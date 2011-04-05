@@ -53,7 +53,7 @@
 static void hipfw_usage(void)
 {
     puts("HIP Firewall");
-    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-h] [-V]");
+    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-u] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     puts(" [-m]");
 #endif
@@ -73,6 +73,7 @@ static void hipfw_usage(void)
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
     puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
+    puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
@@ -108,7 +109,7 @@ int main(int argc, char *argv[])
      * Otherwise may get warnings from system_print() commands. */
     setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:vV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:uvV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -171,6 +172,9 @@ int main(int argc, char *argv[])
                 cleanup_interval = connection_timeout;
             }
             break;
+        case 'u':
+            esp_speedup = 1;
+            break;
         case 'v':
             log_level = LOGDEBUG_MEDIUM;
             hip_set_logfmt(LOGFMT_SHORT);
@@ -192,6 +196,25 @@ int main(int argc, char *argv[])
     if (connection_timeout > 0 && !filter_traffic) {
         puts("Warning: timeouts (-t) have no effect with connection");
         puts("         tracking disabled (-F)");
+    }
+
+    if (esp_speedup && limit_capabilities) {
+        puts("Conflict: ESP speedups (-u) requires root privileges,\n");
+        puts("          but lowered privleges (-p) requested as well.\n");
+        hipfw_usage();
+        return EXIT_FAILURE;
+    }
+
+    if (esp_speedup && hip_userspace_ipsec) {
+        puts("Conflict: Bypassing userspace ESP processing (-u) impossible\n");
+        puts("          with userspace IPSEC enabled (-i or -I)\n");
+        hipfw_usage();
+        return EXIT_FAILURE;
+    }
+
+    if (esp_speedup && !filter_traffic) {
+        puts("Warning: ESP speedup (-U) has no effect without\n");
+        puts("         connection tracking (-F)\n");
     }
 
     if (geteuid() != 0) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,17 +23,37 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_FIREWALL_HELPERS_H
-#define HIP_FIREWALL_HELPERS_H
+#define _BSD_SOURCE
 
-#include <netinet/in.h>
+#include <check.h>
+#include <stdlib.h>
 
-const char *addr_to_numeric(const struct in6_addr *addrp);
-struct in6_addr *numeric_to_addr(const char *num);
-int system_print(const char *command);
-int system_printf(const char *command, ...);
+#include "lib/core/common.h"
+#include "firewall/helpers.h"
+#include "test/mocks.h"
+#include "test_suites.h"
 
-/** The maximum command line length (that is, argument to system()) we expect. */
-#define MAX_COMMAND_LINE 196
 
-#endif /* HIP_FIREWALL_HELPERS_H */
+START_TEST(test_system_printf)
+{
+    mock_system = true;
+
+    char str[MAX_COMMAND_LINE + 1];
+    memset(str, '.', sizeof(str));
+    str[MAX_COMMAND_LINE] = '\0';
+
+    fail_unless(system_printf("_%s",  str) == -1, "Truncated command line executed");
+    fail_unless(system_printf("%s", str)   ==  0, "Fitting command line not executed");
+}
+END_TEST
+
+Suite *firewall_helpers(void)
+{
+    Suite *s = suite_create("firewall/helpers");
+
+    TCase *tc_helpers = tcase_create("helpers");
+    tcase_add_test(tc_helpers, test_system_printf);
+    suite_add_tcase(s, tc_helpers);
+
+    return s;
+}

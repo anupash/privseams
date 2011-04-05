@@ -40,7 +40,9 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -50,6 +52,7 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <sys/time.h>
+#include <linux/netfilter_ipv4.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
@@ -62,6 +65,7 @@
 #include "modules/update/hipd/update.h"
 #include "common_types.h"
 #include "dlist.h"
+#include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "firewall_defines.h"
 #include "firewall.h"
@@ -105,6 +109,12 @@ enum {
     STATE_ESTABLISHING_FROM_UPDATE,
     STATE_CLOSING
 };
+
+/**
+ * Number of currently managed iptables rules for ESP speedup (-u option).
+ * @see hip_fw_manage_esp_rule();
+ */
+static unsigned int total_esp_rules_count = 0;
 
 /*------------print functions-------------*/
 /**
@@ -341,6 +351,161 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
 }
 
 /**
+ * Set up or remove iptables rules to bypass userspace processing of the
+ * SPI/destination pairs as specified by @a esp_tuple and @a dest.
+ * This can greatly improve firewall throughput.
+ *
+ * @param esp_tuple Determines the SPI.
+ * @param dest      The corresponding destination address to bypass. May be
+ *                  a IPv6-mapped IPv4 address.
+ * @param insert    Insert new rule if true, remove existing if false.
+ * @return          0 if rules were modified, -1 otherwise.
+ *
+ * @note This feature may be turned off completely by the -u command line option.
+ *       It is also automatically deactivated for connections that demand
+ *       more advanced connection tracking.
+ *       In these cases, -1 is returned even though there was not even an
+ *       attempt to modify rules.
+ *
+ * @note This interferes, in one way or another, with userspace_ipsec,
+ *       relay, LSI, midauth, lightweight-update and esp_prot. Care was
+ *       taken to not break these features though.
+ *
+ * @see update_esp_address()
+ * @see free_esp_tuple()
+ * @see ::esp_speedup
+ */
+static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
+                                  const struct in6_addr *const dest,
+                                  const bool insert)
+{
+    int         err   = 0;
+    const char *flag  = insert ? "-I" : "-D";
+    const char *table = NULL;
+
+    if (!esp_speedup || hip_userspace_ipsec) {
+        return -1;
+    }
+
+    HIP_ASSERT(esp_tuple);
+    HIP_ASSERT(dest);
+
+    if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED) {
+        HIP_DEBUG("ESP Transforms requested; not handled via iptables "
+                  "since we need to inspect packets\n");
+        return -1;
+    }
+
+    if (esp_tuple->tuple->esp_relay) {
+        HIP_DEBUG("ESP Relay requested; not handled via iptables "
+                  "since we need packet rewriting\n");
+        return -1;
+    }
+
+    switch (esp_tuple->tuple->hook) {
+    case NF_IP_LOCAL_IN:
+        table = "HIPFW-INPUT";
+        break;
+    case NF_IP_FORWARD:
+        table = "HIPFW-FORWARD";
+        break;
+    case NF_IP_LOCAL_OUT:
+        table = "HIPFW-OUTPUT";
+        break;
+    default:
+        HIP_ERROR("Packet was received via unsupported netfilter hook %d\n",
+                  esp_tuple->tuple->hook);
+        return -1;
+    }
+
+    HIP_DEBUG("insert         = %d\n", insert);
+    HIP_DEBUG("table          = %s\n", table);
+    HIP_DEBUG("esp_tuple->spi = 0x%08X\n", esp_tuple->spi);
+    HIP_DEBUG_IN6ADDR("src  ip", esp_tuple->tuple->src_ip);
+    HIP_DEBUG_IN6ADDR("dest ip", dest);
+
+    if (IN6_IS_ADDR_V4MAPPED(dest)) {
+        char           daddr[INET_ADDRSTRLEN];
+        struct in_addr dest4;
+
+        IPV6_TO_IPV4_MAP(dest, &dest4);
+        HIP_IFEL(!inet_ntop(AF_INET, &dest4, daddr, sizeof(daddr)), -1,
+                 "inet_ntop: %s\n", strerror(errno));
+
+        if (esp_tuple->tuple->connection->udp_encap) {
+            /* SPI is the first 32bit value in encapsulating UDP payload, so
+             * we may use a simple u32 Pattern. Here, '4&0x1FFF=0' ensures
+             * we're not processing a fragmented packet.
+             */
+            err = system_printf("iptables %s %s -p UDP "
+                                "--dport 10500 --sport 10500 -d %s -m u32 "
+                                "--u32 '4&0x1FFF=0 && 0>>22&0x3C@8=0x%08X' -j ACCEPT",
+                                flag, table, daddr, esp_tuple->spi);
+        } else {
+            err = system_printf("iptables %s %s -p 50 "
+                                "-d %s -m esp --espspi 0x%08X -j ACCEPT",
+                                flag, table, daddr, esp_tuple->spi);
+        }
+    } else {
+        char daddr[INET6_ADDRSTRLEN];
+        HIP_IFEL(!inet_ntop(AF_INET6, dest, daddr, sizeof(daddr)), -1,
+                 "inet_ntop: %s\n", strerror(errno));
+
+        HIP_ASSERT(!esp_tuple->tuple->connection->udp_encap);
+        err = system_printf("ip6tables %s %s -p 50 "
+                            "-d %s -m esp --espspi 0x%08X -j ACCEPT",
+                            flag, table, daddr, esp_tuple->spi);
+    }
+
+    if (err == EXIT_SUCCESS) {
+        total_esp_rules_count += (insert ? 1 : -1);
+        HIP_DEBUG("total_esp_rules_count = %d\n", total_esp_rules_count);
+    }
+
+out_err:
+    return err == EXIT_SUCCESS ? 0 : -1;
+}
+
+/**
+ * Set up or remove iptables rules to bypass userspace processing of all
+ * SPI/destination pairs associated with @a esp_tuple.
+ *
+ * @param esp_tuple Determines the SPI and all destination addresses.
+ * @param insert    Insert rules if true, remove existing if false.
+ *
+ * @see hip_fw_manage_esp_rule()
+ */
+static void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
+                                    const bool insert)
+{
+    const struct hip_ll_node *node = esp_tuple->dst_addresses.head;
+    while (node) {
+        hip_fw_manage_esp_rule(esp_tuple, node->ptr, insert);
+        node = node->next;
+    }
+}
+
+/**
+ * Set up or remove iptables rules to bypass userspace processing of all
+ * ESP SPI/destination pairs associated with @a tuple.
+ *
+ * @param esp_tuple Determines all SPI/destination pairs.
+ * @param insert    Insert rules if true, remove existing if false.
+ *
+ * @see hip_fw_manage_esp_rule()
+ * @see hip_fw_manage_esp_tuple()
+ */
+void hip_fw_manage_all_esp_tuples(const struct tuple *const tuple,
+                                  const bool insert)
+{
+    const struct slist *lst = tuple->esp_tuples;
+    while (lst) {
+        hip_fw_manage_esp_tuple(lst->data, insert);
+        lst = lst->next;
+    }
+}
+
+/**
  * Insert or update a destination address associated with an ESP tuple.
  * If the address is already known, its update_id is replaced with the new
  * value.
@@ -383,6 +548,7 @@ static bool update_esp_address(struct esp_tuple *const esp_tuple,
         *esp_addr->update_id = *upd_id;
     }
 
+    hip_fw_manage_esp_rule(esp_tuple, addr, true);
     return true;
 
 out_err:
@@ -458,12 +624,17 @@ struct esp_tuple *find_esp_tuple(const struct slist *search_list,
 }
 
 /**
- * initialize and store a new HIP/ESP connnection into the connection table
+ * Initialize and store a new HIP/ESP connnection into the connection
+ * table.
  *
- * @param data the connection-related data to be inserted
- * @see remove_connection
+ * @param data The connection-related data to be inserted.
+ * @param ctx  The packet context. Note that source and destination HITs
+ *             are always taken from @a data rather than @a ctx.
+ *
+ * @see remove_connection()
  */
-static void insert_new_connection(const struct hip_data *data)
+static void insert_new_connection(const struct hip_data *const data,
+                                  const struct hip_fw_context *const ctx)
 {
     struct connection *connection = NULL;
 
@@ -472,6 +643,7 @@ static void insert_new_connection(const struct hip_data *data)
     connection = calloc(1, sizeof(struct connection));
 
     connection->state     = STATE_ESTABLISHED;
+    connection->udp_encap = ctx->udp_encap_hdr ? true : false;
     connection->timestamp = time(NULL);
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state = PISA_STATE_DISALLOW;
@@ -568,6 +740,7 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
 
         // remove all associated addresses
         while ((addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL))) {
+            hip_fw_manage_esp_rule(esp_tuple, &addr->dst_addr, false);
             free(addr->update_id);
             free(addr);
         }
@@ -1102,6 +1275,7 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
 
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
 
+        update_esp_address(esp_tuple, ip6_src, NULL);
         insert_esp_tuple(esp_tuple);
     }
 
@@ -1171,6 +1345,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
                  -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
+        update_esp_address(esp_tuple, ip6_src, NULL);
         insert_esp_tuple(esp_tuple);
 
         HIP_DEBUG("ESP tuple inserted\n");
@@ -1663,7 +1838,7 @@ static int check_packet(const struct in6_addr *ip6_src,
             }
 #endif
 
-            insert_new_connection(data);
+            insert_new_connection(data, ctx);
 
             // TODO call free for all pointer members of data - comment by Rene
             free(data);
@@ -1720,6 +1895,8 @@ static int check_packet(const struct in6_addr *ip6_src,
         } else {
             HIP_DEBUG("Tuple connection NULL, could not timestamp\n");
         }
+
+        tuple->hook = ctx->ipq_packet->hook;
     }
 
     HIP_DEBUG("udp_encap_hdr=%p tuple=%p err=%d\n", ctx->udp_encap_hdr, tuple, err);
@@ -2022,6 +2199,177 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
 }
 
 /**
+ * Parse one line of `iptables -nvL` formatted output and extract packet count,
+ * SPI and destination IP if the line corresponds to a previously set up ESP
+ * rule.
+ * This takes into account specifically the kinds of rules that can be created
+ * by hip_fw_manage_esp_rule().
+ *
+ * @param input        The line to be parsed.
+ * @param packet_count Out: receives the packet count.
+ * @param spi          Out: receives the SPI, unless the packet count was zero.
+ * @param dest         Out: receives the destination IP, unless the packet count
+ *                          was zero.
+ * @return             true if @a input could be parsed as an ESP
+ *                     rule (and at least @a packet_count was set), false
+ *                     otherwise.
+ *
+ * @note Short-circuiting behaviour for @a spi and @a dest (see description).
+ *
+ * @see detect_esp_rule_activity()
+ * @see hip_fw_manage_esp_rule()
+ */
+static bool parse_iptables_esp_rule(const char *const input,
+                                    unsigned int *const packet_count,
+                                    uint32_t *const spi,
+                                    struct in6_addr *const dest)
+{
+    static const char u32_prefix[] = "u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0x";
+
+    /*
+     * In iptables output, one column is optional. So we try the long
+     * format first and fall back to the shorter one (see sscanf call
+     * below).
+     * The %45s format is used here because 45 is the maximum IPv6 address
+     * length, considering all variations (i.e. INET6_ADDRSTRLEN - 1).
+     */
+    static const char *formats[] = { "%u %*u %*s %*s %*2[!f-] %*s %*s %*s %45s",
+                                     "%u %*u %*s %*s %*s %*s %*s %45s" };
+
+    char        ip[INET6_ADDRSTRLEN];
+    const char *str_spi;
+
+    // there's two ways of specifying SPIs in a rule
+    // (see hip_fw_manage_esp_rule)
+
+    if ((str_spi = strstr(input, "spi:"))) {
+        // non-UDP
+        if (sscanf(str_spi, "spi:%u", spi) < 1) {
+            HIP_ERROR("Unexpected iptables output (spi): '%s'\n", input);
+            return false;
+        }
+    } else if ((str_spi = strstr(input, u32_prefix))) {
+        // UDP
+        // spi follows u32_prefix string as a hex number
+        // (always host byte order)
+        if (sscanf(&str_spi[sizeof(u32_prefix) - 1], "%x", spi) < 1) {
+            HIP_ERROR("Unexpected iptables output (u32 match): '%s'\n", input);
+            return false;
+        }
+    } else {
+        // no SPI specified, so it's no ESP rule
+        return false;
+    }
+
+    // grab packet count and destination IP.
+    if (sscanf(input, formats[0], packet_count, ip) < 2) {
+        // retry with alternative format before we give up
+        if (sscanf(input, formats[1], packet_count, ip) < 2) {
+            HIP_ERROR("Unexpected iptables output (number of colums): '%s'\n", input);
+            return false;
+        }
+    }
+
+    // IP not needed, unless there was activity
+    if (*packet_count > 0) {
+        char *slash;
+
+        // IP may be in /128 format, strip the suffix
+        if ((slash = strchr(ip, '/'))) {
+            *slash = '\0';
+        }
+
+        // parse destination IP; try IPv6 first, then IPv4
+        if (!inet_pton(AF_INET6, ip, dest)) {
+            struct in_addr addr4;
+            if (!inet_pton(AF_INET, ip, &addr4)) {
+                HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+                HIP_ERROR("Can't parse destination IP: %s\n", ip);
+                return false;
+            }
+
+            IPV4_TO_IPV6_MAP(&addr4, dest);
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Update timestamps of all ESP tuples where corresponding iptables rules'
+ * packet counters are non-zero.
+ * Currently, this works by parsing the output of iptables and ip6tables
+ * to extract and zero the packet counters.
+ *
+ * @param now We consider this the current time.
+ * @return    Number of rules that were identified with an esp tuple
+ *            (not necessarily the number of tuples updated), or -1 if
+ *            communication with iptables failed.
+ *
+ * @note Ugly approach, yes. You may be tempted to statically link in
+ *       libiptc, and I'd generally approve of it because while it was never
+ *       meant to be used publicly, quite some projects have relied on it
+ *       without burning their fingers too badly for a long time now.  On the
+ *       other hand, libiptc would blow up iptables communication code at most
+ *       other places, and the output format is unlikely to change.
+ *       Furthermore, a successor to iptables (namely: nftables) with an actual
+ *       API is under consideration by the netfilter team.
+ */
+static int detect_esp_rule_activity(const time_t now)
+{
+    static const char *const bins[]   = { "iptables", "ip6tables" };
+    static const char *const chains[] = { "HIPFW-INPUT", "HIPFW-OUTPUT",
+                                          "HIPFW-FORWARD" };
+
+    unsigned int chain, bin, ret = 0;
+
+    for (bin = 0; bin < ARRAY_SIZE(bins); ++bin) {
+        for (chain = 0; chain < ARRAY_SIZE(chains); ++chain) {
+            char  bfr[256];
+            FILE *p;
+
+            snprintf(bfr, sizeof(bfr), "%s -nvL -Z %s", bins[bin], chains[chain]);
+            if (!(p = popen(bfr, "r"))) {
+                HIP_ERROR("popen(\"%s\"): %s\n", bfr, strerror(errno));
+                return -1;
+            }
+
+            while (fgets(bfr, sizeof(bfr), p)) {
+                unsigned int    packet_count;
+                uint32_t        spi;
+                struct in6_addr dest;
+
+                if (parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
+                    ret += 1;
+                    if (packet_count > 0) {
+                        struct tuple *const tuple = get_tuple_by_esp(&dest, spi);
+                        if (!tuple) {
+                            HIP_ERROR("Stray ESP rule: SPI = %u\n", spi);
+                            continue;
+                        }
+
+                        tuple->connection->timestamp = now;
+                        HIP_DEBUG("Activity detected: SPI = %u\n", spi);
+                        HIP_DEBUG_IN6ADDR("dest: ", &dest);
+                    }
+                }
+            }
+
+            if (!feof(p)) {
+                HIP_ERROR("fgets(), bin: %s, chain %s: %s\n",
+                          bins[bin], chains[chain], strerror(errno));
+                return -1;
+            }
+
+            pclose(p);
+        }
+    }
+
+    HIP_DEBUG("-> %u\n", ret);
+    return ret;
+}
+
+/**
  * Do some necessary bookkeeping concerning connection tracking.
  * Currently, this only makes sure that stale locations will be removed.
  * The actual tasks will be run at most once per ::connection_timeout
@@ -2032,7 +2380,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  */
 void hip_fw_conntrack_periodic_cleanup(void)
 {
-    static time_t      last_check = 0;   // timestamp of last call
+    static time_t      last_check = 0; // timestamp of last call
     struct slist      *iter_conn;
     struct connection *conn;
 
@@ -2051,6 +2399,17 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
     if (now - last_check >= cleanup_interval) {
         HIP_DEBUG("Checking for connection timeouts\n");
+
+        // If connections are covered by iptables rules, we rely on kernel
+        // packet counters to update timestamps indirectly for these.
+
+        if (total_esp_rules_count > 0) {
+            // cast to signed value
+            const int found = detect_esp_rule_activity(now);
+            if (found == -1 || (unsigned int) found != total_esp_rules_count) {
+                HIP_ERROR("Not all ESP tuples' packet counts were found\n");
+            }
+        }
 
         iter_conn = conn_list;
         while (iter_conn) {

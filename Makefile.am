@@ -201,6 +201,7 @@ test_check_firewall_SOURCES = test/check_firewall.c          \
                               test/mocks.c                   \
                               test/firewall/conntrack.c      \
                               test/firewall/file_buffer.c    \
+                              test/firewall/helpers.c        \
                               test/firewall/line_parser.c    \
                               test/firewall/port_bindings.c  \
                               $(firewall_hipfw_sources)

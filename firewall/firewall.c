@@ -144,6 +144,7 @@ int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
+int esp_speedup               = 0; /**< Enable esp speedup via dynamic iptables usage (-u option). */
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
 #endif
