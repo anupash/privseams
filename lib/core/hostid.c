@@ -227,9 +227,9 @@ out_err:
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type)
+static int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                          struct in6_addr *const hit,
+                                          const int hit_type)
 {
     int                   err = 0;
     int                   rsa_pub_len, rsa_priv_len;

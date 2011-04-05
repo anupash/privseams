@@ -46,9 +46,6 @@ struct hip_hit_info {
 
 int hip_host_id_to_hit(const struct hip_host_id *const host_id,
                        struct in6_addr *const hit, const int hit_type);
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                struct in6_addr *const hit, const int hit_type);
 void hip_get_rsa_keylen(const struct hip_host_id_priv *const host_id,
