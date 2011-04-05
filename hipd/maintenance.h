@@ -31,6 +31,9 @@
 #include <sys/time.h>
 
 
+extern int hip_firewall_sock_lsi_fd;
+extern int hip_firewall_status;
+
 int hip_register_maint_function(int (*maint_function)(void),
                                 const uint16_t priority);
 int hip_unregister_maint_function(int (*maint_function)(void));

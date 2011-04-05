@@ -80,7 +80,7 @@ extern int hip_wait_addr_changes_to_stabilize;
 
 extern int hip_user_sock;
 
-extern int                 hip_firewall_sock, hip_firewall_status;
+extern int                 hip_firewall_sock;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int hit_db_lock;
