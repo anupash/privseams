@@ -2513,11 +2513,11 @@ out_err:
  *       in conf.h because type values are used as @c action_handler array
  *       index. Locations and order of these handlers are important.
  */
-int (*action_handler[])(struct hip_common *,
-                        int action,
-                        const char *opt[],
-                        int optc,
-                        int send_only) =
+static int (*action_handler[])(struct hip_common *,
+                               int action,
+                               const char *opt[],
+                               int optc,
+                               int send_only) =
 {
     NULL,                               /* reserved */
     hip_conf_handle_hi,                 /* 1: TYPE_HI */
