@@ -60,13 +60,6 @@
 #define HIPFW UNUSED
 #endif
 
-/** marking for OPPORTUNISTIC-specific function parameters */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-#define OPP
-#else
-#define OPP UNUSED
-#endif
-
 /** marking for DEBUG-specific function parameters */
 #ifdef CONFIG_HIP_DEBUG
 #define DBG

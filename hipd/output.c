@@ -103,8 +103,8 @@ static int hip_send_i1_pkt(struct hip_common *i1, struct in6_addr *local_addr,
 {
     int err = 0;
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    // if hitr is hashed null hit, send it as null on the wire
+    /* If hitr is hashed null hit, send it as null on the wire.
+     * This case is an opportunistic BEX. */
     if  (hit_is_opportunistic_hit(&i1->hitr)) {
         ipv6_addr_copy(&i1->hitr, &in6addr_any);
     }
@@ -115,8 +115,6 @@ static int hip_send_i1_pkt(struct hip_common *i1, struct in6_addr *local_addr,
     if (peer_addr) {
         HIP_DEBUG_IN6ADDR("peer", peer_addr);
     }
-
-#endif // CONFIG_HIP_OPPORTUNISTIC
 
     HIP_DEBUG_HIT("BEFORE sending", peer_addr);
     err = hip_send_pkt(local_addr, peer_addr, src_port, dst_port, i1, entry, 1);
@@ -804,11 +802,9 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
         r1_dst_port = ctx->msg_ports.src_port;
     }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
     HIP_ASSERT(!hit_is_opportunistic_hit(&ctx->input_msg->hitr));
-#endif
 
     /* Case: I ----->IPv4---> RVS ---IPv6---> R */
     if (IN6_IS_ADDR_V4MAPPED(r1_src_addr) !=

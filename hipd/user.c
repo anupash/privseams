@@ -245,15 +245,13 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
-    const hip_hit_t             *src_hit   = NULL, *dst_hit = NULL;
-    struct hip_hadb_state       *entry     = NULL;
-    int                          err       = 0, msg_type = 0, reti = 0;
-    int                          access_ok = 0, is_root = 0, name_len;
-    const struct hip_tlv_common *param     = NULL;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    struct in6_addr opp_hit, src_ip;
-    struct in6_addr hit_local;
-#endif
+    const hip_hit_t                       *src_hit   = NULL, *dst_hit = NULL;
+    struct hip_hadb_state                 *entry     = NULL;
+    int                                    err       = 0, msg_type = 0, reti = 0;
+    int                                    access_ok = 0, is_root = 0, name_len;
+    const struct hip_tlv_common           *param     = NULL;
+    struct in6_addr                        opp_hit, src_ip;
+    struct in6_addr                        hit_local;
     const struct hip_transformation_order *transorder;
     struct hip_hit_to_ip_set              *name_info;
 
@@ -492,9 +490,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                 err = -1;
                 goto out_err;
             }
-        }
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-        else {
+        } else {
             HIP_IFEL(hip_get_default_hit(&hit_local), -1,
                      "Error retrieving default HIT \n");
 
@@ -526,7 +522,6 @@ int hip_handle_user_msg(struct hip_common *msg,
                      -1,
                      "Did not find entry\n");
         }
-#endif
 
         reg_types  = reg_req->reg_type;
         type_count = hip_get_param_contents_len(reg_req) -

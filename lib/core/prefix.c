@@ -198,7 +198,6 @@ int hip_id_type_match(const struct in6_addr *id, int id_type)
     return ret;
 }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
  * Convert a given IP address into a pseudo HIT
  *
@@ -235,8 +234,6 @@ out_err:
 
     return err;
 }
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 /**
  * cast a socket address to an IPv4 or IPv6 address.

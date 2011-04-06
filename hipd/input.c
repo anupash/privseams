@@ -550,14 +550,13 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         goto out_err;
     }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
+    /* Check if state can be found for opportunistic BEX */
     if (!ctx->hadb_entry &&
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
             hip_opp_get_hadb_entry_i1_r1(ctx->input_msg,
                                          &ctx->src_addr);
     }
-#endif
 
     if (ctx->hadb_entry) {
         state = ctx->hadb_entry->state;
@@ -709,7 +708,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
              "No entry in host association database when receiving R1." \
              "Dropping.\n");
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Internally, we use HITs derived from the dst IP of the I1 for the
      * creation of an hadb entry when triggering an opportunistic I1.
      * Check for such a HIT now and possibly handle the opportunistic
@@ -717,7 +715,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
     if (hit_is_opportunistic_hit(&ctx->hadb_entry->hit_peer)) {
         hip_handle_opp_r1(ctx);
     }
-#endif
 
     if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
         HIP_DEBUG_HIT("Dst HIT does not belong to this host",

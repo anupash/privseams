@@ -112,6 +112,7 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/nat.c                   \
                     hipd/netdev.c                \
                     hipd/nsupdate.c              \
+                    hipd/opp_mode.c              \
                     hipd/output.c                \
                     hipd/pkt_handling.c          \
                     hipd/registration.c          \
@@ -121,10 +122,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
 
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
-endif
-
-if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/opp_mode.c
 endif
 
 firewall_hipfw_sources = firewall/cache.c               \
