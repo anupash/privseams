@@ -69,9 +69,11 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 ### tests ###
 if HIP_UNITTESTS
 TESTS           = test/check_firewall \
-                  test/check_lib_core
+                  test/check_lib_core \
+                  test/check_lib_tool
 check_PROGRAMS  = test/check_firewall \
-                  test/check_lib_core
+                  test/check_lib_core \
+                  test/check_lib_tool
 endif
 
 
@@ -207,6 +209,9 @@ test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \
                               test/lib/core/straddr.c
 
+test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
+                              test/lib/tool/checksum.c
+
 # Include module Makefile.am's.
 # TODO: Make this inclusion dynamic
 include modules/heartbeat/Makefile.am
@@ -220,6 +225,7 @@ hipd_hipd_LDADD                          = lib/core/libhipcore.la
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
+test_check_lib_tool_LDADD                = lib/core/libhipcore.la
 test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
