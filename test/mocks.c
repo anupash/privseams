@@ -87,6 +87,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "mocks.h"
@@ -164,7 +165,7 @@ bool  mock_system      = false;        /**< system(3) mock enabled? */
 char *mock_system_last = NULL;         /**< copy of last argument passed to
                                         *   system(3) mock, or NULL if mock was
                                         *   not called yet. */
-int   mock_system_exit = EXIT_SUCCESS; /**< value that is returned by
+int mock_system_exit   = EXIT_SUCCESS; /**< value that is returned by
                                         *   system(3) mock if a non-NULL
                                         *   argument is supplied to it.*/
 
