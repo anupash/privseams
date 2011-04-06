@@ -43,6 +43,12 @@
 #include "common_types.h"
 #include "esp_prot_defines.h"
 
+enum hipfw_pkt_type {
+    OTHER_PACKET = 0,
+    HIP_PACKET,
+    ESP_PACKET,
+    FW_PROTO_NUM
+};
 
 struct hip_fw_context {
     // queued packet
@@ -58,11 +64,10 @@ struct hip_fw_context {
     } ip_hdr;
 
     // transport layer information
-    int packet_type;     /* HIP_PACKET, ESP_PACKET, etc  */
+    enum hipfw_pkt_type packet_type; // HIP_PACKET, ESP_PACKET, etc
     union {
         struct hip_esp    *esp;
         struct hip_common *hip;
-        struct tcphdr     *tcp;
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
 
@@ -144,12 +149,12 @@ struct connection {
     int          state;
     time_t       timestamp;
     /* members needed for iptables setup */
-    bool         udp_encap; /**< UDP encapsulation enabled? (NAT extension) */
+    bool udp_encap;         /**< UDP encapsulation enabled? (NAT extension) */
     /* members needed for ESP protection extension */
-    int          num_esp_prot_tfms;
-    uint8_t      esp_prot_tfms[MAX_NUM_TRANSFORMS];
+    int     num_esp_prot_tfms;
+    uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];
 #ifdef CONFIG_HIP_MIDAUTH
-    int          pisa_state;
+    int pisa_state;
 #endif
 };
 

@@ -99,12 +99,6 @@
 #include "firewall.h"
 
 
-/* packet types handled by the firewall */
-#define OTHER_PACKET          0
-#define HIP_PACKET            1
-#define ESP_PACKET            2
-#define FW_PROTO_NUM          3 /* number of packet types */
-
 /* location of the lock file */
 #define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR "/hip_firewall.lock"
 
