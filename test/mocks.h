@@ -35,6 +35,5 @@ extern time_t mock_time_next;
 
 extern bool  mock_system;
 extern char *mock_system_last;
-extern int   mock_system_exit;
 
 #endif /* HIP_TEST_MOCKS_H */

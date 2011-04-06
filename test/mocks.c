@@ -161,13 +161,10 @@ time_t time(time_t *t)
 
 /*** system(3) ***/
 
-bool  mock_system      = false;        /**< system(3) mock enabled? */
-char *mock_system_last = NULL;         /**< copy of last argument passed to
-                                        *   system(3) mock, or NULL if mock was
-                                        *   not called yet. */
-int mock_system_exit   = EXIT_SUCCESS; /**< value that is returned by
-                                        *   system(3) mock if a non-NULL
-                                        *   argument is supplied to it.*/
+bool  mock_system      = false; /**< system(3) mock enabled? */
+char *mock_system_last = NULL;  /**< copy of last argument passed to
+                                 *   system(3) mock, or NULL if mock was not
+                                 *   called yet. */
 
 /**
  * system(3) mock function. Controlled by the ::mock_system flag.
@@ -175,8 +172,7 @@ int mock_system_exit   = EXIT_SUCCESS; /**< value that is returned by
  *
  * @param command A copy of this string is stored in ::mock_system_last of
  *                non-NULL. Otherwise, ::mock_system_last is set to NULL.
- * @return        The value of ::mock_system_exit if @a command was non-NULL, -1
- *                otherwise.
+ * @return        EXIT_SUCCESS @a command was non-NULL, -1 otherwise.
  */
 int system(const char *command)
 {
@@ -193,5 +189,5 @@ int system(const char *command)
         return -1;
     }
 
-    return mock_system_exit;
+    return EXIT_SUCCESS;
 }
