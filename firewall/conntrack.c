@@ -925,12 +925,12 @@ static bool insert_connection_from_update(const struct hip_data *const data,
                                           const struct hip_seq *const seq)
 {
     int                      err        = 0;
+    struct esp_tuple        *esp_tuple  = NULL;
     struct connection *const connection = malloc(sizeof(*connection));
     HIP_IFEL(!connection, -1, "Allocating connection object failed");
 
-    struct esp_tuple *const esp_tuple =
-        esp_tuple_from_esp_info_locator(esp_info, locator, seq,
-                                        &connection->reply);
+    esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
+                                                &connection->reply);
     HIP_IFEL(!esp_tuple, -1, "Creating ESP tuple object failed");
 
     connection->state = STATE_ESTABLISHING_FROM_UPDATE;
