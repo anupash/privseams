@@ -936,7 +936,7 @@ int hip_build_solution(UNUSED const uint8_t packet_type,
              -ENOENT,
              "Internal error: PUZZLE parameter mysteriously gone\n");
     HIP_IFEL(hip_build_param_solution(ctx->output_msg, pz,
-                                      ntoh64(ctx->hadb_entry->puzzle_solution)),
+                                      ctx->hadb_entry->puzzle_solution),
              -1,
              "Building of solution failed\n");
 out_err:

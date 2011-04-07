@@ -2527,7 +2527,7 @@ int hip_build_param_solution(struct hip_common *msg,
     /* Type 2 (in R1) or 3 (in I2) */
     hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_SOLUTION);
 
-    cookie.J = hton64(val_J);
+    cookie.J = val_J;
     memcpy(&cookie.K, &pz->K, 12);     /* copy: K (1), reserved (1),
                                         * opaque (2) and I (8 bytes). */
     cookie.reserved = 0;
