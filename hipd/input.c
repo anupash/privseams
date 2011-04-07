@@ -824,14 +824,10 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                              err           = 0, retransmission = 0, written = 0;
-    uint64_t                         solved_puzzle = 0, I = 0;
-    const struct hip_puzzle         *pz            = NULL;
-    const struct hip_diffie_hellman *dh_req        = NULL;
-    const struct hip_r1_counter     *r1cntr        = NULL;
-    struct hip_dh_public_value      *dhpv          = NULL;
-    const struct hip_locator        *locator       = NULL;
-    uint16_t                         i2_mask       = 0;
+    int                          err           = 0, retransmission = 0;
+    uint64_t                     solved_puzzle = 0, I = 0;
+    const struct hip_r1_counter *r1cntr        = NULL;
+    const struct hip_locator    *locator       = NULL;
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -896,21 +892,21 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     hip_msg_init(ctx->output_msg);
     hip_build_network_hdr(ctx->output_msg,
                           HIP_I2,
-                          i2_mask,
+                          0,
                           &ctx->input_msg->hitr,
                           &ctx->input_msg->hits);
 
-    /* note: we could skip keying material generation in the case
-     * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(ctx,
-                                         I,
-                                         solved_puzzle,
-                                         &dhpv),
-             -EINVAL,
-             "Could not produce keying material\n");
+out_err:
+    return err;
+}
 
-    /********** ESP_INFO **********/
-    /* SPI is set below */
+int hip_build_esp_info(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    /* SPI is set in another handler */
     HIP_IFEL(hip_build_param_esp_info(ctx->output_msg,
                                       ctx->hadb_entry->esp_keymat_index,
                                       0,
@@ -918,15 +914,47 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
              -1,
              "building of ESP_INFO failed.\n");
 
-    /********** SOLUTION **********/
+out_err:
+    return err;
+}
+
+int hip_build_solution(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
+    int                      err = 0;
+    const struct hip_puzzle *pz  = NULL;
+
+    /* solution already computed and stored in hadb during packet check */
     HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)),
              -ENOENT,
              "Internal error: PUZZLE parameter mysteriously gone\n");
-    HIP_IFEL(hip_build_param_solution(ctx->output_msg, pz, ntoh64(solved_puzzle)),
+    HIP_IFEL(hip_build_param_solution(ctx->output_msg, pz,
+                                      ntoh64(ctx->hadb_entry->puzzle_solution)),
              -1,
              "Building of solution failed\n");
+out_err:
+    return err;
+}
 
-    /********** Diffie-Hellman *********/
+int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
+                              UNUSED const uint32_t ha_state,
+                              struct hip_packet_context *ctx)
+{
+    int                              err    = 0, written;
+    const struct hip_diffie_hellman *dh_req = NULL;
+    struct hip_dh_public_value      *dhpv   = NULL;
+
+    /* note: we could skip keying material generation in the case
+     * of a retransmission but then we'd had to fill ctx->hmac etc */
+    HIP_IFEL(hip_produce_keying_material(ctx,
+                                         ctx->hadb_entry->puzzle_i,
+                                         ctx->hadb_entry->puzzle_solution,
+                                         &dhpv),
+             -EINVAL,
+             "Could not produce keying material\n");
+
+
     /* calculate shared secret and create keying material */
     HIP_IFEL(!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,
@@ -946,13 +974,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                                                      0),
              -1,
              "Building of DH failed.\n");
-
-    /********* ESP protection preferred transforms [OPTIONAL] *********/
-    HIP_IFEL(esp_prot_r1_handle_transforms(ctx),
-             -1,
-             "failed to handle preferred esp protection transforms\n");
-
-    /******************************************************************/
 
 out_err:
     return err;

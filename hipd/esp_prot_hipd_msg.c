@@ -573,12 +573,16 @@ out_err:
 }
 
 /**
- * Handles the esp protection transforms included in an R1 message
+ * Handles the esp protection transforms included in an R1 message.
  *
- * @param ctx       packet context for the received R1 message
- * @return          always 0
+ * @param packet_type Unused.
+ * @param ha_state    Unused:
+ * @param ctx         Packet context for the received R1 message.
+ * @return            Always 0.
  */
-int esp_prot_r1_handle_transforms(struct hip_packet_context *ctx)
+int esp_prot_r1_handle_transforms(UNUSED const uint8_t packet_type,
+                                  UNUSED const uint32_t ha_state,
+                                  struct hip_packet_context *ctx)
 {
     const struct esp_prot_preferred_tfms *prot_transforms = NULL;
     int                                   err             = 0;

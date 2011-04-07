@@ -89,6 +89,7 @@
 #include "registration.h"
 #include "user.h"
 #include "init.h"
+#include "hipd/esp_prot_hipd_msg.h"
 
 
 /**
@@ -766,6 +767,10 @@ static int hip_init_handle_functions(void)
 
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_add_signed_echo_response, 41000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_sign_and_mac_packet, 42000);
@@ -773,6 +778,10 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_add_signed_echo_response, 41000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_sign_and_mac_packet, 42000);
@@ -780,6 +789,10 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_add_signed_echo_response, 41000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_sign_and_mac_packet, 42000);
@@ -787,6 +800,10 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_add_signed_echo_response, 41000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_sign_and_mac_packet, 42000);
