@@ -232,14 +232,11 @@ out_err:
  * @param ctx      context
  * @param I        I value from puzzle
  * @param J        J value from puzzle
- * @param dhpv_out Out: pointer to the DH public value choosen.
- *                 Not set if this parameter is NULL.
  * @return zero on success, or negative on error.
  */
 static int hip_produce_keying_material(struct hip_packet_context *ctx,
                                        uint64_t I,
-                                       uint64_t J,
-                                       const struct hip_dh_public_value **dhpv_out)
+                                       uint64_t J)
 {
     char                        *dh_shared_key = NULL;
     int                          hip_transf_length, hmac_transf_length;
@@ -430,10 +427,6 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* store DH shared key */
     ctx->hadb_entry->dh_shared_key     = dh_shared_key;
     ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
-
-    if (dhpv_out) {
-        *dhpv_out = dhpv;
-    }
 
     /* on success free for dh_shared_key is called during close procedure with
      * hip_del_peer_info_entry() */
@@ -905,8 +898,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
      * of a retransmission but then we'd had to fill ctx->hmac etc */
     HIP_IFEL(hip_produce_keying_material(ctx,
                                          ctx->hadb_entry->puzzle_i,
-                                         ctx->hadb_entry->puzzle_solution,
-                                         NULL),
+                                         ctx->hadb_entry->puzzle_solution),
              -EINVAL,
              "Could not produce keying material\n");
 
@@ -1374,17 +1366,16 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  UNUSED const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int                               err            = 0, is_loopback = 0;
-    uint16_t                          mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
-    char                             *tmp_enc        = NULL;
-    const char                       *enc            = NULL;
-    unsigned char                    *iv             = NULL;
-    const struct hip_solution        *solution       = NULL;
-    const struct hip_dh_public_value *dhpv           = NULL;
-    const struct hip_r1_counter      *r1cntr         = NULL;
-    const struct hip_hip_transform   *hip_transform  = NULL;
-    struct hip_host_id               *host_id_in_enc = NULL;
-    struct hip_host_id                host_id;
+    int                             err            = 0, is_loopback = 0;
+    uint16_t                        mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
+    char                           *tmp_enc        = NULL;
+    const char                     *enc            = NULL;
+    unsigned char                  *iv             = NULL;
+    const struct hip_solution      *solution       = NULL;
+    const struct hip_r1_counter    *r1cntr         = NULL;
+    const struct hip_hip_transform *hip_transform  = NULL;
+    struct hip_host_id             *host_id_in_enc = NULL;
+    struct hip_host_id              host_id;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
@@ -1468,8 +1459,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(hip_produce_keying_material(ctx,
                                          solution->I,
-                                         solution->J,
-                                         &dhpv),
+                                         solution->J),
              -EPROTO,
              "Unable to produce keying material. Dropping the I2 packet.\n");
 
