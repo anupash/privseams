@@ -166,10 +166,10 @@ run_program "make -j distcheck"
 run_program "make -j check"
 
 # PISA configuration
-compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance
+compile --enable-firewall --disable-rvs --disable-profiling --enable-debug --enable-midauth --disable-performance
 
 # Max compile coverage configuration
-FEATURES_ALL="--enable-firewall --enable-rvs --enable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance"
+FEATURES_ALL="--enable-firewall --enable-rvs --enable-profiling --disable-debug --enable-midauth --enable-performance"
 compile $FEATURES_ALL
 
 # Max compile coverage configuration without optimization
