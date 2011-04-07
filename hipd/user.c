@@ -245,13 +245,15 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
-    const hip_hit_t                       *src_hit   = NULL, *dst_hit = NULL;
-    struct hip_hadb_state                 *entry     = NULL;
-    int                                    err       = 0, msg_type = 0, reti = 0;
-    int                                    access_ok = 0, is_root = 0, name_len;
-    const struct hip_tlv_common           *param     = NULL;
-    struct in6_addr                        opp_hit, src_ip;
-    struct in6_addr                        hit_local;
+    const hip_hit_t             *src_hit   = NULL, *dst_hit = NULL;
+    struct hip_hadb_state       *entry     = NULL;
+    int                          err       = 0, msg_type = 0, reti = 0;
+    int                          access_ok = 0, is_root = 0, name_len;
+    const struct hip_tlv_common *param     = NULL;
+#ifdef CONFIG_HIP_RVS
+    struct in6_addr opp_hit, src_ip;
+    struct in6_addr hit_local;
+#endif /* CONFIG_HIP_RVS */
     const struct hip_transformation_order *transorder;
     struct hip_hit_to_ip_set              *name_info;
 
