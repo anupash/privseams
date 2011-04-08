@@ -822,10 +822,9 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                          err           = 0, retransmission = 0;
-    uint64_t                     solved_puzzle = 0, I = 0;
-    const struct hip_r1_counter *r1cntr        = NULL;
-    const struct hip_locator    *locator       = NULL;
+    int                          err     = 0, retransmission = 0;
+    const struct hip_r1_counter *r1cntr  = NULL;
+    const struct hip_locator    *locator = NULL;
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -873,16 +872,12 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
         HIP_IFEL(!(pz2 = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
-        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz2,
-                                                   ctx->input_msg,
-                                                   HIP_SOLVE_PUZZLE)) == 0,
+        HIP_IFEL((ctx->hadb_entry->puzzle_solution =
+                      hip_solve_puzzle(pz2,
+                                       ctx->input_msg,
+                                       HIP_SOLVE_PUZZLE)) == 0,
                  -EINVAL, "Solving of puzzle failed\n");
-        I                                = pz2->I;
-        ctx->hadb_entry->puzzle_solution = solved_puzzle;
-        ctx->hadb_entry->puzzle_i        = pz2->I;
-    } else {
-        I             = ctx->hadb_entry->puzzle_i;
-        solved_puzzle = ctx->hadb_entry->puzzle_solution;
+        ctx->hadb_entry->puzzle_i = pz2->I;
     }
 
     HIP_DEBUG("Build normal I2.\n");
