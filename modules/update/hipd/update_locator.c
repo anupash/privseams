@@ -47,7 +47,7 @@
 #include "lib/core/protodefs.h"
 #include "update_builder.h"
 #include "update.h"
-#include "update_legacy.h"
+#include "update_locator.h"
 
 
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0

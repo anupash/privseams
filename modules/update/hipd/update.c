@@ -67,7 +67,7 @@
 #include "lib/core/solve.h"
 #include "lib/core/modularization.h"
 #include "update_builder.h"
-#include "update_legacy.h"
+#include "update_locator.h"
 #include "update.h"
 
 enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
