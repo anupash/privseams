@@ -81,9 +81,12 @@ int hip_add_signed_echo_response(const uint8_t packet_type,
                                  const uint32_t ha_state,
                                  struct hip_packet_context *ctx);
 
-int hip_sign_and_mac_packet(const uint8_t packet_type,
-                            const uint32_t ha_state,
-                            struct hip_packet_context *ctx);
+int hip_mac_and_sign_packet(struct hip_common *msg,
+                            struct hip_hadb_state *hadb_entry);
+
+int hip_mac_and_sign_handler(const uint8_t packet_type,
+                             const uint32_t ha_state,
+                             struct hip_packet_context *ctx);
 
 int hip_add_unsigned_echo_response(const uint8_t packet_type,
                                    const uint32_t ha_state,

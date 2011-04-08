@@ -287,7 +287,29 @@ int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
 }
 
 /**
- * @brief Adds a signature and hmac to an outbound packet.
+ * Adds a signature and hmac to a HIP packet.
+ *
+ * @param msg packet where the hmac and the signature should be applied to
+ * @param hadb_entry host association state for the current connection
+ * @return zero on success, negative value on error.
+ */
+int hip_mac_and_sign_packet(struct hip_common *msg,
+                            struct hip_hadb_state *hadb_entry)
+{
+    if (hip_build_param_hmac_contents(msg, &hadb_entry->hip_hmac_out)) {
+        HIP_ERROR("Building of HMAC failed\n");
+        return -1;
+    }
+
+    if (hadb_entry->sign(hadb_entry->our_priv_key, msg)) {
+        HIP_ERROR("Could not create signature\n");
+        return -EINVAL;
+    }
+    return 0;
+}
+
+/**
+ * Handle function adding a signature and hmac to an outbound packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
@@ -298,19 +320,13 @@ int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
  *
  * @return zero on success, negative value on error.
  */
-int hip_sign_and_mac_packet(UNUSED const uint8_t packet_type,
-                            UNUSED const uint32_t ha_state,
-                            struct hip_packet_context *ctx)
+int hip_mac_and_sign_handler(UNUSED const uint8_t packet_type,
+                             UNUSED const uint32_t ha_state,
+                             struct hip_packet_context *ctx)
 {
-    if (hip_build_param_hmac_contents(ctx->output_msg,
-                                      &ctx->hadb_entry->hip_hmac_out)) {
-        HIP_ERROR("Building of HMAC failed\n");
+    if (hip_mac_and_sign_packet(ctx->output_msg, ctx->hadb_entry)) {
+        HIP_ERROR("failed to sign and mac outbound packet\n");
         return -1;
-    }
-    if (ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                              ctx->output_msg)) {
-        HIP_ERROR("Could not create signature\n");
-        return -EINVAL;
     }
     return 0;
 }
