@@ -66,3 +66,4 @@ tools/nsupdate.pl
 tools/pisacert
 modules/hipd_modules.h
 version.h
+test/check_lib_tool
