@@ -46,6 +46,7 @@
 #include "config.h"
 
 
+#ifdef HAVE_LIBCONFIG
 static const char *config_file = HIPL_SYSCONFDIR "/esp_prot_config.cfg";
 
 static const char *path_hash_length           = "token_config.hash_length";
@@ -64,7 +65,6 @@ static const char *path_update_threshold     = "sender.update_threshold";
 
 static const char *path_window_size = "verifier.window_size";
 
-#ifdef HAVE_LIBCONFIG
 /**
  * Return an int value of the currently opened config file
  * @param cfg configuration setting to look up
