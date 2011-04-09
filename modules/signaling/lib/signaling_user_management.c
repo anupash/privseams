@@ -704,6 +704,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
@@ -715,6 +716,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
@@ -772,6 +774,11 @@ int userdb_handle_user_signature(struct hip_common *const msg,
         return -1;
     }
     HIP_DEBUG("Verified user's signature.\n");
+
+    if (msg->type_hdr == HIP_I3) {
+        HIP_DEBUG("Not verifying users public key again in I3.\n");
+        return 0;
+    }
 
     /* check if user's public key has already been authenticated */
     if (userdb_user_is_authed(conn_ctx->userdb_entry)) {

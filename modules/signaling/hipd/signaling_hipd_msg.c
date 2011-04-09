@@ -278,6 +278,10 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
         hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
 #endif
 
+    if(signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
+        HIP_DEBUG("User failed to sign packet.\n");
+    }
+
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
                        (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
@@ -879,6 +883,7 @@ out_err:
         HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_I3_HOST_SIGN, PERF_USER_COMM\n");
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
         hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
+        hip_perf_write_benchmark(perf_set, PERF_I3_USER_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_R2);
         hip_perf_write_benchmark(perf_set, PERF_R2x1);
         hip_perf_write_benchmark(perf_set, PERF_R2x2);
@@ -937,19 +942,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not update authentication flags from I3/U3 message \n");
 
     /* Signature validation */
-/* DONT DO THIS in HIPD, this is just for the HIPFW
- * #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I3_VERIFY_HOST_SIG\n");
-    hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
-#endif
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                            ctx->input_msg),
-             -EINVAL,
-             "I3 signature verification failed.\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I3_VERIFY_HOST_SIG\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
-#endif */
+    userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
@@ -1003,6 +996,7 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_R2_I3);
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
         hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_HIPD_I3_FINISH);
         hip_perf_write_benchmark(perf_set, PERF_I3);
         hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);

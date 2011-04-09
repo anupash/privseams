@@ -355,7 +355,9 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_HOST_SIG, "results/PERF_R2_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_SIG, "results/PERF_R2_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_I3_HOST_SIGN, "results/PERF_I3_HOST_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_I3_USER_SIGN, "results/PERF_I3_USER_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_I3_VERIFY_HOST_SIG, "results/PERF_I3_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_I3_VERIFY_USER_SIG, "results/PERF_I3_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_I2_VERIFY_USER_PUBKEY, "results/PERF_I2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_PUBKEY, "results/PERF_R2_VERIFY_USER_PUBKEY.csv");
 

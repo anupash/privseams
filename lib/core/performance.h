@@ -164,7 +164,9 @@ enum perf_sensor {
     PERF_R2_VERIFY_HOST_SIG, // time to verify host signature on R2
     PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2
     PERF_I3_HOST_SIGN,       // time to generate host signature on I3
+    PERF_I3_USER_SIGN,       // time to generate user signature on I3
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
+    PERF_I3_VERIFY_USER_SIG, // time to verify user signature on I3
     PERF_UPDATE_HOST_SIGN,   // time to sign an update packet
     PERF_UPDATE_VERIFY_HOST_SIG, // time to verify user signature on UPDATE
     PERF_CONN_U1_VERIFY_USER_SIG, // time to verify signature on connection UPDATE 2
