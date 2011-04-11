@@ -958,7 +958,7 @@ int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
 
     pub_len = ntohs(dhpv->pub_len);
     HIP_IFEL(!(public_value = malloc(pub_len)),
-             -1,
+             -ENOMEM,
              "Failed to allocate memory for public value\n");
     HIP_IFEL((pub_len = hip_insert_dh(public_value,
                                       pub_len,
