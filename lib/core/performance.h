@@ -176,6 +176,8 @@ enum perf_sensor {
     PERF_CONN_U2_USER_SIGN, // time to generate host signature on UPDATE 2
     PERF_CONN_U2_HOST_SIGN, // time to generate host signature on UPDATE 2
     PERF_CONN_U3_HOST_SIGN, // time to generate host signature on UPDATE 3
+    PERF_CONN_U3_USER_SIGN, // time to generate iuser signature on UPDATE 3
+    PERF_CONN_U3_VERIFY_USER_SIG, // time to verify signature on connection UPDATE 3
     PERF_NOTIFY_VERIFY_HOST_SIG, // time to verify signature on NOTIFY
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign

@@ -708,6 +708,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
 #endif
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
                      -1, "ECDSA user signature did not verify correctly\n");
@@ -720,6 +721,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
 #endif
         break;
     case EVP_PKEY_RSA:

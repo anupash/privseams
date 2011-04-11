@@ -209,6 +209,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha,
     HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN\n");
     hip_perf_start_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
     hip_perf_start_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
 #endif
     /* Add user authentication */
     if(signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
@@ -218,6 +219,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha,
     HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
 #endif
 
     return msg_buf;
@@ -1236,10 +1238,6 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(signaling_handle_incoming_i3(packet_type, ha_state, ctx),
                  -1, "Could not process third bex update \n");
         break;
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_CONN_U3\n");
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U3);
-#endif
 
     case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:
         HIP_DEBUG("Received certificate Update... \n");
@@ -1270,10 +1268,12 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_DEBUG("Write PERF_CONN_U2_VERIFY_USER_SIG, PERF_CONN_U3_HOST_SIGN, PERF_CONN_U2\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     case SIGNALING_THIRD_BEX_UPDATE:
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     }
