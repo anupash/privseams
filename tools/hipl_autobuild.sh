@@ -20,13 +20,16 @@
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
 # - /opt/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
 #
+# A typical crontab entry for the autobuilder looks the following way:
+# m   h dom mon dow    command
+# 30  *  *   *   *     bzr up -q $HOME/src/hipl/trunk && \
+#                      sh -l $HOME/src/hipl/trunk/tools/hipl_autobuild.sh trunk
+#
 # TODO      Shortly describe the different stages (as in check-out, compare, ...)
 #           of the autobuilder, especially when/why the autobuilder uses which
 #           directory.
 # RATIONALE I was not sure where the VERSION info added by Miika should have been
 #           extracted from in the first place.
-# TODO      What should cron-jobs typically look like and why?
-#           - Rene (26.05.2010)
 #
 # Copyright (c) 2010 Aalto University and RWTH Aachen University.
 #
