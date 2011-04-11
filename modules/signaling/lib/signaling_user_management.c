@@ -706,6 +706,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
@@ -719,6 +720,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);

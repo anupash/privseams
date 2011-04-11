@@ -412,6 +412,9 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
         }
     }
 
+    /* Try to auth the user and set flags accordingly */
+    userdb_handle_user_signature(common, existing_conn, IN);
+
     /* Check if we're done with this connection or if we have to wait for addition authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
         HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
