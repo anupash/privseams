@@ -294,7 +294,7 @@ int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
  * @return zero on success, negative value on error.
  */
 int hip_mac_and_sign_packet(struct hip_common *msg,
-                            struct hip_hadb_state *hadb_entry)
+                            const struct hip_hadb_state *const hadb_entry)
 {
     if (hip_build_param_hmac_contents(msg, &hadb_entry->hip_hmac_out)) {
         HIP_ERROR("Building of HMAC failed\n");
