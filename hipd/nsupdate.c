@@ -119,7 +119,9 @@ static char *make_env(const char *const name, const char *const value)
         return NULL;
     }
 
-    strcat(result, name);
+    /* strcpy first part of result as strcat relies on null-termination to append
+     * a string and this is not guaranteed on memory provided by malloc */
+    strcpy(result, name);
     strcat(result, "=");
     strcat(result, value);
 
