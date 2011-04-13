@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <netinet/in.h>
 
+#include "lib/core/hashtable.h"
 #include "lib/core/protodefs.h"
 
 /* the different mobility message types */
@@ -51,6 +52,29 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
 enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
+
+struct update_state {
+    /** A kludge to get the UPDATE retransmission to work.
+     *  @todo Remove this kludge. */
+    int update_state;
+
+    /** This "linked list" includes the locators we recieved in the initial
+     * UPDATE packet. Locators are stored as "struct in6_addr *"s.
+     *
+     * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+     * addresses.
+     *
+     * Notice that there's a hack that a hash table is used as a linked list
+     * here but this is common allover HIPL and it doesn't seem to cause
+     * performance problems.
+     */
+    HIP_HASHTABLE *addresses_to_send_echo_request;
+
+    /** Stored outgoing UPDATE ID counter. */
+    uint32_t update_id_out;
+    /** Stored incoming UPDATE ID counter. */
+    uint32_t update_id_in;
+};
 
 struct hip_locator {
     hip_tlv     type;
