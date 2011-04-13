@@ -108,6 +108,8 @@ int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 struct hip_locator_info_addr_item *locators,
                                 int type);
 
+enum update_types hip_classify_update_type(const struct hip_common *const hip_msg);
+
 int hip_update_init(void);
 
 #endif /* HIP_MODULES_HIPD_UPDATE_H */

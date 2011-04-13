@@ -785,35 +785,6 @@ out_err:
 }
 
 /**
- * Classifies an UPDATE packet by means of contained parameters.
- *
- * @param esp_info      esp_info parameter of currently received packet
- * @param locator       locator parameter of currently received packet
- * @param seq           sequence parameter of currently received packet
- * @param ack           acknowledgement parameter of currently received packet
- * @param echo_request  echo_request parameter of currently received packet
- * @param echo_response echo_response parameter of currently received packet
- * @return member of enum update_types
- */
-static enum update_types hip_classify_update_type(const struct hip_esp_info *esp_info,
-                                                  const struct hip_locator *locator,
-                                                  const struct hip_seq *seq,
-                                                  const struct hip_ack *ack,
-                                                  const struct hip_echo_request *echo_request,
-                                                  const struct hip_echo_response *echo_response)
-{
-    if (esp_info && locator && seq) {
-        return FIRST_PACKET;
-    } else if (esp_info && seq && ack && echo_request) {
-        return SECOND_PACKET;
-    } else if (ack && echo_response) {
-        return THIRD_PACKET;
-    } else {
-        return UNKNOWN_PACKET;
-    }
-}
-
-/**
  * process the first UPDATE packet (i.e. with a LOCATOR parameter)
  *
  * @param ctx           the packet context
@@ -822,13 +793,17 @@ static enum update_types hip_classify_update_type(const struct hip_esp_info *esp
  * @param seq           sequence parameter of currently received packet
  * @return zero on success or negative on failure
  */
-static int hip_handle_first_update_packet(struct hip_packet_context *ctx,
-                                          const struct hip_esp_info *esp_info,
-                                          struct hip_locator *locator,
-                                          const struct hip_seq *seq)
+static int hip_handle_first_update_packet(struct hip_packet_context *const ctx)
 {
-    struct update_state *localstate = NULL;
-    int                  err        = 0;
+    const struct hip_esp_info *esp_info   = NULL;
+    struct hip_locator        *locator    = NULL;
+    const struct hip_seq      *seq        = NULL;
+    struct update_state       *localstate = NULL;
+    int                        err        = 0;
+
+    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
+    locator  = hip_get_param_readwrite(ctx->input_msg, HIP_PARAM_LOCATOR);
+    seq      = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
 
     HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
                                                 "update")),
@@ -870,12 +845,15 @@ out_err:
  * @param seq           sequence parameter of currently received packet
  * @return zero on success or negative on failure
  */
-static int hip_handle_second_update_packet(struct hip_packet_context *ctx,
-                                           const struct hip_esp_info *esp_info,
-                                           const struct hip_seq *seq)
+static int hip_handle_second_update_packet(struct hip_packet_context *const ctx)
 {
-    struct update_state *localstate = NULL;
-    int                  err        = 0;
+    const struct hip_esp_info *esp_info   = NULL;
+    const struct hip_seq      *seq        = NULL;
+    struct update_state       *localstate = NULL;
+    int                        err        = 0;
+
+    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
+    seq      = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
 
     HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
                                                 "update")),
@@ -1141,24 +1119,8 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
                                     UNUSED const uint32_t ha_state,
                                     struct hip_packet_context *ctx)
 {
-    const struct hip_esp_info      *esp_info      = NULL;
-    struct hip_locator             *locator       = NULL;
-    const struct hip_seq           *seq           = NULL;
-    const struct hip_ack           *ack           = NULL;
-    const struct hip_echo_request  *echo_request  = NULL;
-    const struct hip_echo_response *echo_response = NULL;
-    enum update_types               update_type   = UNKNOWN_PACKET;
-    int                             err           = 0;
-
-    /* RFC 5206: End-Host Mobility and Multihoming.
-     * Mandatory parameters from 3.2.1. Mobility with a Single SA Pair
-     * (No Rekeying) */
-    esp_info      = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
-    locator       = hip_get_param_readwrite(ctx->input_msg, HIP_PARAM_LOCATOR);
-    seq           = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
-    ack           = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
-    echo_request  = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-    echo_response = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
+    enum update_types update_type = UNKNOWN_PACKET;
+    int               err         = 0;
 
     /* set local UDP port just in case the original communications
      * changed from raw to UDP or vice versa */
@@ -1166,23 +1128,13 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
     /* @todo: a workaround for bug id 592200 */
     ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
 
-    update_type = hip_classify_update_type(esp_info,
-                                           locator,
-                                           seq,
-                                           ack,
-                                           echo_request,
-                                           echo_response);
+    update_type = hip_classify_update_type(ctx->input_msg);
     switch (update_type) {
     case FIRST_PACKET:
-        err = hip_handle_first_update_packet(ctx,
-                                             esp_info,
-                                             locator,
-                                             seq);
+        err = hip_handle_first_update_packet(ctx);
         break;
     case SECOND_PACKET:
-        err = hip_handle_second_update_packet(ctx,
-                                              esp_info,
-                                              seq);
+        err = hip_handle_second_update_packet(ctx);
         break;
     case THIRD_PACKET:
         hip_handle_third_update_packet(ctx);
@@ -1233,6 +1185,47 @@ static int hip_update_change_state(UNUSED const uint8_t packet_type,
 #endif
 
     return err;
+}
+
+/**
+ * Classifies an UPDATE packet by means of contained parameters.
+ *
+ * @param esp_info      esp_info parameter of currently received packet
+ * @param locator       locator parameter of currently received packet
+ * @param seq           sequence parameter of currently received packet
+ * @param ack           acknowledgement parameter of currently received packet
+ * @param echo_request  echo_request parameter of currently received packet
+ * @param echo_response echo_response parameter of currently received packet
+ * @return member of enum update_types
+ */
+enum update_types hip_classify_update_type(const struct hip_common *const hip_msg)
+{
+    const struct hip_esp_info      *esp_info      = NULL;
+    const struct hip_locator       *locator       = NULL;
+    const struct hip_seq           *seq           = NULL;
+    const struct hip_ack           *ack           = NULL;
+    const struct hip_echo_request  *echo_request  = NULL;
+    const struct hip_echo_response *echo_response = NULL;
+
+    /* RFC 5206: End-Host Mobility and Multihoming.
+     * Mandatory parameters from 3.2.1. Mobility with a Single SA Pair
+     * (No Rekeying) */
+    esp_info      = hip_get_param(hip_msg, HIP_PARAM_ESP_INFO);
+    locator       = hip_get_param(hip_msg, HIP_PARAM_LOCATOR);
+    seq           = hip_get_param(hip_msg, HIP_PARAM_SEQ);
+    ack           = hip_get_param(hip_msg, HIP_PARAM_ACK);
+    echo_request  = hip_get_param(hip_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    echo_response = hip_get_param(hip_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
+
+    if (esp_info && locator && seq) {
+        return FIRST_PACKET;
+    } else if (esp_info && seq && ack && echo_request) {
+        return SECOND_PACKET;
+    } else if (ack && echo_response) {
+        return THIRD_PACKET;
+    } else {
+        return UNKNOWN_PACKET;
+    }
 }
 
 /**
