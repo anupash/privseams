@@ -530,10 +530,7 @@ out_err:
 /**
  * process the first UPDATE packet (i.e. with a LOCATOR parameter)
  *
- * @param ctx           the packet context
- * @param esp_info      esp_info parameter of currently received packet
- * @param locator       locator parameter of currently received packet
- * @param seq           sequence parameter of currently received packet
+ * @param ctx the packet context
  * @return zero on success or negative on failure
  */
 static int hip_handle_first_update_packet(struct hip_packet_context *const ctx)
@@ -584,8 +581,6 @@ out_err:
  * process the second UPDATE packet (i.e. with echo request)
  *
  * @param ctx           the packet context
- * @param esp_info      esp_info parameter of currently received packet
- * @param seq           sequence parameter of currently received packet
  * @return zero on success or negative on failure
  */
 static int hip_handle_second_update_packet(struct hip_packet_context *const ctx)
@@ -933,12 +928,7 @@ static int hip_update_change_state(UNUSED const uint8_t packet_type,
 /**
  * Classifies an UPDATE packet by means of contained parameters.
  *
- * @param esp_info      esp_info parameter of currently received packet
- * @param locator       locator parameter of currently received packet
- * @param seq           sequence parameter of currently received packet
- * @param ack           acknowledgement parameter of currently received packet
- * @param echo_request  echo_request parameter of currently received packet
- * @param echo_response echo_response parameter of currently received packet
+ * @param hip_msg   the received packet
  * @return member of enum update_types
  */
 enum update_types hip_classify_update_type(const struct hip_common *const hip_msg)
