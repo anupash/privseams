@@ -235,6 +235,7 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
     hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_write_benchmark(perf_set, PERF_HASH);
 #endif
 
 out_err:

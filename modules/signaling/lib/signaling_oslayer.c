@@ -80,7 +80,7 @@ static int hash_file(const char *in_file, unsigned char *digest_buffer)
     SHA_CTX context;
     int fd;
     int i;
-    unsigned char read_buffer[1024];
+    unsigned char read_buffer[500000];
     FILE *f;
     int err = 0;
 
@@ -89,40 +89,44 @@ static int hash_file(const char *in_file, unsigned char *digest_buffer)
 
     HIP_DEBUG("Hashing file: %s. \n", in_file);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HASH\n");   // test 1.1.2
+    hip_perf_start_benchmark(perf_set, PERF_HASH);
+#endif
     f = fopen(in_file,"r");
     fd=fileno(f);
     SHA1_Init(&context);
     for (;;) {
-        i = read(fd,read_buffer,1024);
+        i = read(fd,read_buffer,500000);
         if(i <= 0)
             break;
         SHA1_Update(&context,read_buffer,(unsigned long)i);
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_HASH\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HASH);
+#endif
     SHA1_Final(digest_buffer,&context);
     fclose(f);
+
 
 out_err:
     return err;
 }
 
-static int verify_application_hash(const char *file, X509AC *ac)
+static int verify_application_hash(X509AC *ac, unsigned char *md)
 {
     int err = 0;
     int res = 0;
-    unsigned char md[SHA_DIGEST_LENGTH];
     ASN1_BIT_STRING *hash;
 
-    HIP_IFEL(!file, -1, "No path to application given.");
+    HIP_IFEL(!md, -1, "No hash of application given.");
     HIP_IFEL(!ac, -1, "No attribute certificate given.");
 
     // Check if hash is present in certificate
     HIP_IFEL(ac->info->holder->objectDigestInfo == NULL,
             -1, "Hash could not be found in attribute certificate.");
 
-    // Get the hash of file into a ASN1 Bitstring
-    // TODO: We need to choose the hash algorithm equal to the one in the certificate?
-    HIP_IFEL(0 > hash_file(file, md),
-            -1, "Could not compute hash of binary.\n");
     hash = ASN1_BIT_STRING_new();
     ASN1_BIT_STRING_set(hash,md,SHA_DIGEST_LENGTH);
 
@@ -135,7 +139,7 @@ static int verify_application_hash(const char *file, X509AC *ac)
         HIP_HEXDUMP("\thash of app:\t", hash->data, hash->length);
         err = -1;
     } else {
-        HIP_DEBUG("Hash of file %s matches the one in the certificate.\n", file);
+        HIP_DEBUG("Hash of application matches the one in the certificate.\n");
     }
 
 out_err:
@@ -282,6 +286,7 @@ int signaling_verify_application(const char *app_path)
     /* Look if it has been verified before. */
     HIP_IFEL(0 > hash_file(app_path, md),
              -1, "Could not compute hash of binary.\n");
+
     while (verified_app) {
         if (!memcmp(md, verified_app->data, SHA_DIGEST_LENGTH)) {
             HIP_DEBUG("Application has recently been verified and is unchanged, skipping certificate chain verification. \n");
@@ -297,9 +302,8 @@ int signaling_verify_application(const char *app_path)
     HIP_DEBUG("Found chain of size %d \n", sk_X509_num(untrusted_chain));
     //HIP_DEBUG("Application certificate: \n");
     //X509AC_print(app_cert);
-
     /* Before we do any verifying, check that hashes match */
-    HIP_IFEL(0 > verify_application_hash(app_path, app_cert),
+    HIP_IFEL(0 > verify_application_hash(app_cert, md),
              -1, "Hash of application doesn't match hash in certificate.\n");
 
     /* Now verify the chain */
@@ -352,11 +356,10 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     ctx->user.uid = sys_ctx.uid;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_NETSTAT_LOOKUP\n");
-    hip_perf_stop_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
-
     HIP_DEBUG("Start PERF_VERIFY_APPLICATION\n");   // test 1.1.2
     hip_perf_start_benchmark(perf_set, PERF_VERIFY_APPLICATION);
+    HIP_DEBUG("Stop PERF_NETSTAT_LOOKUP\n");
+    hip_perf_stop_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
 #endif
 
     HIP_IFEL(signaling_verify_application(sys_ctx.path),

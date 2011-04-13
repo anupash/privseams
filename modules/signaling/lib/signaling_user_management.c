@@ -658,7 +658,10 @@ int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key)
         return SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED;
     }
 
-    return verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
+    // We need only check that there is a matching chain, verification has been done earlier
+    return 0;
+
+    //return verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
 
 out_err:
     return err;
