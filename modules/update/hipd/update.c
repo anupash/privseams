@@ -70,7 +70,6 @@
 #include "update_locator.h"
 #include "update.h"
 
-enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
 
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.

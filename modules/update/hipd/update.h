@@ -50,6 +50,7 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
+enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
 
 struct hip_locator {
     hip_tlv     type;
