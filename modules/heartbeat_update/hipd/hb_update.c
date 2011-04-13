@@ -50,6 +50,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/protodefs.h"
 #include "modules/update/hipd/update.h"
+#include "modules/update/hipd/update_locator.h"
 #include "hb_update.h"
 
 static const int hip_heartbeat_trigger_update_threshold = 5;

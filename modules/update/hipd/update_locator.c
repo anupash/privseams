@@ -110,6 +110,115 @@ out_err:
 }
 
 /**
+ * build locators in an UPDATE message
+ *
+ * @param locator_msg the message where the LOCATOR should be appended
+ * @param locators an extra pointer that will point to the LOCATOR
+ * @return zero on success or negative on failure
+ */
+int hip_create_locators(struct hip_common *locator_msg,
+                        struct hip_locator_info_addr_item **locators)
+{
+    int                 err = 0;
+    struct hip_locator *loc = NULL;
+
+    hip_msg_init(locator_msg);
+    HIP_IFEL(hip_build_user_hdr(locator_msg,
+                                HIP_MSG_SET_LOCATOR_ON, 0), -1,
+             "Failed to add user header\n");
+    HIP_IFEL(hip_build_locators_old(locator_msg),
+             -1,
+             "Failed to build locators\n");
+    loc = hip_get_param_readwrite(locator_msg, HIP_PARAM_LOCATOR);
+    hip_print_locator_addresses(locator_msg);
+    *locators = (struct hip_locator_info_addr_item *) (loc + 1);
+
+out_err:
+    return err;
+}
+
+/**
+ * Retrieve a locator address item from a list.
+ *
+ * @param item_list a pointer to the first item in the list
+ * @param idx       the index of the item in the list
+ * @return          the locator addres item
+ */
+union hip_locator_info_addr *hip_get_locator_item(void *item_list,
+                                                  int idx)
+{
+    int                                i = 0;
+    struct hip_locator_info_addr_item *temp;
+    char                              *result;
+    result = item_list;
+
+
+    for (i = 0; i <= idx - 1; i++) {
+        temp = (struct hip_locator_info_addr_item *) result;
+        if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
+            temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+            result += sizeof(struct hip_locator_info_addr_item);
+        } else {
+            result += sizeof(struct hip_locator_info_addr_item2);
+        }
+    }
+    return (union hip_locator_info_addr *) result;
+}
+
+/**
+ * retrieve a IP address from a locator item structure
+ *
+ * @param item      a pointer to the item
+ * @return a pointer to the IP address
+ */
+struct in6_addr *hip_get_locator_item_address(void *item)
+{
+    struct hip_locator_info_addr_item *temp;
+
+
+    temp = item;
+    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+        return &temp->address;
+    } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+        return &temp->address;
+    } else {
+        return &((struct hip_locator_info_addr_item2 *) temp)->address;
+    }
+}
+
+/**
+ * Retrieve the number of locators inside a LOCATOR parameter.
+ * Type 1 and 2 parameters are supported.
+ *
+ * @param locator a LOCATOR parameter
+ * @return the number of locators
+ */
+int hip_get_locator_addr_item_count(const struct hip_locator *locator)
+{
+    const char *address_pointer = (const char *) (locator + 1);
+    int         loc_count       = 0;
+    uint8_t     type;
+
+    while (address_pointer <
+           ((const char *) locator) + hip_get_param_contents_len(locator)) {
+        type = ((const struct hip_locator_info_addr_item *)
+                address_pointer)->locator_type;
+
+        if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item2);
+            loc_count       += 1;
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI
+                   || type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+            loc_count       += 1;
+        } else {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+        }
+    }
+    return loc_count;
+}
+
+/**
  * This function stores the LOCATOR parameter into the hadb entry
  * of a connection in question. The whole LOCATOR is stored and
  * handled later as the LOCATOR is received before the connection

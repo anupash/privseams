@@ -31,6 +31,16 @@
 
 int hip_build_locators_old(struct hip_common *msg);
 
+int hip_create_locators(struct hip_common *locator_msg,
+                        struct hip_locator_info_addr_item **locators);
+
+union hip_locator_info_addr *hip_get_locator_item(void *item_list,
+                                                  int idx);
+
+struct in6_addr *hip_get_locator_item_address(void *item);
+
+int hip_get_locator_addr_item_count(const struct hip_locator *locator);
+
 int handle_locator(const struct hip_locator *locator,
                    struct hip_hadb_state *entry);
 

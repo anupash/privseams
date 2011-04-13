@@ -96,10 +96,6 @@ union hip_locator_info_addr {
     struct hip_locator_info_addr_item2 type2;
 } __attribute__ ((packed));
 
-int hip_get_locator_addr_item_count(const struct hip_locator *locator);
-
-int hip_create_locators(struct hip_common *locator_msg,
-                        struct hip_locator_info_addr_item **locators);
 
 int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 struct hip_hadb_state *ha,
