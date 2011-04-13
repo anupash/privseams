@@ -27,7 +27,11 @@
 #define HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H
 
 #include "lib/core/protodefs.h"
+#include "update.h"
 
 int hip_build_locators_old(struct hip_common *msg);
+
+int handle_locator(const struct hip_locator *locator,
+                   struct hip_hadb_state *entry);
 
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H */
