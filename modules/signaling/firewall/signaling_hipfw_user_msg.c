@@ -35,7 +35,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
                                  const struct signaling_port_pair *const ports)
 {
     int i = 0;
-    char buf[200];
+    char buf[400];
     char src_hit[41];
     char dst_hit[41];
 
@@ -51,11 +51,12 @@ static void insert_iptables_rule(const struct in6_addr *const s,
     hip_perf_start_benchmark(perf_set, PERF_IP6TABLES);
 #endif
     while(i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
-        sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT",
-                src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
-        system_print(buf);
-        sprintf(buf, "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
-                src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
+        sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT &&"
+                     "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
+                src_hit, dst_hit, ports[i].src_port, ports[i].dst_port, src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
+        //system_print(buf);
+        //sprintf(buf, "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
+        //        src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
         system_print(buf);
         i++;
     }
