@@ -41,7 +41,4 @@ struct in6_addr *hip_get_locator_item_address(void *item);
 
 int hip_get_locator_addr_item_count(const struct hip_locator *locator);
 
-int handle_locator(const struct hip_locator *locator,
-                   struct hip_hadb_state *entry);
-
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H */

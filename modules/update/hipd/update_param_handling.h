@@ -41,4 +41,8 @@ int hip_handle_locator_parameter(struct hip_hadb_state *ha,
                                  const struct in6_addr *src_addr,
                                  struct hip_locator *locator);
 
+int hip_handle_locator(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+
 #endif /* MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H */

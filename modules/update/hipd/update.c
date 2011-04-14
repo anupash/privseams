@@ -975,6 +975,23 @@ int hip_update_init(void)
              -1,
              "Error on registering update state init function.\n");
 
+    HIP_IFEL(hip_register_handle_function(HIP_R1,
+                                          HIP_STATE_I1_SENT,
+                                          &hip_handle_locator, 31500),
+             -1, "Error on registering LOCATOR handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1,
+                                          HIP_STATE_I2_SENT,
+                                          &hip_handle_locator, 31500),
+             -1, "Error on registering LOCATOR handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1,
+                                          HIP_STATE_CLOSING,
+                                          &hip_handle_locator, 31500),
+             -1, "Error on registering LOCATOR handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1,
+                                          HIP_STATE_CLOSED,
+                                          &hip_handle_locator, 31500),
+             -1, "Error on registering LOCATOR handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
                                           &hip_check_update_freshness,

@@ -217,32 +217,3 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
     }
     return loc_count;
 }
-
-/**
- * This function stores the LOCATOR parameter into the hadb entry
- * of a connection in question. The whole LOCATOR is stored and
- * handled later as the LOCATOR is received before the connection
- * state has reached ESTABLISHED (UPDATEs are not allowed before
- * the state is ESTABLISHED) and the address verification is
- * handled later during the BEX (after receiving the R2).
- *
- * @param locator The received LOCATOR parameter.
- * @param entry Hadb entry where the LOCATOR is stored.
- *
- * @return Zero on success, non-zero else.
- */
-int handle_locator(const struct hip_locator *locator,
-                   struct hip_hadb_state *entry)
-{
-    int n_addrs = 0, loc_size = 0, err = 0;
-
-    n_addrs  = hip_get_locator_addr_item_count(locator);
-    loc_size = sizeof(struct hip_locator) +
-               (n_addrs * sizeof(struct hip_locator_info_addr_item));
-    HIP_IFEL(!(entry->locator = malloc(loc_size)),
-             -1, "Malloc for entry->locators failed\n");
-    memcpy(entry->locator, locator, loc_size);
-
-out_err:
-    return err;
-}

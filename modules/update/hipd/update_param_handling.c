@@ -31,6 +31,8 @@
  * @author  Rene Hummen
  */
 
+#include <string.h>
+
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
@@ -149,6 +151,46 @@ int hip_handle_locator_parameter(struct hip_hadb_state *ha,
     }
 
     hip_print_addresses_to_send_update_request(ha);
+
+out_err:
+    return err;
+}
+
+/**
+ * This function stores the LOCATOR parameter into the hadb entry
+ * of a connection in question. The whole LOCATOR is stored and
+ * handled later as the LOCATOR is received before the connection
+ * state has reached ESTABLISHED (UPDATEs are not allowed before
+ * the state is ESTABLISHED) and the address verification is
+ * handled later during the BEX (after receiving the R2).
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
+ *
+ * @return zero on success, or negative error value on error.
+ */
+int hip_handle_locator(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
+    const struct hip_locator *locator = NULL;
+    int                       n_addrs = 0, loc_size = 0, err = 0;
+
+    locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    if (locator) {
+        n_addrs  = hip_get_locator_addr_item_count(locator);
+        loc_size = sizeof(struct hip_locator) +
+                   (n_addrs * sizeof(struct hip_locator_info_addr_item));
+        HIP_IFEL(!(ctx->hadb_entry->locator = malloc(loc_size)),
+                 -1, "Malloc for entry->locators failed\n");
+        memcpy(ctx->hadb_entry->locator, locator, loc_size);
+    } else {
+        HIP_DEBUG("R1 did not have locator\n");
+    }
 
 out_err:
     return err;

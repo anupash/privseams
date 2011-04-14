@@ -69,7 +69,6 @@
 #include "lib/core/state.h"
 #include "lib/core/transform.h"
 #include "lib/tool/xfrmapi.h"
-#include "modules/update/hipd/update_locator.h"
 #include "config.h"
 #include "cookie.h"
 #include "dh.h"
@@ -793,9 +792,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                          err     = 0, retransmission = 0;
-    const struct hip_r1_counter *r1cntr  = NULL;
-    const struct hip_locator    *locator = NULL;
+    int                          err    = 0, retransmission = 0;
+    const struct hip_r1_counter *r1cntr = NULL;
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -811,15 +809,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     if (ctx->msg_ports.dst_port   != 0 &&
         ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
         ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
-    }
-
-    /***** LOCATOR PARAMETER ******/
-    locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
-    if (locator) {
-        err = handle_locator(locator,
-                             ctx->hadb_entry);
-    } else {
-        HIP_DEBUG("R1 did not have locator\n");
     }
 
     /* R1 generation check */
