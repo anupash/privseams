@@ -64,6 +64,7 @@
 #include "lib/core/hostid.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/ife.h"
+#include "lib/core/modularization.h"
 #include "lib/tool/nlink.h"
 #include "lib/core/performance.h"
 #include "lib/core/straddr.h"
