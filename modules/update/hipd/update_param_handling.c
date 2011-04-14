@@ -185,6 +185,11 @@ int hip_handle_locator(UNUSED const uint8_t packet_type,
         n_addrs  = hip_get_locator_addr_item_count(locator);
         loc_size = sizeof(struct hip_locator) +
                    (n_addrs * sizeof(struct hip_locator_info_addr_item));
+
+        /* this handle function is called during BEX, there should be no
+         * locators yet. */
+        HIP_ASSERT(!ctx->hadb_entry->locator);
+
         HIP_IFEL(!(ctx->hadb_entry->locator = malloc(loc_size)),
                  -1, "Malloc for entry->locators failed\n");
         memcpy(ctx->hadb_entry->locator, locator, loc_size);
