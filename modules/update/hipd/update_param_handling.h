@@ -31,8 +31,8 @@
  * @author  Rene Hummen
  */
 
-#ifndef MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H
-#define MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H
 
 #include "lib/core/protodefs.h"
 #include "update.h"
@@ -45,4 +45,4 @@ int hip_handle_locator(const uint8_t packet_type,
                        const uint32_t ha_state,
                        struct hip_packet_context *ctx);
 
-#endif /* MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_PARAM_HANDLING_H */

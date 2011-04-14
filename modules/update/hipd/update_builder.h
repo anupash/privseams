@@ -32,8 +32,8 @@
  * @author Rene Hummen
  */
 
-#ifndef MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
-#define MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
 
 #include <stdint.h>
 
@@ -46,4 +46,4 @@ int hip_build_param_locator(struct hip_common *msg,
                             struct hip_locator_info_addr_item *addrs,
                             int addr_count);
 
-#endif /* MODULES_UPDATE_HIPD_UPDATE_BUILDER_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H */

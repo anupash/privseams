@@ -30,8 +30,8 @@
  * @date    3.5.2009
  */
 
-#ifndef HIP_MODULES_HIPD_UPDATE_H
-#define HIP_MODULES_HIPD_UPDATE_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_H
 
 #include <stdint.h>
 #include <netinet/in.h>
@@ -133,4 +133,4 @@ enum update_types hip_classify_update_type(const struct hip_common *const hip_ms
 
 int hip_update_init(void);
 
-#endif /* HIP_MODULES_HIPD_UPDATE_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */
