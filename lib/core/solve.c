@@ -38,7 +38,6 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "ife.h"
 #include "prefix.h"
 #include "protodefs.h"
 #include "solve.h"
@@ -65,7 +64,6 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
     uint64_t maxtries = 0;
     uint64_t digest   = 0;
     uint8_t  cookie[48];
-    int      err = 0;
     const union {
         struct hip_puzzle   pz;
         struct hip_solution sl;
@@ -78,9 +76,11 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
     /* pre-create cookie */
     u = puzzle_or_solution;
 
-    HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0,
-             "Cookie K %u is higher than we are willing to calculate"
-             " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
+    if (u->pz.K > HIP_PUZZLE_MAX_K) {
+        HIP_ERROR("Cookie K %u is higher than we are willing to calculate"
+                  " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
+        return 0;
+    }
 
     mask = hton64((1ULL << u->pz.K) - 1);
     memcpy(cookie, &u->pz.I, sizeof(uint64_t));
@@ -98,7 +98,8 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
         maxtries = 1ULL << (u->pz.K + 3);
         get_random_bytes(&randval, sizeof(uint64_t));
     } else {
-        HIP_OUT_ERR(0, "Unknown mode: %d\n", mode);
+        HIP_ERROR("Unknown mode: %d\n", mode);
+        return 0;
     }
 
     HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
@@ -136,13 +137,16 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
         }
 
         /* It seems like the puzzle was not correctly solved */
-        HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
+        if (mode == HIP_VERIFY_PUZZLE) {
+            HIP_ERROR("Puzzle incorrect\n");
+            return 0;
+        }
         randval++;
     }
 
     HIP_ERROR("Could not solve the puzzle, no solution found\n");
-out_err:
-    return err;
+
+    return 0;
 }
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -163,7 +167,6 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
     const struct hip_challenge_request *pz;
     struct hip_puzzle                   tmp;
     uint64_t                            solution;
-    int                                 err = 0;
     uint8_t                             digist[HIP_AH_SHA_LEN];
 
     pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
@@ -172,8 +175,10 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
             break;
         }
 
-        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0,
-                 -1, "Building of SHA1 Random seed I failed\n");
+        if (hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0) {
+            HIP_ERROR("Building of SHA1 Random seed I failed\n");
+            return -1;
+        }
         tmp.type      = pz->type;
         tmp.length    = pz->length;
         tmp.K         = pz->K;
@@ -181,19 +186,20 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
         tmp.opaque[0] = tmp.opaque[1] = 0;
         tmp.I         = *digist & 0x40; //truncate I to 8 byte length
 
-        HIP_IFEL((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0,
-                 -EINVAL,
-                 "Solving of puzzle failed\n");
+        if ((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0) {
+            HIP_ERROR("Solving of puzzle failed\n");
+            return -EINVAL;
+        }
 
-        HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0,
-                 -1,
-                 "Error while creating solution_m reply parameter\n");
+        if (hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0) {
+            HIP_ERROR("Error while creating solution_m reply parameter\n");
+            return -1;
+        }
         pz = (const struct hip_challenge_request *)
              hip_get_next_param(in, (const struct hip_tlv_common *) pz);
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 #endif /* CONFIG_HIP_MIDAUTH */
