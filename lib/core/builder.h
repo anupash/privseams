@@ -126,11 +126,11 @@ int hip_build_param_cert(struct hip_common *,
                          uint8_t,
                          void *,
                          size_t);
-int hip_build_param_puzzle(struct hip_common *,
-                           uint8_t,
-                           uint8_t,
-                           uint32_t,
-                           uint64_t);
+int hip_build_param_puzzle(struct hip_common *const msg,
+                           const uint8_t val_K,
+                           const uint8_t lifetime,
+                           const uint32_t opaque,
+                           const uint8_t *const random_i);
 
 int hip_build_param_challenge_request(struct hip_common *,
                                       uint8_t,
@@ -150,7 +150,7 @@ int hip_build_param_signature_contents(struct hip_common *,
                                        uint8_t);
 int hip_build_param_solution(struct hip_common *,
                              const struct hip_puzzle *,
-                             uint64_t);
+                             uint8_t *const);
 
 int hip_build_param_challenge_response(struct hip_common *,
                                        const struct hip_challenge_request *,

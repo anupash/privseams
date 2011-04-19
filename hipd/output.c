@@ -652,8 +652,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /********** R1_COUNTER (OPTIONAL) *********/
 
     /********** PUZZLE ************/
+    const uint8_t zero_i[PUZZLE_LENGTH] = { 0 };
+
     HIP_IFEL(hip_build_param_puzzle(err, cookie_k,
-                                    42 /* 2^(42-32) sec lifetime */, 0, 0),
+                                    42 /* 2^(42-32) sec lifetime */, 0, zero_i),
              NULL, "Cookies were burned. Bummer!\n");
 
     /* Parameter Diffie-Hellman */
@@ -718,7 +720,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Fill puzzle parameters */
     {
         struct hip_puzzle *pz;
-        uint64_t           random_i;
 
         HIP_IFEL(!(pz = hip_get_param_readwrite(err, HIP_PARAM_PUZZLE)), NULL,
                  "Internal error\n");
@@ -727,9 +728,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         pz->opaque[0] = 'H';
         pz->opaque[1] = 'I';
         //pz->opaque[2] = 'P';
-        /** @todo Remove random_i variable. */
-        get_random_bytes(&random_i, sizeof(random_i));
-        pz->I = random_i;
+        get_random_bytes(pz->I, PUZZLE_LENGTH);
     }
 
     /* Packet ready */

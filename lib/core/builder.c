@@ -2384,8 +2384,11 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
-                           uint8_t lifetime, uint32_t opaque, uint64_t random_i)
+int hip_build_param_puzzle(struct hip_common *const msg,
+                           const uint8_t val_K,
+                           const uint8_t lifetime,
+                           const uint32_t opaque,
+                           const uint8_t random_i[PUZZLE_LENGTH])
 {
     struct hip_puzzle puzzle;
     int               err = 0;
@@ -2402,7 +2405,7 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
     puzzle.lifetime  = lifetime;
     puzzle.opaque[0] = opaque & 0xFF;
     puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
-    puzzle.I         = random_i;
+    memcpy(puzzle.I, random_i, PUZZLE_LENGTH);
 
     err = hip_build_generic_param(msg, &puzzle,
                                   sizeof(struct hip_tlv_common),
@@ -2515,7 +2518,7 @@ int hip_build_param_challenge_response(struct hip_common *msg,
  */
 int hip_build_param_solution(struct hip_common *msg,
                              const struct hip_puzzle *pz,
-                             uint64_t val_J)
+                             uint8_t val_J[PUZZLE_LENGTH])
 {
     struct hip_solution cookie;
     int                 err = 0;
@@ -2527,7 +2530,7 @@ int hip_build_param_solution(struct hip_common *msg,
     /* Type 2 (in R1) or 3 (in I2) */
     hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_SOLUTION);
 
-    cookie.J = val_J;
+    memcpy(cookie.J, val_J, PUZZLE_LENGTH);
     memcpy(&cookie.K, &pz->K, 12);     /* copy: K (1), reserved (1),
                                         * opaque (2) and I (8 bytes). */
     cookie.reserved = 0;

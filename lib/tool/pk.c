@@ -131,8 +131,8 @@ static int verify(void *peer_pub, struct hip_common *msg, const int type)
     uint8_t            sha1_digest[HIP_AH_SHA_LEN];
     struct in6_addr    tmpaddr;
     struct hip_puzzle *pz = NULL;
-    uint8_t            opaque[3];
-    uint64_t           randi = 0;
+    uint8_t            opaque[HIP_PUZZLE_OPAQUE_LEN];
+    uint8_t            rand_i[PUZZLE_LENGTH];
 
     ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
 
@@ -146,11 +146,13 @@ static int verify(void *peer_pub, struct hip_common *msg, const int type)
 
         HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)),
                  -ENOENT, "Illegal R1 packet (puzzle missing)\n");
-        memcpy(opaque, pz->opaque, sizeof(pz->opaque));
-        randi = pz->I;
 
-        memset(pz->opaque, 0, sizeof(pz->opaque));
-        pz->I = 0;
+        /* temporarily store original puzzle values */
+        memcpy(opaque, pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(rand_i, pz->I, PUZZLE_LENGTH);
+        /* R1 signature is computed over zero values */
+        memset(pz->opaque, 0, HIP_PUZZLE_OPAQUE_LEN);
+        memset(pz->I, 0, PUZZLE_LENGTH);
     } else {
         HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_HIP_SIGNATURE)),
                  -ENOENT, "Could not find signature\n");
@@ -182,8 +184,8 @@ static int verify(void *peer_pub, struct hip_common *msg, const int type)
 #endif
 
     if (hip_get_msg_type(msg) == HIP_R1) {
-        memcpy(pz->opaque, opaque, sizeof(pz->opaque));
-        pz->I = randi;
+        memcpy(pz->opaque, opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(pz->I, rand_i, PUZZLE_LENGTH);
     }
 
     ipv6_addr_copy(&msg->hitr, &tmpaddr);

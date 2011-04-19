@@ -58,19 +58,18 @@
 static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
                                          struct in6_addr *smaller_hit,
                                          struct in6_addr *bigger_hit,
-                                         uint64_t I, uint64_t J)
+                                         const uint8_t I[PUZZLE_LENGTH],
+                                         const uint8_t J[PUZZLE_LENGTH])
 
 {
     uint8_t *buffer = NULL, *cur = NULL;
     size_t   requiredmem;
 
-    HIP_DEBUG("\n");
-    /* 2*sizeof(uint64_t) added to take care of I and J. */
     if (2 * sizeof(struct in6_addr) < hash_len) {
-        requiredmem = kij_len + hash_len + sizeof(uint8_t) + 2 * sizeof(uint64_t);
+        requiredmem = kij_len + hash_len + sizeof(uint8_t) + 2 * PUZZLE_LENGTH;
     } else {
         requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
-                      sizeof(uint8_t) + 2 * sizeof(uint64_t);
+                      sizeof(uint8_t) + 2 * PUZZLE_LENGTH;
     }
     buffer = malloc(requiredmem);
     if (!buffer) {
@@ -85,10 +84,10 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
     cur += sizeof(struct in6_addr);
     memcpy(cur, (uint8_t *) bigger_hit, sizeof(struct in6_addr));
     cur += sizeof(struct in6_addr);
-    memcpy(cur, &I, sizeof(uint64_t));     // XX CHECK: network byte order?
-    cur += sizeof(uint64_t);
-    memcpy(cur, &J, sizeof(uint64_t));     // XX CHECK: network byte order?
-    cur   += sizeof(uint64_t);
+    memcpy(cur, I, PUZZLE_LENGTH);
+    cur += PUZZLE_LENGTH;
+    memcpy(cur, J, PUZZLE_LENGTH);
+    cur   += PUZZLE_LENGTH;
     *(cur) = 1;
     cur   += sizeof(uint8_t);
 
@@ -138,8 +137,8 @@ void hip_make_keymat(char *kij,
                      struct in6_addr *hit1,
                      struct in6_addr *hit2,
                      uint8_t *calc_index,
-                     uint64_t I,
-                     uint64_t J)
+                     const uint8_t I[PUZZLE_LENGTH],
+                     const uint8_t J[PUZZLE_LENGTH])
 {
     int              bufsize;
     uint8_t          index_nbr = 1;

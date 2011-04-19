@@ -50,6 +50,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <openssl/lhash.h>
+#include <openssl/rand.h>
 #include <sys/types.h>
 
 #include "lib/core/builder.h"
@@ -234,8 +235,8 @@ out_err:
  * @return zero on success, or negative on error.
  */
 static int hip_produce_keying_material(struct hip_packet_context *ctx,
-                                       uint64_t I,
-                                       uint64_t J)
+                                       const uint8_t I[PUZZLE_LENGTH],
+                                       const uint8_t J[PUZZLE_LENGTH])
 {
     char                        *dh_shared_key = NULL;
     int                          hip_transf_length, hmac_transf_length;
@@ -794,6 +795,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 {
     int                          err    = 0, retransmission = 0;
     const struct hip_r1_counter *r1cntr = NULL;
+    struct puzzle_hash_input     puzzle_input;
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -828,16 +830,23 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     /* Solve puzzle: if this is a retransmission, we have to preserve
      * the old solution. */
     if (!retransmission) {
-        const struct hip_puzzle *pz2 = NULL;
+        const struct hip_puzzle *pz = NULL;
 
-        HIP_IFEL(!(pz2 = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
+        HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
-        HIP_IFEL((ctx->hadb_entry->puzzle_solution =
-                      hip_solve_puzzle(pz2,
-                                       ctx->input_msg,
-                                       HIP_SOLVE_PUZZLE)) == 0,
+
+        memcpy(puzzle_input.puzzle, pz->I, PUZZLE_LENGTH);
+        puzzle_input.initiator_hit = ctx->input_msg->hitr;
+        puzzle_input.responder_hit = ctx->input_msg->hits;
+        RAND_bytes(puzzle_input.solution, PUZZLE_LENGTH);
+
+        HIP_IFEL(hip_solve_puzzle(&puzzle_input, pz->K),
                  -EINVAL, "Solving of puzzle failed\n");
-        ctx->hadb_entry->puzzle_i = pz2->I;
+
+        memcpy(ctx->hadb_entry->puzzle_i, pz->I, PUZZLE_LENGTH);
+        memcpy(ctx->hadb_entry->puzzle_solution,
+               puzzle_input.solution,
+               PUZZLE_LENGTH);
     }
 
     HIP_DEBUG("Build normal I2.\n");

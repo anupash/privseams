@@ -737,13 +737,17 @@ struct hip_r1_counter {
     uint64_t    generation;
 } __attribute__ ((packed));
 
+
+/* puzzle and solutions are defined to have a length of 8 bytes */
+#define PUZZLE_LENGTH 8
+
 struct hip_puzzle {
     hip_tlv     type;
     hip_tlv_len length;
     uint8_t     K;
     uint8_t     lifetime;
     uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t    I;
+    uint8_t     I[PUZZLE_LENGTH];
 } __attribute__ ((packed));
 
 struct hip_solution {
@@ -752,8 +756,8 @@ struct hip_solution {
     uint8_t     K;
     uint8_t     reserved;
     uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t    I;
-    uint64_t    J;
+    uint8_t     I[PUZZLE_LENGTH];
+    uint8_t     J[PUZZLE_LENGTH];
 } __attribute__ ((packed));
 
 

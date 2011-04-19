@@ -34,9 +34,9 @@
 struct hip_r1entry {
     struct hip_common *r1;
     uint32_t           generation;
-    uint64_t           Ci;
+    uint8_t            Ci[PUZZLE_LENGTH];
     uint8_t            Ck;
-    uint8_t            Copaque[3];
+    uint8_t            Copaque[HIP_PUZZLE_OPAQUE_LEN];
 };
 
 struct hip_common *hip_get_r1(struct in6_addr *ip_i,

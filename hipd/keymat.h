@@ -37,7 +37,9 @@
 void hip_make_keymat(char *kij, size_t kij_len,
                      struct hip_keymat_keymat *keymat,
                      void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-                     struct in6_addr *hit2, uint8_t *calc_index, uint64_t I, uint64_t J);
+                     struct in6_addr *hit2, uint8_t *calc_index,
+                     const uint8_t I[PUZZLE_LENGTH],
+                     const uint8_t J[PUZZLE_LENGTH]);
 int hip_keymat_draw_and_copy(unsigned char *dst,
                              struct hip_keymat_keymat *keymat,
                              int len);

@@ -38,6 +38,7 @@ int main(void)
 {
     int      number_failed;
     SRunner *sr = srunner_create(lib_core_hit());
+    srunner_add_suite(sr, lib_core_solve());
     srunner_add_suite(sr, lib_core_straddr());
 
     srunner_run_all(sr, CK_NORMAL);

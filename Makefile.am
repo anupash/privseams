@@ -207,6 +207,7 @@ test_check_firewall_SOURCES = test/check_firewall.c          \
 
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \
+                              test/lib/core/solve.c          \
                               test/lib/core/straddr.c
 
 test_check_lib_tool_SOURCES = test/check_lib_tool.c          \

@@ -294,13 +294,13 @@ struct hip_hadb_state {
     /** A function pointer to a function that verifies peer's host identity. */
     int (*verify)(void *, struct hip_common *);
     /** For retransmission. */
-    uint64_t puzzle_solution;
+    uint8_t puzzle_solution[PUZZLE_LENGTH];
     /** LOCATOR parameter. Just tmp save if sent in R1 no @c esp_info so
      *  keeping it here 'till the hip_update_locator_parameter can be done.
      *  @todo Remove this kludge. */
     struct hip_locator *locator;
     /** For retransmission. */
-    uint64_t puzzle_i;
+    uint8_t puzzle_i[PUZZLE_LENGTH];
     /** Used for UPDATE and CLOSE. When we sent multiple identical UPDATE
      * packets between different address combinations, we don't modify
      * the opaque data. */

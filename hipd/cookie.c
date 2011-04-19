@@ -56,7 +56,7 @@
 
 #define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 
-static int hip_cookie_difficulty = 1ULL; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
+static uint8_t hip_cookie_difficulty = 0; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 /**
  * query for current puzzle difficulty
@@ -75,11 +75,11 @@ static int hip_get_cookie_difficulty(void)
  * @param k the new puzzle difficulty
  * @return the k value on success or negative on error
  */
-static int hip_set_cookie_difficulty(int k)
+static int hip_set_cookie_difficulty(const uint8_t k)
 {
-    if (k > HIP_PUZZLE_MAX_K || k < 1) {
+    if (k > MAX_PUZZLE_DIFFICULTY) {
         HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
-                  k, 1, HIP_PUZZLE_MAX_K);
+                  k, 1, MAX_PUZZLE_DIFFICULTY);
         return -1;
     }
     hip_cookie_difficulty = k;
@@ -322,7 +322,8 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
     const struct hip_puzzle  *puzzle = NULL;
     struct hip_r1entry       *result = NULL;
     struct hip_host_id_entry *hid    = NULL;
-    int                       err    = 0;
+    struct puzzle_hash_input  puzzle_input;
+    int                       err = 0;
 
     /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
@@ -347,7 +348,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
         HIP_IFEL(solution->K != result->Ck, -1,
                  "Solution's K did not match any sent Ks.\n");
-        HIP_IFEL(solution->I != result->Ci, -1,
+        HIP_IFEL(memcmp(solution->I, result->Ci, PUZZLE_LENGTH), -1,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, result->Copaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
@@ -356,15 +357,20 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
     } else {
         HIP_HEXDUMP("solution", solution, sizeof(*solution));
         HIP_HEXDUMP("puzzle", puzzle, sizeof(*puzzle));
-        HIP_IFEL(solution->I != puzzle->I, -1,
+        HIP_IFEL(memcmp(solution->I, puzzle->I, PUZZLE_LENGTH), -1,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
                  "Solution's opaque data does not match the opaque data sent\n");
     }
 
-    HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), -1,
-             "Puzzle incorrectly solved.\n");
+    memcpy(puzzle_input.puzzle, solution->I, PUZZLE_LENGTH);
+    puzzle_input.initiator_hit = hdr->hits;
+    puzzle_input.responder_hit = hdr->hitr;
+    memcpy(puzzle_input.solution, solution->J, PUZZLE_LENGTH);
+
+    HIP_IFEL(hip_verify_puzzle_solution(&puzzle_input, solution->K),
+             -1, "Puzzle incorrectly solved.\n");
 
 out_err:
     return err;
