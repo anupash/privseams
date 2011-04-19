@@ -72,7 +72,7 @@ struct perf_set *hip_perf_create(int num)
     set->running   = calloc(num, sizeof(int));
     set->writable  = calloc(num, sizeof(int));
 
-    return perf_set;
+    return set;
 }
 
 /**
@@ -228,6 +228,12 @@ out_err:
 void hip_perf_destroy(struct perf_set *set)
 {
     int slot = 0;
+
+    if (!set) {
+        HIP_ERROR("Performance set is NULL\n");
+        return;
+    }
+
 
     free(set->files);
     set->files = NULL;
