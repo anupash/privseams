@@ -57,6 +57,7 @@
 #include "lib/core/modularization.h"
 #include "lib/core/prefix.h"
 #include "lib/core/state.h"
+#include "lib/core/performance.h"
 #include "update_builder.h"
 #include "update_locator.h"
 #include "update_param_handling.h"
