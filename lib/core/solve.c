@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <strings.h>
+#include <openssl/rand.h>
 
 #include "config.h"
 #include "builder.h"
@@ -189,12 +190,12 @@ int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_inpu
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
+int hip_solve_puzzle_m(struct hip_common *const out,
+                       const struct hip_common *const in)
 {
+    struct puzzle_hash_input            puzzle_input;
     const struct hip_challenge_request *pz;
-    struct hip_puzzle                   tmp;
-    uint64_t                            solution;
-    uint8_t                             digist[HIP_AH_SHA_LEN];
+    uint8_t                             digest[HIP_AH_SHA_LEN];
 
     pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
     while (pz) {
@@ -202,23 +203,24 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
             break;
         }
 
-        if (hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0) {
+        if (hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digest) < 0) {
             HIP_ERROR("Building of SHA1 Random seed I failed\n");
             return -1;
         }
-        tmp.type      = pz->type;
-        tmp.length    = pz->length;
-        tmp.K         = pz->K;
-        tmp.lifetime  = pz->lifetime;
-        tmp.opaque[0] = tmp.opaque[1] = 0;
-        tmp.I         = *digist & 0x40; //truncate I to 8 byte length
 
-        if ((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0) {
+        memcpy(puzzle_input.puzzle,
+               &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
+               PUZZLE_LENGTH);
+        puzzle_input.initiator_hit = out->hits;
+        puzzle_input.responder_hit = out->hitr;
+        RAND_bytes(puzzle_input.solution, PUZZLE_LENGTH);
+
+        if ((hip_solve_puzzle(&puzzle_input, pz->K))) {
             HIP_ERROR("Solving of puzzle failed\n");
             return -EINVAL;
         }
 
-        if (hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0) {
+        if (hip_build_param_challenge_response(out, pz, puzzle_input.solution) < 0) {
             HIP_ERROR("Error while creating solution_m reply parameter\n");
             return -1;
         }

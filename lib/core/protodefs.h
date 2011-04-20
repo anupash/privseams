@@ -775,7 +775,7 @@ struct hip_challenge_response {
     hip_tlv_len length;
     uint8_t     K;
     uint8_t     lifetime;
-    uint64_t    J;
+    uint8_t     J[PUZZLE_LENGTH];
     uint8_t     opaque[24];           /**< variable length */
 } __attribute__ ((packed));
 

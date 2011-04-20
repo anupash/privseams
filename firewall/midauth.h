@@ -60,15 +60,9 @@ struct midauth_handlers {
  */
 int midauth_handler_accept(struct hip_fw_context *ctx);
 
-/**
- * Check the correctness of a hip_solution_m
- *
- * @param hip the hip_common that contains the solution
- * @param s the solution to be checked
- * @return 0 if correct, nonzero otherwise
- */
-int midauth_verify_challenge_response(struct hip_common *hip,
-                                      struct hip_challenge_response *s);
+int midauth_verify_challenge_response(const struct hip_challenge_response *const solution,
+                                      const hip_hit_t initiator_hit,
+                                      const hip_hit_t responder_hit);
 
 
 

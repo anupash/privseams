@@ -152,9 +152,9 @@ int hip_build_param_solution(struct hip_common *,
                              const struct hip_puzzle *,
                              uint8_t *const);
 
-int hip_build_param_challenge_response(struct hip_common *,
-                                       const struct hip_challenge_request *,
-                                       uint64_t);
+int hip_build_param_challenge_response(struct hip_common *const msg,
+                                       const struct hip_challenge_request *const pz,
+                                       const uint8_t *const solution);
 
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);

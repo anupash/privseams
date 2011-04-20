@@ -2467,15 +2467,15 @@ int hip_build_param_challenge_request(struct hip_common *msg,
  * host byte order. This is an exception to the normal builder rules, where
  * input arguments are normally always in host byte order.
  *
- * @param msg the message where the solution is to be appended
- * @param pz values from the corresponding hip_challenge_request copied to the solution
- * @param val_J J value for the solution (in host byte order)
+ * @param msg       the message where the solution is to be appended
+ * @param pz        values from the corresponding hip_challenge_request copied to the solution
+ * @param solution  value for the solution (in host byte order)
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_challenge_response(struct hip_common *msg,
-                                       const struct hip_challenge_request *pz,
-                                       uint64_t val_J)
+int hip_build_param_challenge_response(struct hip_common *const msg,
+                                       const struct hip_challenge_request *const pz,
+                                       const uint8_t solution[PUZZLE_LENGTH])
 {
     struct hip_challenge_response cookie;
     int                           err = 0, opaque_len = 0;
@@ -2487,7 +2487,7 @@ int hip_build_param_challenge_response(struct hip_common *msg,
     /* Type 2 (in R1) or 3 (in I2) */
     hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
 
-    cookie.J        = hton64(val_J);
+    memcpy(cookie.J, solution, PUZZLE_LENGTH);
     cookie.K        = pz->K;
     cookie.lifetime = pz->K;
     opaque_len      = sizeof(pz->opaque) / sizeof(pz->opaque[0]);

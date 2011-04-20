@@ -240,26 +240,30 @@ static void midauth_update_all_headers(struct hip_fw_context *ctx)
 /**
  * Verify that the challenge response in a packet is valid
  *
- * @param hip packet that contains the challenge response
- * @param s   challenge response parameter
+ * @param solution      challenge response parameter
+ * @param initiator_hit HIT of the initiator
+ * @param responder_hit HIT of the receiver
  * @return    0 on success, <0 otherwise
  */
-int midauth_verify_challenge_response(struct hip_common *hip,
-                                      struct hip_challenge_response *s)
+int midauth_verify_challenge_response(const struct hip_challenge_response *const solution,
+                                      const hip_hit_t initiator_hit,
+                                      const hip_hit_t responder_hit)
 {
-    int                 err = 0;
-    struct hip_solution solution;
-    uint8_t             digist[HIP_AH_SHA_LEN];
+    int                      err = 0;
+    struct puzzle_hash_input puzzle_input;
+    uint8_t                  digest[HIP_AH_SHA_LEN];
 
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, solution->opaque, 24, digest) < 0,
              -1, "Building of SHA1 Random seed I failed\n");
-    solution.K        = s->K;
-    solution.reserved = 0;
-    solution.I        = *digist & 0x40;
-    solution.J        = s->J;
-    HIP_DEBUG("solution: %d \n", solution.J);
 
-    HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0,
+    memcpy(puzzle_input.puzzle,
+           &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
+           PUZZLE_LENGTH);
+    puzzle_input.initiator_hit = initiator_hit;
+    puzzle_input.responder_hit = responder_hit;
+    memcpy(puzzle_input.solution, solution->J, PUZZLE_LENGTH);
+
+    HIP_IFEL(hip_verify_puzzle_solution(&puzzle_input, solution->K),
              -1, "Solution is wrong\n");
 
 out_err:

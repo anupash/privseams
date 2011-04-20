@@ -227,7 +227,9 @@ static struct hip_challenge_response *pisa_check_challenge_response(struct hip_f
         }
         if ((!memcmp(response->opaque, &hash[1][0], PISA_PUZZLE_OPAQUE_LEN)) ||
             (!memcmp(response->opaque, &hash[0][0], PISA_PUZZLE_OPAQUE_LEN))) {
-            if (midauth_verify_challenge_response(hip, response) == 0) {
+            if (!midauth_verify_challenge_response(response,
+                                                   hip->hits,
+                                                   hip->hitr)) {
                 return response;
             }
         }
