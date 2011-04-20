@@ -29,7 +29,6 @@
 #include <stdint.h>
 
 #include "protodefs.h"
-#include "config.h"
 
 /* ensure that the max puzzle difficulty (here 28) is limited by sizeof(int),
  * as ffs() is working on int type.
@@ -56,9 +55,7 @@ int hip_solve_puzzle(struct puzzle_hash_input *puzzle_input,
 int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_input,
                                const uint8_t difficulty);
 
-#ifdef CONFIG_HIP_MIDAUTH
 int hip_solve_puzzle_m(struct hip_common *const out,
                        const struct hip_common *const in);
-#endif /* CONFIG_HIP_MIDAUTH */
 
 #endif /* HIP_LIB_CORE_SOLVE_H */
