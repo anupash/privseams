@@ -51,7 +51,8 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
-enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
+enum update_types { UNKNOWN_UPDATE_PACKET, FIRST_UPDATE_PACKET,
+                    SECOND_UPDATE_PACKET, THIRD_UPDATE_PACKET };
 
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.
@@ -121,13 +122,9 @@ union hip_locator_info_addr {
     struct hip_locator_info_addr_item2 type2;
 } __attribute__ ((packed));
 
+uint32_t hip_update_get_out_id(const struct update_state *const state);
 
-int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
-                                struct hip_hadb_state *ha,
-                                struct in6_addr *src_addr,
-                                struct in6_addr *dst_addr,
-                                struct hip_locator_info_addr_item *locators,
-                                int type);
+int hip_trigger_update(struct hip_hadb_state *const hadb_entry);
 
 enum update_types hip_classify_update_type(const struct hip_common *const hip_msg);
 

@@ -47,7 +47,6 @@
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
-#include "lib/core/ife.h"
 #include "lib/core/protodefs.h"
 #include "modules/update/hipd/update.h"
 #include "modules/update/hipd/update_locator.h"
@@ -55,13 +54,10 @@
 
 static const int hip_heartbeat_trigger_update_threshold = 5;
 
-static int hip_hb_update_trigger(struct hip_hadb_state *hadb_entry,
+static int hip_hb_update_trigger(struct hip_hadb_state *const hadb_entry,
                                  UNUSED void *opaque)
 {
-    int                                err               = 0;
-    uint8_t                           *heartbeat_counter = NULL;
-    struct hip_common                 *locator_msg       = NULL;
-    struct hip_locator_info_addr_item *locators          = NULL;
+    uint8_t *heartbeat_counter = NULL;
 
     if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&
         (hadb_entry->outbound_sa_count > 0)) {
@@ -71,25 +67,16 @@ static int hip_hb_update_trigger(struct hip_hadb_state *hadb_entry,
         if (*heartbeat_counter >= hip_heartbeat_trigger_update_threshold) {
             HIP_DEBUG("HEARTBEAT counter reached threshold, trigger UPDATE\n");
 
-            HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
-                     "Out of memory while allocation memory for the packet\n");
-            HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
-
-            HIP_IFEL(hip_send_update_to_one_peer(NULL,
-                                                 hadb_entry,
-                                                 &hadb_entry->our_addr,
-                                                 &hadb_entry->peer_addr,
-                                                 locators,
-                                                 HIP_UPDATE_LOCATOR),
-                     -1, "Failed to trigger update\n");
+            if (hip_trigger_update(hadb_entry)) {
+                HIP_DEBUG("failed to trigger update\n");
+                return -1;
+            }
 
             *heartbeat_counter = 0;
         }
     }
 
-out_err:
-    free(locator_msg);
-    return err;
+    return 0;
 }
 
 static int hip_hb_update_maintenance(void)
@@ -101,13 +88,12 @@ static int hip_hb_update_maintenance(void)
 
 int hip_hb_update_init(void)
 {
-    int err = 0;
-
     HIP_INFO("Initializing tunnel updates for heartbeat extension\n");
 
-    HIP_IFEL(hip_register_maint_function(&hip_hb_update_maintenance, 50000),
-             -1,
-             "Error on registration of hip_hb_update_maintenance().\n");
-out_err:
-    return err;
+    if (hip_register_maint_function(&hip_hb_update_maintenance, 50000)) {
+        HIP_DEBUG("Error on registration of hip_hb_update_maintenance()\n");
+        return -1;
+    }
+
+    return 0;
 }

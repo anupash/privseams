@@ -37,9 +37,33 @@
 #include "lib/core/protodefs.h"
 #include "update.h"
 
-int hip_handle_locator_parameter(struct hip_hadb_state *ha,
-                                 const struct in6_addr *src_addr,
-                                 struct hip_locator *locator);
+int hip_add_esp_info_param(const uint8_t packet_type,
+                           const uint32_t ha_state,
+                           struct hip_packet_context *ctx);
+
+int hip_handle_esp_info_param(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *ctx);
+
+int hip_add_seq_param(const uint8_t packet_type,
+                      const uint32_t ha_state,
+                      struct hip_packet_context *ctx);
+
+int hip_handle_seq_param(const uint8_t packet_type,
+                         const uint32_t ha_state,
+                         struct hip_packet_context *ctx);
+
+int hip_add_echo_request_param(const uint8_t packet_type,
+                               const uint32_t ha_state,
+                               struct hip_packet_context *ctx);
+
+int hip_handle_echo_request_param(const uint8_t packet_type,
+                                  const uint32_t ha_state,
+                                  struct hip_packet_context *ctx);
+
+int hip_handle_locator_parameter(const uint8_t packet_type,
+                                 const uint32_t ha_state,
+                                 struct hip_packet_context *ctx);
 
 int hip_handle_locator(const uint8_t packet_type,
                        const uint32_t ha_state,

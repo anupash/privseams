@@ -29,9 +29,9 @@
 #include "lib/core/protodefs.h"
 #include "update.h"
 
-int hip_build_locators_old(struct hip_common *msg);
+int hip_build_locators_old(struct hip_common *const msg);
 
-int hip_create_locators(struct hip_common *locator_msg,
+int hip_create_locators(struct hip_common *const locator_msg,
                         struct hip_locator_info_addr_item **locators);
 
 union hip_locator_info_addr *hip_get_locator_item(void *item_list,

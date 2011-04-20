@@ -59,7 +59,7 @@
  * @param msg the LOCATOR parameter will be appended to this UPDATE message
  * @return zero on success on negative on failure
  */
-int hip_build_locators_old(struct hip_common *msg)
+int hip_build_locators_old(struct hip_common *const msg)
 {
     int                                err = 0, i = 0, count = 0;
     int                                addr_max;
@@ -116,7 +116,7 @@ out_err:
  * @param locators an extra pointer that will point to the LOCATOR
  * @return zero on success or negative on failure
  */
-int hip_create_locators(struct hip_common *locator_msg,
+int hip_create_locators(struct hip_common *const locator_msg,
                         struct hip_locator_info_addr_item **locators)
 {
     int                 err = 0;
@@ -144,8 +144,8 @@ out_err:
  * @param idx       the index of the item in the list
  * @return          the locator addres item
  */
-union hip_locator_info_addr *hip_get_locator_item(void *item_list,
-                                                  int idx)
+union hip_locator_info_addr *hip_get_locator_item(void *const item_list,
+                                                  const int idx)
 {
     int                                i = 0;
     struct hip_locator_info_addr_item *temp;
@@ -171,12 +171,10 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list,
  * @param item      a pointer to the item
  * @return a pointer to the IP address
  */
-struct in6_addr *hip_get_locator_item_address(void *item)
+struct in6_addr *hip_get_locator_item_address(void *const item)
 {
-    struct hip_locator_info_addr_item *temp;
+    struct hip_locator_info_addr_item *temp = item;
 
-
-    temp = item;
     if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
         return &temp->address;
     } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
@@ -193,7 +191,7 @@ struct in6_addr *hip_get_locator_item_address(void *item)
  * @param locator a LOCATOR parameter
  * @return the number of locators
  */
-int hip_get_locator_addr_item_count(const struct hip_locator *locator)
+int hip_get_locator_addr_item_count(const struct hip_locator *const locator)
 {
     const char *address_pointer = (const char *) (locator + 1);
     int         loc_count       = 0;

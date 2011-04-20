@@ -47,7 +47,7 @@
  * @param update_id Update ID
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
+int hip_build_param_seq(struct hip_common *const msg, const uint32_t update_id)
 {
     int            err = 0;
     struct hip_seq seq;
@@ -67,7 +67,8 @@ int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
  * @param peer_update_id peer Update ID
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
+int hip_build_param_ack(struct hip_common *const msg,
+                        const uint32_t peer_update_id)
 {
     int            err = 0;
     struct hip_ack ack;
@@ -88,9 +89,9 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
  * @param addr_count number of addresses
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_locator(struct hip_common *msg,
-                            struct hip_locator_info_addr_item *addrs,
-                            int addr_count)
+int hip_build_param_locator(struct hip_common *const msg,
+                            const struct hip_locator_info_addr_item *const addrs,
+                            const int addr_count)
 {
     int                 err          = 0;
     struct hip_locator *locator_info = NULL;
