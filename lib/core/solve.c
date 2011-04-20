@@ -62,21 +62,22 @@ static int hip_single_puzzle_computation(const struct puzzle_hash_input *const p
 {
     unsigned char sha_digest[SHA_DIGEST_LENGTH];
     uint32_t      truncated_digest = 0;
-    int           err              = -1;
 
     /* any puzzle solution is acceptable for difficulty 0 */
     if (difficulty == 0) {
         return 0;
     }
 
-    HIP_IFEL(difficulty > MAX_PUZZLE_DIFFICULTY,
-             -1, "difficulty exceeds max. configured difficulty\n");
+    if (difficulty > MAX_PUZZLE_DIFFICULTY) {
+        HIP_ERROR("difficulty exceeds max. configured difficulty\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1,
-                              puzzle_input,
-                              sizeof(struct puzzle_hash_input),
-                              sha_digest),
-             -1, "failed to compute hash digest\n");
+    if (hip_build_digest(HIP_DIGEST_SHA1, puzzle_input,
+                         sizeof(struct puzzle_hash_input), sha_digest)) {
+        HIP_ERROR("failed to compute hash digest\n");
+        return -1;
+    }
 
     /* In reference to RFC 5201, we need to interpret the hash digest as an
      * integer in network byte-order. We are interested in least significant
@@ -95,13 +96,10 @@ static int hip_single_puzzle_computation(const struct puzzle_hash_input *const p
     /* check if position of first least significant 1-bit is higher than
      * difficulty */
     if (ffs(truncated_digest) > difficulty) {
-        err = 0;
-    } else {
-        err = 1;
+        return 0;
     }
 
-out_err:
-    return err;
+    return 1;
 }
 
 /**
