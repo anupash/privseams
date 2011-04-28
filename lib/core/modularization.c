@@ -183,7 +183,7 @@ void lmod_uninit_state_uninit_functions()
 }
 
 /**
- * Run all functions specified in @param list with @param state as parameter.
+ * Run all functions specified in @c list with @c state as parameter.
  * Use this function to initialize or uninitialize state items.
  * Behaviour for lists that do not contain function pointers is undefined.
  *
