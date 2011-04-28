@@ -183,6 +183,27 @@ void lmod_uninit_state_uninit_functions()
 }
 
 /**
+ * Run all functions specified in @param list with @param state as parameter.
+ * Use this function to initialize or uninitialize state items.
+ * Behaviour for lists that do not contain function pointers is undefined.
+ *
+ * @param state Pointer to the modular state data structure.
+ * @param list  Pointer to the list of functions that are supposed to be called
+ *              with the modular state as parameter.
+ */
+static void lmod_run_functions_on_state(struct modular_state *const state,
+                                        struct hip_ll *const list)
+{
+    const struct hip_ll_node *iter = NULL;
+    int                       (*function)(struct modular_state *state) = NULL;
+
+    while ((iter = hip_ll_iterate(list, iter))) {
+        function = iter->ptr;
+        function(state);
+    }
+}
+
+/**
  * Initialize all registered state items. This function is called, when a new
  * host association database entry is created.
  *
@@ -193,13 +214,7 @@ void lmod_uninit_state_uninit_functions()
  */
 void lmod_init_state_items(struct modular_state *state)
 {
-    const struct hip_ll_node *iter = NULL;
-    int                       (*init_function)(struct modular_state *state) = NULL;
-
-    while ((iter = hip_ll_iterate(&state_init_functions, iter))) {
-        init_function = iter->ptr;
-        init_function(state);
-    }
+    lmod_run_functions_on_state(state, &state_init_functions);
 }
 
 /**
