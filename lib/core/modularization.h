@@ -48,7 +48,7 @@ struct hip_ll *lmod_register_function(struct hip_ll *list, void *entry,
                                       const uint16_t priority);
 int lmod_unregister_function(struct hip_ll *list, const void *function);
 
-int lmod_register_state_init_function(void *func);
+int lmod_register_state_init_function(void *const func);
 
 void lmod_uninit_state_init_functions(void);
 

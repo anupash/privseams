@@ -137,7 +137,7 @@ struct modular_state *lmod_init_state(void)
  * @return Success = 0
  *         Error   = -1
  */
-int lmod_register_state_init_function(void *func)
+int lmod_register_state_init_function(void *const func)
 {
     if (!func) {
         return -1;
