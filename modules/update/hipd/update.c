@@ -466,6 +466,10 @@ static int hip_update_maintenance(void)
  *
  * Allocates the required memory and sets the members to the start values.
  *
+ * @note The allocated memory is free'd with hip_update_uninit_state(). The
+ *       item_name parameter used for registering or getting this update_state
+ *       instance must be the same in both functions. In this case it is "update".
+ *
  *  @return Success = Index of the update state item in the global state. (>0)
  *          Error   = -1
  */
@@ -484,6 +488,28 @@ static int hip_update_init_state(struct modular_state *state)
     update_state->update_id_in                   = 0;
 
     return lmod_add_state_item(state, update_state, "update");
+}
+
+/**
+ * Free memory that was allocated in the update_state instance.
+ *
+ * @note The item_name parameter for the lmod_get_state_item() call has to be
+ *       the same as the one it was registered with in hip_update_init_state().
+ *       In this case it is "update".
+ *
+ * @param state Pointer to the modular state data structure.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+static void hip_update_uninit_state(struct modular_state *const state)
+{
+    struct update_state *update_state = NULL;
+
+    update_state = lmod_get_state_item(state, "update");
+    if (update_state != NULL) {
+        hip_ht_uninit(update_state->addresses_to_send_echo_request);
+    }
 }
 
 /**
@@ -683,6 +709,10 @@ int hip_update_init(void)
     HIP_IFEL(lmod_register_state_init_function(&hip_update_init_state),
              -1,
              "Error on registering update state init function.\n");
+
+    HIP_IFEL(lmod_register_state_uninit_function(&hip_update_uninit_state),
+             -1,
+             "Error on registering update state uninit function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_I1_SENT,
