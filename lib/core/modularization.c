@@ -70,7 +70,8 @@ static struct hip_ll state_init_functions;
  * List of uninitialization functions for the modular states.
  * These functions free memory that was allocated for their respective state item.
  *
- * Call lmod_register_state_uninit_function to add a function the list.
+ * Call lmod_register_state_uninit_function to add a function the list and
+ * lmod_uninit_state_items to uninitialize the items of a modular state instance.
  */
 static struct hip_ll state_uninit_functions;
 
