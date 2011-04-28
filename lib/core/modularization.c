@@ -139,10 +139,6 @@ struct modular_state *lmod_init_state(void)
  */
 int lmod_register_state_init_function(void *const func)
 {
-    if (!func) {
-        return -1;
-    }
-
     return hip_ll_add_last(&state_init_functions, func);
 }
 
