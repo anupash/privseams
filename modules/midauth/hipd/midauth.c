@@ -91,10 +91,12 @@ static int hip_midauth_add_puzzle_solution_m_update(UNUSED const uint8_t packet_
                                                     UNUSED const uint32_t ha_state,
                                                     struct hip_packet_context *ctx)
 {
-    int err = 0;
+    enum update_types update_type = UNKNOWN_PACKET;
+    int               err         = 0;
 
-    if (hip_classify_update_type(ctx->input_msg) == SECOND_PACKET ||
-        hip_classify_update_type(ctx->input_msg) == THIRD_PACKET) {
+    update_type = hip_classify_update_type(ctx->input_msg);
+
+    if (update_type == SECOND_PACKET || update_type == THIRD_PACKET) {
         /* TODO: no caching is done for PUZZLE_M parameters. This may be
          * a DOS attack vector. */
         HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
@@ -109,11 +111,13 @@ static int hip_midauth_add_host_id_update(UNUSED const uint8_t packet_type,
                                           UNUSED const uint32_t ha_state,
                                           struct hip_packet_context *ctx)
 {
+    enum update_types         update_type   = UNKNOWN_PACKET;
     struct hip_host_id_entry *host_id_entry = NULL;
     int                       err           = 0;
 
-    if (hip_classify_update_type(ctx->input_msg) == FIRST_PACKET ||
-        hip_classify_update_type(ctx->input_msg) == SECOND_PACKET) {
+    update_type = hip_classify_update_type(ctx->input_msg);
+
+    if (update_type == FIRST_PACKET || update_type == SECOND_PACKET) {
         HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
                                                                         &ctx->input_msg->hitr,
                                                                         HIP_ANY_ALGO,
