@@ -67,6 +67,14 @@ struct parameter_type {
 static struct hip_ll state_init_functions;
 
 /**
+ * List of uninitialization functions for the modular states.
+ * These functions free memory that was allocated for their respective state item.
+ *
+ * Call lmod_register_state_uninit_function to add a function the list.
+ */
+static struct hip_ll state_uninit_functions;
+
+/**
  * List of module identifier.
  *
  * Used to check, whether a certain module is loaded.
@@ -140,6 +148,19 @@ struct modular_state *lmod_init_state(void)
 int lmod_register_state_init_function(void *const func)
 {
     return hip_ll_add_last(&state_init_functions, func);
+}
+
+/**
+ * Register a new state uninitialization function. These functions are called,
+ * when a host association database entry is purged.
+ *
+ * @param func Pointer to the state uninitialization function.
+ * @return Success =  0
+ *         Error   = -1
+ */
+int lmod_register_state_uninit_function(void *const func)
+{
+    return hip_ll_add_last(&state_uninit_functions, func);
 }
 
 /**
