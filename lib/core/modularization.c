@@ -154,7 +154,10 @@ int lmod_register_state_init_function(void *const func)
  * Register a new state uninitialization function. These functions are called,
  * when a host association database entry is purged.
  *
- * @param func Pointer to the state uninitialization function.
+ * @note    Call lmod_uninit_state_uninit_functions() to free all memory
+ *          allocated for the state uninitialization functions.
+ *
+ * @param  func Pointer to the state uninitialization function.
  * @return Success =  0
  *         Error   = -1
  */
@@ -169,6 +172,14 @@ int lmod_register_state_uninit_function(void *const func)
 void lmod_uninit_state_init_functions(void)
 {
     hip_ll_uninit(&state_init_functions, NULL);
+}
+
+/**
+ * Free all memory allocated for storage of the state uninitialization functions.
+ */
+void lmod_uninit_state_uninit_functions()
+{
+    hip_ll_uninit(&state_uninit_functions, NULL);
 }
 
 /**

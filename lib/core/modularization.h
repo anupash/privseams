@@ -54,6 +54,8 @@ int lmod_register_state_uninit_function(void *const func);
 
 void lmod_uninit_state_init_functions(void);
 
+void lmod_uninit_state_uninit_functions(void);
+
 void lmod_init_state_items(struct modular_state *state);
 
 struct modular_state *lmod_init_state(void);
