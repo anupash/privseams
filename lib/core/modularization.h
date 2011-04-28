@@ -58,6 +58,8 @@ void lmod_uninit_state_uninit_functions(void);
 
 void lmod_init_state_items(struct modular_state *state);
 
+void lmod_uninit_state_items(struct modular_state *const state);
+
 struct modular_state *lmod_init_state(void);
 
 int   lmod_add_state_item(struct modular_state *state,

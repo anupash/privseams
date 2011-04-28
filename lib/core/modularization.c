@@ -218,6 +218,17 @@ void lmod_init_state_items(struct modular_state *state)
 }
 
 /**
+ * Uninitialize all registered state items. This function is called when a host
+ * association database entry is purged.
+ *
+ * @param state Pointer to the modular state data structure.
+ */
+void lmod_uninit_state_items(struct modular_state *const state)
+{
+    lmod_run_functions_on_state(state, &state_uninit_functions);
+}
+
+/**
  * Retrieve a void pointer to a state variable from the global state set using
  * the state item name.
  *
@@ -314,6 +325,7 @@ void lmod_uninit_state(struct modular_state *state)
 {
     unsigned int i;
 
+    lmod_uninit_state_items(state);
     hip_ll_uninit(state->item_list, free);
     free(state->item_list);
 
