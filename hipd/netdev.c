@@ -214,17 +214,16 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
  * @return     FA_ADD if the given address @c addr is allowed to be one of the
  *             addresses of this host, FA_IGNORE otherwise.
  */
-static int hip_filter_address(struct sockaddr *addr)
+static int hip_filter_address(const struct sockaddr *const addr)
 {
-    char             s[INET6_ADDRSTRLEN];
-    struct in6_addr *a_in6 = NULL;
-    in_addr_t        a_in;
+    char                   s[INET6_ADDRSTRLEN];
+    const struct in6_addr *a_in6;
+    in_addr_t              a_in;
     HIP_DEBUG("Filtering the address family %d \n", addr->sa_family);
     switch (addr->sa_family) {
     case AF_INET6:
-        a_in6 = hip_cast_sa_addr(addr);
-        inet_ntop(AF_INET6, &((struct sockaddr_in6 *) addr)->sin6_addr, s,
-                  INET6_ADDRSTRLEN);
+        a_in6 = &((const struct sockaddr_in6 *) addr)->sin6_addr;
+        inet_ntop(AF_INET6, a_in6, s, INET6_ADDRSTRLEN);
 
         HIP_DEBUG("IPv6 address to filter is %s.\n", s);
 
@@ -259,8 +258,8 @@ static int hip_filter_address(struct sockaddr *addr)
         break;
 
     case AF_INET:
-        a_in = ((struct sockaddr_in *) addr)->sin_addr.s_addr;
-        inet_ntop(AF_INET, &((struct sockaddr_in *) addr)->sin_addr, s,
+        a_in = ((const struct sockaddr_in *) addr)->sin_addr.s_addr;
+        inet_ntop(AF_INET, &((const struct sockaddr_in *) addr)->sin_addr, s,
                   INET6_ADDRSTRLEN);
 
         HIP_DEBUG("IPv4 address to filter is %s.\n", s);
@@ -284,7 +283,7 @@ static int hip_filter_address(struct sockaddr *addr)
         } else if (IS_IPV4_LOOPBACK(a_in)) {
             HIP_DEBUG("Address ignored: IPV4_LOOPBACK.\n");
             return FA_IGNORE;
-        } else if (IS_LSI((struct sockaddr_in *) addr)) {
+        } else if (IS_LSI((const struct sockaddr_in *) addr)) {
             HIP_DEBUG("Address ignored: address is LSI.\n");
             return FA_IGNORE;
         } else {
