@@ -95,9 +95,9 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
  */
 #define IS_LSI32(a) ((((in_addr_t) ntohl(a)) & 0xFF000000) == 0x01000000)
 
-#define IS_LSI(a) ((((struct sockaddr *) a)->sa_family == AF_INET) ? \
-                   (IS_LSI32(((struct sockaddr_in *) a)->sin_addr.s_addr)) : \
-                   (ipv6_addr_is_hit(&((struct sockaddr_in6 *) a)->sin6_addr)))
+#define IS_LSI(a) ((((const struct sockaddr *) a)->sa_family == AF_INET) ? \
+                   (IS_LSI32(((const struct sockaddr_in *) a)->sin_addr.s_addr)) : \
+                   (ipv6_addr_is_hit(&((const struct sockaddr_in6 *) a)->sin6_addr)))
 
 /**
  * A macro to test if a in_addr_t represents an IPv4 loopback address.
