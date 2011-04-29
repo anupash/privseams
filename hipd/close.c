@@ -109,7 +109,9 @@ static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
                               &entry->hit_our,
                               &entry->hit_peer);
 
-    HIP_IFE(!(msg_close = hip_msg_alloc()), -ENOMEM);
+    if (!(msg_close = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
 
     hip_build_network_hdr(msg_close,
                           HIP_CLOSE,

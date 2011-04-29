@@ -114,7 +114,9 @@ static int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
     int      khi_data_len     = key_rr_len + sizeof(khi_context_id);
     int      khi_index        = 0;
 
-    HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
+    if (hit_type != HIP_HIT_TYPE_HASH100) {
+        return -ENOSYS;
+    }
 
     /* Hash Input :=  Context ID | Input */
     khi_data  = malloc(khi_data_len);
