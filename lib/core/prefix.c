@@ -268,21 +268,19 @@ void *hip_cast_sa_addr(struct sockaddr *sa)
 }
 
 /**
- * Test if a sockaddr_in6 structure is in IPv6 mapped format (i.e.
- * contains an IPv4 address)
+ * Test if a sockaddr structure contains an IPv4 address mapped to an IPv6
+ * address format (AF_INET6).
  *
  * @param sa socket address structure
- * @return one if the structure is in IPv6 mapped format or zero otherwise
+ * @return one if the structure is an IPv4 address mapped to IPv6 format or
+ * zero otherwise
  */
-int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
+int hip_sockaddr_is_v6_mapped(const struct sockaddr *const sa)
 {
-    int family = sa->sa_family;
-
-    HIP_ASSERT(family == AF_INET || family == AF_INET6);
-    if (family != AF_INET6) {
+    if (sa->sa_family != AF_INET6) {
         return 0;
     } else {
-        return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+        return IN6_IS_ADDR_V4MAPPED(&(((const struct sockaddr_in6 *const) sa)->sin6_addr));
     }
 }
 
