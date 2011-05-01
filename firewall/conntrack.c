@@ -552,7 +552,6 @@ out_err:
         if (hip_ll_get(addresses, 0) == esp_addr) {
             hip_ll_del_first(addresses, NULL);
         }
-        free(esp_addr->update_id);
         free(esp_addr);
     }
     return err;
