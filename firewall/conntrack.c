@@ -911,12 +911,13 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
  * @param locator a pointer to a locator message parameter.
  * @param seq a pointer to a sequence number of an UPDATE message.
  *
- * returns true if successful, false otherwise.
+ * @return  0 on success
+ *         -1 on error
  */
-static bool insert_connection_from_update(const struct hip_data *const data,
-                                          const struct hip_esp_info *const esp_info,
-                                          const struct hip_locator *const locator,
-                                          const struct hip_seq *const seq)
+static int insert_connection_from_update(const struct hip_data *const data,
+                                         const struct hip_esp_info *const esp_info,
+                                         const struct hip_locator *const locator,
+                                         const struct hip_seq *const seq)
 {
     int                      err        = 0;
     struct esp_tuple        *esp_tuple  = NULL;
@@ -978,7 +979,7 @@ static bool insert_connection_from_update(const struct hip_data *const data,
     hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
     HIP_DEBUG("insert_connection_from_update \n");
 
-    return true;
+    return err;
 
 out_err:
     if (connection) {
@@ -993,7 +994,7 @@ out_err:
     }
     free(connection);
     free_esp_tuple(esp_tuple);
-    return false;
+    return err;
 }
 
 /**
@@ -1527,7 +1528,7 @@ static int handle_update(const struct hip_common *common,
             /** FIXME the firewall should not care about locator for esp tracking
              *
              * NOTE: modify this regardingly! */
-            if (!insert_connection_from_update(data, esp_info, locator, seq)) {
+            if (insert_connection_from_update(data, esp_info, locator, seq) == -1) {
                 /* insertion failed */
                 HIP_DEBUG("connection insertion failed\n");
 
