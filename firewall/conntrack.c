@@ -834,7 +834,6 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                                                          const struct hip_seq *const seq,
                                                          struct tuple *const tuple)
 {
-    int               err     = 0;
     struct esp_tuple *new_esp = NULL;
 
     HIP_ASSERT(esp_info);
@@ -853,8 +852,10 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
         const struct hip_locator_info_addr_item *const addresses =
             (const struct hip_locator_info_addr_item *) (locator + 1);
 
-        HIP_IFEL((new_esp = calloc(1, sizeof(*new_esp))) == NULL, -1,
-                 "Allocating esp_tuple object failed");
+        if ((new_esp = calloc(1, sizeof(*new_esp))) == NULL) {
+            HIP_ERROR("Allocating esp_tuple object failed");
+            return NULL;
+        }
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
@@ -866,8 +867,6 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
         return new_esp;
     }
 
-out_err:
-    free_esp_tuple(new_esp);
     return NULL;
 }
 
