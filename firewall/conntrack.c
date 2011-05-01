@@ -983,10 +983,7 @@ static int insert_connection_from_update(const struct hip_data *const data,
 
 out_err:
     if (connection) {
-        if (connection->reply.hip_tuple) {
-            free(connection->reply.hip_tuple->data);
-            free(connection->reply.hip_tuple);
-        }
+        free(connection->reply.hip_tuple);
         if (connection->original.hip_tuple) {
             free(connection->original.hip_tuple->data);
             free(connection->original.hip_tuple);
