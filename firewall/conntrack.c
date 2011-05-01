@@ -510,12 +510,13 @@ void hip_fw_manage_all_esp_tuples(const struct tuple *const tuple,
  * @param upd_id    The update id. May be NULL if the address is inserted for
  *                  the first time.
  *
- * @return true on success, false if insufficient memory is available for a new
- *         esp address object.
+ * @return  0 on success
+ *         -1 on error (if insufficient memory is available for a new
+ *                      esp address object)
  */
-static bool update_esp_address(struct esp_tuple *const esp_tuple,
-                               const struct in6_addr *const addr,
-                               const uint32_t *const upd_id)
+static int update_esp_address(struct esp_tuple *const esp_tuple,
+                              const struct in6_addr *const addr,
+                              const uint32_t *const upd_id)
 {
     bool                 remove_esp_addr = false;
     int                  err             = 0;
@@ -544,7 +545,7 @@ static bool update_esp_address(struct esp_tuple *const esp_tuple,
     }
 
     hip_fw_manage_esp_rule(esp_tuple, addr, true);
-    return true;
+    return err;
 
 out_err:
     if (esp_addr && remove_esp_addr) {
@@ -554,7 +555,7 @@ out_err:
         free(esp_addr->update_id);
         free(esp_addr);
     }
-    return false;
+    return err;
 }
 
 /**
@@ -1264,7 +1265,7 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
-        HIP_IFEL(!update_esp_address(esp_tuple, ip6_src, NULL),
+        HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
                  -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
@@ -1336,7 +1337,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
-        HIP_IFEL(!update_esp_address(esp_tuple, ip6_src, NULL),
+        HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
                  -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
@@ -1414,9 +1415,9 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                        (locator + 1);
 
         while (n > 0) {
-            HIP_IFEL(!update_esp_address(esp_tuple,
-                                         &locator_addr->address,
-                                         &seq->update_id), 0,
+            HIP_IFEL(update_esp_address(esp_tuple,
+                                        &locator_addr->address,
+                                        &seq->update_id) == -1, 0,
                      "adding or updating ESP destination address failed");
             n--;
 
