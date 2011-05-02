@@ -1676,9 +1676,10 @@ uint8_t hip_get_msg_response(struct hip_common *msg)
 int hip_build_user_hdr(struct hip_common *msg, hip_hdr base_type,
                        hip_hdr_err err_val)
 {
-    int err = 0;
-
-    HIP_IFEL(!msg, -EINVAL, "null msg\n");
+    if (!msg) {
+        HIP_ERROR("null msg\n");
+        return -EINVAL;
+    }
 
     /* build header first and then parameters */
     HIP_ASSERT(hip_get_msg_total_len(msg) == 0);
@@ -1695,14 +1696,14 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr base_type,
      * header length anyway. */
     hip_calc_hdr_len(msg);
 
-    HIP_IFE(hip_get_msg_total_len(msg) == 0, -EMSGSIZE);
-    HIP_IFEL(!hip_check_user_msg_len(msg),
-             -EMSGSIZE,
-             "hipd build hdr: msg len (%d) invalid\n",
-             hip_get_msg_total_len(msg));
+    if (hip_get_msg_total_len(msg) == 0) {
+        return -EMSGSIZE;
+    } else if (!hip_check_user_msg_len(msg)) {
+        HIP_ERROR("hipd build hdr: msg len (%d) invalid\n", hip_get_msg_total_len(msg));
+        return -EMSGSIZE;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**

@@ -59,8 +59,9 @@ static int get_default_hit(struct in6_addr *result)
     const struct hip_tlv_common *param = NULL;
     const struct in6_addr       *hit   = NULL;
 
-    msg = hip_msg_alloc();
-    HIP_IFE(!msg, -1);
+    if (!(msg = hip_msg_alloc())) {
+        return -1;
+    }
 
     HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1);
     HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);

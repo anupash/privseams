@@ -392,7 +392,9 @@ int hip_firewall_set_esp_relay(int action)
     int                sent;
 
     HIP_DEBUG("Setting ESP relay to %d\n", action);
-    HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+    if (!(msg = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
     HIP_IFEL(hip_build_user_hdr(msg,
                                 action ? HIP_MSG_OFFER_FULLRELAY : HIP_MSG_CANCEL_FULLRELAY, 0),
              -1, "Build header failed\n");

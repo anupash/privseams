@@ -45,7 +45,6 @@
 #include "config.h"
 #include "builder.h"
 #include "debug.h"
-#include "ife.h"
 #include "protodefs.h"
 #include "prefix.h"
 
@@ -218,10 +217,13 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
     int     err = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
 
-    HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest)),
-             err,
-             "Building of digest failed\n");
+    if (hit_type != HIP_HIT_TYPE_HASH100) {
+        return -ENOSYS;
+    }
+    if ((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest))) {
+        HIP_ERROR("Building of digest failed\n");
+        return err;
+    }
 
     memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
            sizeof(struct in6_addr));
@@ -229,8 +231,6 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
     hit->s6_addr32[3] = 0; // this separates phit from normal hit
 
     set_hit_prefix(hit);
-
-out_err:
 
     return err;
 }

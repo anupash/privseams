@@ -348,7 +348,9 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg,
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, EHIP);
+        if ((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+            return EHIP;
+        }
 
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
@@ -451,7 +453,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, -1);
+        if ((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+            return -1;
+        }
 
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
