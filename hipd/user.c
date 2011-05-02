@@ -114,7 +114,7 @@ static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
     struct hip_hit_info data;
     int                 err = 0;
 
-    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
+    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_host_id_local));
     /* FIXME: algo is 0 in entry->lhi */
     data.lhi.algo = hip_get_host_id_algo(entry->host_id);
     memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));

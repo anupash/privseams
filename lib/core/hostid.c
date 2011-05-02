@@ -451,25 +451,25 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int rsa_key_bits,
                                  const int dsa_key_bits)
 {
-    int                  err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
-    int                  dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
-    hip_hdr              numeric_action     = 0;
-    char                 hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    const char          *rsa_filenamebase     = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char          *dsa_filenamebase     = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char          *rsa_filenamebase_pub = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char          *dsa_filenamebase_pub = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    unsigned char       *dsa_key_rr           = NULL, *rsa_key_rr = NULL;
-    unsigned char       *dsa_pub_key_rr       = NULL, *rsa_pub_key_rr = NULL;
-    DSA                 *dsa_key              = NULL, *dsa_pub_key = NULL;
-    RSA                 *rsa_key              = NULL, *rsa_pub_key = NULL;
-    struct hip_lhi       rsa_lhi, dsa_lhi, rsa_pub_lhi, dsa_pub_lhi;
-    struct hip_host_id  *dsa_host_id          = NULL, *rsa_host_id = NULL;
-    struct hip_host_id  *dsa_pub_host_id      = NULL, *rsa_pub_host_id = NULL;
-    struct endpoint_hip *endpoint_dsa_hip     = NULL;
-    struct endpoint_hip *endpoint_dsa_pub_hip = NULL;
-    struct endpoint_hip *endpoint_rsa_hip     = NULL;
-    struct endpoint_hip *endpoint_rsa_pub_hip = NULL;
+    int                      err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
+    int                      dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
+    hip_hdr                  numeric_action     = 0;
+    char                     hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    const char              *rsa_filenamebase     = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char              *dsa_filenamebase     = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char              *rsa_filenamebase_pub = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    const char              *dsa_filenamebase_pub = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    unsigned char           *dsa_key_rr           = NULL, *rsa_key_rr = NULL;
+    unsigned char           *dsa_pub_key_rr       = NULL, *rsa_pub_key_rr = NULL;
+    DSA                     *dsa_key              = NULL, *dsa_pub_key = NULL;
+    RSA                     *rsa_key              = NULL, *rsa_pub_key = NULL;
+    struct hip_host_id_local rsa_lhi, dsa_lhi, rsa_pub_lhi, dsa_pub_lhi;
+    struct hip_host_id      *dsa_host_id          = NULL, *rsa_host_id = NULL;
+    struct hip_host_id      *dsa_pub_host_id      = NULL, *rsa_pub_host_id = NULL;
+    struct endpoint_hip     *endpoint_dsa_hip     = NULL;
+    struct endpoint_hip     *endpoint_dsa_pub_hip = NULL;
+    struct endpoint_hip     *endpoint_rsa_hip     = NULL;
+    struct endpoint_hip     *endpoint_rsa_pub_hip = NULL;
 
     if (action == ACTION_ADD) {
         numeric_action = HIP_MSG_ADD_LOCAL_HI;

@@ -40,8 +40,8 @@ struct hip_rsa_keylen {
 };
 
 struct hip_hit_info {
-    struct hip_lhi lhi;
-    hip_lsi_t      lsi;
+    struct hip_host_id_local lhi;
+    hip_lsi_t                lsi;
 };
 
 int hip_host_id_to_hit(const struct hip_host_id *const host_id,

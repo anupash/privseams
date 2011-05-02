@@ -589,7 +589,7 @@ struct hip_host_id_priv {
  * Localhost Host Identity. Used only internally in the implementation.
  * Used for wrapping anonymous bit with the corresponding HIT.
  */
-struct hip_lhi {
+struct hip_host_id_local {
     struct in6_addr hit;
     uint16_t        anonymous;        /**< Is this an anonymous HI */
     uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA */

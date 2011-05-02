@@ -226,7 +226,7 @@ void hip_init_hostid_db(void)
  * @param lhi the HIT to be deleted from the database.
  * @return    zero on success, otherwise negative.
  */
-static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
+static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_host_id_local *lhi)
 {
     int                       err = -ENOENT;
     struct hip_host_id_entry *id  = NULL;
@@ -288,7 +288,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
     HIP_WRITE_LOCK_DB(db);
 
     list_for_each_safe(curr, iter, db, count) {
-        struct hip_lhi lhi;
+        struct hip_host_id_local lhi;
 
         tmp = list_entry(curr);
 
@@ -445,7 +445,7 @@ void hip_uninit_host_id_dbs(void)
  * @return        0 on success, otherwise an negative error value is returned.
  */
 static int hip_add_host_id(HIP_HASHTABLE *db,
-                           const struct hip_lhi *lhi,
+                           const struct hip_host_id_local *lhi,
                            hip_lsi_t *lsi,
                            const struct hip_host_id_priv *host_id,
                            int (*add)(struct hip_host_id_entry *, void **arg),
@@ -552,7 +552,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 {
     int                            err           = 0;
     const struct hip_host_id_priv *host_identity = NULL;
-    struct hip_lhi                 lhi;
+    struct hip_host_id_local       lhi;
     const struct hip_tlv_common   *param        = NULL;
     const struct hip_eid_endpoint *eid_endpoint = NULL;
     struct in6_addr                in6_lsi;
@@ -630,10 +630,10 @@ out_err:
  */
 int hip_handle_del_local_hi(const struct hip_common *input)
 {
-    const struct in6_addr *hit;
-    struct hip_lhi         lhi;
-    char                   buf[46];
-    int                    err = 0;
+    const struct in6_addr   *hit;
+    struct hip_host_id_local lhi;
+    char                     buf[46];
+    int                      err = 0;
 
     hit = hip_get_param_contents(input, HIP_PARAM_HIT);
     HIP_IFEL(!hit, -ENODATA, "no hit\n");
