@@ -1348,7 +1348,7 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
  *
  * @see hip_remove_iface_all_local_hits()
  */
-static int hip_remove_iface_hit_by_host_id(struct hip_host_id_entry *entry,
+static int hip_remove_iface_hit_by_host_id(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
     return hip_manage_iface_local_hit(&(entry->lhi.hit), false);

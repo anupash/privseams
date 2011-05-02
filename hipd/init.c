@@ -490,12 +490,12 @@ out_err:
  *
  * @return the host id or NULL if none found
  */
-static struct hip_host_id_entry *hip_return_first_rsa(void)
+static struct local_host_id *hip_return_first_rsa(void)
 {
-    LHASH_NODE               *curr, *iter;
-    struct hip_host_id_entry *tmp = NULL;
-    int                       c;
-    uint16_t                  algo = 0;
+    LHASH_NODE           *curr, *iter;
+    struct local_host_id *tmp = NULL;
+    int                   c;
+    uint16_t              algo = 0;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
@@ -591,11 +591,11 @@ out_err:
  */
 static int hip_init_certs(void)
 {
-    int                       err = 0;
-    char                      hit[41];
-    FILE                     *conf_file;
-    struct hip_host_id_entry *entry;
-    char                      hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    int                   err = 0;
+    char                  hit[41];
+    FILE                 *conf_file;
+    struct local_host_id *entry;
+    char                  hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
     HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
              "gethostname failed\n");

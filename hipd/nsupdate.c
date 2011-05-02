@@ -269,7 +269,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
  * @return          0
  */
 
-static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
+static int run_nsupdate_for_hit(struct local_host_id *entry, void *opaq)
 {
     int         start = 0;
     char        ip_str[40]; // buffer for one IP address

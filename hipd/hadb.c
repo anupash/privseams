@@ -281,11 +281,11 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    LHASH_NODE               *item, *tmp;
-    struct hip_host_id_entry *e;
-    struct hip_hadb_state    *entry = NULL;
-    hip_hit_t                 our_hit;
-    int                       i;
+    LHASH_NODE            *item, *tmp;
+    struct local_host_id  *e;
+    struct hip_hadb_state *entry = NULL;
+    hip_hit_t              our_hit;
+    int                    i;
 
     /* Let's try with the default HIT first */
     hip_get_default_hit(&our_hit);
@@ -545,7 +545,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
  * @param  peer_map_void a pointer to hip_peer_map_info
  * @return zero on success or negative on error
  */
-static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+static int hip_hadb_add_peer_info_wrapper(struct local_host_id *entry,
                                           void *peer_map_void)
 {
     struct hip_peer_map_info *peer_map = peer_map_void;

@@ -197,10 +197,10 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
                               struct in6_addr *our_hit)
 {
-    struct hip_common        *err         = NULL, *r1 = NULL;
-    struct hip_r1entry       *hip_r1table = NULL;
-    struct hip_host_id_entry *hid         = NULL;
-    int                       idx, len;
+    struct hip_common    *err         = NULL, *r1 = NULL;
+    struct hip_r1entry   *hip_r1table = NULL;
+    struct local_host_id *hid         = NULL;
+    int                   idx, len;
 
     /* Find the proper R1 table and copy the R1 message from the table */
     HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
@@ -319,11 +319,11 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
      * of this function was inverted. I.e. This function now returns
      * negative for error conditions, zero otherwise. It used to be the
      * other way around. -Lauri 23.07.2008. */
-    const struct hip_puzzle  *puzzle = NULL;
-    struct hip_r1entry       *result = NULL;
-    struct hip_host_id_entry *hid    = NULL;
-    struct puzzle_hash_input  puzzle_input;
-    int                       err = 0;
+    const struct hip_puzzle *puzzle = NULL;
+    struct hip_r1entry      *result = NULL;
+    struct local_host_id    *hid    = NULL;
+    struct puzzle_hash_input puzzle_input;
+    int                      err = 0;
 
     /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
@@ -383,7 +383,7 @@ out_err:
  * @param opaque unused, required for compatibility with hip_for_each_hi()
  * @return zero on success or negative on error
  */
-static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
+static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
     int (*signature_func)(void *key, struct hip_common *m);

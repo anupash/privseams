@@ -347,13 +347,13 @@ int hip_create_i2(UNUSED const uint8_t packet_type,
                   UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    hip_transform_suite       transform_hip_suite, transform_esp_suite;
-    const struct hip_param   *param         = NULL;
-    struct hip_esp_info      *esp_info      = NULL;
-    struct hip_host_id_entry *host_id_entry = NULL;
-    char                     *enc_in_msg    = NULL, *host_id_in_enc = NULL;
-    unsigned char            *iv            = NULL;
-    int                       err           = 0, host_id_in_enc_len = 0;
+    hip_transform_suite     transform_hip_suite, transform_esp_suite;
+    const struct hip_param *param         = NULL;
+    struct hip_esp_info    *esp_info      = NULL;
+    struct local_host_id   *host_id_entry = NULL;
+    char                   *enc_in_msg    = NULL, *host_id_in_enc = NULL;
+    unsigned char          *iv            = NULL;
+    int                     err           = 0, host_id_in_enc_len = 0;
 
     HIP_IFEL(ctx->error, -1, "Abort packet processing.\n");
 

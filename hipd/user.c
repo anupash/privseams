@@ -104,12 +104,12 @@ static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
  * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
  * Interprocess communications only.
  *
- * @param entry an hip_host_id_entry structure
+ * @param entry an local_host_id structure
  * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
  *            parameter will be written
  * @return zero on success and negative on error
  */
-static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
+static int host_id_entry_to_hit_info(struct local_host_id *entry, void *msg)
 {
     struct hip_hit_info data;
     int                 err = 0;
