@@ -501,7 +501,7 @@ static struct local_host_id *hip_return_first_rsa(void)
 
     list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
         tmp = list_entry(curr);
-        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+        HIP_DEBUG_HIT("Found HIT", &tmp->hit);
         algo = hip_get_host_id_algo(tmp->host_id);
         HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
                   algo, HIP_HI_RSA);
@@ -610,7 +610,7 @@ static int hip_init_certs(void)
             HIP_DEBUG("Failed to get the first RSA HI");
             goto out_err;
         }
-        hip_in6_ntop(&entry->lhi.hit, hit);
+        hip_in6_ntop(&entry->hit, hit);
         conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
         fprintf(conf_file,
                 "# Section containing SPKI related information\n"

@@ -404,7 +404,7 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
         return -1;
     }
 
-    if (!hip_precreate_r1(entry->r1, &entry->lhi.hit, signature_func,
+    if (!hip_precreate_r1(entry->r1, &entry->hit, signature_func,
                           entry->private_key, entry->host_id)) {
         return -1;
     }

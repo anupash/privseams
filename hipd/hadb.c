@@ -298,7 +298,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     list_for_each_safe(item, tmp, hip_local_hostid_db, i)
     {
         e = list_entry(item);
-        ipv6_addr_copy(&our_hit, &e->lhi.hit);
+        ipv6_addr_copy(&our_hit, &e->hit);
         entry = hip_hadb_find_byhits(hit, &our_hit);
         if (!entry) {
             continue;
@@ -550,7 +550,7 @@ static int hip_hadb_add_peer_info_wrapper(struct local_host_id *entry,
 {
     struct hip_peer_map_info *peer_map = peer_map_void;
 
-    if (hip_hadb_add_peer_info_complete(&entry->lhi.hit,
+    if (hip_hadb_add_peer_info_complete(&entry->hit,
                                         &peer_map->peer_hit,
                                         &peer_map->peer_lsi,
                                         &peer_map->our_addr,

@@ -284,7 +284,7 @@ static int run_nsupdate_for_hit(struct local_host_id *entry, void *opaq)
 
     HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-    hip_convert_hit_to_str(&entry->lhi.hit, NULL, hit);
+    hip_convert_hit_to_str(&entry->hit, NULL, hit);
 
     /* make space-separated list of IP addresses in ips_str */
     list_for_each_safe(item, tmp, addresses, i) {

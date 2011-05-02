@@ -26,6 +26,7 @@
 #ifndef HIP_HIPD_HIDB_H
 #define HIP_HIPD_HIDB_H
 
+#include <stdbool.h>
 #include <netinet/in.h>
 #include <openssl/lhash.h>
 
@@ -59,11 +60,12 @@
 #endif
 
 struct local_host_id {
-    struct hip_host_id_local lhi;
-    hip_lsi_t                lsi;
-    struct hip_host_id      *host_id; /* allocated dynamically */
-    void                    *private_key; /* RSA or DSA */
-    struct hip_r1entry      *r1; /* precreated R1s */
+    hip_hit_t           hit;
+    bool                anonymous;        /**< Is this an anonymous HI */
+    hip_lsi_t           lsi;
+    struct hip_host_id *host_id;      /* allocated dynamically */
+    void               *private_key;      /* RSA or DSA */
+    struct hip_r1entry *r1;      /* precreated R1s */
     /* Handler to call after insert with an argument, return 0 if OK*/
     int (*insert)(struct local_host_id *, void **arg);
     /* Handler to call before remove with an argument, return 0 if OK*/

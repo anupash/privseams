@@ -1341,7 +1341,7 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
 /**
  * Remove the HIT given by @a entry from the virtual interface.
  *
- * @param entry  The hit is determined by entry->lhi.hit
+ * @param entry  The hit is determined by entry->hit
  * @param opaque Ignored: added to comply with hip_for_each_hi() callback
  *               signature.
  * @return       Zero on success, non-zero on failure.
@@ -1351,7 +1351,7 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
 static int hip_remove_iface_hit_by_host_id(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
-    return hip_manage_iface_local_hit(&(entry->lhi.hit), false);
+    return hip_manage_iface_local_hit(&(entry->hit), false);
 }
 
 /**
