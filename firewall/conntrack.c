@@ -1261,13 +1261,10 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
+        esp_tuple->tuple = other_dir;
         HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
                  -1, "adding or updating ESP destination address failed");
-        esp_tuple->tuple = other_dir;
-
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
-
-        update_esp_address(esp_tuple, ip6_src, NULL);
         insert_esp_tuple(esp_tuple);
     }
 
@@ -1333,11 +1330,9 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
+        esp_tuple->tuple = other_dir;
         HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
                  -1, "adding or updating ESP destination address failed");
-        esp_tuple->tuple = other_dir;
-
-        update_esp_address(esp_tuple, ip6_src, NULL);
         insert_esp_tuple(esp_tuple);
 
         HIP_DEBUG("ESP tuple inserted\n");
