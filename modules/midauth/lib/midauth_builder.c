@@ -114,23 +114,23 @@ int hip_build_param_challenge_response(struct hip_common *msg,
                                        uint8_t val_J[PUZZLE_LENGTH])
 {
     struct hip_challenge_response response;
-    int                           opaque_length = 0;
-    int                           err           = 0;
+    int                           opaque_len = 0;
+    int                           err        = 0;
 
-    opaque_length = hip_get_param_contents_len(request) -
-                    2 * sizeof(uint8_t);
+    opaque_len = hip_challenge_request_opaque_len(request);
+
+    static const size_t min_length = sizeof(response)
+                                     - sizeof(response.tlv)
+                                     - sizeof(response.opaque);
 
     /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &response,
-                               3 * sizeof(uint8_t) + sizeof(uint64_t) +
-                               opaque_length);
-    hip_set_param_type((struct hip_tlv_common *) &response,
-                       HIP_PARAM_CHALLENGE_RESPONSE);
+    hip_set_param_contents_len(&response.tlv, min_length + opaque_len);
+    hip_set_param_type(&response.tlv, HIP_PARAM_CHALLENGE_RESPONSE);
 
     memcpy(response.J, val_J, PUZZLE_LENGTH);
     response.K        = request->K;
     response.lifetime = request->lifetime;
-    memcpy(&response.opaque, request->opaque, opaque_length);
+    memcpy(response.opaque, request->opaque, opaque_len);
 
     HIP_IFEL(hip_build_param(msg, &response), -1, "failed to build parameter\n");
 
