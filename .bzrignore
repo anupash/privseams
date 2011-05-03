@@ -8,6 +8,7 @@
 .libs
 .project
 .pydevproject
+.vimrc_custom
 Makefile
 Makefile.in
 TAGS

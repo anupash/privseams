@@ -7,3 +7,7 @@ autocmd FileType make,automake set noexpandtab shiftwidth=8 softtabstop=8
 
 " trailing whitespace is forbidden, so highlight it
 let c_space_errors = 1
+
+if filereadable(".vimrc_custom")
+    source .vimrc_custom
+endif
