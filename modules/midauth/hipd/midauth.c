@@ -89,7 +89,7 @@ static int hip_handle_challenge_request_param(UNUSED const uint8_t packet_type,
         HIP_IFEL(hip_build_param_challenge_response(ctx->output_msg,
                                                     request, tmp_puzzle.solution) < 0,
                  -1,
-                 "Error while creating solution_m reply parameter\n");
+                 "Error while creating CHALLENGE_RESPONSE parameter\n");
 
         // process next challenge parameter, if available
         request = (const struct hip_challenge_request *)
