@@ -690,10 +690,8 @@ out_err:
 const char *lmod_get_parameter_identifier(const uint16_t parameter_type)
 {
     const struct hip_ll_node *iter = NULL;
-    HIP_DEBUG("Name search for parameter type %d \n", parameter_type);
 
     while ((iter = hip_ll_iterate(&parameter_types, iter))) {
-        HIP_DEBUG("Parameter type in list %d \n", ((struct parameter_type *) iter->ptr)->num);
         if (parameter_type == ((struct parameter_type *) iter->ptr)->num) {
             return ((struct parameter_type *) iter->ptr)->identifier;
         }
