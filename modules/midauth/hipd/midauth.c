@@ -144,7 +144,7 @@ int hip_midauth_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_I1_SENT,
                                           &hip_handle_challenge_request_param,
-                                          20550),
+                                          32500),
              -1, "Error on registering MIDAUTH handle function.\n");
 
     //
