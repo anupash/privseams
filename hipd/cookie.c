@@ -241,15 +241,23 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
 {
     int i = 0;
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
-        int cookie_k;
+        int                cookie_k;
+        union hip_msg_bfr *bfr = NULL;
 
         cookie_k = hip_get_cookie_difficulty();
 
-        r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey, cookie_k);
-        if (!r1table[i].r1) {
+        bfr = malloc(sizeof(*bfr));
+        if (!bfr) {
+            HIP_ERROR("Unable to allocate memory for message buffer");
+            return -ENOMEM;
+        }
+
+        if (hip_create_r1(&bfr->msg, hit, sign, privkey, pubkey, cookie_k)) {
             HIP_ERROR("Unable to precreate R1s\n");
             return 0;
         }
+
+        r1table[i].r1 = &bfr->msg;
 
         HIP_DEBUG("Packet %d created\n", i);
     }
