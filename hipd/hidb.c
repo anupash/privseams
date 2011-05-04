@@ -245,12 +245,6 @@ static int hip_del_host_id(HIP_HASHTABLE *db, hip_hit_t hit)
         id->remove(id, &id->arg);
     }
 
-    /* free the dynamically reserved memory and
-     * set host_id to null to signal that it is free */
-    if (id->r1) {
-        hip_uninit_r1(id->r1);
-    }
-
     switch (hip_get_host_id_algo(&id->host_id)) {
     case HIP_HI_RSA:
         RSA_free(id->private_key);
