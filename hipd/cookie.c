@@ -370,7 +370,7 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
     int (*signature_func)(void *key, struct hip_common *m);
 
     hip_uninit_r1(entry->r1);
-    switch (hip_get_host_id_algo(entry->host_id)) {
+    switch (hip_get_host_id_algo(&entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
         break;
@@ -383,7 +383,7 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
     }
 
     if (!hip_precreate_r1(entry->r1, &entry->hit, signature_func,
-                          entry->private_key, entry->host_id)) {
+                          entry->private_key, &entry->host_id)) {
         return -1;
     }
 

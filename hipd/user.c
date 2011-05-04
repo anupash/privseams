@@ -114,7 +114,7 @@ static int host_id_entry_to_hit_info(struct local_host_id *entry, void *msg)
     struct hip_hit_info data;
     int                 err = 0;
 
-    data.lhi = (struct hip_host_id_local) { entry->hit, entry->anonymous, hip_get_host_id_algo(entry->host_id) };
+    data.lhi = (struct hip_host_id_local) { entry->hit, entry->anonymous, hip_get_host_id_algo(&entry->host_id) };
     memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
 
     HIP_IFEL(hip_build_param_contents(msg,
