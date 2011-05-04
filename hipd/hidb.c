@@ -493,7 +493,6 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
-    HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
     HIP_IFEL(!(id_entry->host_id = malloc(sizeof(struct hip_host_id))),
              -ENOMEM, "Unable to allocate host id\n");
     HIP_IFEL(hip_get_public_key(host_id, id_entry->host_id),

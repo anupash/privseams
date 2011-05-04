@@ -65,7 +65,7 @@ struct local_host_id {
     hip_lsi_t           lsi;
     struct hip_host_id *host_id;      /* allocated dynamically */
     void               *private_key;      /* RSA or DSA */
-    struct hip_r1entry *r1;      /* precreated R1s */
+    struct hip_r1entry  r1[HIP_R1TABLESIZE];      /* precreated R1s */
     /* Handler to call after insert with an argument, return 0 if OK*/
     int (*insert)(struct local_host_id *, void **arg);
     /* Handler to call before remove with an argument, return 0 if OK*/

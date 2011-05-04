@@ -54,8 +54,6 @@
 #include "cookie.h"
 
 
-#define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
-
 static uint8_t hip_cookie_difficulty = 0; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 /**
@@ -228,22 +226,6 @@ out_err:
 }
 
 /**
- * initialize an R1 entry structure
- *
- * @return The allocated R1 entry structure. Caller deallocates.
- */
-struct hip_r1entry *hip_init_r1(void)
-{
-    struct hip_r1entry *err;
-
-    if (!(err = calloc(HIP_R1TABLESIZE, sizeof(struct hip_r1entry)))) {
-        return NULL;
-    }
-
-    return err;
-}
-
-/**
  * precreate an R1 packet
  *
  * @param r1table a pointer to R1 table structure
@@ -280,7 +262,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
  *
  * @param hip_r1table R1 table
  */
-void hip_uninit_r1(struct hip_r1entry *hip_r1table)
+void hip_uninit_r1(struct hip_r1entry *const hip_r1table)
 {
     int i;
 
@@ -293,9 +275,8 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
     if (hip_r1table) {
         for (i = 0; i < HIP_R1TABLESIZE; i++) {
             free(hip_r1table[i].r1);
+            hip_r1table[i].r1 = NULL;
         }
-        free(hip_r1table);
-        hip_r1table = NULL;
     }
 }
 
@@ -389,9 +370,6 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
     int (*signature_func)(void *key, struct hip_common *m);
 
     hip_uninit_r1(entry->r1);
-    if (!(entry->r1 = hip_init_r1())) {
-        return -ENOMEM;
-    }
     switch (hip_get_host_id_algo(entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
