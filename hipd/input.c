@@ -528,7 +528,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
      * debug printing do not print this information inside the individual
      * receive or handle functions. */
     HIP_INFO_IN6ADDR("Src IP", &ctx->src_addr);
-    HIP_INFO_IN6ADDR("Dst IP", &ctx->src_addr);
+    HIP_INFO_IN6ADDR("Dst IP", &ctx->dst_addr);
     HIP_DEBUG("Src port: %u\n", ctx->msg_ports.src_port);
     HIP_DEBUG("Dst port: %u\n", ctx->msg_ports.dst_port);
     HIP_DUMP_MSG(ctx->input_msg);
