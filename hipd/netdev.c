@@ -1238,7 +1238,6 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
             break;
         case XFRMGRP_ACQUIRE:
             /* This seems never to occur */
-            HIP_DEBUG("\n");
             return -1;
             break;
         case XFRMGRP_EXPIRE:
