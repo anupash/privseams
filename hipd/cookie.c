@@ -211,9 +211,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     HIP_DEBUG("Calculated index: %d\n", idx);
 
     /* Create a copy of the found entry */
-    len = hip_get_msg_total_len(&hip_r1table[idx].bfr.msg);
+    len = hip_get_msg_total_len(&hip_r1table[idx].buf.msg);
     r1  = hip_msg_alloc();
-    memcpy(r1, &hip_r1table[idx].bfr.msg, len);
+    memcpy(r1, &hip_r1table[idx].buf.msg, len);
     err = r1;
 
 out_err:
@@ -245,9 +245,9 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
 
         cookie_k = hip_get_cookie_difficulty();
 
-        hip_msg_init(&r1table[i].bfr.msg);
+        hip_msg_init(&r1table[i].buf.msg);
 
-        if (hip_create_r1(&r1table[i].bfr.msg, hit, sign, privkey, pubkey, cookie_k)) {
+        if (hip_create_r1(&r1table[i].buf.msg, hit, sign, privkey, pubkey, cookie_k)) {
             HIP_ERROR("Unable to precreate R1s\n");
             return 0;
         }
@@ -292,7 +292,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
              -1, "Requested source HIT not (any more) available.\n");
     result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 
-    puzzle = hip_get_param(&result->bfr.msg, HIP_PARAM_PUZZLE);
+    puzzle = hip_get_param(&result->buf.msg, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
     HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                     HIP_PUZZLE_OPAQUE_LEN), -1,

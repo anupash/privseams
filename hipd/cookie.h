@@ -34,7 +34,7 @@
 #define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 
 struct hip_r1entry {
-    union hip_msg_bfr bfr;
+    union hip_msg_bfr buf;
     uint32_t          generation;
     uint8_t           Ci[PUZZLE_LENGTH];
     uint8_t           Ck;
