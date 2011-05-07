@@ -631,6 +631,9 @@ int hip_create_r1(struct hip_common *const msg,
         }
     }
 
+    /* Initialize the message buffer as the message builder depends on it. */
+    hip_msg_init(msg);
+
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
