@@ -502,7 +502,7 @@ static struct local_host_id *hip_return_first_rsa(void)
     list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
         tmp = list_entry(curr);
         HIP_DEBUG_HIT("Found HIT", &tmp->hit);
-        algo = hip_get_host_id_algo(tmp->host_id);
+        algo = hip_get_host_id_algo(&tmp->host_id);
         HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
                   algo, HIP_HI_RSA);
         if (algo == HIP_HI_RSA) {

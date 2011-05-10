@@ -443,7 +443,7 @@ int hip_create_i2(UNUSED const uint8_t packet_type,
                                                                         -1)),
                  -1, "Unknown HIT\n");
 
-        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, host_id_entry->host_id),
+        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, &host_id_entry->host_id),
                  -1, "Building of host id failed\n");
     }
 

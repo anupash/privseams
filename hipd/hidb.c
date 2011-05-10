@@ -251,7 +251,7 @@ static int hip_del_host_id(HIP_HASHTABLE *db, hip_hit_t hit)
         hip_uninit_r1(id->r1);
     }
 
-    switch (hip_get_host_id_algo(id->host_id)) {
+    switch (hip_get_host_id_algo(&id->host_id)) {
     case HIP_HI_RSA:
         RSA_free(id->private_key);
         break;
@@ -261,7 +261,6 @@ static int hip_del_host_id(HIP_HASHTABLE *db, hip_hit_t hit)
         HIP_ERROR("Cannot free key because key type is unknown.\n");
     }
 
-    free(id->host_id);
     list_del(id, db);
     free(id);
     id = NULL;
@@ -325,7 +324,7 @@ struct local_host_id *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
 
         if ((hit == NULL || !ipv6_addr_cmp(&id_entry->hit, hit)) &&
             (algo == HIP_ANY_ALGO ||
-             (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
+             (hip_get_host_id_algo(&id_entry->host_id) == algo)) &&
             (anon == -1 || id_entry->anonymous == anon)) {
             return id_entry;
         }
@@ -493,12 +492,9 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
-    HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
-    HIP_IFEL(!(id_entry->host_id = malloc(sizeof(struct hip_host_id))),
-             -ENOMEM, "Unable to allocate host id\n");
-    HIP_IFEL(hip_get_public_key(host_id, id_entry->host_id),
+    HIP_IFEL(hip_get_public_key(host_id, &id_entry->host_id),
              -1, "Unable to get public key from private host id\n");
-    switch (hip_get_host_id_algo(id_entry->host_id)) {
+    switch (hip_get_host_id_algo(&id_entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
         break;
@@ -514,7 +510,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_IFEL(!hip_precreate_r1(id_entry->r1,
                                &hit,
                                signature_func,
-                               id_entry->private_key, id_entry->host_id),
+                               id_entry->private_key, &id_entry->host_id),
              -ENOENT,
              "Unable to precreate R1s.\n");
 
@@ -526,13 +522,10 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
 out_err:
     if (err && id_entry) {
-        if (id_entry->host_id) {
-            if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
-                RSA_free(id_entry->private_key);
-            } else {
-                DSA_free(id_entry->private_key);
-            }
-            free(id_entry->host_id);
+        if (hip_get_host_id_algo(&id_entry->host_id) == HIP_HI_RSA) {
+            RSA_free(id_entry->private_key);
+        } else {
+            DSA_free(id_entry->private_key);
         }
         free(id_entry);
     }
@@ -814,12 +807,12 @@ int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
     entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
     HIP_IFE(!entry, -1);
 
-    host_id_len = hip_get_param_total_len(entry->host_id);
+    host_id_len = hip_get_param_total_len(&entry->host_id);
     HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
 
     *host_id = malloc(host_id_len);
     HIP_IFE(!*host_id, -ENOMEM);
-    memcpy(*host_id, entry->host_id, host_id_len);
+    memcpy(*host_id, &entry->host_id, host_id_len);
 
     *key = entry->private_key;
     HIP_IFE(!*key, -1);
