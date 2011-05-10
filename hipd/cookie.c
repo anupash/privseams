@@ -235,9 +235,11 @@ out_err:
  * @param pubkey the host id (public key)
  * @return zero on success and non-zero on error
  */
-int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
-                     int (*sign)(void *key, struct hip_common *m),
-                     void *privkey, struct hip_host_id *pubkey)
+int hip_precreate_r1(struct hip_r1entry *const r1table,
+                     const struct in6_addr *const hit,
+                     int (*sign)(void *const key, struct hip_common *const m),
+                     void *const privkey,
+                     const struct hip_host_id *const pubkey)
 {
     int i = 0;
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
