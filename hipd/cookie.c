@@ -345,7 +345,7 @@ out_err:
 static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
-    int (*signature_func)(void *key, struct hip_common *m);
+    int (*signature_func)(void *const key, struct hip_common *const m);
 
     switch (hip_get_host_id_algo(&entry->host_id)) {
     case HIP_HI_RSA:

@@ -579,11 +579,11 @@ out_err:
  * @return             0 on success, a non-zero value on error.
  */
 int hip_create_r1(struct hip_common *const msg,
-                  const struct in6_addr *src_hit,
-                  int (*sign)(void *key, struct hip_common *m),
-                  void *private_key,
-                  const struct hip_host_id *host_id_pub,
-                  int cookie_k)
+                  const struct in6_addr *const src_hit,
+                  int (*sign)(void *const key, struct hip_common *const m),
+                  void *const private_key,
+                  const struct hip_host_id *const host_id_pub,
+                  const int cookie_k)
 {
     int            err = 0;
     struct hip_srv service_list[HIP_TOTAL_EXISTING_SERVICES];
