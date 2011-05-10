@@ -40,7 +40,7 @@
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_rsa_sign(void *priv_key, struct hip_common *msg)
+int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
 {
     RSA         *rsa = priv_key;
     uint8_t      sha1_digest[HIP_AH_SHA_LEN];
@@ -86,12 +86,12 @@ out_err:
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_dsa_sign(void *priv_key, struct hip_common *msg)
+int hip_dsa_sign(void *const priv_key, struct hip_common *const msg)
 {
-    DSA    *dsa = priv_key;
-    uint8_t sha1_digest[HIP_AH_SHA_LEN];
-    uint8_t signature[HIP_DSA_SIGNATURE_LEN];
-    int     err = 0, len;
+    DSA *const dsa = priv_key;
+    uint8_t    sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t    signature[HIP_DSA_SIGNATURE_LEN];
+    int        err = 0, len;
 
     len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
@@ -124,7 +124,7 @@ out_err:
  * @param type HIP_HI_RSA or HIP_HI_DSA
  * @return zero on success and non-zero on failure
  */
-static int verify(void *peer_pub, struct hip_common *msg, const int type)
+static int verify(void *const peer_pub, struct hip_common *const msg, const int type)
 {
     int                err = 0, len, origlen;
     struct hip_sig    *sig;
@@ -207,7 +207,7 @@ out_err:
  *            be verified
  * @return zero on success and non-zero on failure
  */
-int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
+int hip_rsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
@@ -224,7 +224,7 @@ int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
  *            be verified
  * @return zero on success and non-zero on failure
  */
-int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
+int hip_dsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
@@ -240,7 +240,7 @@ int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
  *
  * @note This function is originally from OpenHIP
  */
-int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
+int bn2bin_safe(const BIGNUM *const a, unsigned char *const to, const int len)
 {
     int padlen = len - BN_num_bytes(a);
     /* add leading zeroes when needed */
