@@ -34,17 +34,16 @@
 #define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 
 struct hip_r1entry {
-    struct hip_common *r1;
-    uint32_t           generation;
-    uint8_t            Ci[PUZZLE_LENGTH];
-    uint8_t            Ck;
-    uint8_t            Copaque[HIP_PUZZLE_OPAQUE_LEN];
+    union hip_msg_bfr buf;
+    uint32_t          generation;
+    uint8_t           Ci[PUZZLE_LENGTH];
+    uint8_t           Ck;
+    uint8_t           Copaque[HIP_PUZZLE_OPAQUE_LEN];
 };
 
 struct hip_common *hip_get_r1(struct in6_addr *ip_i,
                               struct in6_addr *ip_r,
                               struct in6_addr *peer_hit);
-void hip_uninit_r1(struct hip_r1entry *const hip_r1table);
 int hip_recreate_all_precreated_r1_packets(void);
 int hip_precreate_r1(struct hip_r1entry *r1table,
                      const struct in6_addr *hit,

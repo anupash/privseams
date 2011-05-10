@@ -45,11 +45,12 @@ extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
-                                 int (*sign)(void *key, struct hip_common *m),
-                                 void *private_key,
-                                 const struct hip_host_id *host_id_pub,
-                                 int cookie_k);
+int hip_create_r1(struct hip_common *const msg,
+                  const struct in6_addr *src_hit,
+                  int (*sign)(void *key, struct hip_common *m),
+                  void *private_key,
+                  const struct hip_host_id *host_id_pub,
+                  int cookie_k);
 
 int hip_send_r1(const uint8_t packet_type,
                 const uint32_t ha_state,

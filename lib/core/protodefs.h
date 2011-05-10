@@ -701,6 +701,19 @@ struct hip_common_user {
 } __attribute__ ((packed));
 
 /**
+ * A memory buffer for a HIP message.
+ * Instances of this type occupy HIP_MAX_PACKET bytes of memory.
+ * This type is useful where HIP messages are constructed and to express that
+ * the message needs to be backed by memory for that.
+ * It is also useful where dynamic allocation of message buffers is unwanted.
+ */
+union hip_msg_bfr {
+    struct hip_common      msg;
+    struct hip_common_user usr;
+    unsigned char          bfr[HIP_MAX_PACKET];
+};
+
+/**
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and length conversion.
  */

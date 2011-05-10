@@ -211,9 +211,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     HIP_DEBUG("Calculated index: %d\n", idx);
 
     /* Create a copy of the found entry */
-    len = hip_get_msg_total_len(hip_r1table[idx].r1);
+    len = hip_get_msg_total_len(&hip_r1table[idx].buf.msg);
     r1  = hip_msg_alloc();
-    memcpy(r1, hip_r1table[idx].r1, len);
+    memcpy(r1, &hip_r1table[idx].buf.msg, len);
     err = r1;
 
 out_err:
@@ -245,8 +245,9 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
 
         cookie_k = hip_get_cookie_difficulty();
 
-        r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey, cookie_k);
-        if (!r1table[i].r1) {
+        hip_msg_init(&r1table[i].buf.msg);
+
+        if (hip_create_r1(&r1table[i].buf.msg, hit, sign, privkey, pubkey, cookie_k)) {
             HIP_ERROR("Unable to precreate R1s\n");
             return 0;
         }
@@ -255,29 +256,6 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
     }
 
     return 1;
-}
-
-/**
- * uninitialize R1 table
- *
- * @param hip_r1table R1 table
- */
-void hip_uninit_r1(struct hip_r1entry *const hip_r1table)
-{
-    int i;
-
-    /* The R1 packet consist of 2 memory blocks. One contains the actual
-     * buffer where the packet is formed, while the other contains
-     * pointers to different TLVs to speed up parsing etc.
-     * The r1->common is the actual buffer, and r1 is the structure
-     * holding only pointers to the TLVs.
-     */
-    if (hip_r1table) {
-        for (i = 0; i < HIP_R1TABLESIZE; i++) {
-            free(hip_r1table[i].r1);
-            hip_r1table[i].r1 = NULL;
-        }
-    }
 }
 
 /**
@@ -314,7 +292,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
              -1, "Requested source HIT not (any more) available.\n");
     result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 
-    puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
+    puzzle = hip_get_param(&result->buf.msg, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
     HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                     HIP_PUZZLE_OPAQUE_LEN), -1,
@@ -369,7 +347,6 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
 {
     int (*signature_func)(void *key, struct hip_common *m);
 
-    hip_uninit_r1(entry->r1);
     switch (hip_get_host_id_algo(&entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
