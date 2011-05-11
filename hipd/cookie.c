@@ -381,7 +381,7 @@ int hip_recreate_all_precreated_r1_packets(void)
     struct hip_host_id *tmp;
     int                 c;
 
-    hip_for_each_hi(hip_recreate_r1s_for_entry_move, ht);
+    hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
 
     list_for_each_safe(curr, iter, ht, c)
     {
