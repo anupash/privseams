@@ -37,14 +37,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/icomm.h"
 #include "lib/core/ife.h"
-#include "lib/core/list.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/tool/pk.h"
@@ -372,24 +370,10 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
 /**
  * precreate all R1 packets
  *
- * @return zero on success or negative on error
+ * @return 0
  */
 int hip_recreate_all_precreated_r1_packets(void)
 {
-    HIP_HASHTABLE      *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    LHASH_NODE         *curr, *iter;
-    struct hip_host_id *tmp;
-    int                 c;
-
     hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
-
-    list_for_each_safe(curr, iter, ht, c)
-    {
-        tmp = list_entry(curr);
-        hip_ht_add(HIP_DB_LOCAL_HID, tmp);
-        list_del(tmp, ht);
-    }
-
-    hip_ht_uninit(ht);
     return 0;
 }
