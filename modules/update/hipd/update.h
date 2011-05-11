@@ -36,7 +36,6 @@
 #include <stdint.h>
 #include <netinet/in.h>
 
-#include "lib/core/hashtable.h"
 #include "lib/core/protodefs.h"
 
 /* the different mobility message types */
@@ -51,6 +50,14 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
+/**
+ * The maximum number of locators the current implementation supports per
+ * update message. This number is arbitrarily chosen. It may be increased
+ * at the expense of more memory being used per struct update_state
+ * instance.
+ */
+#define HIP_MAX_LOCATORS 16
+
 enum update_types { UNKNOWN_UPDATE_PACKET, FIRST_UPDATE_PACKET,
                     SECOND_UPDATE_PACKET, THIRD_UPDATE_PACKET };
 
@@ -59,17 +66,19 @@ struct update_state {
      *  @todo Remove this kludge. */
     int update_state;
 
-    /** This "linked list" includes the locators we recieved in the initial
-     * UPDATE packet. Locators are stored as "struct in6_addr *"s.
+    /**
+     * The set of locators we received in the initial UPDATE packet.
      *
      * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
      * addresses.
-     *
-     * Notice that there's a hack that a hash table is used as a linked list
-     * here but this is common allover HIPL and it doesn't seem to cause
-     * performance problems.
      */
-    HIP_HASHTABLE *addresses_to_send_echo_request;
+    struct in6_addr addresses_to_send_echo_request[HIP_MAX_LOCATORS];
+
+    /**
+     * The number of valid entries in the addresses_to_send_echo_request
+     * array.
+     */
+    unsigned valid_locators;
 
     /** Stored outgoing UPDATE ID counter. */
     uint32_t update_id_out;

@@ -31,13 +31,13 @@
  * @author  Rene Hummen
  */
 
+#include <stdbool.h>
 #include <openssl/rand.h>
 #include <string.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-#include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "update_builder.h"
 #include "update_locator.h"
@@ -45,22 +45,32 @@
 
 
 /**
- * Removes all the addresses from the addresses_to_send_echo_request list
- * and deallocates them.
+ * Add an address to the addresses_to_send_echo_request container.
+ *
+ * @param state points to the update_state object to manipulate.
+ * @param addr the address to add to @a state as a locator.
+ * @return true if the address has been added successfully, false otherwise.
+ */
+static bool hip_add_address_to_send_echo_request(struct update_state *const state,
+                                                 const struct in6_addr addr)
+{
+    if (state->valid_locators < ARRAY_SIZE(state->addresses_to_send_echo_request)) {
+        state->addresses_to_send_echo_request[state->valid_locators] = addr;
+        state->valid_locators                                       += 1;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Removes all addresses from the addresses_to_send_echo_request container.
  *
  * @param state pointer to a host association
  */
 static void hip_remove_addresses_to_send_echo_request(struct update_state *const state)
 {
-    int              i       = 0;
-    LHASH_NODE      *item    = NULL, *tmp = NULL;
-    struct in6_addr *address = NULL;
-
-    list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
-        address = list_entry(item);
-        list_del(address, state->addresses_to_send_echo_request);
-        free(address);
-    }
+    state->valid_locators = 0;
 }
 
 /**
@@ -70,17 +80,11 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *const
  */
 static void hip_print_addresses_to_send_update_request(const struct hip_hadb_state *const ha)
 {
-    int                  i          = 0;
-    LHASH_NODE          *item       = NULL, *tmp = NULL;
-    struct in6_addr     *address    = NULL;
-    struct update_state *localstate = NULL;
-
-    localstate = lmod_get_state_item(ha->hip_modular_state, "update");
+    const struct update_state *const localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
     HIP_DEBUG("Addresses to send update:\n");
-    list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
-        address = list_entry(item);
-        HIP_DEBUG_IN6ADDR("", address);
+    for (unsigned i = 0; i < localstate->valid_locators; i += 1) {
+        HIP_DEBUG_IN6ADDR("", &localstate->addresses_to_send_echo_request[i]);
     }
 }
 
@@ -351,15 +355,10 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
         for (int i = 0; i < locator_addr_count; i++) {
             locator_info_addr = hip_get_locator_item(locator_address_item, i);
 
-            peer_addr = malloc(sizeof(struct in6_addr));
-            if (!peer_addr) {
-                HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
+            if (!hip_add_address_to_send_echo_request(localstate, *hip_get_locator_item_address(locator_info_addr))) {
+                HIP_ERROR("Adding an address to the container for update locators failed!");
                 return -1;
             }
-
-            ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
-
-            list_add(peer_addr, localstate->addresses_to_send_echo_request);
 
             HIP_DEBUG_IN6ADDR("Comparing", &ctx->src_addr);
             HIP_DEBUG_IN6ADDR("to ", peer_addr);
@@ -372,14 +371,10 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
         if (!src_addr_included) {
             HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
 
-            peer_addr = malloc(sizeof(struct in6_addr));
-            if (!peer_addr) {
-                HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
+            if (!hip_add_address_to_send_echo_request(localstate, ctx->src_addr)) {
+                HIP_ERROR("Adding an address to the container for update locators failed!");
                 return -1;
             }
-
-            ipv6_addr_copy(peer_addr, &ctx->src_addr);
-            list_add(peer_addr, localstate->addresses_to_send_echo_request);
         }
 
         hip_print_addresses_to_send_update_request(ctx->hadb_entry);

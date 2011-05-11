@@ -296,10 +296,8 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
         // send challenge to all advertised locators
         localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
 
-        int         i    = 0;
-        LHASH_NODE *item = NULL, *tmp = NULL;
-        list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
-            dst_addr = list_entry(item);
+        for (unsigned i = 0; i < localstate->valid_locators; i += 1) {
+            dst_addr = &localstate->addresses_to_send_echo_request[i];
 
             if (!are_addresses_compatible(&ctx->dst_addr, dst_addr)) {
                 continue;
@@ -488,10 +486,10 @@ static int hip_update_init_state(struct modular_state *state)
         return -1;
     }
 
-    update_state->update_state                   = 0;
-    update_state->addresses_to_send_echo_request = hip_linked_list_init();
-    update_state->update_id_out                  = 0;
-    update_state->update_id_in                   = 0;
+    update_state->update_state   = 0;
+    update_state->valid_locators = 0;
+    update_state->update_id_out  = 0;
+    update_state->update_id_in   = 0;
 
     return lmod_add_state_item(state, update_state, "update");
 }
