@@ -42,7 +42,6 @@
 
 #include "hit_to_ip.h"
 #include "lib/core/conf.h"
-#include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
