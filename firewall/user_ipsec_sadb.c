@@ -52,7 +52,6 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/ife.h"
 #include "lib/core/keylen.h"
-#include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/core/state.h"
 #include "esp_prot_api.h"
@@ -824,29 +823,38 @@ out_err:
 }
 
 /**
+ * Call-back function for deleting a hip_sa_entry object.
+ *
+ * @param ptr points to the hip_sa_entry object to delete.
+ */
+static void delete_sa_entry(void *const ptr)
+{
+    int                        err   = 0;
+    struct hip_sa_entry *const entry = ptr;
+
+    err = hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr);
+    if (err) {
+        char src[64];
+        char dst[64];
+        inet_ntop(AF_INET6, &entry->inner_src_addr, src, sizeof(src));
+        inet_ntop(AF_INET6, &entry->inner_dst_addr, dst, sizeof(dst));
+        HIP_ERROR("Deleting SA entry %s -> %s failed with error %d\n", src, dst,
+                  err);
+    }
+}
+
+/**
  * flushes all entries in the sadb
  *
- * @return      -1, if error occurred, else 0
+ * @return 0
  */
 int hip_sadb_flush(void)
 {
-    int                  err   = 0, i = 0;
-    LHASH_NODE          *item  = NULL, *tmp = NULL;
-    struct hip_sa_entry *entry = NULL;
-
-    // iterating over all elements
-    list_for_each_safe(item, tmp, sadb, i)
-    {
-        HIP_IFEL(!(entry = list_entry(item)), -1,
-                 "failed to get list entry\n");
-        HIP_IFEL(hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr), -1,
-                 "failed to delete sa entry\n");
-    }
+    hip_ht_doall(sadb, delete_sa_entry);
 
     HIP_DEBUG("sadb flushed\n");
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
