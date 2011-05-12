@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -56,6 +56,7 @@
  * @brief Host Association Database (HADB) for HIP
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <errno.h>
@@ -259,6 +260,34 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
 }
 
 /**
+ * Context information used during a search by
+ * hip_hadb_try_to_find_by_peer_hit().
+ */
+struct ha_pattern {
+    const hip_hit_t        peer_hit;
+    struct hip_hadb_state *ha;
+};
+
+/**
+ * A call-back function for finding a host association between a given peer HIT
+ * and any of the iteratively provided local HIs.
+ *
+ * @param lhi     Points to a local_host_id object from which contains the
+ *                local HIT of the HA to find.
+ * @param context Points to a ha_pattern object which contains the peer HIT of
+ *                the HA to find and where the result is stored if a HA is
+ *                found.
+ * @return        0 if no matching HA is found, 1 if a matching HA is found.
+ */
+static int find_ha_by_lhi(struct local_host_id *const lhi,
+                          void *const context)
+{
+    struct ha_pattern *pattern = context;
+    pattern->ha = hip_hadb_find_byhits(&pattern->peer_hit, &lhi->hit);
+    return pattern->ha != NULL;
+}
+
+/**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
@@ -281,11 +310,9 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    LHASH_NODE            *item, *tmp;
-    struct local_host_id  *e;
     struct hip_hadb_state *entry = NULL;
     hip_hit_t              our_hit;
-    int                    i;
+    struct ha_pattern      pattern = { *hit, NULL };
 
     /* Let's try with the default HIT first */
     hip_get_default_hit(&our_hit);
@@ -295,18 +322,9 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     }
 
     /* and then with rest (actually default HIT is here redundantly) */
-    list_for_each_safe(item, tmp, hip_local_hostid_db, i)
-    {
-        e = list_entry(item);
-        ipv6_addr_copy(&our_hit, &e->hit);
-        entry = hip_hadb_find_byhits(hit, &our_hit);
-        if (!entry) {
-            continue;
-        } else {
-            return entry;
-        }
-    }
-    return NULL;
+    hip_for_each_hi(find_ha_by_lhi, &pattern);
+
+    return pattern.ha;
 }
 
 /**
