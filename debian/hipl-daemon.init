@@ -10,7 +10,6 @@
 ### END INIT INFO
 
 HIPD_OPTS="-bkN"
-PID=$(pidof -o $$ hipd)
 
 set -e
 
@@ -22,26 +21,33 @@ if test -f /etc/default/hipd; then
     . /etc/default/hipd
 fi
 
-stop_hipd() {
-    # Ensure that we don't try to kill init.d script itself
-    if [ $PID ]; then
-        kill $1 $PID
+
+start_hipd() {
+    log_daemon_msg "Starting HIP daemon" "hipd"
+    if start-stop-daemon --start --quiet --oknodo --exec /usr/sbin/hipd -- $HIPD_OPTS; then
+        log_end_msg 0
+    else
+        log_end_msg 1
     fi
 }
 
+stop_hipd() {
+    log_daemon_msg "Stopping HIP daemon" "hipd"
+    # send TERM to hipd and if it is still running after 3 seconds send KILL
+    if start-stop-daemon --stop --quiet --retry 3 --oknodo --exec /usr/sbin/hipd; then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi
+}
+
+
 case "$1" in
     start)
-        log_daemon_msg "Starting HIP daemon" "hipd"
-        if start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS; then
-            log_end_msg 0
-        else
-            log_end_msg 1
-        fi
+        start_hipd
         ;;
     stop)
-        log_daemon_msg "Stopping HIP daemon" "hipd"
         stop_hipd
-        log_end_msg 0
         ;;
     reload|force-reload)
         log_daemon_msg "Reloading HIP daemon" "hipd"
@@ -52,14 +58,8 @@ case "$1" in
         fi
         ;;
     restart)
-        log_daemon_msg "Restarting HIP daemon" "hipd"
-        # Daemon waits N seconds for closing of connections - just kill it
-        stop_hipd -KILL
-        if start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS; then
-            log_end_msg 0
-        else
-            log_end_msg 1
-        fi
+        stop_hipd
+        start_hipd
         ;;
     status)
         status_of_proc -p /var/lock/hipd.lock /usr/sbin/hipd hipd && exit 0 || exit $?
