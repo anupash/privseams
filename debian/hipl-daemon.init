@@ -49,15 +49,7 @@ case "$1" in
     stop)
         stop_hipd
         ;;
-    reload|force-reload)
-        log_daemon_msg "Reloading HIP daemon" "hipd"
-        if start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd --name hipd; then
-            log_end_msg 0
-        else
-            log_end_msg 1
-        fi
-        ;;
-    restart)
+    restart|force-reload)
         stop_hipd
         start_hipd
         ;;
@@ -65,7 +57,7 @@ case "$1" in
         status_of_proc -p /var/lock/hipd.lock /usr/sbin/hipd hipd && exit 0 || exit $?
         ;;
     *)
-        log_action_msg "Usage: /etc/init.d/hipd {start|stop|reload|force-reload|restart|status}"
+        log_action_msg "Usage: /etc/init.d/hipd {start|stop|force-reload|restart|status}"
         exit 1
 esac
 
