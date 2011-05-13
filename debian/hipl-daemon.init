@@ -45,7 +45,7 @@ case "$1" in
         ;;
     reload|force-reload)
         log_daemon_msg "Reloading HIP daemon" "hipd"
-        if start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd; then
+        if start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd --name hipd; then
             log_end_msg 0
         else
             log_end_msg 1
