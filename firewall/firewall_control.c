@@ -130,8 +130,6 @@ int hip_handle_msg(struct hip_common *msg)
         HIP_IFEL(handle_sa_flush_all_request(), -1,
                  "hip userspace sadb flush all did NOT succeed\n");
         break;
-    case HIP_MSG_TURN_INFO:
-        break;
     case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);
         break;

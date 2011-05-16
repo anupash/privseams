@@ -223,7 +223,6 @@ const char *hipconf_usage =
     "get ha all|HIT\n"
     "locator on|off|get\n"
     "debug all|medium|none\n"
-    "restart daemon\n"
     "transform order <integer> "
     " (1=AES, 2=3DES, 3=NULL and place them to order\n"
     "  like 213 for the order 3DES, AES and NULL)\n"

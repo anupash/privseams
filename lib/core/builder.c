@@ -1108,8 +1108,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_DEL_LOCAL_HI:       return "HIP_MSG_DEL_LOCAL_HI";
     case HIP_MSG_RUN_UNIT_TEST:      return "HIP_MSG_RUN_UNIT_TEST";
     case HIP_MSG_RST:                return "HIP_MSG_RST";
-    case HIP_MSG_UNIT_TEST:          return "HIP_MSG_UNIT_TEST";
-    case HIP_MSG_NETLINK_DUMMY:      return "HIP_MSG_NETLINK_DUMMY";
     case HIP_MSG_CONF_PUZZLE_NEW:    return "HIP_MSG_CONF_PUZZLE_NEW";
     case HIP_MSG_CONF_PUZZLE_GET:    return "HIP_MSG_CONF_PUZZLE_GET";
     case HIP_MSG_CONF_PUZZLE_SET:    return "HIP_MSG_CONF_PUZZLE_SET";
@@ -1118,8 +1116,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
     case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
     case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
-    case HIP_MSG_MHADDR_ACTIVE:      return "HIP_MSG_MHADDR_ACTIVE";
-    case HIP_MSG_MHADDR_LAZY:        return "HIP_MSG_MHADDR_LAZY";
     case HIP_MSG_RESTART:            return "HIP_MSG_RESTART";
     case HIP_MSG_SET_LOCATOR_ON:     return "HIP_MSG_SET_LOCATOR_ON";
     case HIP_MSG_SET_LOCATOR_OFF:    return "HIP_MSG_SET_LOCATOR_OFF";
@@ -1134,12 +1130,7 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_OFFER_HIPRELAY:     return "HIP_MSG_OFFER_HIPRELAY";
     case HIP_MSG_CANCEL_HIPRELAY:    return "HIP_MSG_CANCEL_HIPRELAY";
     case HIP_MSG_REINIT_RELAY:       return "HIP_MSG_REINIT_RELAY";
-    case HIP_MSG_ADD_DB_HI:          return "HIP_MSG_ADD_DB_HI";
-    case HIP_MSG_FIREWALL_PING:      return "HIP_MSG_FIREWALL_PING";
-    case HIP_MSG_FIREWALL_PING_REPLY: return "HIP_MSG_FIREWALL_PING_REPLY";
     case HIP_MSG_FIREWALL_QUIT:      return "HIP_MSG_FIREWALL_QUIT";
-    case HIP_MSG_DAEMON_QUIT:        return "HIP_MSG_DAEMON_QUIT";
-    case HIP_MSG_I1_REJECT:          return "HIP_MSG_I1_REJECT";
     case HIP_MSG_SET_NAT_PLAIN_UDP:  return "HIP_MSG_SET_NAT_PLAIN_UDP";
     case HIP_MSG_SET_NAT_NONE:       return "HIP_MSG_SET_NAT_NONE";
     case HIP_MSG_FW_BEX_DONE:        return "HIP_MSG_FW_BEX_DONE";
@@ -1154,10 +1145,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
     case HIP_MSG_SET_NAT_PORT:       return "HIP_MSG_SET_NAT_PORT";
-    case HIP_MSG_SIGN_BUDDY_X509V3:  return "HIP_MSG_SIGN_BUDDY_X509V3";
-    case HIP_MSG_SIGN_BUDDY_SPKI:    return "HIP_MSG_SIGN_BUDDY_SPKI";
-    case HIP_MSG_VERIFY_BUDDY_X509V3: return "HIP_MSG_VERIFY_BUDDY_X509V3";
-    case HIP_MSG_VERIFY_BUDDY_SPKI:  return "HIP_MSG_VERIFY_BUDDY_SPKI";
     case HIP_MSG_MAP_ID_TO_ADDR:     return "HIP_MSG_MAP_ID_TO_ADDR";
     case HIP_MSG_OFFER_FULLRELAY:    return "HIP_MSG_OFFER_FULLRELAY";
     case HIP_MSG_CANCEL_FULLRELAY:   return "HIP_MSG_CANCEL_FULLRELAY";
