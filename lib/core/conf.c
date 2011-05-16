@@ -261,7 +261,7 @@ static int hip_get_hits(struct hip_common *msg, const char *opt,
 
     if (strcmp(opt, "all") == 0) {
         /* Build a HIP message with socket option to get default HIT. */
-        HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0), -1);
+        HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_GET_LOCAL_HITS, 0), -1);
         /* Send the message to the daemon. The daemon fills the
          * message. */
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
@@ -302,7 +302,7 @@ static int hip_get_hits(struct hip_common *msg, const char *opt,
         }
     } else if (strcmp(opt, "default") == 0) {
         /* Build a HIP message with socket option to get default HIT. */
-        HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1);
+        HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_GET_DEFAULT_HIT, 0), -1);
         /* Send the message to the daemon. The daemon fills the
          * message. */
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
@@ -365,7 +365,7 @@ static int hip_conf_handle_hi_del_all(struct hip_common *msg,
     msg_tmp = hip_msg_alloc();
     HIP_IFEL(!msg_tmp, -ENOMEM, "Malloc for msg_tmp failed\n");
 
-    HIP_IFEL(hip_build_user_hdr(msg_tmp, HIP_MSG_GET_HITS, 0),
+    HIP_IFEL(hip_build_user_hdr(msg_tmp, HIP_MSG_GET_LOCAL_HITS, 0),
              -1, "Failed to build user message header\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg_tmp, send_only, 0), -1,
              "Sending msg failed.\n");

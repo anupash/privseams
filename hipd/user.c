@@ -491,9 +491,9 @@ int hip_handle_user_msg(struct hip_common *msg,
         err = hip_recreate_all_precreated_r1_packets();
         break;
 #endif /* CONFIG_HIP_RVS */
-    case HIP_MSG_GET_HITS:
+    case HIP_MSG_GET_LOCAL_HITS:
         hip_msg_init(msg);
-        hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0);
+        hip_build_user_hdr(msg, HIP_MSG_GET_LOCAL_HITS, 0);
         err = hip_for_each_hi(host_id_entry_to_hit_info, msg);
         break;
     case HIP_MSG_GET_HA_INFO:
@@ -501,7 +501,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0);
         err = hip_for_each_ha(hip_handle_get_ha_info, msg);
         break;
-    case HIP_MSG_DEFAULT_HIT:
+    case HIP_MSG_GET_DEFAULT_HIT:
         err = hip_get_default_hit_msg(msg);
         break;
     case HIP_MSG_MHADDR_ACTIVE:

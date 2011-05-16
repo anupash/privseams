@@ -558,7 +558,7 @@ static int hip_query_default_local_hit_from_hipd(void)
     const hip_lsi_t             *lsi   = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_DEFAULT_HIT, 0), -1,
              "build user hdr\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
              "send/recv daemon info\n");
