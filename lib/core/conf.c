@@ -199,7 +199,7 @@
  *       for the action.
  */
 const char *hipconf_usage =
-    "add|del map <hit> <ip> [lsi]\n"
+    "add map <hit> <ip> [lsi]\n"
     "del hi <hit>|all\n"
     "get hi default|all\n"
     "new|add hi anon|pub rsa|dsa filebasename\n"
