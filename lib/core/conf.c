@@ -112,7 +112,7 @@
 #define ACTION_RST 14
 /* unused, was ACTION_BOS 15 */
 #define ACTION_DEBUG 16
-#define ACTION_MHADDR 17
+/* unused, was ACTION_MHADDR 17 */
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 /* unused, was ACTION_OPENDHT 20 */
@@ -164,7 +164,7 @@
 #define TYPE_TTL           13
 /* free slots */
 #define TYPE_HA            16
-#define TYPE_MHADDR        17
+/* unused, was TYPE_MHADDR 17 */
 #define TYPE_DEBUG         18
 #define TYPE_DAEMON        19
 #define TYPE_LOCATOR       20
@@ -213,7 +213,6 @@ const char *hipconf_usage =
     "nat port peer <port>\n"
     "rst all|peer_hit <peer_HIT>\n"
     "load config default\n"
-    "mhaddr mode lazy|active\n"
     "handover mode hard|soft\n"
     "Server side:\n"
     "\tadd|del service rvs|relay|full-relay\n"
@@ -561,8 +560,6 @@ static int hip_conf_get_action(const char *argv[])
         ret = ACTION_LOCATOR;
     } else if (!strcmp("debug", argv[1])) {
         ret = ACTION_DEBUG;
-    } else if (!strcmp("mhaddr", argv[1])) {
-        ret = ACTION_MHADDR;
     } else if (!strcmp("handover", argv[1])) {
         ret = ACTION_HANDOVER;
     } else if (!strcmp("transform", argv[1])) {
@@ -643,7 +640,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_RUN:
     case ACTION_LOAD:
     case ACTION_HA:
-    case ACTION_MHADDR:
     case ACTION_TRANSORDER:
     case ACTION_NAT_LOCAL_PORT:
     case ACTION_NAT_PEER_PORT:
@@ -702,8 +698,6 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         ret = TYPE_LOCATOR;
     } else if (!strcmp("debug", text)) {
         ret = TYPE_DEBUG;
-    } else if ((!strcmp("mode", text)) && (strcmp("mhaddr", argv[1]) == 0)) {
-        ret = TYPE_MHADDR;
     } else if (!strcmp("daemon", text)) {
         ret = TYPE_DAEMON;
     } else if ((!strcmp("mode", text)) && (strcmp("handover", argv[1]) == 0)) {
@@ -767,7 +761,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_HEARTBEAT:
     case ACTION_LOCATOR:
     case ACTION_RST:
-    case ACTION_MHADDR:
     case ACTION_HANDOVER:
     case ACTION_TRANSORDER:
     case ACTION_REINIT:
@@ -1942,42 +1935,6 @@ out_err:
 }
 
 /**
- * set mobility to lazy or active mode for mhaddr extension
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt "lazy" or "active"
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_mhaddr(struct hip_common *msg,
-                                  UNUSED int action,
-                                  const char *opt[],
-                                  UNUSED int optc,
-                                  int send_only)
-{
-    int err = 0;
-
-    if (strcmp("active", opt[0]) == 0) {
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MHADDR_ACTIVE, 0), -1,
-                 "Building of daemon header failed\n");
-        HIP_INFO("mhaddr mode set to active successfully\n");
-    } else {
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MHADDR_LAZY, 0), -1,
-                 "Building of daemon header failed\n");
-        HIP_INFO("mhaddr mode set to lazy successfully\n");
-    }
-
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "send recv daemon info\n");
-
-out_err:
-    return err;
-}
-
-/**
  * prefer hard or soft handovers
  *
  * @param msg input/output message for the query/response for hipd
@@ -2534,7 +2491,7 @@ static int (*action_handler[])(struct hip_common *,
     NULL,                               /* unused, was 14: TYPE_GW */
     NULL,                               /* unused, was 15: TYPE_GET */
     hip_conf_handle_ha,                 /* 16: TYPE_HA */
-    hip_conf_handle_mhaddr,             /* 17: TYPE_MHADDR */
+    NULL,                               /* unused, was 17: TYPE_MHADDR */
     hip_conf_handle_debug,              /* 18: TYPE_DEBUG */
     hip_conf_handle_restart,            /* 19: TYPE_DAEMON */
     hip_conf_handle_locator,            /* 20: TYPE_LOCATOR */
