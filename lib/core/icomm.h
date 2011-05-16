@@ -66,7 +66,6 @@
 /* several free slots here */
 #define HIP_MSG_HEARTBEAT                        31
 /* inclusive */
-#define HIP_MSG_PING                             32
 #define HIP_MSG_TRIGGER_BEX                      33
 #define HIP_MSG_MAP_ID_TO_ADDR                   34
 #define HIP_MSG_LSI_TO_HIT                       35
