@@ -86,8 +86,6 @@
 #define HIP_MSG_SET_DEBUG_MEDIUM                 83
 #define HIP_MSG_SET_DEBUG_NONE                   84
 #define HIP_MSG_LOCATOR_GET                      85
-/** Socket option for hipconf to restart daemon. */
-#define HIP_MSG_RESTART                          88
 #define HIP_MSG_SET_LOCATOR_ON                   89
 #define HIP_MSG_SET_LOCATOR_OFF                  90
 /* Free slots here */

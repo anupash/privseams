@@ -465,10 +465,5 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if (hipd_get_flag(HIPD_FLAG_RESTART)) {
-        HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
-        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, (const char *const *) argv);
-    }
-
     return EXIT_SUCCESS;
 }

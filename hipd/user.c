@@ -504,12 +504,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_GET_DEFAULT_HIT:
         err = hip_get_default_hit_msg(msg);
         break;
-    case HIP_MSG_RESTART:
-        HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
-        hipd_set_flag(HIPD_FLAG_RESTART);
-        /* invoking the signal handler directly is not a sane thing to do */
-        kill(getpid(), SIGINT);
-        break;
     case HIP_MSG_TRIGGER_BEX:
         HIP_DEBUG("HIP_MSG_TRIGGER_BEX\n");
         hip_firewall_status = 1;

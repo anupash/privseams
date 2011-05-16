@@ -113,7 +113,7 @@
 /* unused, was ACTION_BOS 15 */
 #define ACTION_DEBUG 16
 /* unused, was ACTION_MHADDR 17 */
-#define ACTION_RESTART 18
+/* unused, was ACTION_RESTART 18 */
 #define ACTION_LOCATOR 19
 /* unused, was ACTION_OPENDHT 20 */
 /* unused, was for ACTION_OPPTCP 21 */
@@ -166,7 +166,7 @@
 #define TYPE_HA            16
 /* unused, was TYPE_MHADDR 17 */
 #define TYPE_DEBUG         18
-#define TYPE_DAEMON        19
+/* unused, was TYPE_DAEMON 19 */
 #define TYPE_LOCATOR       20
 /* free slots */
 /* unused, was TYPE_OPPTCP 23 */
@@ -560,8 +560,6 @@ static int hip_conf_get_action(const char *argv[])
         ret = ACTION_DEBUG;
     } else if (!strcmp("transform", argv[1])) {
         ret = ACTION_TRANSORDER;
-    } else if (!strcmp("restart", argv[1])) {
-        ret = ACTION_RESTART;
     } else if (!strcmp("reinit", argv[1])) {
         ret = ACTION_REINIT;
     } else if (!strcmp("manual-update", argv[1])) {
@@ -620,7 +618,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_MAP_ID_TO_ADDR:
     case ACTION_LSI_TO_HIT:
     case ACTION_DEBUG:
-    case ACTION_RESTART:
     case ACTION_REINIT:
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
@@ -693,8 +690,6 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         ret = TYPE_LOCATOR;
     } else if (!strcmp("debug", text)) {
         ret = TYPE_DEBUG;
-    } else if (!strcmp("daemon", text)) {
-        ret = TYPE_DAEMON;
     } else if (!strcmp("order", text)) {
         ret = TYPE_ORDER;
     } else if (strcmp("heartbeat", argv[1]) == 0) {
@@ -756,7 +751,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_RST:
     case ACTION_TRANSORDER:
     case ACTION_REINIT:
-    case ACTION_RESTART:
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
     case ACTION_HIT_TO_IP_SET:
@@ -1926,166 +1920,6 @@ out_err:
     return err;
 }
 
-/**
- * creates the string intended to set the environmental variable
- * LD_PRELOAD. The function required the required libraries, and then
- * includes the prefix (path where these libraries are located) to
- * each one. Finally it appends all of the them to the same string.
- *
- * @param libs            an array of pointers to the required libraries
- * @param lib_all         a pointer to the string to store the result
- * @param lib_all_length  length of the string lib_all
- * @return                zero on success, or -1 overflow in string lib_all
- */
-
-static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
-{
-    unsigned    c_count = lib_all_length;
-    int         err     = 0;
-    char       *lib_aux = lib_all;
-    const char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
-
-    while (*libs) {
-        /* Copying prefix to lib_all */
-        HIP_IFEL(c_count < strlen(prefix), -1, "Overflow in string lib_all\n");
-        strncpy(lib_aux, prefix, c_count);
-        while (*lib_aux != '\0') {
-            lib_aux++;
-            c_count--;
-        }
-
-        /* Copying "/lib/" to lib_all */
-        HIP_IFEL(c_count < 5, -1, "Overflow in string lib_all\n");
-        strncpy(lib_aux, "/lib/", c_count);
-        c_count -= 5;
-        lib_aux += 5;
-
-        /* Copying the library name to lib_all */
-        HIP_IFEL(c_count < strlen(*libs), -1, "Overflow in string lib_all\n");
-        strncpy(lib_aux, *libs, c_count);
-        while (*lib_aux != '\0') {
-            lib_aux++;
-            c_count--;
-        }
-
-        /* Adding ':' to separate libraries */
-        *lib_aux = ':';
-        c_count--;
-        lib_aux++;
-
-        /* Next library */
-        libs++;
-    }
-
-    /* Delete the last ':' */
-    *--lib_aux = '\0';
-
-out_err:
-    return err;
-}
-
-/** Maximum length of the string for that stores all libraries. */
-#define LIB_LENGTH 200
-
-/**
- * Handle the hipconf commands where the type is @c run. Execute new
- * application and set environment variable "LD_PRELOAD" to as type
- * says.
- *
- * @param do_fork Whether to fork or not.
- * @param type   the numeric action identifier for the action to be performed.
- * @param argc   the number of elements in the array.
- * @param argv   an array of pointers to the command line arguments after
- *               the action and type.
- * @return       zero on success, or negative error value on error.
- * @note In order to this function to work properly, "make install"
- *       must be executed to install libraries to right paths. Also library
- *       paths must be set right.
- * @see exec_app_types EXEC_LOADLIB_HIP and EXEC_LOADLIB_NONE
- *
- */
-int hip_handle_exec_app(int do_fork, int type, int argc,
-                        const char *const argv[])
-{
-    int      ret = 0;
-    unsigned i;
-    int      k;
-    char     lib_all[LIB_LENGTH];
-    char    *libs[5]  = { 0 };
-    char   **argv_new = NULL;
-
-    argv_new = calloc(argc, sizeof(char *));
-
-    for (k = 0; k < argc; k++) {
-        argv_new[k] = strdup(argv[k]);
-    }
-
-    if (do_fork) {
-        ret = fork();
-    }
-
-    if (ret < 0) {
-        HIP_ERROR("Failed to fork a new process: %s!\n",
-                  strerror(errno));
-        return ret;
-    } else if (ret > 0) {
-        return 0;
-    }
-
-    /* fork returned zero, so we're in the child process now */
-    HIP_DEBUG("Executing %s.\n", argv[0]);
-    if (type == EXEC_LOADLIB_HIP) {
-        libs[0] = strdup("libhiptool.so");
-    }
-
-    hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
-    setenv("LD_PRELOAD", lib_all, 1);
-    HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
-
-    if (execvp(argv_new[0], argv_new)) {
-        HIP_DEBUG("Failed to execvp new application: %s!\n",
-                  strerror(errno));
-
-        for (i = 0; i < sizeof(libs) / sizeof(libs[0]); i++) {
-            free(libs[i]);
-        }
-        for (k = 0; 0 < argc; k++) {
-            free(argv_new[k]);
-        }
-        free(argv_new);
-
-        exit(EXIT_FAILURE);
-    }
-
-    return 0;
-}
-
-/**
- * trigger HIP CLOSE to close all SAs and HAs
- *
- * @param msg input/output message for the query/response for hipd
- * @param type unused
- * @param opt ignored
- * @param optc ignored
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_restart(struct hip_common *msg,
-                                   UNUSED int type,
-                                   UNUSED const char *opt[],
-                                   UNUSED int optc,
-                                   UNUSED int send_only)
-{
-    int err = 0;
-
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_RESTART, 0), -1,
-             "hip_build_user_hdr() failed!");
-
-out_err:
-    return err;
-}
-
 static int hip_conf_handle_nsupdate(struct hip_common *msg,
                                     UNUSED int action,
                                     const char *opt[],
@@ -2447,7 +2281,7 @@ static int (*action_handler[])(struct hip_common *,
     hip_conf_handle_ha,                 /* 16: TYPE_HA */
     NULL,                               /* unused, was 17: TYPE_MHADDR */
     hip_conf_handle_debug,              /* 18: TYPE_DEBUG */
-    hip_conf_handle_restart,            /* 19: TYPE_DAEMON */
+    NULL,                               /* unused, was 19: TYPE_DAEMON */
     hip_conf_handle_locator,            /* 20: TYPE_LOCATOR */
     NULL,                               /* 21: unused, was TYPE_SET */
     NULL,                               /* 22: unused, was TYPE_DHT */
