@@ -56,7 +56,6 @@
  */
 #define HIP_MSG_ANY_MIN                          1
 #define HIP_MSG_ADD_PEER_MAP_HIT_IP              2
-#define HIP_MSG_DEL_PEER_MAP_HIT_IP              3
 /* free slots */
 #define HIP_MSG_DEFAULT_HIT                      16
 /* Free slots here */

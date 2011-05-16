@@ -1214,10 +1214,6 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
                                     0), -1, "add peer map failed\n");
 
         break;
-    case ACTION_DEL:
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEL_PEER_MAP_HIT_IP,
-                                    0), -1, "del peer map failed\n");
-        break;
     default:
         err = -1;
         goto out_err;
