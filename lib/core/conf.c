@@ -200,8 +200,10 @@
  */
 const char *hipconf_usage =
     "add map <hit> <ip> [lsi]\n"
-    "del hi <hit>|all\n"
-    "get hi default|all\n"
+    "get map <hit | lsi>\n"
+    "del hi <hit> | all\n"
+    "get hi default | all\n"
+    "get ha <hit> | all\n"
     "new|add hi anon|pub rsa|dsa filebasename\n"
     "new hi anon|pub rsa|dsa filebasename keylen\n"
     "new|add hi default (HI must be created as root)\n"
@@ -220,7 +222,6 @@ const char *hipconf_usage =
     "\tadd server rvs|relay|full-relay [HIT] <IP|hostname> <lifetime in seconds>\n"
     "\tdel server rvs|relay|full-relay [HIT] <IP|hostname>\n"
     "heartbeat <seconds> (0 seconds means off)\n"
-    "get ha all|HIT\n"
     "locator on|off|get\n"
     "debug all|medium|none\n"
     "transform order <integer> "
@@ -1030,6 +1031,117 @@ out_err:
     return err;
 }
 
+/**
+ *
+ */
+static int hip_conf_add_id_to_ip_map(struct hip_common *const msg,
+                                     const char *opt[],
+                                     const int optc)
+{
+    struct in_addr  lsi, aux;
+    struct in6_addr hit, ip6;
+    int             err = 0;
+
+    HIP_IFEL(optc != 2 && optc != 3, -1, "Missing arguments\n");
+
+    HIP_IFEL(hip_convert_string_to_address(opt[0], &hit), -1,
+             "string to address conversion failed\n");
+
+    HIP_IFEL((err = hip_convert_string_to_address(opt[1], &ip6)), -1,
+             "string to address conversion failed\n");
+
+    if ((err && inet_pton(AF_INET, opt[1], &aux) != 1)) {
+        HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
+    }
+
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ADD_PEER_MAP_HIT_IP,
+                                0), -1, "add peer map failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+                                      sizeof(struct in6_addr)), -1,
+             "build param hit failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, &ip6,
+                                      HIP_PARAM_IPV6_ADDR,
+                                      sizeof(struct in6_addr)), -1,
+             "build param hit failed\n");
+
+    if (optc == 3) {
+        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) != 1, -1,
+                 "string to address conversion failed\n");
+        HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
+        HIP_IFEL(hip_build_param_contents(msg, &lsi,
+                                          HIP_PARAM_LSI,
+                                          sizeof(struct in_addr)), -1,
+                 "build param lsi failed\n");
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * ask hipd to map a HIT or LSI to a locator
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt a HIT or LSI
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
+static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
+                                     const char *opt[],
+                                     int optc,
+                                     int send_only)
+{
+    int                          err = 0;
+    struct in6_addr              hit;
+    struct in_addr               lsi;
+    const struct in6_addr       *ip;
+    struct in_addr               ip4;
+    const struct hip_tlv_common *param = NULL;
+    char                         addr_str[INET6_ADDRSTRLEN];
+
+    HIP_IFEL(optc != 1, -1, "Missing arguments\n");
+
+    if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
+        HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
+                 "inet_pton failed\n");
+        IPV4_TO_IPV6_MAP(&lsi, &hit);
+    }
+
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MAP_ID_TO_ADDR, 0), -1,
+             "Failed to build message header\n");
+    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
+                                      sizeof(hit)), -1,
+             "Failed to build message contents\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+             "Sending message failed\n");
+
+    while ((param = hip_get_next_param(msg, param))) {
+        if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR) {
+            continue;
+        }
+        ip = hip_get_param_contents_direct(param);
+        if (IN6_IS_ADDR_V4MAPPED(ip)) {
+            IPV6_TO_IPV4_MAP(ip, &ip4);
+            HIP_IFEL(!inet_ntop(AF_INET, &ip4, addr_str,
+                                INET_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+        } else {
+            HIP_IFEL(!inet_ntop(AF_INET6, ip, addr_str,
+                                INET6_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+        }
+
+        HIP_INFO("Resolved to IP: %s\n", addr_str);
+    }
+
+    hip_msg_init(msg);
+
+out_err:
+    return err;
+}
+
 #define OPT_HI_TYPE   0
 #define OPT_HI_FMT    1
 #define OPT_HI_FILE   2
@@ -1169,53 +1281,19 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
                                const char *opt[],
                                int optc, UNUSED int send_only)
 {
-    int             err = 0;
-    struct in_addr  lsi, aux;
-    struct in6_addr hit, ip6;
-
-    HIP_DEBUG("action=%d optc=%d\n", action, optc);
-
-    HIP_IFEL(optc != 2 && optc != 3, -1, "Missing arguments\n");
-
-    HIP_IFEL(hip_convert_string_to_address(opt[0], &hit), -1,
-             "string to address conversion failed\n");
-
-    HIP_IFEL((err = hip_convert_string_to_address(opt[1], &ip6)), -1,
-             "string to address conversion failed\n");
-
-    if ((err && inet_pton(AF_INET, opt[1], &aux) != 1)) {
-        HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
-    }
+    int err = 0;
 
     switch (action) {
     case ACTION_ADD:
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ADD_PEER_MAP_HIT_IP,
-                                    0), -1, "add peer map failed\n");
-
+        hip_conf_add_id_to_ip_map(msg, opt, optc);
+        break;
+    case ACTION_GET:
+        hip_conf_get_id_to_ip_map(msg, opt, optc, send_only);
         break;
     default:
         err = -1;
         goto out_err;
         break;
-    }
-
-    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                      sizeof(struct in6_addr)), -1,
-             "build param hit failed\n");
-
-    HIP_IFEL(hip_build_param_contents(msg, &ip6,
-                                      HIP_PARAM_IPV6_ADDR,
-                                      sizeof(struct in6_addr)), -1,
-             "build param hit failed\n");
-
-    if (optc == 3) {
-        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) != 1, -1,
-                 "string to address conversion failed\n");
-        HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
-        HIP_IFEL(hip_build_param_contents(msg, &lsi,
-                                          HIP_PARAM_LSI,
-                                          sizeof(struct in_addr)), -1,
-                 "build param lsi failed\n");
     }
 
 out_err:
@@ -1943,68 +2021,6 @@ out_err:
 }
 
 /**
- * ask hipd to map a HIT or LSI to a locator
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt a HIT or LSI
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_map_id_to_addr(struct hip_common *msg,
-                                          UNUSED int action,
-                                          const char *opt[],
-                                          UNUSED int optc,
-                                          int send_only)
-{
-    int                          err = 0;
-    struct in6_addr              hit;
-    struct in_addr               lsi;
-    const struct in6_addr       *ip;
-    struct in_addr               ip4;
-    const struct hip_tlv_common *param = NULL;
-    char                         addr_str[INET6_ADDRSTRLEN];
-
-    if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
-        HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
-                 "inet_pton failed\n");
-        IPV4_TO_IPV6_MAP(&lsi, &hit);
-    }
-
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MAP_ID_TO_ADDR, 0), -1,
-             "Failed to build message header\n");
-    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
-                                      sizeof(hit)), -1,
-             "Failed to build message contents\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Sending message failed\n");
-
-    while ((param = hip_get_next_param(msg, param))) {
-        if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR) {
-            continue;
-        }
-        ip = hip_get_param_contents_direct(param);
-        if (IN6_IS_ADDR_V4MAPPED(ip)) {
-            IPV6_TO_IPV4_MAP(ip, &ip4);
-            HIP_IFEL(!inet_ntop(AF_INET, &ip4, addr_str,
-                                INET_ADDRSTRLEN), -1, "inet_ntop() failed\n");
-        } else {
-            HIP_IFEL(!inet_ntop(AF_INET6, ip, addr_str,
-                                INET6_ADDRSTRLEN), -1, "inet_ntop() failed\n");
-        }
-
-        HIP_INFO("Found IP: %s\n", addr_str);
-    }
-
-    hip_msg_init(msg);
-
-out_err:
-    return err;
-}
-
-/**
  * Set hit-to-ip extension on of off. The extension "subscribes" the host
  * to DNS resolution for HITs from the configured DNS server.
  *
@@ -2019,18 +2035,19 @@ out_err:
  * @see hip_conf_handle_hit_to_ip_set
  */
 static int hip_conf_handle_hit_to_ip(struct hip_common *msg,
-                                     int action,
+                                     UNUSED const int action,
                                      const char *opt[],
-                                     int optc, int send_only)
+                                     UNUSED const int optc,
+                                     UNUSED const int send_only)
 {
-    int err = 0, status;
+    int err = 0, status = HIP_MSG_HIT_TO_IP_OFF;
 
     if (!strcmp("on", opt[0])) {
         status = HIP_MSG_HIT_TO_IP_ON;
     } else if (!strcmp("off", opt[0])) {
         status = HIP_MSG_HIT_TO_IP_OFF;
     } else {
-        return hip_conf_handle_map_id_to_addr(msg, action, opt, optc, send_only);
+        HIP_ERROR("Invalid option!\n");
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));
@@ -2293,7 +2310,7 @@ static int (*action_handler[])(struct hip_common *,
     NULL,                               /* 28: unused */
     NULL,                               /* 29: unused */
     NULL,                               /* 30: unused, was TYPE_BUDDIES */
-    NULL,                               /* 31: TYPE_SAVAHR, reserved for sava */
+    NULL,                               /* 31: unused, was TYPE_SAVAHR */
     hip_conf_handle_nsupdate,           /* 32: TYPE_NSUPDATE */
     hip_conf_handle_hit_to_ip,          /* 33: TYPE_HIT_TO_IP */
     hip_conf_handle_hit_to_ip_set,      /* 34: TYPE_HIT_TO_IP_SET */
@@ -2302,11 +2319,11 @@ static int (*action_handler[])(struct hip_common *,
     hip_conf_handle_nat_port,           /* 37: TYPE_PEER_LOCAL_PORT */
     NULL,                               /* 38: unused, was TYPE_DATAPACKET*/
     NULL,                               /* 39: unused, was TYPE_SHOTGUN */
-    hip_conf_handle_map_id_to_addr,     /* 40: TYPE_ID_TO_ADDR */
+    NULL,                               /* 40: unused, was TYPE_ID_TO_ADDR */
     hip_conf_handle_lsi_to_hit,         /* 41: TYPE_LSI_TO_HIT */
     NULL,                               /* 42: unused, was TYPE_HANDOVER */
     hip_conf_handle_manual_update,      /* 43: TYPE_MANUAL_UPDATE */
-    hip_conf_handle_broadcast,      /* 44: TYPE_BROADCAST */
+    hip_conf_handle_broadcast,          /* 44: TYPE_BROADCAST */
     NULL     /* TYPE_MAX, the end. */
 };
 
