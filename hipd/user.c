@@ -504,12 +504,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_GET_DEFAULT_HIT:
         err = hip_get_default_hit_msg(msg);
         break;
-    case HIP_MSG_MHADDR_ACTIVE:
-        is_active_mhaddr = 1;
-        break;
-    case HIP_MSG_MHADDR_LAZY:
-        is_active_mhaddr = 0;
-        break;
     case HIP_MSG_HANDOVER_HARD:
         is_hard_handover = 1;
         break;
