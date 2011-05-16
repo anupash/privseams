@@ -287,9 +287,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
 
     switch (msg_type) {
-    case HIP_MSG_NULL_OP:
-        HIP_DEBUG("Null op\n");
-        break;
     case HIP_MSG_PING:
         break;
     case HIP_MSG_ADD_LOCAL_HI:

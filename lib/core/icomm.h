@@ -58,8 +58,6 @@
 #define HIP_MSG_ADD_PEER_MAP_HIT_IP              2
 #define HIP_MSG_DEL_PEER_MAP_HIT_IP              3
 /* free slots */
-#define HIP_MSG_NULL_OP                          8
-/* free slots */
 #define HIP_MSG_DEFAULT_HIT                      16
 /* Free slots here */
 #define HIP_MSG_GET_HITS                         21
