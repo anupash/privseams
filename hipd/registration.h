@@ -83,5 +83,6 @@ int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
                                 struct hip_common *msg);
 
 int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg);
+int hip_handle_req_user_msg(const struct hip_common *const msg);
 
 #endif /* HIP_HIPD_REGISTRATION_H */
