@@ -305,8 +305,6 @@ vpath %.h $(srcdir)
 %.ho: %.h
 	$(AM_V_CC) $(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-# Ensure that version.h is created before everything else. This does not work
-# when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/checkout/dirstate)
 	bzr version-info $(srcdir) --custom --template='#define VCS_REVISION "{revno}"\n#define VCS_DATE "{date}"\n#define VCS_BRANCH "{branch_nick}"\n' > $@
