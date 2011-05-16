@@ -134,7 +134,7 @@
 /* unused, was ACTION_SHOTGUN 36 */
 #define ACTION_MAP_ID_TO_ADDR 37
 #define ACTION_LSI_TO_HIT 38
-#define ACTION_HANDOVER 39
+/* unused, was ACTION_HANDOVER 39 */
 #define ACTION_MANUAL_UPDATE 40
 #define ACTION_BROADCAST 41
 #define ACTION_MAX 42 /* exclusive */
@@ -184,7 +184,7 @@
 #define TYPE_SHOTGUN       39
 #define TYPE_ID_TO_ADDR    40
 #define TYPE_LSI_TO_HIT    41
-#define TYPE_HANDOVER      42
+/* unused, was TYPE_HANDOVER 42 */
 #define TYPE_MANUAL_UPDATE 43
 #define TYPE_BROADCAST     44
 #define TYPE_MAX           45 /* exclusive */
@@ -213,7 +213,6 @@ const char *hipconf_usage =
     "nat port peer <port>\n"
     "rst all|peer_hit <peer_HIT>\n"
     "load config default\n"
-    "handover mode hard|soft\n"
     "Server side:\n"
     "\tadd|del service rvs|relay|full-relay\n"
     "\treinit service rvs|relay|full-relay\n"
@@ -560,8 +559,6 @@ static int hip_conf_get_action(const char *argv[])
         ret = ACTION_LOCATOR;
     } else if (!strcmp("debug", argv[1])) {
         ret = ACTION_DEBUG;
-    } else if (!strcmp("handover", argv[1])) {
-        ret = ACTION_HANDOVER;
     } else if (!strcmp("transform", argv[1])) {
         ret = ACTION_TRANSORDER;
     } else if (!strcmp("restart", argv[1])) {
@@ -643,7 +640,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_TRANSORDER:
     case ACTION_NAT_LOCAL_PORT:
     case ACTION_NAT_PEER_PORT:
-    case ACTION_HANDOVER:
         count = 2;
         break;
     default:
@@ -700,8 +696,6 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         ret = TYPE_DEBUG;
     } else if (!strcmp("daemon", text)) {
         ret = TYPE_DAEMON;
-    } else if ((!strcmp("mode", text)) && (strcmp("handover", argv[1]) == 0)) {
-        ret = TYPE_HANDOVER;
     } else if (!strcmp("order", text)) {
         ret = TYPE_ORDER;
     } else if (strcmp("heartbeat", argv[1]) == 0) {
@@ -761,7 +755,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_HEARTBEAT:
     case ACTION_LOCATOR:
     case ACTION_RST:
-    case ACTION_HANDOVER:
     case ACTION_TRANSORDER:
     case ACTION_REINIT:
     case ACTION_RESTART:
@@ -1935,44 +1928,6 @@ out_err:
 }
 
 /**
- * prefer hard or soft handovers
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt "hard" or "soft"
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_handover(struct hip_common *msg,
-                                    UNUSED int action,
-                                    const char *opt[],
-                                    UNUSED int optc,
-                                    int send_only)
-{
-    int err = 0;
-
-    if (strcmp("hard", opt[0]) == 0) {
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_HANDOVER_HARD, 0), -1,
-                 "Building of daemon header failed\n");
-        HIP_INFO("handover mode set to hard successfully\n");
-    } else {
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_HANDOVER_SOFT, 0), -1,
-                 "Building of daemon header failed\n");
-        HIP_INFO("handover mode set to soft successfully\n");
-    }
-
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "send recv daemon info\n");
-
-out_err:
-    hip_msg_init(msg);
-
-    return err;
-}
-
-/**
  * creates the string intended to set the environmental variable
  * LD_PRELOAD. The function required the required libraries, and then
  * includes the prefix (path where these libraries are located) to
@@ -2516,7 +2471,7 @@ static int (*action_handler[])(struct hip_common *,
     NULL,                               /* 39: unused, was TYPE_SHOTGUN */
     hip_conf_handle_map_id_to_addr,     /* 40: TYPE_ID_TO_ADDR */
     hip_conf_handle_lsi_to_hit,         /* 41: TYPE_LSI_TO_HIT */
-    hip_conf_handle_handover,           /* 42: TYPE_HANDOVER */
+    NULL,                               /* 42: unused, was TYPE_HANDOVER */
     hip_conf_handle_manual_update,      /* 43: TYPE_MANUAL_UPDATE */
     hip_conf_handle_broadcast,      /* 44: TYPE_BROADCAST */
     NULL     /* TYPE_MAX, the end. */
