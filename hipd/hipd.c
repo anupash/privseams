@@ -68,8 +68,6 @@
 #include "hipd.h"
 
 
-int is_hard_handover = 0;                 /**< if hard handover is forced to be used (default: no) */
-
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
  *  0 = none = default, AF_INET, AF_INET6 */
 int suppress_af_family = 0;

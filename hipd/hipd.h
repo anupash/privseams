@@ -83,7 +83,6 @@ extern int hip_user_sock;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int hit_db_lock;
-extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
