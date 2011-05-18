@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -32,6 +32,7 @@
  * @brief Firewall communication interface with hipd
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -48,6 +49,7 @@
 #include "cache.h"
 #include "firewall.h"
 #include "user_ipsec_fw_msg.h"
+#include "user_ipsec_sadb.h"
 #include "firewall_control.h"
 
 /**
@@ -127,8 +129,7 @@ int hip_handle_msg(struct hip_common *msg)
         break;
     case HIP_MSG_IPSEC_FLUSH_ALL_SA:
         HIP_DEBUG("Received flush all sa request from hipd\n");
-        HIP_IFEL(handle_sa_flush_all_request(), -1,
-                 "hip userspace sadb flush all did NOT succeed\n");
+        hip_sadb_flush();
         break;
     case HIP_MSG_TURN_INFO:
         break;

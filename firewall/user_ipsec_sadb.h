@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  * @brief Security association database for IPsec connections
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_SADB_H
@@ -90,7 +91,7 @@ struct hip_sa_entry {
 };
 
 int hip_sadb_init(void);
-int hip_sadb_uninit(void);
+void hip_sadb_uninit(void);
 int hip_sadb_add(int direction,
                  uint32_t spi,
                  uint32_t mode,
@@ -112,7 +113,7 @@ int hip_sadb_add(int direction,
                  int update);
 int hip_sadb_delete(const struct in6_addr *dst_addr,
                     uint32_t spi);
-int hip_sadb_flush(void);
+void hip_sadb_flush(void);
 struct hip_sa_entry *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
                                                uint32_t spi);
 struct hip_sa_entry *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,

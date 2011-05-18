@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  * @brief Security association database for IPsec connections
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>
@@ -696,21 +697,12 @@ out_err:
 
 /**
  * uninits the sadb and linkdb by deleting all entries stored in there
- *
- * @return -1, if error occurred, else 0
  */
-int hip_sadb_uninit(void)
+void hip_sadb_uninit(void)
 {
-    int err = 0;
-
-    if ((err = hip_sadb_flush())) {
-        HIP_ERROR("failed to flush sadb\n");
-    }
-
+    hip_sadb_flush();
     free(sadb);
     free(linkdb);
-
-    return err;
 }
 
 /**
@@ -845,16 +837,12 @@ static void delete_sa_entry(void *const ptr)
 
 /**
  * flushes all entries in the sadb
- *
- * @return 0
  */
-int hip_sadb_flush(void)
+void hip_sadb_flush(void)
 {
     hip_ht_doall(sadb, delete_sa_entry);
 
     HIP_DEBUG("sadb flushed\n");
-
-    return 0;
 }
 
 /**
