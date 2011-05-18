@@ -371,10 +371,9 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
 /**
  * precreate all R1 packets
  *
- * @return 0
+ * @return zero on success or negative on error
  */
 int hip_recreate_all_precreated_r1_packets(void)
 {
-    hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
-    return 0;
+    return hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
 }
