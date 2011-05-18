@@ -356,7 +356,7 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
             locator_info_addr = hip_get_locator_item(locator_address_item, i);
 
             if (!hip_add_address_to_send_echo_request(localstate, *hip_get_locator_item_address(locator_info_addr))) {
-                HIP_ERROR("Adding an address to the container for update locators failed!");
+                HIP_ERROR("Adding an address to the container for update locators failed!\n");
                 return -1;
             }
 
@@ -372,7 +372,7 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
             HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
 
             if (!hip_add_address_to_send_echo_request(localstate, ctx->src_addr)) {
-                HIP_ERROR("Adding an address to the container for update locators failed!");
+                HIP_ERROR("Adding an address to the container for update locators failed!\n");
                 return -1;
             }
         }
