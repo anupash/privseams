@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -56,6 +56,7 @@
  * @brief Host Association Database (HADB) for HIP
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <errno.h>
@@ -806,7 +807,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
         goto out_err;
     }
 
-    err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
+    err = hip_hadb_get_peer_addr_info_old(entry, new_addr);
     if (err) {
         goto out_err;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  *
  * @author Baris Boyvat
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>
@@ -46,24 +47,16 @@
 #include "hadb_legacy.h"
 
 /**
- * Gets infomation on the given peer IPv6 address.
+ * Test whether an IPv6 address is in the peer address list of a HA.
  *
  * @param entry         corresponding hadb entry of the peer.
  * @param addr          the IPv6 address for which the information is to be
  *                      retrieved.
- * @param lifetime      where the lifetime of @c addr is copied to.
- * @param modified_time where the time when @c addr was added or updated is
- *                      copied to.
  * @return              If @c entry has the address @c addr in its peer address
- *                      list parameters @c spi, @c lifetime, and
- *                      @c modified_time are assigned if they are non-NULL and 1
- *                      is returned, else @c interface_id and @c lifetime are
- *                      not assigned a value and 0 is returned.
+ *                      list, 1 is returned, else 0 is returned.
  */
 int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
-                                    const struct in6_addr *addr,
-                                    uint32_t *lifetime,
-                                    struct timeval *modified_time)
+                                    const struct in6_addr *addr)
 {
     struct hip_peer_addr_list_item *peer_addr_list_item;
     int                             i = 1, ii;
@@ -74,15 +67,6 @@ int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
         peer_addr_list_item = list_entry(item);
 
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
-            if (lifetime) {
-                *lifetime = peer_addr_list_item->lifetime;
-            }
-
-            if (modified_time) {
-                modified_time->tv_sec  = peer_addr_list_item->modified_time.tv_sec;
-                modified_time->tv_usec = peer_addr_list_item->modified_time.tv_usec;
-            }
-
             return 1;
         }
 
