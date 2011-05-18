@@ -1104,10 +1104,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
 #endif /* CONFIG_HIP_RVS */
 
-    /* Copying address list from temp location in entry
-     * "entry->peer_addr_list_to_be_added" */
-    hip_copy_peer_addrlist_changed(ctx->hadb_entry);
-
     /* Handle REG_RESPONSE and REG_FAILED parameters. */
     hip_handle_param_reg_response(ctx->hadb_entry, ctx->input_msg);
     hip_handle_param_reg_failed(ctx->hadb_entry, ctx->input_msg);
