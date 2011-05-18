@@ -77,8 +77,7 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr);
 
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
-                           const struct in6_addr *new_addr,
-                           uint32_t interface_id);
+                           const struct in6_addr *new_addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 

@@ -710,8 +710,7 @@ int hip_check_r1(RVS const uint8_t packet_type,
         HIP_HEXDUMP("Received", &ctx->src_addr, 16);
         hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
         hip_hadb_add_peer_addr(ctx->hadb_entry,
-                               &ctx->src_addr,
-                               0);
+                               &ctx->src_addr);
     }
 
     hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
@@ -1687,8 +1686,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     ctx->hadb_entry->peer_controls |= ntohs(ctx->input_msg->control);
 
     HIP_IFEL(hip_hadb_add_peer_addr(ctx->hadb_entry,
-                                    &ctx->src_addr,
-                                    0),
+                                    &ctx->src_addr),
              -1,
              "Error while adding the preferred peer address\n");
 
