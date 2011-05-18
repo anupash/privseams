@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,6 +39,7 @@
  * @author  Rene Hummen
  * @author  Samu Varjonen
  * @author  Tim Just
+ * @author  Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -710,10 +711,7 @@ int hip_check_r1(RVS const uint8_t packet_type,
         hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
         hip_hadb_add_peer_addr(ctx->hadb_entry,
                                &ctx->src_addr,
-                               0,
-                               0,
-                               PEER_ADDR_STATE_ACTIVE,
-                               ctx->msg_ports.src_port);
+                               0);
     }
 
     hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
@@ -1690,10 +1688,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(hip_hadb_add_peer_addr(ctx->hadb_entry,
                                     &ctx->src_addr,
-                                    0,
-                                    0,
-                                    PEER_ADDR_STATE_ACTIVE,
-                                    ctx->msg_ports.src_port),
+                                    0),
              -1,
              "Error while adding the preferred peer address\n");
 

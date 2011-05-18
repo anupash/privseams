@@ -530,8 +530,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     hip_hadb_insert_state(entry);
 
     /* Add initial HIT-IP mapping. */
-    if (hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE,
-                               hip_get_peer_nat_udp_port())) {
+    if (hip_hadb_add_peer_addr(entry, peer_addr, 0)) {
         HIP_ERROR("error while adding a new peer address\n");
         return -2;
     }
@@ -759,16 +758,12 @@ int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr)
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
  * @param spi outbound SPI to which the @c new_addr is related to
- * @param lifetime address lifetime of the address
- * @param state address state
- * @param port the port
  *
  * @return zero on success and negative on error
  */
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
                            const struct in6_addr *new_addr,
-                           uint32_t spi, uint32_t lifetime, int state,
-                           in_port_t port)
+                           uint32_t spi)
 {
     int                             err = 0;
     struct hip_peer_addr_list_item *a_item;
@@ -797,10 +792,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
                 err = -ENOMEM;
                 goto out_err;
             }
-            a_item->lifetime = lifetime;
             ipv6_addr_copy(&a_item->address, new_addr);
-            a_item->address_state = state;
-            gettimeofday(&a_item->modified_time, NULL);
 
             list_add(a_item, entry->peer_addr_list_to_be_added);
         }
@@ -819,11 +811,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
         goto out_err;
     }
 
-    a_item->lifetime = lifetime;
-    a_item->port     = port;
     ipv6_addr_copy(&a_item->address, new_addr);
-    a_item->address_state = state;
-    gettimeofday(&a_item->modified_time, NULL);
 
     list_add(a_item, entry->peer_addresses_old);
 

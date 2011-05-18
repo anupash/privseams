@@ -112,13 +112,6 @@ struct hip_msg_retrans {
 
 struct hip_peer_addr_list_item {
     struct in6_addr address;
-    /** current state of the address (PEER_ADDR_STATE_xx) */
-    int      address_state;
-    uint32_t lifetime;
-    /** time when this address was added or updated */
-    struct timeval modified_time;
-    /** port number for transport protocol */
-    uint16_t port;
 };
 
 struct hip_spi_in_item {
