@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,6 +27,8 @@
  * @file
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
+ *
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_LIB_CORE_STATE_H
@@ -108,33 +110,15 @@ struct hip_msg_retrans {
     struct hip_common *buf;
 };
 
-/*
- * Fixed start of this struct must match to struct hip_locator_info_addr_item
- * for the part of address item. It is used in hip_update_locator_match().
- */
-/// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item {
-    uint32_t        padding;
-    unsigned long   hash_key;
     struct in6_addr address;
-
-    int address_state;                  /* current state of the
-                                         * address (PEER_ADDR_STATE_xx) */
-    int is_preferred;                   /* 1 if this address was set as
-                                         * preferred address in the LOCATOR */
-    uint32_t       lifetime;
-    struct timeval modified_time;       /* time when this address was
-                                         * added or updated */
-    uint8_t echo_data[4];               /* data put into the ECHO_REQUEST parameter */
-//NAT branch
-    uint8_t transport_protocol;                     /*value 1 for UDP*/
-
-    uint16_t port /*port number for transport protocol*/;
-
-    uint32_t priority;
-
-    uint8_t kind;
-//end NAT branch
+    /** current state of the address (PEER_ADDR_STATE_xx) */
+    int      address_state;
+    uint32_t lifetime;
+    /** time when this address was added or updated */
+    struct timeval modified_time;
+    /** port number for transport protocol */
+    uint16_t port;
 };
 
 struct hip_spi_in_item {

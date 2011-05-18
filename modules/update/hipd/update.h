@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,6 +28,8 @@
  * @author  Baris Boyvat <baris#boyvat.com>
  * @version 0.1
  * @date    3.5.2009
+ *
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
@@ -83,11 +85,6 @@ struct hip_locator {
     /* fixed part ends */
 } __attribute__ ((packed));
 
-/**
- * Fixed start of this struct must match to struct hip_peer_addr_list_item
- * for the part of address item. It is used in hip_update_locator_match().
- * @todo Maybe fix this in some better way?
- */
 struct hip_locator_info_addr_item {
     uint8_t         traffic_type;
     uint8_t         locator_type;
