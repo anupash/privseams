@@ -319,9 +319,6 @@ struct hip_hadb_state {
     int spi_outbound_current;
     int spi_outbound_new;
 
-    // Has struct hip_peer_addr_list_item s
-    HIP_HASHTABLE *peer_addresses_old;
-
     /* modular state */
     struct modular_state *hip_modular_state;
 } __attribute__((packed));

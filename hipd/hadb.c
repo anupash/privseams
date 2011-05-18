@@ -89,7 +89,6 @@
 #include "lib/tool/xfrmapi.h"
 #include "config.h"
 #include "accessor.h"
-#include "hadb_legacy.h"
 #include "hidb.h"
 #include "hipd.h"
 #include "input.h"
@@ -686,8 +685,6 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     /* Initialize the peer host name */
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    entry->peer_addresses_old = hip_linked_list_init();
-
     /* Randomize inbound SPI */
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
@@ -844,16 +841,6 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
         }
         hip_ht_uninit(ha->peer_addr_list_to_be_added);
-    }
-
-    if (ha->peer_addresses_old) {
-        list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = list_entry(item);
-            list_del(addr_li, ha->peer_addresses_old);
-            free(addr_li);
-            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-        }
-        hip_ht_uninit(ha->peer_addresses_old);
     }
 
     list_del(ha, hadb_hit);

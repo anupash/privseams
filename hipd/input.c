@@ -77,7 +77,6 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
 #include "hadb.h"
-#include "hadb_legacy.h"
 #include "hidb.h"
 #include "hipd.h"
 #include "hiprelay.h"
@@ -708,7 +707,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
         HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
         HIP_HEXDUMP("Mapping", &daddr, 16);
         HIP_HEXDUMP("Received", &ctx->src_addr, 16);
-        hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
         hip_hadb_add_peer_addr(ctx->hadb_entry,
                                &ctx->src_addr);
     }

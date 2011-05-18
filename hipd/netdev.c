@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,6 +39,7 @@
  * @brief Localhost address cache and related management functions
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -1453,7 +1454,6 @@ void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
 
     list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
         addr_li = list_entry(item);
-        list_add(addr_li, ha->peer_addresses_old);
         HIP_DEBUG_HIT("SPI out address", &addr_li->address);
     }
     hip_ht_uninit(ha->peer_addr_list_to_be_added);
