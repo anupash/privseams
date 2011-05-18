@@ -841,8 +841,6 @@ static void delete_sa_entry(void *const ptr)
 void hip_sadb_flush(void)
 {
     hip_ht_doall(sadb, delete_sa_entry);
-
-    HIP_DEBUG("sadb flushed\n");
 }
 
 /**
