@@ -56,7 +56,7 @@ static bool hip_add_address_to_send_echo_request(struct update_state *const stat
 {
     if (state->valid_locators < ARRAY_SIZE(state->addresses_to_send_echo_request)) {
         state->addresses_to_send_echo_request[state->valid_locators] = addr;
-        state->valid_locators                                       += 1;
+        state->valid_locators++;
         return true;
     } else {
         return false;
@@ -83,7 +83,7 @@ static void hip_print_addresses_to_send_update_request(const struct hip_hadb_sta
     const struct update_state *const localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
     HIP_DEBUG("Addresses to send update:\n");
-    for (unsigned i = 0; i < localstate->valid_locators; i += 1) {
+    for (unsigned i = 0; i < localstate->valid_locators; i++) {
         HIP_DEBUG_IN6ADDR("", &localstate->addresses_to_send_echo_request[i]);
     }
 }
