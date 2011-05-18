@@ -297,7 +297,7 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
         // send challenge to all advertised locators
         localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
 
-        for (unsigned i = 0; i < localstate->valid_locators; i += 1) {
+        for (unsigned i = 0; i < localstate->valid_locators; i++) {
             dst_addr = &localstate->addresses_to_send_echo_request[i];
 
             if (!are_addresses_compatible(&ctx->dst_addr, dst_addr)) {
