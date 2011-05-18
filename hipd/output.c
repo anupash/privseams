@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,6 +34,7 @@
  * @author  Kristian Slavov
  * @author  Samu Varjonen
  * @author  Rene Hummen
+ * @author  Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -83,6 +84,29 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
+
+/**
+ * display peer_addr_list_to_be_added structure from a host association
+ *
+ * @param entry the host association
+ */
+static void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
+{
+    LHASH_NODE                     *item = NULL, *tmp = NULL;
+    struct hip_peer_addr_list_item *addr;
+    int                             i = 0;
+
+    HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
+    if (entry->peer_addr_list_to_be_added == NULL) {
+        return;
+    }
+
+    list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
+    {
+        addr = list_entry(item);
+        HIP_DEBUG_HIT("Peer address", &addr->address);
+    }
+}
 
 /**
  * Send an I1 packet to the Responder. Used internally by hip_send_i1().
