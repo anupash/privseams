@@ -826,8 +826,8 @@ static void delete_sa_entry(void *const ptr)
 
     err = hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr);
     if (err) {
-        char src[64];
-        char dst[64];
+        char src[INET6_ADDRSTRLEN];
+        char dst[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, &entry->inner_src_addr, src, sizeof(src));
         inet_ntop(AF_INET6, &entry->inner_dst_addr, dst, sizeof(dst));
         HIP_ERROR("Deleting SA entry %s -> %s failed with error %d\n", src, dst,
