@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@
  * @brief Inter-process communication with the hipd for userspace IPsec
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>
@@ -237,22 +238,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
 
     /* the only useful information here are the spi and peer address */
     hip_sadb_delete(peer_addr, spi);
-
-out_err:
-    return err;
-}
-
-/**
- * handles a SA flush request sent by the hipd
- *
- * @return 0, if message sent and received ok, != 0 else
- */
-int handle_sa_flush_all_request(void)
-{
-    int err = 0;
-
-    /* this message does not have any parameters, only triggers flushing */
-    HIP_IFEL(hip_sadb_flush(), -1, "failed to flush sadb\n");
 
 out_err:
     return err;

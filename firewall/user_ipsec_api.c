@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@
  * @brief API for the userspace IPsec functionality
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 /* required for IFNAMSIZ in libipq headers */
@@ -200,8 +201,7 @@ int userspace_ipsec_uninit(void)
         HIP_ERROR("failed to notify hipd about userspace ipsec deactivation\n");
     }
 
-    // uninit sadb
-    HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
+    hip_sadb_uninit();
 
     // close sockets used for reinjection
     if (raw_sock_v4) {
@@ -215,7 +215,6 @@ int userspace_ipsec_uninit(void)
     free(esp_packet);
     free(decrypted_packet);
 
-out_err:
     return err;
 }
 

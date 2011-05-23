@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  * @brief i.e. 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -42,7 +43,6 @@
 
 #include "hit_to_ip.h"
 #include "lib/core/conf.h"
-#include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
