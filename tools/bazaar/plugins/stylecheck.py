@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: latin-1 -*-
 
 #
-# Copyright (c) 2010 Aalto University and RWTH Aachen University.
+# Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -23,6 +24,11 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+#
+
+#
+# Contributors:
+# Stefan Götz <stefan.goetz@web.de>
 #
 
 _stylecheck_tutorial = """
@@ -70,7 +76,7 @@ check and allows the commit to succeed.
 
 """
 
-version_info = (0, 1, 0, 'dev', 0)
+version_info = (0, 2, 0, 'dev', 0)
 plugin_name = 'stylecheck'
 
 from bzrlib import branch, help_topics
@@ -426,7 +432,13 @@ for code-style checking, remove the plugin file %s.py" % (str(e), plugin_name)
             beautification.apply_to_branch()
             print "Style changes successfully applied.\n"
         diff_file.close()
-        raise bzrlib.errors.BzrError("This commit has been aborted. Your original commit message was:\n--\n%s\n--" % (get_commit_message(local, master, future_revid)))
+        
+        # Store the commit message in a file so it can be retrieved later
+        msg_file = tempfile.NamedTemporaryFile(prefix = "bzr-commit-revno-%d-" % (future_revno), delete = False)
+        msg_file.write(get_commit_message(local, master, future_revid))
+        msg_file.close()
+        
+        raise bzrlib.errors.BzrError("This commit has been aborted. Your original commit message (see %s) was:\n--\n%s\n--" % (msg_file.name, get_commit_message(local, master, future_revid)))
 
 
 help_topics.topic_registry.register(plugin_name + '-tutorial',
