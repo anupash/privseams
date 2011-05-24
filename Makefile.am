@@ -21,10 +21,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-#
-# @author Stefan Götz <stefan.goetz@web.de>
-#
-
 ACLOCAL_AMFLAGS  = -I m4
 
 HIPL_HEADER_LOCATIONS = firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*.h test/*/*.h test/*/*/*.h
