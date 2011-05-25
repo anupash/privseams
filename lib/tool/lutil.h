@@ -12,18 +12,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-/* moved this here from getaddrinfo.c because it's used now in
- * getendpointinfo.c too */
-
-struct gaih_addrtuple {
-    struct gaih_addrtuple *next;
-    int                    family;
-    char                   addr[16];
-    uint32_t               scopeid;
-};
-
-void free_gaih_addrtuple(struct gaih_addrtuple *tuple);
-
 struct listitem {
     char             data[256];
     struct listitem *next;
