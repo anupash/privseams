@@ -67,7 +67,6 @@
 #include "lib/core/linkedlist.h"
 #include "lib/core/list.h"
 #include "lib/core/prefix.h"
-#include "lib/tool/lutil.h"
 #include "lib/tool/nlink.h"
 #include "config.h"
 #include "accessor.h"
