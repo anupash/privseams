@@ -361,7 +361,10 @@ static int hip_conf_handle_hi_del_all(struct hip_common *msg,
     struct       hip_common     *msg_tmp = NULL;
 
     msg_tmp = hip_msg_alloc();
-    HIP_IFEL(!msg_tmp, -ENOMEM, "Malloc for msg_tmp failed\n");
+    if (!msg_tmp) {
+        HIP_ERROR("Malloc for msg_tmp failed\n");
+        return -ENOMEM;
+    }
 
     HIP_IFEL(hip_build_user_hdr(msg_tmp, HIP_MSG_GET_LOCAL_HITS, 0),
              -1, "Failed to build user message header\n");
@@ -411,37 +414,43 @@ static int hip_conf_handle_hi_del(struct hip_common *msg,
                                   int optc,
                                   int send_only)
 {
-    int             err = 0;
-    int             ret;
+    int             err, ret;
     struct in6_addr hit;
 
-    HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
+    if (optc != 1) {
+        HIP_ERROR("Invalid number of arguments\n");
+        return -EINVAL;
+    }
 
     if (!strcmp(opt[0], "all")) {
         return hip_conf_handle_hi_del_all(msg, action, opt, optc, send_only);
     }
 
     ret = inet_pton(AF_INET6, opt[0], &hit);
-    HIP_IFEL(ret < 0 && errno == EAFNOSUPPORT, -EAFNOSUPPORT,
-             "inet_pton: not a valid address family\n");
-    HIP_IFEL(ret == 0, -EINVAL,
-             "inet_pton: %s: not a valid network address\n", opt[0]);
+    if (ret < 0 && errno == EAFNOSUPPORT) {
+        HIP_ERROR("inet_pton: not a valid address family\n");
+        return -EAFNOSUPPORT;
+    }
+
+    if (ret == 0) {
+        HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+        return -EINVAL;
+    }
 
     HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(struct in6_addr));
 
     if ((err = hip_build_user_hdr(msg, HIP_MSG_DEL_LOCAL_HI, 0))) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
+        return err;
     }
 
     if ((err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                         sizeof(struct in6_addr)))) {
         HIP_ERROR("build param HIT failed: %s\n", strerror(err));
-        goto out_err;
+        return err;
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -860,16 +869,14 @@ static int hip_conf_handle_server(struct hip_common *msg,
     if (action != ACTION_ADD && action != ACTION_DEL) {
         HIP_ERROR("Only actions \"add\" and \"del\" are supported for " \
                   "\"server\".\n");
-        err = -1;
-        goto out_err;
+        return -1;
     } else if (action == ACTION_ADD) {
         char *tail_ptr = NULL;
 
         if (optc < 4) {
             if (optc < 3) {
                 HIP_ERROR("Missing arguments.\n");
-                err = -1;
-                goto out_err;
+                return -1;
             } else {
                 HIP_DEBUG("Opportunistic mode or direct HIT registration \n");
                 opp_mode = 1;
@@ -886,14 +893,16 @@ static int hip_conf_handle_server(struct hip_common *msg,
         }
 
         seconds = strtoul(opt[optc - 1], &tail_ptr, 10);
-        HIP_IFEL(*tail_ptr != '\0' || seconds <= 0 || seconds > 15384774, -1,
-                 "Invalid lifetime value \"%s\" given.\n"       \
-                 "Please give a lifetime value between 1 and "  \
-                 "15384774 seconds.\n", opt[optc - 1]);
-
-        HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
-                 "Unable to convert seconds to a lifetime value.\n");
-
+        if (*tail_ptr != '\0' || seconds <= 0 || seconds > 15384774) {
+            HIP_ERROR("Invalid lifetime value \"%s\" given.\n"      \
+                      "Please give a lifetime value between 1 and " \
+                      "15384774 seconds.\n", opt[optc - 1]);
+            return -1;
+        }
+        if (hip_get_lifetime_value(seconds, &lifetime)) {
+            HIP_ERROR("Unable to convert seconds to a lifetime value.\n");
+            return -1;
+        }
         hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
     } else if (action == ACTION_DEL) {
         if (optc < 3) {
@@ -911,8 +920,7 @@ static int hip_conf_handle_server(struct hip_common *msg,
         if (inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
             if (resolve_hostname_to_id(opt[index_of_hit], &hit, 1)) {
                 HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
-                err = -1;
-                goto out_err;
+                return -1;
             }
         }
     }
@@ -935,27 +943,24 @@ static int hip_conf_handle_server(struct hip_common *msg,
             if (err) {
                 HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
                           opt[index_of_ip]);
-                err = -1;
-                goto out_err;
+                return -1;
             }
         } else {
             IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
         }
     }
 
+    if (optc > 13) {
+        HIP_ERROR("Too many services requested.\n");
+        return -1;
+    }
+
     reg_types = malloc(number_of_regtypes * sizeof(uint8_t));
 
     if (reg_types == NULL) {
-        err = -1;
         HIP_ERROR("Unable to allocate memory for registration " \
                   "types.\n");
-        goto out_err;
-    }
-
-    if (optc > 13) {
-        HIP_ERROR("Too many services requested.\n");
-        err = -1;
-        goto out_err;
+        return -ENOMEM;
     }
 
     /* Every commandline argument in opt[] from '0' to 'optc - 4' should
@@ -1042,40 +1047,58 @@ static int hip_conf_add_id_to_ip_map(struct hip_common *const msg,
     struct in6_addr hit, ip6;
     int             err = 0;
 
-    HIP_IFEL(optc != 2 && optc != 3, -1, "Missing arguments\n");
-
-    HIP_IFEL(hip_convert_string_to_address(opt[0], &hit), -1,
-             "string to address conversion failed\n");
-
-    HIP_IFEL((err = hip_convert_string_to_address(opt[1], &ip6)), -1,
-             "string to address conversion failed\n");
-
-    if ((err && inet_pton(AF_INET, opt[1], &aux) != 1)) {
-        HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
+    if (optc != 2 && optc != 3) {
+        HIP_ERROR("Missing arguments\n");
+        return -1;
     }
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ADD_PEER_MAP_HIT_IP,
-                                0), -1, "add peer map failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                      sizeof(struct in6_addr)), -1,
-             "build param hit failed\n");
+    if (hip_convert_string_to_address(opt[0], &hit)) {
+        HIP_ERROR("string to address conversion failed\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_build_param_contents(msg, &ip6,
-                                      HIP_PARAM_IPV6_ADDR,
-                                      sizeof(struct in6_addr)), -1,
-             "build param hit failed\n");
+    if ((err = hip_convert_string_to_address(opt[1], &ip6))) {
+        HIP_ERROR("string to address conversion failed\n");
+        return -1;
+    }
+
+    if ((err && inet_pton(AF_INET, opt[1], &aux) != 1) && IS_LSI32(aux.s_addr)) {
+        HIP_ERROR("Missing IP address before lsi\n");
+        return -1;
+    }
+
+    if (hip_build_user_hdr(msg, HIP_MSG_ADD_PEER_MAP_HIT_IP, 0)) {
+        HIP_ERROR("add peer map failed\n");
+        return -1;
+    }
+    if (hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+                                 sizeof(struct in6_addr))) {
+        HIP_ERROR("build param hit failed\n");
+        return -1;
+    }
+
+    if (hip_build_param_contents(msg, &ip6, HIP_PARAM_IPV6_ADDR,
+                                 sizeof(struct in6_addr))) {
+        HIP_ERROR("build param hit failed\n");
+        return -1;
+    }
 
     if (optc == 3) {
-        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) != 1, -1,
-                 "string to address conversion failed\n");
-        HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
-        HIP_IFEL(hip_build_param_contents(msg, &lsi,
-                                          HIP_PARAM_LSI,
-                                          sizeof(struct in_addr)), -1,
-                 "build param lsi failed\n");
+        if (inet_pton(AF_INET, opt[2], &lsi) != 1) {
+            HIP_ERROR("string to address conversion failed\n");
+            return -1;
+        }
+        if (!IS_LSI32(lsi.s_addr)) {
+            HIP_ERROR("Wrong LSI value\n");
+            return -1;
+        }
+        if (hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI,
+                                     sizeof(struct in_addr))) {
+            HIP_ERROR("build param lsi failed\n");
+            return -1;
+        }
     }
 
-out_err:
     return err;
 }
 
@@ -1095,7 +1118,6 @@ static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
                                      int optc,
                                      int send_only)
 {
-    int                          err = 0;
     struct in6_addr              hit;
     struct in_addr               lsi;
     const struct in6_addr       *ip;
@@ -1103,21 +1125,32 @@ static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
     const struct hip_tlv_common *param = NULL;
     char                         addr_str[INET6_ADDRSTRLEN];
 
-    HIP_IFEL(optc != 1, -1, "Missing arguments\n");
+    if (optc != 1) {
+        HIP_ERROR("Missing arguments\n");
+        return -1;
+    }
 
     if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
-        HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
-                 "inet_pton failed\n");
+        if (inet_pton(AF_INET, opt[0], &lsi) != 1) {
+            HIP_ERROR("inet_pton failed\n");
+            return -1;
+        }
         IPV4_TO_IPV6_MAP(&lsi, &hit);
     }
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MAP_ID_TO_ADDR, 0), -1,
-             "Failed to build message header\n");
-    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
-                                      sizeof(hit)), -1,
-             "Failed to build message contents\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Sending message failed\n");
+    if (hip_build_user_hdr(msg, HIP_MSG_MAP_ID_TO_ADDR, 0)) {
+        HIP_ERROR("Failed to build message header\n");
+        return -1;
+    }
+    if (hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
+                                 sizeof(hit))) {
+        HIP_ERROR("Failed to build message contents\n");
+        return -1;
+    }
+    if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+        HIP_ERROR("Sending message failed\n");
+        return -1;
+    }
 
     while ((param = hip_get_next_param(msg, param))) {
         if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR) {
@@ -1126,11 +1159,17 @@ static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
         ip = hip_get_param_contents_direct(param);
         if (IN6_IS_ADDR_V4MAPPED(ip)) {
             IPV6_TO_IPV4_MAP(ip, &ip4);
-            HIP_IFEL(!inet_ntop(AF_INET, &ip4, addr_str,
-                                INET_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+            if (!inet_ntop(AF_INET, &ip4, addr_str,
+                           INET_ADDRSTRLEN)) {
+                HIP_ERROR("inet_ntop() failed\n");
+                return -1;
+            }
         } else {
-            HIP_IFEL(!inet_ntop(AF_INET6, ip, addr_str,
-                                INET6_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+            if (!inet_ntop(AF_INET6, ip, addr_str,
+                           INET6_ADDRSTRLEN)) {
+                HIP_ERROR("inet_ntop() failed\n");
+                return -1;
+            }
         }
 
         HIP_INFO("Resolved to IP: %s\n", addr_str);
@@ -1138,8 +1177,7 @@ static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
 
     hip_msg_init(msg);
 
-out_err:
-    return err;
+    return 0;
 }
 
 #define OPT_HI_TYPE   0
@@ -1169,19 +1207,28 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
     if (action == ACTION_DEL) {
         return hip_conf_handle_hi_del(msg, action, opt, optc, send_only);
     } else if (action == ACTION_GET) {
-        HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
-        HIP_IFEL(optc > 1, -1, "Too many arguments.\n");
+        if (optc < 1) {
+            HIP_ERROR("Missing arguments.\n");
+            return -1;
+        } else if (optc > 1) {
+            HIP_ERROR("Too many arguments.\n");
+            return -1;
+        }
 
         return hip_get_hits(msg, opt[0], 1, send_only);
     } else if (action != ACTION_ADD && action != ACTION_NEW) {
         HIP_ERROR("Only actions \"add\", \"new\", \"del\" and \"get\" " \
                   "are supported for \"hi\".\n");
-        err = -1;
-        goto out_err;
+        return -1;
     }
 
-    HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
-    HIP_IFEL(optc > 4, -1, "Too many arguments.\n");
+    if (optc < 1) {
+        HIP_ERROR("Missing arguments.\n");
+        return -1;
+    } else if (optc > 4) {
+        HIP_ERROR("Too many arguments.\n");
+        return -1;
+    }
 
     if (strcmp(opt[0], "pub") == 0) {
         anon = 0;
@@ -1192,8 +1239,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
     } else {
         HIP_ERROR("Bad HI type %s. Please use \"pub\", \"anon\" or " \
                   "\"default\".\n", opt[0]);
-        err = -EINVAL;
-        goto out_err;
+        return -EINVAL;
     }
 
     if (use_default && action == ACTION_ADD) {
@@ -1202,46 +1248,53 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
                                                 "dsa", NULL, 0, 0))) {
-            goto out_err;
+            return err;
         }
-        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-                 "Sending msg failed.\n");
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
                                                 "dsa", NULL, 0, 0))) {
-            goto out_err;
+            return err;
         }
-        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-                 "Sending msg failed.\n");
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
                                                 "rsa", NULL, 0, 0))) {
-            goto out_err;
+            return err;
         }
-        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-                 "Sending msg failed.\n");
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
 
         hip_msg_init(msg);
         err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
                                            "rsa", NULL, 0, 0);
-
-        goto out_err;
+        return err;
     }
 
     if (use_default) {
         if (optc == 3) {
             rsa_key_bits = atoi(opt[1]);
             dsa_key_bits = atoi(opt[2]);
-        } else {
-            HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
+        } else if (optc != 1) {
+            HIP_ERROR("Invalid number of arguments\n");
+            return -EINVAL;
         }
     } else {
         if (optc == 4) {
             rsa_key_bits = dsa_key_bits = atoi(opt[OPT_HI_KEYLEN]);
-        } else {
-            HIP_IFEL(optc != 3, -EINVAL, "Invalid number of arguments\n");
+        } else if (optc != 3) {
+            HIP_ERROR("Invalid number of arguments\n");
+            return -EINVAL;
         }
 
         fmt  = opt[OPT_HI_FMT];
@@ -1259,7 +1312,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
     err = hip_serialize_host_id_action(msg, action, anon, use_default,
                                        fmt, file, rsa_key_bits, dsa_key_bits);
-out_err:
+
     return err;
 }
 
@@ -1281,8 +1334,6 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
                                const char *opt[],
                                int optc, UNUSED int send_only)
 {
-    int err = 0;
-
     switch (action) {
     case ACTION_ADD:
         hip_conf_add_id_to_ip_map(msg, opt, optc);
@@ -1291,13 +1342,10 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
         hip_conf_get_id_to_ip_map(msg, opt, optc, send_only);
         break;
     default:
-        err = -1;
-        goto out_err;
-        break;
+        return -1;
     }
 
-out_err:
-    return err;
+    return -1;
 }
 
 /**
@@ -1316,23 +1364,25 @@ static int hip_conf_handle_heartbeat(struct hip_common *msg, UNUSED int action,
                                      const char *opt[], UNUSED int optc,
                                      UNUSED int send_only)
 {
-    int err = 0, seconds = 0;
+    int seconds = 0;
 
     seconds = atoi(opt[0]);
     if (seconds < 0) {
         HIP_ERROR("Invalid argument\n");
-        err = -EINVAL;
-        goto out_err;
+        return -EINVAL;
     }
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_HEARTBEAT, 0),
-             -1, "Failed to build user message header\n");
+    if (hip_build_user_hdr(msg, HIP_MSG_HEARTBEAT, 0)) {
+        HIP_ERROR("Failed to build user message header\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_build_param_heartbeat(msg, seconds),
-             -1, "Failed to build param heartbeat\n");
+    if (hip_build_param_heartbeat(msg, seconds)) {
+        HIP_ERROR("Failed to build param heartbeat\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1351,12 +1401,11 @@ static int hip_conf_handle_trans_order(struct hip_common *msg,
                                        UNUSED int action, const char *opt[],
                                        int optc, UNUSED int send_only)
 {
-    int err = 0, transorder = 0, i = 0, k = 0;
+    int err, transorder, i, k;
 
     if (optc != 1) {
         HIP_ERROR("Missing arguments\n");
-        err = -EINVAL;
-        goto out;
+        return -EINVAL;
     }
 
     transorder = atoi(opt[0]);
@@ -1364,8 +1413,7 @@ static int hip_conf_handle_trans_order(struct hip_common *msg,
     /* has to be over 100 three options (and less than 321) */
     if (transorder < 100 && transorder > 322) {
         HIP_ERROR("Invalid argument\n");
-        err = -EINVAL;
-        goto out;
+        return -EINVAL;
     }
 
     /* Check individual numbers has to be in range 1 to 3 (3 options) */
@@ -1374,25 +1422,23 @@ static int hip_conf_handle_trans_order(struct hip_common *msg,
         k -= 48;         // easy way to remove junk
         if (k < 0 || k > 3) {
             HIP_ERROR("Invalid argument\n");
-            err = -EINVAL;
-            goto out;
+            return -EINVAL;
         }
     }
 
     err = hip_build_user_hdr(msg, HIP_MSG_TRANSFORM_ORDER, 0);
     if (err) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out;
+        return err;
     }
 
     err = hip_build_param_transform_order(msg, transorder);
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out;
+        return err;
     }
 
-out:
-    return err;
+    return 0;
 }
 
 /**
@@ -1421,30 +1467,27 @@ static int hip_conf_handle_rst(struct hip_common *msg, UNUSED int action,
         ret = inet_pton(AF_INET6, opt[0], &hit);
         if (ret < 0 && errno == EAFNOSUPPORT) {
             HIP_PERROR("inet_pton: not a valid address family\n");
-            err = -EAFNOSUPPORT;
-            goto out;
+            return -EAFNOSUPPORT;
         } else if (ret == 0) {
             HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-            err = -EINVAL;
-            goto out;
+            return -EINVAL;
         }
     }
 
     err = hip_build_user_hdr(msg, HIP_MSG_RST, 0);
     if (err) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out;
+        return err;
     }
 
     err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                    sizeof(struct in6_addr));
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out;
+        return err;
     }
 
-out:
-    return err;
+    return 0;
 }
 
 /**
@@ -1466,9 +1509,10 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
     int err    = 0;
     int status = 0;
 
-    HIP_IFEL(optc != 0,
-             -EINVAL,
-             "Wrong number of arguments. Usage:\nhipconf debug all|medium|none\n");
+    if (optc != 0) {
+        HIP_ERROR("Wrong number of arguments. Usage:\nhipconf debug all|medium|none\n");
+        return -EINVAL;
+    }
 
     if (!strcmp("all", opt[0])) {
         HIP_INFO("Displaying all debugging messages\n");
@@ -1480,15 +1524,16 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
         HIP_INFO("Displaying no debugging messages\n");
         status = HIP_MSG_SET_DEBUG_NONE;
     } else {
-        HIP_OUT_ERR(-EINVAL, "Unknown argument\n");
+        HIP_ERROR("Unknown argument\n");
+        return -EINVAL;
     }
 
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0),
-             -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1511,11 +1556,12 @@ static int hip_conf_handle_manual_update(struct hip_common *msg,
 {
     int err = 0;
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MANUAL_UPDATE_PACKET, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, HIP_MSG_MANUAL_UPDATE_PACKET, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1540,24 +1586,24 @@ static int hip_conf_handle_nat_port(struct hip_common *msg, int action,
 
     in_port_t port = (in_port_t) atoi(opt[1]);
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SET_NAT_PORT, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
-
-    if (action == ACTION_NAT_LOCAL_PORT) {
-        HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT), -1,
-                 "Failed to build nat port parameter.: %s\n", strerror(err));
-    } else {
-        HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_PEER_NAT_PORT), -1,
-                 "Failed to build nat port parameter.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, HIP_MSG_SET_NAT_PORT, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
     }
 
-    goto out_err;
+    if (action == ACTION_NAT_LOCAL_PORT) {
+        if (hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT)) {
+            HIP_ERROR("Failed to build nat port parameter.: %s\n", strerror(err));
+            return -1;
+        }
+    } else {
+        if (hip_build_param_nat_port(msg, port, HIP_PARAM_PEER_NAT_PORT)) {
+            HIP_ERROR("Failed to build nat port parameter.: %s\n", strerror(err));
+            return -1;
+        }
+    }
 
-    HIP_ERROR("Invalid argument\n");
-    err = -EINVAL;
-
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1585,11 +1631,12 @@ static int hip_conf_handle_nat(struct hip_common *msg, UNUSED int action,
         status = HIP_MSG_SET_NAT_NONE;
     }
 
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1620,13 +1667,18 @@ static int hip_conf_handle_locator(struct hip_common *msg, UNUSED int action,
     } else if (!strcmp("get", opt[0])) {
         status = HIP_MSG_LOCATOR_GET;
     } else {
-        HIP_OUT_ERR(-1, "bad args\n");
+        HIP_ERROR("bad args\n");
+        return -1;
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
     if (status == HIP_MSG_LOCATOR_GET) {
-        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-                 "Send recv daemon info failed\n");
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Send recv daemon info failed\n");
+            return -1;
+        }
         locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
         if (locator) {
             hip_print_locator_addresses(msg);
@@ -1634,8 +1686,8 @@ static int hip_conf_handle_locator(struct hip_common *msg, UNUSED int action,
             HIP_DEBUG("No LOCATOR found from daemon msg\n");
         }
     }
-out_err:
-    return err;
+
+    return 0;
 }
 
 /**
@@ -1817,27 +1869,42 @@ static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
     const char                  *hit_str = opt[0];
     const struct hip_tlv_common *param;
 
-    HIP_IFEL(inet_pton(AF_INET6, hit_str, &hit) <= 0, 1,
-             "Not an IPv6 address\n");
-    HIP_IFEL(!ipv6_addr_is_hit(&hit), -1, "Not a HIT\n");
+    if (inet_pton(AF_INET6, hit_str, &hit) <= 0) {
+        HIP_ERROR("Not an IPv6 address\n");
+        return -1;
+    }
+    if (!ipv6_addr_is_hit(&hit)) {
+        HIP_ERROR("Not a HIT\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_LSI_PEER, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, HIP_MSG_GET_LSI_PEER, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-    HIP_IFE(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit)), -1);
+    if (hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit))) {
+        return -1;
+    }
 
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "send recv daemon info\n");
+    if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+        HIP_ERROR("send recv daemon info\n");
+        return -1;
+    }
 
     param = hip_get_param(msg, HIP_PARAM_LSI);
-    HIP_IFEL(!param, -1, "No LSI in msg\n");
+    if (!param) {
+        HIP_ERROR("No LSI in msg\n");
+        return -1;
+    }
     lsi = hip_get_param_contents_direct(param);
-    HIP_IFEL(!inet_ntop(AF_INET, lsi, lsi_str, sizeof(lsi_str)), -1,
-             "LSI string conversion failed\n");
+    if (!inet_ntop(AF_INET, lsi, lsi_str, sizeof(lsi_str))) {
+        HIP_ERROR("LSI string conversion failed\n");
+        return -1;
+    }
     HIP_INFO("HIT %s maps to LSI %s\n", hit_str, lsi_str);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1862,64 +1929,85 @@ static int hip_conf_handle_service(struct hip_common *msg,
                                    int optc,
                                    UNUSED int send_only)
 {
-    int err = 0;
-
-    HIP_IFEL(action != ACTION_ADD && action != ACTION_REINIT && action != ACTION_DEL, -1,
-             "Only actions \"add\", \"del\" and \"reinit\" are supported " \
-             "for \"service\".\n");
-
-    HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
-    HIP_IFEL(optc > 1, -1, "Too many arguments.\n");
+    if (action != ACTION_ADD && action != ACTION_REINIT && action != ACTION_DEL) {
+        HIP_ERROR("Only actions \"add\", \"del\" and \"reinit\" are supported "
+                  "for \"service\".\n");
+        return -1;
+    }
+    if (optc < 1) {
+        HIP_ERROR("Missing arguments.\n");
+        return -1;
+    } else if (optc > 1) {
+        HIP_ERROR("Too many arguments.\n");
+        return -1;
+    }
 
     if (action == ACTION_ADD) {
         if (strcmp(opt[0], "rvs") == 0) {
             HIP_INFO("Adding rendezvous service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OFFER_RVS, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_OFFER_RVS, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "relay") == 0) {
             HIP_INFO("Adding HIP UDP relay service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OFFER_HIPRELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_OFFER_HIPRELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "full-relay") == 0) {
             HIP_INFO("Adding HIP_FULLRELAY service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OFFER_FULLRELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_OFFER_FULLRELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else {
             HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
         }
     } else if (action == ACTION_REINIT) {
         if (strcmp(opt[0], "rvs") == 0) {
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_REINIT_RVS, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_REINIT_RVS, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "relay") == 0) {
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_REINIT_RELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_REINIT_RELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "full-relay") == 0) {
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_REINIT_FULLRELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_REINIT_FULLRELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else {
             HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
         }
     } else if (action == ACTION_DEL) {
         if (strcmp(opt[0], "rvs") == 0) {
             HIP_INFO("Deleting rendezvous service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CANCEL_RVS, 0),
-                     -1, "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_CANCEL_RVS, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "relay") == 0) {
             HIP_INFO("Deleting HIP UDP relay service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CANCEL_HIPRELAY, 0),
-                     -1, "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_CANCEL_HIPRELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else if (strcmp(opt[0], "full-relay") == 0) {
             HIP_INFO("Deleting HIP full relay service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CANCEL_FULLRELAY, 0),
-                     -1, "Failed to build user message header.\n");
+            if (hip_build_user_hdr(msg, HIP_MSG_CANCEL_FULLRELAY, 0)) {
+                HIP_ERROR("Failed to build user message header.\n");
+                return -1;
+            }
         } else {
             HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
         }
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -2011,13 +2099,15 @@ static int hip_conf_handle_nsupdate(struct hip_common *msg,
     } else if (!strcmp("off", opt[0])) {
         status = HIP_MSG_NSUPDATE_OFF;
     } else {
-        HIP_OUT_ERR(-1, "bad args\n");
+        HIP_ERROR("bad args\n");
+        return -1;
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -2049,11 +2139,12 @@ static int hip_conf_handle_hit_to_ip(struct hip_common *msg,
     } else {
         HIP_ERROR("Invalid option!\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -2077,22 +2168,25 @@ static int hip_conf_handle_hit_to_ip_set(struct hip_common *msg,
     int err      = 0;
     int len_name = 0;
     len_name = strlen(opt[0]);
-    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
-    HIP_IFEL(len_name >= HIT_TO_IP_ZONE_MAX_LEN, -1, "Name too long (max %s)\n",
-             HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n",
+              opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
+    if (len_name >= HIT_TO_IP_ZONE_MAX_LEN) {
+        HIP_ERROR("Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
+        return -1;
+    }
 
     err = hip_build_user_hdr(msg, HIP_MSG_HIT_TO_IP_SET, 0);
     if (err) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
+        return err;
     }
     err = hip_build_param_hit_to_ip_set(msg, opt[0]);
     if (err) {
         HIP_ERROR("build param failed: %s\n", strerror(err));
-        goto out_err;
+        return err;
     }
-out_err:
-    return err;
+
+    return 0;
 }
 
 /**
@@ -2112,18 +2206,26 @@ static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
                                       UNUSED int optc,
                                       int send_only)
 {
-    int                          err = 0;
     hip_lsi_t                    lsi;
     const struct in6_addr       *hit;
     const struct hip_tlv_common *param = NULL;
 
-    HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1, "inet_pton()\n");
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LSI_TO_HIT, 0), -1,
-             "Failed to build message header\n");
-    HIP_IFEL(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
-             -1, "Failed to build message contents\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Sending message failed\n");
+    if (inet_pton(AF_INET, opt[0], &lsi) != 1) {
+        HIP_ERROR("inet_pton()\n");
+        return -1;
+    }
+    if (hip_build_user_hdr(msg, HIP_MSG_LSI_TO_HIT, 0)) {
+        HIP_ERROR("Failed to build message header\n");
+        return -1;
+    }
+    if (hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi))) {
+        HIP_ERROR("Failed to build message contents\n");
+        return -1;
+    }
+    if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+        HIP_ERROR("Sending message failed\n");
+        return -1;
+    }
 
     while ((param = hip_get_next_param(msg, param))) {
         if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR) {
@@ -2135,8 +2237,7 @@ static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
 
     hip_msg_init(msg);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -2166,7 +2267,10 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     char       *comment;
     char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
-    HIP_IFEL(optc != 1, -1, "Missing arguments\n");
+    if (optc != 1) {
+        HIP_ERROR("Missing arguments\n");
+        return -1;
+    }
 
     if (!strcmp(opt[0], "default")) {
         strcpy(fname, HIPL_CONFIG_FILE);
@@ -2175,8 +2279,10 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     }
 
 
-    HIP_IFEL(!(hip_config = fopen(fname, "r")), -1,
-             "Error: can't open config file %s.\n", fname);
+    if (!(hip_config = fopen(fname, "r"))) {
+        HIP_ERROR("Error: can't open config file %s.\n", fname);
+        return -1;
+    }
 
     while (err == 0 && fgets(line, sizeof(line), hip_config)) {
         /* Remove whitespace */
@@ -2221,10 +2327,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
         destroy(&list);
     }
 
-out_err:
-    if (hip_config) {
-        fclose(hip_config);
-    }
+    fclose(hip_config);
 
     return err;
 }
@@ -2242,13 +2345,15 @@ static int hip_conf_handle_broadcast(struct hip_common *msg,
     } else if (!strcmp("off", opt[0])) {
         status = HIP_MSG_BROADCAST_OFF;
     } else {
-        HIP_IFEL(1, -1, "bad args\n");
+        HIP_ERROR("bad args\n");
+        return -1;
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
+    if (hip_build_user_hdr(msg, status, 0)) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -2343,31 +2448,44 @@ int hip_do_hipconf(int argc, const char *argv[], int send_only)
     struct hip_common *msg    = NULL;
 
     /* Check that we have at least one command line argument. */
-    HIP_IFEL(argc < 2, -1, "Invalid arguments.\n\n%s usage:\n%s\n",
-             argv[0], hipconf_usage);
+    if (argc < 2) {
+        HIP_ERROR("Invalid arguments.\n\n%s usage:\n%s\n",
+                  argv[0], hipconf_usage);
+        return -1;
+    }
 
     /* Get a numeric value representing the action. */
     action = hip_conf_get_action(argv);
 
-    HIP_IFEL(action == -1, -1,
-             "Invalid action argument '%s'\n", argv[1]);
+    if (action == -1) {
+        HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
+        return -1;
+    }
 
     /* Check that we have at least the minumum number of arguments
      * for the given action. */
-    HIP_IFEL(argc < hip_conf_check_action_argc(action) + 2, -1,
-             "Not enough arguments given for the action '%s'\n",
-             argv[1]);
+    if (argc < hip_conf_check_action_argc(action) + 2) {
+        HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
+        return -1;
+    }
 
     /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
-    HIP_IFEL((type_arg = hip_conf_get_type_arg(action)) < 0, -1,
-             "Could not parse type\n");
+    if ((type_arg = hip_conf_get_type_arg(action)) < 0) {
+        HIP_ERROR("Could not parse type\n");
+        return -1;
+    }
 
     type = hip_conf_get_type(argv[type_arg], argv);
-    HIP_IFEL(type <= 0 || type > TYPE_MAX, -1,
-             "Invalid type argument '%s' %d\n", argv[type_arg], type);
+    if (type <= 0 || type > TYPE_MAX) {
+        HIP_ERROR("Invalid type argument '%s' %d\n", argv[type_arg], type);
+        return -1;
+    }
 
     /* Get the type argument for the given action. */
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+    if (!(msg = malloc(HIP_MAX_PACKET))) {
+        HIP_ERROR("malloc failed.\n");
+        return -ENOMEM;
+    }
     hip_msg_init(msg);
 
     HIP_IFEL(*action_handler[type] == NULL, 0, "Unhandled action, ignore\n");
