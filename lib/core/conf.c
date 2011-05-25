@@ -49,6 +49,7 @@
  * @author  Tao Wan  <twan@cc.hut.fi>
  * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
+ * @author  Stefan Götz <stefan.goetz@web.de>
  * @todo    del map
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
@@ -71,7 +72,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/tool/lutil.h"
 #include "common.h"
 #include "config.h"
 #include "builder.h"
@@ -2277,11 +2277,10 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
                          int optc,
                          UNUSED int send_only)
 {
-    int   err        = 0, i, len, res_len;
+    int   err        = 0, i, res_len;
     FILE *hip_config = NULL;
 
-    struct list list;
-    char       *c, line[128], str[128];
+    char       *c, line[128], str[128], *token;
     const char *args[64];
     char       *comment, *newline;
     char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
@@ -2335,21 +2334,19 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
 
         /* split the line into an array of strings and feed it
          * recursively to hipconf */
-        initlist(&list);
-        extractsubstrings(str, &list);
-        len = length(&list);
-        for (i = 0; i < len; i++) {
-            /* the list is backwards ordered */
-            args[len - i - 1] = getitem(&list, i);
+        i     = 0;
+        token = strtok(str, " \t");
+        while (token) {
+            args[i++] = token;
+            token     = strtok(NULL, " \t");
         }
-        err = hip_do_hipconf(len, args, 1);
+
+        err = hip_do_hipconf(i, args, 1);
         if (err) {
             HIP_ERROR("Error on the following line: %s\n", line);
             HIP_ERROR("Ignoring error on hipd configuration\n");
             err = 0;
         }
-
-        destroy(&list);
     }
 
     fclose(hip_config);
