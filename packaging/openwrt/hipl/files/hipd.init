@@ -14,7 +14,8 @@ start() {
 
 restart() {
     echo -n "Restarting hipd"
-    killall hipd
+    # if hipd is running, give it 5 seconds to exit gracefully
+    killall hipd && env sleep 5
     hipd ${HIPD_OPTS}
     echo "."
 }
