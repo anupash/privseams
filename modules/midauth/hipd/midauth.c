@@ -48,18 +48,17 @@
 
 
 /**
- * solve a midauth puzzle which is essentially a normal HIP cookie
- * with some extra whipped cream on the top
+ * Handle the CHALLENGE_REQUEST parameter.
  *
- * NEEDED in I2 and R2
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
  *
- * @param out the received R1 message
- * @param in an I2 message where the solution will be written
- * @return zero on success and negative on error
- * @see <a
- * href="http://tools.ietf.org/id/draft-heer-hip-middle-auth">Heer et
- * al, End-Host Authentication for HIP Middleboxes, Internet draft,
- * work in progress, February 2009</a>
+ * @return zero challenge was processed correctly or no challenge was attached
+ *         to the packet, negative value otherwise
  */
 static int hip_handle_challenge_request_param(UNUSED const uint8_t packet_type,
                                               UNUSED const uint32_t ha_state,
@@ -100,6 +99,19 @@ out_err:
     return err;
 }
 
+/**
+ * Add a HOST_ID parameter corresponding to the local HIT of the association to
+ * an UPDATE packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative value otherwise
+ */
 static int hip_add_host_id_param_update(UNUSED const uint8_t packet_type,
                                         UNUSED const uint32_t ha_state,
                                         struct hip_packet_context *ctx)
@@ -130,6 +142,11 @@ out_err:
     return err;
 }
 
+/**
+ * Initialization function for the midauth module.
+ *
+ * @return zero on success, negative value otherwise
+ */
 int hip_midauth_init(void)
 {
     int err = 0;
