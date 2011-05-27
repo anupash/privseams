@@ -15,13 +15,13 @@ start() {
 restart() {
     echo -n "Restarting hipfw"
     # if hipfw is running, give it 2 seconds to exit gracefully
-    killall hipfw && env sleep 2
+    killall hipfw 2>/dev/null && env sleep 2
     ${HIPFW_START}
     echo "."
 }
 
 stop() {
     echo -n "Stopping hipfw"
-    killall hipfw
+    killall hipfw 2>/dev/null
     echo "."
 }
