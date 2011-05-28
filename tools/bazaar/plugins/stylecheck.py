@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 
 #
 # Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
