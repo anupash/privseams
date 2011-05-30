@@ -128,8 +128,7 @@ check_dist_tarball()
 check_doxygen()
 {
     make doxygen > /dev/null 2> doxygen_stderr
-    touch empty
-    run_program diff -u empty doxygen_stderr
+    run_program diff -u /dev/null doxygen_stderr
 }
 
 compile()
