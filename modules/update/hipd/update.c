@@ -513,7 +513,7 @@ static void hip_update_uninit_state(struct modular_state *const state)
 
     update_state = lmod_get_state_item(state, "update");
     if (update_state != NULL) {
-        hip_ht_uninit(update_state->addresses_to_send_echo_request);
+        update_state->valid_locators = 0;
     }
 }
 
