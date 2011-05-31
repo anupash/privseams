@@ -65,8 +65,6 @@
  * @note About the newlines: PERROR() appends always a newline after message to
  *       be printed as in perror(3). In the rest of the functions, you have to
  *       append a newline (as in fprinf(3)).
- *
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

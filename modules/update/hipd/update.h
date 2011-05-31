@@ -28,8 +28,6 @@
  * @author  Baris Boyvat <baris#boyvat.com>
  * @version 0.1
  * @date    3.5.2009
- *
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H

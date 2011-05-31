@@ -34,7 +34,6 @@
  * @author  Kristian Slavov
  * @author  Samu Varjonen
  * @author  Rene Hummen
- * @author  Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

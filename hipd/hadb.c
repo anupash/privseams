@@ -765,7 +765,6 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
 
     /* assumes already locked entry */
 
-    HIP_DEBUG("SPI is 0, set address as the bex address\n");
     if (!ipv6_addr_any(&entry->peer_addr)) {
         hip_in6_ntop(&entry->peer_addr, addrstr);
         HIP_DEBUG("warning, overwriting existing preferred address %s\n",

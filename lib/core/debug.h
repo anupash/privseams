@@ -23,12 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- *
- * @author Stefan Götz <stefan.goetz@web.de>
- */
-
 #ifndef HIP_LIB_CORE_DEBUG_H
 #define HIP_LIB_CORE_DEBUG_H
 

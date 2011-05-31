@@ -39,7 +39,6 @@
  * @brief Localhost address cache and related management functions
  *
  * @author Miika Komu <miika@iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

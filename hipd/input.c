@@ -39,7 +39,6 @@
  * @author  Rene Hummen
  * @author  Samu Varjonen
  * @author  Tim Just
- * @author  Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

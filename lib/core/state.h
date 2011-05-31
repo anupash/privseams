@@ -27,8 +27,6 @@
  * @file
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
- *
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_LIB_CORE_STATE_H
