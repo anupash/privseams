@@ -1336,16 +1336,12 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
 {
     switch (action) {
     case ACTION_ADD:
-        hip_conf_add_id_to_ip_map(msg, opt, optc);
-        break;
+        return hip_conf_add_id_to_ip_map(msg, opt, optc);
     case ACTION_GET:
-        hip_conf_get_id_to_ip_map(msg, opt, optc, send_only);
-        break;
+        return hip_conf_get_id_to_ip_map(msg, opt, optc, send_only);
     default:
         return -1;
     }
-
-    return -1;
 }
 
 /**
