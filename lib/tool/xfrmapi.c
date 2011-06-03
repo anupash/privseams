@@ -379,7 +379,7 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
                                    hit_prefix, preferred_family), -1);
     HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
-             "No associated policies to be deleted\n");
+             "Security policy deletion failed.\n");
 
 out_err:
     return err;
