@@ -248,6 +248,11 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
     nladdr.nl_pid    = peer;
     nladdr.nl_groups = groups;
 
+    if (nl == NULL || n == NULL) {
+        HIP_ERROR("Invalid netlink socket handle or message header.\n");
+        return -1;
+    }
+
     n->nlmsg_seq = seq = ++nl->seq;
 
     /* Note: the TALK_ACK are here because I experienced problems
