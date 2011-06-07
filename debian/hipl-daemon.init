@@ -24,7 +24,7 @@ fi
 
 start_hipd() {
     log_daemon_msg "Starting HIP daemon" "hipd"
-    if start-stop-daemon --start --quiet --oknodo --exec /usr/sbin/hipd -- $HIPD_OPTS; then
+    if start-stop-daemon --start --oknodo --exec /usr/sbin/hipd -- $HIPD_OPTS; then
         log_end_msg 0
     else
         log_end_msg 1
@@ -34,7 +34,7 @@ start_hipd() {
 stop_hipd() {
     log_daemon_msg "Stopping HIP daemon" "hipd"
     # send TERM to hipd and if it is still running after 3 seconds send KILL
-    if start-stop-daemon --stop --quiet --retry 3 --oknodo --exec /usr/sbin/hipd; then
+    if start-stop-daemon --stop --retry 3 --oknodo --exec /usr/sbin/hipd; then
         log_end_msg 0
     else
         log_end_msg 1
