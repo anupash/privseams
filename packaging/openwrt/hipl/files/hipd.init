@@ -5,23 +5,45 @@ START=65
 STOP=65
 
 HIPD_OPTS="-bkN"
+PID_FILE="/var/lock/hipd.lock"
+
+# check if daemon is already running
+is_running() {
+    if test -f $PID_FILE; then
+        pgrep hipd | grep -q -f $PID_FILE
+        return $?
+    else
+        return 1
+    fi
+}
+
+stop_daemon() {
+    PID=$(cat $PID_FILE)
+    kill $PID >/dev/null
+}
 
 start() {
-    echo -n "Starting hipd"
-    hipd ${HIPD_OPTS}
+    if is_running; then
+       echo -n "hipd is already running"
+    else
+       echo -n "Starting hipd"
+       hipd ${HIPD_OPTS}
+    fi
     echo "."
 }
 
 restart() {
-    echo -n "Restarting hipd"
-    # if hipd is running, give it 5 seconds to exit gracefully
-    killall hipd 2>/dev/null && env sleep 5
-    hipd ${HIPD_OPTS}
-    echo "."
+    echo "Restarting hipd."
+    is_running && echo "Stopping hipd." && stop_daemon && sleep 5
+    start
 }
 
 stop() {
-    echo -n "Stopping hipd"
-    killall hipd 2>/dev/null
+    if is_running; then
+        echo -n "Stopping hipd"
+        stop_daemon
+    else
+        echo -n "hipd is not running"
+    fi
     echo "."
 }
