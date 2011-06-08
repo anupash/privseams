@@ -326,7 +326,6 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
     int                                src_addr_included    = 0;
     union hip_locator_info_addr       *locator_info_addr    = NULL;
     struct hip_locator_info_addr_item *locator_address_item = NULL;
-    struct in6_addr                   *peer_addr            = 0;
     struct update_state               *localstate           = NULL;
     struct hip_locator                *locator              = NULL;
 
@@ -354,8 +353,9 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
 
         for (int i = 0; i < locator_addr_count; i++) {
             locator_info_addr = hip_get_locator_item(locator_address_item, i);
+            const struct in6_addr *const peer_addr = hip_get_locator_item_address(locator_info_addr);
 
-            if (!hip_add_address_to_send_echo_request(localstate, *hip_get_locator_item_address(locator_info_addr))) {
+            if (!hip_add_address_to_send_echo_request(localstate, *peer_addr)) {
                 HIP_ERROR("Adding an address to the container for update locators failed!\n");
                 return -1;
             }
