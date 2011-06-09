@@ -1036,9 +1036,6 @@ out_err:
     return err;
 }
 
-/**
- *
- */
 static int hip_conf_add_id_to_ip_map(struct hip_common *const msg,
                                      const char *opt[],
                                      const int optc)
@@ -1106,7 +1103,6 @@ static int hip_conf_add_id_to_ip_map(struct hip_common *const msg,
  * ask hipd to map a HIT or LSI to a locator
  *
  * @param msg input/output message for the query/response for hipd
- * @param action unused
  * @param opt a HIT or LSI
  * @param optc 1
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
