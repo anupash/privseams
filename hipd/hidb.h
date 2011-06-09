@@ -36,29 +36,6 @@
 #include "cookie.h"
 
 
-#if 0
-#define HIP_READ_LOCK_DB(db) do { \
-        read_lock_irqsave(&(db)->db_lock, lf); \
-} while (0)
-
-#define HIP_WRITE_LOCK_DB(db) do { \
-        write_lock_irqsave(&(db)->db_lock, lf); \
-} while (0)
-
-#define HIP_READ_UNLOCK_DB(db) do { \
-        read_unlock_irqrestore(&(db)->db_lock, lf); \
-} while (0)
-
-#define HIP_WRITE_UNLOCK_DB(db) do { \
-        write_unlock_irqrestore(&(db)->db_lock, lf); \
-} while (0)
-#else
-#define HIP_READ_LOCK_DB(db)
-#define HIP_WRITE_LOCK_DB(db)
-#define HIP_READ_UNLOCK_DB(db)
-#define HIP_WRITE_UNLOCK_DB(db)
-#endif
-
 struct local_host_id {
     hip_hit_t          hit;
     bool               anonymous;         /**< Is this an anonymous HI */

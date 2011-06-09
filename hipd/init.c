@@ -497,8 +497,6 @@ static struct local_host_id *hip_return_first_rsa(void)
     int                   c;
     uint16_t              algo = 0;
 
-    HIP_READ_LOCK_DB(hip_local_hostid_db);
-
     list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
         tmp = list_entry(curr);
         HIP_DEBUG_HIT("Found HIT", &tmp->hit);
@@ -511,7 +509,6 @@ static struct local_host_id *hip_return_first_rsa(void)
     }
 
 out_err:
-    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
     if (algo == HIP_HI_RSA) {
         return tmp;
     }
