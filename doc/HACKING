@@ -149,6 +149,9 @@ TBD: further useful commands
 A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
 
+NOTE: If you commit a patch by someone else, use the --author parameter for
+correct attribution.
+
 
 Fixing mistakes
 ---------------
