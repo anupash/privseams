@@ -19,7 +19,7 @@ is_running() {
 
 stop_daemon() {
     PID=$(cat $PID_FILE)
-    kill $PID >/dev/null
+    kill $PID > /dev/null
 }
 
 start() {

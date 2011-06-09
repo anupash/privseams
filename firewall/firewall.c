@@ -229,15 +229,15 @@ static int hip_fw_uninit_userspace_ipsec(void)
         HIP_IFEL(userspace_ipsec_uninit(), -1, "failed to uninit user ipsec\n");
 
         // delete all rules previously set up for this extension
-        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
-        system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
-        system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
+        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2> /dev/null");
+        system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2> /dev/null");
+        system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2> /dev/null");
 
-        system_print("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
+        system_print("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2> /dev/null");
 
-        system_print("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-        system_print("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-        system_print("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+        system_print("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE 2> /dev/null");
+        system_print("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE 2> /dev/null");
+        system_print("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE 2> /dev/null");
     }
 
 out_err:
@@ -361,9 +361,9 @@ static int hip_fw_uninit_lsi_support(void)
         hip_lsi_support = 0;
 
         // remove the rule
-        system_print("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
+        system_print("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2> /dev/null");
 
-        system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+        system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2> /dev/null");
     }
 
     return err;
@@ -585,32 +585,32 @@ static void hip_fw_flush_iptables(void)
     HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
     HIP_DEBUG("Deleting hipfw subchains from main chains\n");
 
-    system_print("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
-    system_print("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
-    system_print("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+    system_print("iptables -D INPUT -j HIPFW-INPUT 2> /dev/null");
+    system_print("iptables -D OUTPUT -j HIPFW-OUTPUT 2> /dev/null");
+    system_print("iptables -D FORWARD -j HIPFW-FORWARD 2> /dev/null");
 
-    system_print("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
-    system_print("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
-    system_print("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+    system_print("ip6tables -D INPUT -j HIPFW-INPUT 2> /dev/null");
+    system_print("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2> /dev/null");
+    system_print("ip6tables -D FORWARD -j HIPFW-FORWARD 2> /dev/null");
 
     HIP_DEBUG("Flushing hipfw chains\n");
 
     /* Flush in case there are some residual rules */
-    system_print("iptables -F HIPFW-INPUT 2>/dev/null");
-    system_print("iptables -F HIPFW-OUTPUT 2>/dev/null");
-    system_print("iptables -F HIPFW-FORWARD 2>/dev/null");
-    system_print("ip6tables -F HIPFW-INPUT 2>/dev/null");
-    system_print("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
-    system_print("ip6tables -F HIPFW-FORWARD 2>/dev/null");
+    system_print("iptables -F HIPFW-INPUT 2> /dev/null");
+    system_print("iptables -F HIPFW-OUTPUT 2> /dev/null");
+    system_print("iptables -F HIPFW-FORWARD 2> /dev/null");
+    system_print("ip6tables -F HIPFW-INPUT 2> /dev/null");
+    system_print("ip6tables -F HIPFW-OUTPUT 2> /dev/null");
+    system_print("ip6tables -F HIPFW-FORWARD 2> /dev/null");
 
     HIP_DEBUG("Deleting hipfw chains\n");
 
-    system_print("iptables -X HIPFW-INPUT 2>/dev/null");
-    system_print("iptables -X HIPFW-OUTPUT 2>/dev/null");
-    system_print("iptables -X HIPFW-FORWARD 2>/dev/null");
-    system_print("ip6tables -X HIPFW-INPUT 2>/dev/null");
-    system_print("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
-    system_print("ip6tables -X HIPFW-FORWARD 2>/dev/null");
+    system_print("iptables -X HIPFW-INPUT 2> /dev/null");
+    system_print("iptables -X HIPFW-OUTPUT 2> /dev/null");
+    system_print("iptables -X HIPFW-FORWARD 2> /dev/null");
+    system_print("ip6tables -X HIPFW-INPUT 2> /dev/null");
+    system_print("ip6tables -X HIPFW-OUTPUT 2> /dev/null");
+    system_print("ip6tables -X HIPFW-FORWARD 2> /dev/null");
 }
 
 /**
