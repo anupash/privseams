@@ -38,14 +38,15 @@ On Ubuntu, the following command(s) should solve the dependencies:
     iptables-dev libconfig8-dev libnet-ip-perl libnet-dns-perl
 
   Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot \
-    dpkg-dev debhelper
+    dpkg-dev debhelper devscripts
 
 On Fedora, the following command(s) should solve the dependencies:
 
   yum install autoconf automake libtool make gcc openssl-devel \
               iptables-devel libconfig-devel perl-Net-IP perl-Net-DNS
 
-  Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build
+  Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build \
+                          redhat-lsb
 
 
 How to build HIPL
