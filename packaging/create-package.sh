@@ -85,6 +85,7 @@ build_rpm()
 
 build_deb()
 {
+    cp debian/changelog.template debian/changelog
     debchange --newversion ${VERSION}-${VCS_REVISION} "entry automatically added by $0"
     dpkg-buildpackage -us -uc -I.bzr $BUILDPACKAGE_OPTS
 }

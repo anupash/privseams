@@ -24,6 +24,7 @@ config.log
 config.status
 config.sub
 configure
+debian/changelog
 debian/files
 debian/hipl-all/
 debian/hipl-daemon/
