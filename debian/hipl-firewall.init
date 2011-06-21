@@ -56,6 +56,10 @@ start_hipfw() {
 }
 
 stop_hipfw() {
+    if ! flush_iptables; then
+        echo "Error while flushing HIP firewall rules."
+    fi
+
     # send TERM to hipfw and if it is still running after 3 seconds send KILL
     if start-stop-daemon --stop --retry 3 --oknodo --exec /usr/sbin/hipfw; then
         log_end_msg 0
@@ -71,12 +75,10 @@ case "$1" in
         ;;
     stop)
         log_daemon_msg "Stopping HIP firewall" "hipfw"
-        flush_iptables
         stop_hipfw
         ;;
     restart|force-reload)
         log_daemon_msg "Restarting HIP firewall" "hipfw"
-        flush_iptables
         stop_hipfw
         start_hipfw
         ;;
