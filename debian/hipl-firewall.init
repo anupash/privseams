@@ -10,7 +10,6 @@
 ### END INIT INFO
 
 HIPFW_OPTS="-bklpF"
-PID=$(pidof -o $$ hipfw)
 
 set -e
 
@@ -48,19 +47,17 @@ flush_iptables() {
     ip6tables -X HIPFW-FORWARD 2> /dev/null
 }
 
-stop_hipfw() {
-    # Ensure that we don't try to kill init.d script itself
-    # Run this before killing hipfw because it also removes dangling rules!
-    if [ $PID ]; then
-        kill $1 $PID
+start_hipfw() {
+    if start-stop-daemon --start --oknodo --exec /usr/sbin/hipfw -- $HIPFW_OPTS; then
         log_end_msg 0
     else
         log_end_msg 1
     fi
 }
 
-start_hipfw() {
-    if start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS; then
+stop_hipfw() {
+    # send TERM to hipfw and if it is still running after 3 seconds send KILL
+    if start-stop-daemon --stop --retry 3 --oknodo --exec /usr/sbin/hipfw; then
         log_end_msg 0
     else
         log_end_msg 1
@@ -81,7 +78,6 @@ case "$1" in
         log_daemon_msg "Restarting HIP firewall" "hipfw"
         flush_iptables
         stop_hipfw
-        sleep 3
         start_hipfw
         ;;
     status)
