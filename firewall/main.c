@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -232,6 +232,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    return hipfw_main(rule_file, kill_old, limit_capabilities) == 0 ? EXIT_SUCCESS
-           : EXIT_FAILURE;
+    return hipfw_main(rule_file, kill_old, limit_capabilities) == 0
+           ? EXIT_SUCCESS : EXIT_FAILURE;
 }
