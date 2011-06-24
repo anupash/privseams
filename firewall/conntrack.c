@@ -1540,8 +1540,21 @@ static int handle_first_update(const struct hip_common *const common,
 
         if (!(esp_tuple = find_esp_tuple(other_dir->esp_tuples,
                                          ntohl(esp_info->old_spi)))) {
-            HIP_ERROR("failed to look up ESP state for existing connection\n");
-            return -1;
+            HIP_DEBUG("existing ESP state does not include current SPI"
+                      "re-establishing connection state\n");
+
+            remove_connection(tuple->connection);
+
+            /** FIXME the firewall should not care about locator for esp tracking
+             *
+             * NOTE: modify this regardingly! */
+            if (insert_connection_from_update(common, esp_info, locator, seq)) {
+                HIP_ERROR("connection insertion failed\n");
+
+                return -1;
+            }
+
+            return 0;
         }
 
         if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
