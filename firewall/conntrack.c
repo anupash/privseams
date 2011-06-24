@@ -796,10 +796,10 @@ static void remove_connection(struct connection *connection)
 {
     struct slist *conn_link;
 
-    HIP_DEBUG("remove_connection: tuple list before: \n");
+    HIP_DEBUG("tuple list before: \n");
     print_tuple_list();
 
-    HIP_DEBUG("remove_connection: esp list before: \n");
+    HIP_DEBUG("esp list before: \n");
     print_esp_list();
 
     if (connection) {
@@ -813,10 +813,10 @@ static void remove_connection(struct connection *connection)
         free(connection);
     }
 
-    HIP_DEBUG("remove_connection: tuple list after: \n");
+    HIP_DEBUG("tuple list after: \n");
     print_tuple_list();
 
-    HIP_DEBUG("remove_connection: esp list after: \n");
+    HIP_DEBUG("esp list after: \n");
     print_esp_list();
 }
 
