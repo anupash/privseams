@@ -1153,7 +1153,7 @@ static int handle_i1(const struct hip_common *const common,
  */
 static int handle_r1(struct hip_common *const common,
                      struct tuple *const tuple,
-                     struct hip_fw_context *const ctx)
+                     UNUSED struct hip_fw_context *const ctx)
 {
     if (hip_fw_verify_and_store_host_id(common, tuple)) {
         HIP_ERROR("unable to create security state from R1 packet\n");
@@ -1163,11 +1163,6 @@ static int handle_r1(struct hip_common *const common,
     // check if the R1 contains ESP protection transforms
     if (esp_prot_conntrack_R1_tfms(common, tuple)) {
         HIP_ERROR("failed to track esp protection extension transforms\n");
-        return 0;
-    }
-
-    if (!hipfw_midauth_add_challenge(ctx, tuple->midauth_nonce)) {
-        HIP_ERROR("failed to add midauth challenge\n");
         return 0;
     }
 
@@ -1199,11 +1194,6 @@ static int handle_i2(struct hip_common *const common,
         other_dir = &tuple->connection->original;
     }
 
-    if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
-        HIP_ERROR("failed to verify midauth challenge\n");
-        return 0;
-    }
-
     if (hip_fw_verify_and_store_host_id(common, tuple)) {
         HIP_ERROR("unable to create security state from I2 packet\n");
         return 0;
@@ -1217,11 +1207,6 @@ static int handle_i2(struct hip_common *const common,
     /* check if the I2 contains ESP protection anchor and store state */
     if (esp_prot_conntrack_I2_anchor(common, tuple)) {
         HIP_ERROR("failed to track esp protection extension state\n");
-        return 0;
-    }
-
-    if (!hipfw_midauth_add_challenge(ctx, tuple->midauth_nonce)) {
-        HIP_ERROR("failed to add midauth challenge\n");
         return 0;
     }
 
@@ -1252,11 +1237,6 @@ static int handle_r2(struct hip_common *const common,
         other_dir = &tuple->connection->reply;
     } else {
         other_dir = &tuple->connection->original;
-    }
-
-    if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
-        HIP_ERROR("failed to verify midauth challenge\n");
-        return 0;
     }
 
     if (!hip_fw_verify_packet(common, tuple)) {
@@ -1547,11 +1527,6 @@ static int handle_update(struct hip_common *const common,
         if (!(*tuple)) {
             *tuple = get_tuple_by_hits(&common->hits, &common->hitr);
         }
-
-        if (!(*tuple) || !hipfw_midauth_add_challenge(ctx, (*tuple)->midauth_nonce)) {
-            HIP_ERROR("failed to add midauth challenge\n");
-            return 0;
-        }
     } else if (esp_info && seq && ack) {
         if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
             other_dir = &(*tuple)->connection->reply;
@@ -1559,11 +1534,6 @@ static int handle_update(struct hip_common *const common,
             other_dir = &(*tuple)->connection->original;
         } else {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
-            return 0;
-        }
-
-        if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
-            HIP_ERROR("failed to verify midauth challenge\n");
             return 0;
         }
 
@@ -1576,11 +1546,6 @@ static int handle_update(struct hip_common *const common,
             HIP_ERROR("unable to process second UPDATE message\n");
             return 0;
         }
-
-        if (!hipfw_midauth_add_challenge(ctx, (*tuple)->midauth_nonce)) {
-            HIP_ERROR("failed to add midauth challenge\n");
-            return 0;
-        }
     } else if (ack) {
         if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
             other_dir = &(*tuple)->connection->reply;
@@ -1588,11 +1553,6 @@ static int handle_update(struct hip_common *const common,
             other_dir = &(*tuple)->connection->original;
         } else {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
-            return 0;
-        }
-
-        if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
-            HIP_ERROR("failed to verify midauth challenge\n");
             return 0;
         }
 
