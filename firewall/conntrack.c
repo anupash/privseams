@@ -621,63 +621,63 @@ struct esp_tuple *find_esp_tuple(const struct slist *search_list,
  * @param data The connection-related data to be inserted.
  * @param ctx  The packet context. Note that source and destination HITs
  *             are always taken from @a data rather than @a ctx.
+ * @return 0 on success, -1 otherwise
  *
  * @see remove_connection()
  */
-static void insert_new_connection(const struct hip_data *const data,
-                                  const struct hip_fw_context *const ctx)
+static int insert_new_connection(const struct hip_data *const data,
+                                 const struct hip_fw_context *const ctx)
 {
-    struct connection *connection = NULL;
+    int err = 0;
 
-    connection = calloc(1, sizeof(struct connection));
+    struct connection *const connection = calloc(1, sizeof(struct connection));
+    HIP_IFEL(!connection, -1, "Allocating connection object failed");
 
     connection->state     = STATE_ESTABLISHED;
     connection->udp_encap = ctx->udp_encap_hdr ? true : false;
     connection->timestamp = time(NULL);
-#ifdef HIP_CONFIG_MIDAUTH
-    connection->pisa_state = PISA_STATE_DISALLOW;
-#endif
 
     //original direction tuple
-    connection->original.state                    = HIP_STATE_UNASSOCIATED;
-    connection->original.direction                = ORIGINAL_DIR;
-    connection->original.esp_tuples               = NULL;
-    connection->original.connection               = connection;
-    connection->original.hip_tuple                = malloc(sizeof(struct hip_tuple));
-    connection->original.hip_tuple->tuple         = &connection->original;
-    connection->original.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->original.state      = HIP_STATE_UNASSOCIATED;
+    connection->original.direction  = ORIGINAL_DIR;
+    connection->original.esp_tuples = NULL;
+    connection->original.connection = connection;
+    connection->original.hip_tuple  = malloc(sizeof(struct hip_tuple));
+    HIP_IFEL(!connection->original.hip_tuple, -1,
+             "Allocating hip_tuple object failed");
+    connection->original.hip_tuple->tuple = &connection->original;
+    connection->original.hip_tuple->data  = malloc(sizeof(struct hip_data));
+    HIP_IFEL(!connection->original.hip_tuple->data, -1,
+             "Allocating hip_data object failed");
     connection->original.hip_tuple->data->src_hit = data->src_hit;
     connection->original.hip_tuple->data->dst_hit = data->dst_hit;
+    connection->original.hip_tuple->data->src_hi  = NULL;
+    connection->original.hip_tuple->data->verify  = NULL;
 
     //reply direction tuple
-    connection->reply.state                    = HIP_STATE_UNASSOCIATED;
-    connection->reply.direction                = REPLY_DIR;
-    connection->reply.esp_tuples               = NULL;
-    connection->reply.connection               = connection;
-    connection->reply.hip_tuple                = malloc(sizeof(struct hip_tuple));
-    connection->reply.hip_tuple->tuple         = &connection->reply;
-    connection->reply.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->reply.state      = HIP_STATE_UNASSOCIATED;
+    connection->reply.direction  = REPLY_DIR;
+    connection->reply.esp_tuples = NULL;
+    connection->reply.connection = connection;
+    connection->reply.hip_tuple  = malloc(sizeof(struct hip_tuple));
+    HIP_IFEL(!connection->reply.hip_tuple, -1,
+             "Allocating hip_tuple object failed");
+    connection->reply.hip_tuple->tuple = &connection->reply;
+    connection->reply.hip_tuple->data  = malloc(sizeof(struct hip_data));
+    HIP_IFEL(!connection->reply.hip_tuple->data, -1,
+             "Allocating hip_data object failed");
     connection->reply.hip_tuple->data->src_hit = data->dst_hit;
     connection->reply.hip_tuple->data->dst_hit = data->src_hit;
+    connection->reply.hip_tuple->data->src_hi  = NULL;
+    connection->reply.hip_tuple->data->verify  = NULL;
 
     //add tuples to list
-    hip_list = append_to_list(hip_list, connection->original.hip_tuple);
-    hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
-    HIP_DEBUG("inserting connection \n");
+    hip_list  = append_to_list(hip_list, connection->original.hip_tuple);
+    hip_list  = append_to_list(hip_list, connection->reply.hip_tuple);
     conn_list = append_to_slist(conn_list, connection);
-}
 
-/**
- * Insert a new ESP tuple to the connection tracker
- *
- * @param esp_tuple the ESP tuple to be inserted
- */
-static void insert_esp_tuple(struct esp_tuple *esp_tuple)
-{
-    esp_list = append_to_list(esp_list, esp_tuple);
-
-    HIP_DEBUG("insert_esp_tuple:\n");
-    print_esp_list();
+out_err:
+    return err;
 }
 
 /**
@@ -818,54 +818,6 @@ static void remove_connection(struct connection *connection)
 }
 
 /**
- * Create an ESP tuple based on the parameters from a HIP message.
- *
- * @param esp_info a pointer to the ESP info parameter in the control message
- * @param locator a pointer to the locator
- * @param seq a pointer to the sequence number
- * @param tuple a pointer to the corresponding tuple
- * @return the created tuple (caller frees) or NULL on failure (e.g. SPIs do not match)
- */
-static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info *const esp_info,
-                                                         const struct hip_locator *const locator,
-                                                         const struct hip_seq *const seq,
-                                                         struct tuple *const tuple)
-{
-    struct esp_tuple *new_esp = NULL;
-
-    HIP_ASSERT(esp_info);
-    HIP_ASSERT(locator);
-    HIP_ASSERT(seq);
-    HIP_ASSERT(tuple);
-    HIP_ASSERT(esp_info->new_spi == esp_info->old_spi);
-
-    const unsigned addresses_in_locator =
-        (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
-        sizeof(struct hip_locator_info_addr_item);
-    HIP_DEBUG("%d addresses in locator\n", addresses_in_locator);
-    if (addresses_in_locator > 0) {
-        const struct hip_locator_info_addr_item *const addresses =
-            (const struct hip_locator_info_addr_item *) (locator + 1);
-
-        if ((new_esp = calloc(1, sizeof(*new_esp))) == NULL) {
-            HIP_ERROR("Allocating esp_tuple object failed");
-            return NULL;
-        }
-        new_esp->spi   = ntohl(esp_info->new_spi);
-        new_esp->tuple = tuple;
-        hip_ll_init(&new_esp->dst_addresses);
-
-        for (unsigned idx = 0; idx < addresses_in_locator; idx += 1) {
-            update_esp_address(new_esp, &addresses[idx].address, &seq->update_id);
-        }
-
-        return new_esp;
-    }
-
-    return NULL;
-}
-
-/**
  * Create an esp_tuple object from an esp_info message parameter and with a
  * specific destination address.
  *
@@ -904,7 +856,7 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
         }
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
                                                 esp_tuple);
-        insert_esp_tuple(esp_tuple);
+        esp_list = append_to_list(esp_list, esp_tuple);
 
         return 0;
     }
@@ -928,81 +880,25 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
  *         -1 on error
  */
 static int insert_connection_from_update(const struct hip_common *const common,
-                                         const struct hip_esp_info *const esp_info,
-                                         const struct hip_locator *const locator,
-                                         const struct hip_seq *const seq)
+                                         const struct hip_fw_context *const ctx,
+                                         const struct hip_esp_info *const esp_info)
 {
-    int                      err        = 0;
-    struct esp_tuple        *esp_tuple  = NULL;
-    struct connection *const connection = malloc(sizeof(*connection));
-    HIP_IFEL(!connection, -1, "Allocating connection object failed");
+    struct hip_data *data  = get_hip_data(common);
+    struct tuple    *tuple = NULL;
 
-    esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
-                                                &connection->reply);
-    HIP_IFEL(!esp_tuple, -1, "Creating ESP tuple object failed");
-
-    connection->state = STATE_ESTABLISHING_FROM_UPDATE;
-#ifdef HIP_CONFIG_MIDAUTH
-    connection->pisa_state = PISA_STATE_DISALLOW;
-#endif
-
-    //original direction tuple
-    connection->original.state      = HIP_STATE_UNASSOCIATED;
-    connection->original.direction  = ORIGINAL_DIR;
-    connection->original.esp_tuples = NULL;
-    connection->original.connection = connection;
-    connection->original.hip_tuple  = malloc(sizeof(struct hip_tuple));
-    HIP_IFEL(!connection->original.hip_tuple, -1,
-             "Allocating hip_tuple object failed");
-    connection->original.hip_tuple->tuple = &connection->original;
-    connection->original.hip_tuple->data  = malloc(sizeof(struct hip_data));
-    HIP_IFEL(!connection->original.hip_tuple->data, -1,
-             "Allocating hip_data object failed");
-    connection->original.hip_tuple->data->src_hit = common->hits;
-    connection->original.hip_tuple->data->dst_hit = common->hitr;
-    connection->original.hip_tuple->data->src_hi  = NULL;
-    connection->original.hip_tuple->data->verify  = NULL;
-
-
-    //reply direction tuple
-    connection->reply.state     = HIP_STATE_UNASSOCIATED;
-    connection->reply.direction = REPLY_DIR;
-
-    connection->reply.esp_tuples = NULL;
-    connection->reply.esp_tuples = append_to_slist(connection->reply.esp_tuples,
-                                                   esp_tuple);
-    connection->reply.connection = connection;
-    connection->reply.hip_tuple  = malloc(sizeof(struct hip_tuple));
-    HIP_IFEL(!connection->reply.hip_tuple, -1,
-             "Allocating hip_tuple object failed");
-    connection->reply.hip_tuple->tuple = &connection->reply;
-    connection->reply.hip_tuple->data  = malloc(sizeof(struct hip_data));
-    HIP_IFEL(!connection->reply.hip_tuple->data, -1,
-             "Allocating hip_data object failed");
-    connection->reply.hip_tuple->data->src_hit = common->hitr;
-    connection->reply.hip_tuple->data->dst_hit = common->hits;
-    connection->reply.hip_tuple->data->src_hi  = NULL;
-    connection->reply.hip_tuple->data->verify  = NULL;
-
-    //add tuples to list
-    insert_esp_tuple(esp_tuple);
-    hip_list  = append_to_list(hip_list, connection->original.hip_tuple);
-    hip_list  = append_to_list(hip_list, connection->reply.hip_tuple);
-    conn_list = append_to_slist(conn_list, connection);
-
-    return err;
-
-out_err:
-    if (connection) {
-        free(connection->reply.hip_tuple);
-        if (connection->original.hip_tuple) {
-            free(connection->original.hip_tuple->data);
-            free(connection->original.hip_tuple);
-        }
+    if (insert_new_connection(data, ctx)) {
+        HIP_ERROR("connection insertion failed\n");
+        return -1;
     }
-    free(connection);
-    free_esp_tuple(esp_tuple);
-    return err;
+
+    tuple = get_tuple_by_hits(&common->hits, &common->hitr);
+
+    if (!tuple || esp_tuple_from_esp_info(esp_info, ctx, tuple)) {
+        HIP_ERROR("unable to create esp state from UPDATE packet\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -1515,6 +1411,7 @@ out_err:
  * @return zero if the packet was ok, negative value otherwise
  */
 static int handle_first_update(const struct hip_common *const common,
+                               const struct hip_fw_context *const ctx,
                                const struct tuple *const tuple,
                                const struct hip_esp_info *const esp_info,
                                const struct hip_locator *const locator,
@@ -1527,7 +1424,7 @@ static int handle_first_update(const struct hip_common *const common,
         /** FIXME the firewall should not care about locator for esp tracking
          *
          * NOTE: modify this regardingly! */
-        if (insert_connection_from_update(common, esp_info, locator, seq)) {
+        if (insert_connection_from_update(common, ctx, esp_info)) {
             HIP_ERROR("connection insertion failed\n");
 
             return -1;
@@ -1552,7 +1449,7 @@ static int handle_first_update(const struct hip_common *const common,
             /** FIXME the firewall should not care about locator for esp tracking
              *
              * NOTE: modify this regardingly! */
-            if (insert_connection_from_update(common, esp_info, locator, seq)) {
+            if (insert_connection_from_update(common, ctx, esp_info)) {
                 HIP_ERROR("connection insertion failed\n");
 
                 return -1;
@@ -1644,7 +1541,7 @@ static int handle_update(struct hip_common *const common,
     ack      = hip_get_param(common, HIP_PARAM_ACK);
 
     if (esp_info && locator && seq) {
-        if (handle_first_update(common, *tuple, esp_info, locator, seq)) {
+        if (handle_first_update(common, ctx, *tuple, esp_info, locator, seq)) {
             HIP_ERROR("unable to process first UPDATE message\n");
             return 0;
         }
