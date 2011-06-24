@@ -1626,12 +1626,6 @@ static int handle_update(struct hip_common *const common,
     seq      = hip_get_param(common, HIP_PARAM_SEQ);
     ack      = hip_get_param(common, HIP_PARAM_ACK);
 
-    if ((*tuple)->direction == ORIGINAL_DIR) {
-        other_dir = &(*tuple)->connection->reply;
-    } else {
-        other_dir = &(*tuple)->connection->original;
-    }
-
     if (esp_info && locator && seq) {
         if (handle_first_update(common, *tuple, esp_info, locator, seq)) {
             HIP_ERROR("unable to process first UPDATE message\n");
@@ -1649,6 +1643,15 @@ static int handle_update(struct hip_common *const common,
             return 0;
         }
     } else if (esp_info && seq && ack) {
+        if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
+            other_dir = &(*tuple)->connection->reply;
+        } else if (*tuple) {
+            other_dir = &(*tuple)->connection->original;
+        } else {
+            HIP_ERROR("Insufficient stored state to process UPDATE\n");
+            return 0;
+        }
+
         if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
             HIP_ERROR("failed to verify midauth challenge\n");
             return 0;
@@ -1669,6 +1672,15 @@ static int handle_update(struct hip_common *const common,
             return 0;
         }
     } else if (ack) {
+        if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
+            other_dir = &(*tuple)->connection->reply;
+        } else if (*tuple) {
+            other_dir = &(*tuple)->connection->original;
+        } else {
+            HIP_ERROR("Insufficient stored state to process UPDATE\n");
+            return 0;
+        }
+
         if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
             HIP_ERROR("failed to verify midauth challenge\n");
             return 0;
