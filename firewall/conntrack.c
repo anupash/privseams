@@ -872,31 +872,47 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
  * @param esp_info a pointer to an ESP info parameter in the control message
  * @param addr a pointer to an address
  * @param tuple a pointer to a tuple structure
- * @return the created ESP tuple (caller frees) or NULL on failure (e.g. SPIs don't match)
+ * @return zero on success, -1 otherwise
  */
-static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
-                                                 const struct in6_addr *const addr,
-                                                 struct tuple *const tuple)
+static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
+                                   const struct hip_fw_context *const ctx,
+                                   struct tuple *const tuple)
 {
-    HIP_ASSERT(esp_info);
-    HIP_ASSERT(addr);
+    HIP_ASSERT(ctx);
     HIP_ASSERT(tuple);
 
-    struct esp_tuple *const new_esp = calloc(1, sizeof(*new_esp));
-    if (esp_info) {
-        new_esp->spi   = ntohl(esp_info->new_spi);
-        new_esp->tuple = tuple;
-        hip_ll_init(&new_esp->dst_addresses);
+    if (!esp_info) {
+        HIP_ERROR("ESP_INFO parameter missing, cannot derive ESP state\n");
+        return -1;
+    }
 
-        update_esp_address(new_esp, addr, NULL);
+    struct esp_tuple *const esp_tuple = calloc(1, sizeof(struct esp_tuple));
+    if (esp_tuple) {
+        struct tuple *other_dir = NULL;
+        if (tuple->direction == ORIGINAL_DIR) {
+            other_dir = &tuple->connection->reply;
+        } else {
+            other_dir = &tuple->connection->original;
+        }
 
-        return new_esp;
+        esp_tuple->spi   = ntohl(esp_info->new_spi);
+        esp_tuple->tuple = other_dir;
+        hip_ll_init(&esp_tuple->dst_addresses);
+        if (update_esp_address(esp_tuple, &ctx->src, NULL)) {
+            HIP_ERROR("adding or updating ESP destination address failed");
+            return -1;
+        }
+        other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
+                                                esp_tuple);
+        insert_esp_tuple(esp_tuple);
+
+        return 0;
     }
 
     HIP_ERROR("Allocating esp_tuple object failed");
-    free(new_esp);
+    free(esp_tuple);
 
-    return NULL;
+    return -1;
 }
 
 /**
@@ -911,7 +927,7 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
  * @return  0 on success
  *         -1 on error
  */
-static int insert_connection_from_update(const struct hip_data *const data,
+static int insert_connection_from_update(const struct hip_common *const common,
                                          const struct hip_esp_info *const esp_info,
                                          const struct hip_locator *const locator,
                                          const struct hip_seq *const seq)
@@ -942,8 +958,8 @@ static int insert_connection_from_update(const struct hip_data *const data,
     connection->original.hip_tuple->data  = malloc(sizeof(struct hip_data));
     HIP_IFEL(!connection->original.hip_tuple->data, -1,
              "Allocating hip_data object failed");
-    connection->original.hip_tuple->data->src_hit = data->src_hit;
-    connection->original.hip_tuple->data->dst_hit = data->dst_hit;
+    connection->original.hip_tuple->data->src_hit = common->hits;
+    connection->original.hip_tuple->data->dst_hit = common->hitr;
     connection->original.hip_tuple->data->src_hi  = NULL;
     connection->original.hip_tuple->data->verify  = NULL;
 
@@ -963,8 +979,8 @@ static int insert_connection_from_update(const struct hip_data *const data,
     connection->reply.hip_tuple->data  = malloc(sizeof(struct hip_data));
     HIP_IFEL(!connection->reply.hip_tuple->data, -1,
              "Allocating hip_data object failed");
-    connection->reply.hip_tuple->data->src_hit = data->dst_hit;
-    connection->reply.hip_tuple->data->dst_hit = data->src_hit;
+    connection->reply.hip_tuple->data->src_hit = common->hitr;
+    connection->reply.hip_tuple->data->dst_hit = common->hits;
     connection->reply.hip_tuple->data->src_hi  = NULL;
     connection->reply.hip_tuple->data->verify  = NULL;
 
@@ -1021,65 +1037,201 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
     uint32_t                   spi;
     const struct hip_esp_info *esp_info;
 
-    HIP_DEBUG_IN6ADDR("ctx->src", &ctx->src);
-    HIP_DEBUG_IN6ADDR("ctx->dst", &ctx->dst);
+    if (esp_relay && ctx->udp_encap_hdr) {
+        HIP_ASSERT((hip_get_msg_type(common) == HIP_R2));
 
-    HIP_ASSERT((hip_get_msg_type(common) == HIP_R2));
+        HIP_IFEL(!(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)), -1,
+                 "No relay_to, skip\n");
 
-    HIP_IFEL(!(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)), -1,
-             "No relay_to, skip\n");
+        HIP_DEBUG_IN6ADDR("relay_to_addr", &relay_to->address);
 
-    HIP_DEBUG_IN6ADDR("relay_to_addr", &relay_to->address);
+        HIP_IFEL(!((ctx->ip_version == 4) &&
+                   (iph->protocol == IPPROTO_UDP)), 0,
+                 "Not a relay packet, ignore\n");
 
-    HIP_IFEL(!((ctx->ip_version == 4) &&
-               (iph->protocol == IPPROTO_UDP)), 0,
-             "Not a relay packet, ignore\n");
+        HIP_IFEL(ipv6_addr_cmp(&ctx->dst, &relay_to->address) == 0, 0,
+                 "Reinjected control packet, passing it\n");
 
-    HIP_IFEL(ipv6_addr_cmp(&ctx->dst, &relay_to->address) == 0, 0,
-             "Reinjected control packet, passing it\n");
+        esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
+        HIP_IFEL(!esp_info, 0, "No ESP_INFO, pass\n");
+        spi = ntohl(esp_info->new_spi);
 
-    esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
-    HIP_IFEL(!esp_info, 0, "No ESP_INFO, pass\n");
-    spi = ntohl(esp_info->new_spi);
+        HIP_DEBUG("SPI is 0x%lx\n", spi);
 
-    HIP_DEBUG("SPI is 0x%lx\n", spi);
+        HIP_IFEL(!(tuple = get_tuple_by_esp(NULL, spi)), 0,
+                 "No tuple, skip\n");
 
-    HIP_IFEL(!(tuple = get_tuple_by_esp(NULL, spi)), 0,
-             "No tuple, skip\n");
+        HIP_IFEL(!(reverse_tuple = get_tuple_by_hits(&common->hits, &common->hitr)), 0,
+                 "No reverse tuple, skip\n");
 
-    HIP_IFEL(!(reverse_tuple = get_tuple_by_hits(&common->hits, &common->hitr)), 0,
-             "No reverse tuple, skip\n");
+        HIP_DEBUG("tuple src=%d dst=%d\n", tuple->src_port, tuple->dst_port);
+        HIP_DEBUG_IN6ADDR("tuple src ip", tuple->src_ip);
+        HIP_DEBUG_IN6ADDR("tuple dst ip", tuple->dst_ip);
+        HIP_DEBUG("tuple dir=%d, sport=%d, dport=%d, rel=%d\n", tuple->direction,
+                  tuple->src_port, tuple->dst_port, tuple->esp_relay);
 
-    HIP_DEBUG("tuple src=%d dst=%d\n", tuple->src_port, tuple->dst_port);
-    HIP_DEBUG_IN6ADDR("tuple src ip", tuple->src_ip);
-    HIP_DEBUG_IN6ADDR("tuple dst ip", tuple->dst_ip);
-    HIP_DEBUG("tuple dir=%d, sport=%d, dport=%d, rel=%d\n", tuple->direction,
-              tuple->src_port, tuple->dst_port, tuple->esp_relay);
+        HIP_DEBUG("reverse tuple src=%d dst=%d\n", reverse_tuple->src_port,
+                  reverse_tuple->dst_port);
+        HIP_DEBUG_IN6ADDR("reverse tuple src ip", reverse_tuple->src_ip);
+        HIP_DEBUG_IN6ADDR("reverse tuple dst ip", reverse_tuple->dst_ip);
+        HIP_DEBUG("reverse tuple dir=%d, sport=%d, dport=%d, rel=%d\n",
+                  reverse_tuple->direction, reverse_tuple->src_port,
+                  reverse_tuple->dst_port, reverse_tuple->esp_relay);
 
-    HIP_DEBUG("reverse tuple src=%d dst=%d\n", reverse_tuple->src_port,
-              reverse_tuple->dst_port);
-    HIP_DEBUG_IN6ADDR("reverse tuple src ip", reverse_tuple->src_ip);
-    HIP_DEBUG_IN6ADDR("reverse tuple dst ip", reverse_tuple->dst_ip);
-    HIP_DEBUG("reverse tuple dir=%d, sport=%d, dport=%d, rel=%d\n",
-              reverse_tuple->direction, reverse_tuple->src_port,
-              reverse_tuple->dst_port, reverse_tuple->esp_relay);
+        /* Store Responder's IP address and port */
+        tuple->esp_relay = 1;
+        ipv6_addr_copy(&tuple->esp_relay_daddr, &ctx->src);
+        tuple->esp_relay_dport = tuple->dst_port;
+        HIP_DEBUG("tuple relay port=%d\n", tuple->esp_relay_dport);
+        HIP_DEBUG_IN6ADDR("tuple relay ip", &tuple->esp_relay_daddr);
 
-    /* Store Responder's IP address and port */
-    tuple->esp_relay = 1;
-    ipv6_addr_copy(&tuple->esp_relay_daddr, &ctx->src);
-    tuple->esp_relay_dport = tuple->dst_port;
-    HIP_DEBUG("tuple relay port=%d\n", tuple->esp_relay_dport);
-    HIP_DEBUG_IN6ADDR("tuple relay ip", &tuple->esp_relay_daddr);
-
-    /* Store Initiator's IP address and port */
-    reverse_tuple->esp_relay = 1;
-    ipv6_addr_copy(&reverse_tuple->esp_relay_daddr, &relay_to->address);
-    reverse_tuple->esp_relay_dport = ntohs(relay_to->port);
-    HIP_DEBUG("reverse_tuple relay port=%d\n", reverse_tuple->esp_relay_dport);
-    HIP_DEBUG_IN6ADDR("reverse_tuple relay ip", &reverse_tuple->esp_relay_daddr);
+        /* Store Initiator's IP address and port */
+        reverse_tuple->esp_relay = 1;
+        ipv6_addr_copy(&reverse_tuple->esp_relay_daddr, &relay_to->address);
+        reverse_tuple->esp_relay_dport = ntohs(relay_to->port);
+        HIP_DEBUG("reverse_tuple relay port=%d\n", reverse_tuple->esp_relay_dport);
+        HIP_DEBUG_IN6ADDR("reverse_tuple relay ip", &reverse_tuple->esp_relay_daddr);
+    }
 
 out_err:
     return err;
+}
+
+/** verify message authenticity for message types with existing security state
+ *
+ * @param common    the hip packet to be verified
+ * @param tuple     the corresponding connection tuple
+ * @return 1 for valid packets, 0 otherwise
+ */
+static int hip_fw_verify_packet(struct hip_common *const common,
+                                const struct tuple *const tuple)
+{
+    HIP_ASSERT(common != NULL);
+    HIP_ASSERT(tuple != NULL);
+    HIP_ASSERT(tuple->hip_tuple != NULL);
+    HIP_ASSERT(tuple->hip_tuple->data != NULL);
+    HIP_ASSERT(tuple->hip_tuple->data->src_hi != NULL);
+
+    /* no need to verify that HI matches HIT in this packet, as:
+     * 1.) HI -> HIT matching must be ensured when saving HI in this tuple
+     * 2.) tuple is looked up corresponding to HITs */
+
+    HIP_DEBUG("verifying signature...\n");
+    if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
+                                       common)) {
+        HIP_INFO("Signature verification failed\n");
+
+        return 0;
+    }
+
+    HIP_INFO("Signature successfully verified\n");
+
+    return 1;
+}
+
+/** verify message authenticity for message types without existing security
+ *  state and store credentials for valid packets
+ *
+ * @param common    the hip packet to be verified
+ * @param tuple     the corresponding connection tuple
+ * @return 1 for valid packets, 0 otherwise
+ */
+static int hip_fw_verify_and_store_host_id(struct hip_common *const common,
+                                           struct tuple *const tuple)
+{
+    const struct hip_host_id *const host_id = hip_get_param(common, HIP_PARAM_HOST_ID);
+    struct in6_addr                 hit;
+    hip_tlv_len                     len = 0;
+    int                             err = 0;
+
+    HIP_IFEL(!host_id, -1, "Awaiting HOST_ID in control message, but none found\n");
+
+    len = hip_get_param_total_len(host_id);
+
+    /* we have to calculate the hash ourselves to check the
+     * hi -> hit mapping */
+    hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100);
+
+    // match received hit and calculated hit
+    HIP_IFEL(ipv6_addr_cmp(&hit, &common->hits), 1,
+             "HI -> HIT mapping does NOT match\n");
+    HIP_INFO("HI -> HIT mapping verified\n");
+
+    // init hi parameter and copy
+    HIP_IFEL(!(tuple->hip_tuple->data->src_hi = malloc(len)),
+             -ENOMEM, "Out of memory\n");
+    memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
+
+    switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
+    case HIP_HI_RSA:
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->verify      = hip_rsa_verify;
+        break;
+    case HIP_HI_ECDSA:
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
+        break;
+    case HIP_HI_DSA:
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->verify      = hip_dsa_verify;
+        break;
+    default:
+        HIP_ERROR("Could not store public key, because host id algorithm is unknown.\n");
+        err = -1;
+        goto out_err;
+    }
+
+    err = !hip_fw_verify_packet(common, tuple);
+
+out_err:
+    if (err) {
+        // free keys depending on cipher
+        if (tuple->hip_tuple->data->src_hi) {
+            switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
+            case HIP_HI_RSA:
+                RSA_free(tuple->hip_tuple->data->src_pub_key);
+                break;
+            case HIP_HI_DSA:
+                DSA_free(tuple->hip_tuple->data->src_pub_key);
+                break;
+            default:
+                HIP_ERROR("Could not free public key, because key type is unknown.\n");
+            }
+        }
+
+        tuple->hip_tuple->data->src_pub_key = NULL;
+        tuple->hip_tuple->data->verify      = NULL;
+
+        free(tuple->hip_tuple->data->src_hi);
+        tuple->hip_tuple->data->src_hi = NULL;
+    }
+
+    return err;
+}
+
+static int handle_i1(const struct hip_common *const common,
+                     const struct tuple *const tuple,
+                     const struct hip_fw_context *const ctx)
+{
+    if (tuple == NULL) {
+        // create a new tuple
+        const struct in6_addr all_zero_addr = { { { 0 } } };
+        hip_hit_t             phit;
+        struct hip_data      *data = get_hip_data(common);
+
+        //if peer hit is all-zero in I1 packet, replace it with pseudo hit
+        if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
+            hip_opportunistic_ipv6_to_hit(&ctx->dst, &phit,
+                                          HIP_HIT_TYPE_HASH100);
+            data->dst_hit = (struct in6_addr) phit;
+        }
+
+        insert_new_connection(data, ctx);
+    } else {
+        HIP_DEBUG("I1 for existing connection\n");
+    }
+
+    return 1;
 }
 
 /**
@@ -1096,74 +1248,27 @@ out_err:
  */
 
 // first check signature then store hi
-static int handle_r1(struct hip_common *common, struct tuple *tuple,
-                     DBG int verify_responder,
-                     UNUSED const struct hip_fw_context *ctx)
+static int handle_r1(struct hip_common *const common,
+                     struct tuple *const tuple,
+                     struct hip_fw_context *const ctx)
 {
-    struct in6_addr           hit;
-    const struct hip_host_id *host_id = NULL;
-    // assume correct packet
-    int         err = 1;
-    hip_tlv_len len = 0;
-
-    HIP_DEBUG("verify_responder: %i\n", verify_responder);
-
-    // handling HOST_ID param
-    HIP_IFEL(!(host_id = hip_get_param(common, HIP_PARAM_HOST_ID)),
-             -1, "No HOST_ID found in control message\n");
-
-    len = hip_get_param_total_len(host_id);
-
-    HIP_DEBUG("verifying hi -> hit mapping...\n");
-
-    /* we have to calculate the hash ourselves to check the
-     * hi -> hit mapping */
-    hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100);
-
-    // match received hit and calculated hit
-    HIP_IFEL(ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit), 0,
-             "HI -> HIT mapping does NOT match\n");
-    HIP_INFO("HI -> HIT mapping verified\n");
-
-    HIP_DEBUG("verifying signature...\n");
-
-    // init hi parameter and copy
-    HIP_IFEL(!(tuple->hip_tuple->data->src_hi = malloc(len)),
-             -ENOMEM, "Out of memory\n");
-    memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
-
-    // store the public key separately
-    // store function pointer for verification
-    switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
-    case HIP_HI_RSA:
-        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
-        tuple->hip_tuple->data->verify      = hip_rsa_verify;
-        break;
-    case HIP_HI_ECDSA:
-        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
-        tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
-        break;
-    case HIP_HI_DSA:
-        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
-        tuple->hip_tuple->data->verify      = hip_dsa_verify;
-        break;
-    default:
-        HIP_ERROR("Could not store public key from I2, because host id algorithm is unknown.\n");
-        err = -1;
-        goto out_err;
+    if (hip_fw_verify_and_store_host_id(common, tuple)) {
+        HIP_ERROR("unable to create security state from R1 packet\n");
+        return 0;
     }
 
-    HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
-             -EINVAL, "Verification of signature failed\n");
-
-    HIP_DEBUG("verified R1 signature\n");
-
     // check if the R1 contains ESP protection transforms
-    HIP_IFEL(esp_prot_conntrack_R1_tfms(common, tuple), -1,
-             "failed to track esp protection extension transforms\n");
+    if (esp_prot_conntrack_R1_tfms(common, tuple)) {
+        HIP_ERROR("failed to track esp protection extension transforms\n");
+        return 0;
+    }
 
-out_err:
-    return err;
+    if (!hipfw_midauth_add_challenge(ctx, tuple->midauth_nonce)) {
+        HIP_ERROR("failed to add midauth challenge\n");
+        return 0;
+    }
+
+    return 1;
 }
 
 /**
@@ -1178,106 +1283,46 @@ out_err:
  *
  * @return one on success or zero failure
  */
-static int handle_i2(struct hip_common *common, struct tuple *tuple,
-                     const struct hip_fw_context *ctx)
+static int handle_i2(struct hip_common *const common,
+                     struct tuple *const tuple,
+                     struct hip_fw_context *const ctx)
 {
-    const struct hip_esp_info *spi            = NULL;
-    const struct slist        *other_dir_esps = NULL;
-    const struct hip_host_id  *host_id        = NULL;
-    struct tuple              *other_dir      = NULL;
-    struct esp_tuple          *esp_tuple      = NULL;
-    struct in6_addr            hit;
-    // assume correct packet
-    int                    err     = 1;
-    hip_tlv_len            len     = 0;
-    const struct in6_addr *ip6_src = &ctx->src;
+    struct tuple                    *other_dir = NULL;
+    const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
-    HIP_DEBUG("\n");
-
-    HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
-             0, "no spi found\n");
-
-    host_id = hip_get_param(common, HIP_PARAM_HOST_ID);
-
-    // handling HOST_ID param
-    if (host_id) {
-        len = hip_get_param_total_len(host_id);
-
-        // verify HI->HIT mapping
-        HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
-                 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
-                 -1, "Unable to verify HOST_ID mapping to src HIT\n");
-
-        // init hi parameter and copy
-        HIP_IFEL(!(tuple->hip_tuple->data->src_hi = malloc(len)),
-                 -ENOMEM, "Out of memory\n");
-        memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
-
-        // store the public key separately
-        // store function pointer for verification
-        switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
-        case HIP_HI_RSA:
-            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
-            tuple->hip_tuple->data->verify      = hip_rsa_verify;
-            break;
-        case HIP_HI_ECDSA:
-            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
-            tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
-            break;
-        case HIP_HI_DSA:
-            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
-            tuple->hip_tuple->data->verify      = hip_dsa_verify;
-            break;
-        default:
-            HIP_ERROR("Could not store public key from I2, because host id algorithm is unknown.\n");
-            err = -1;
-            goto out_err;
-        }
-
-        HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
-                 -EINVAL, "Verification of signature failed\n");
-
-        HIP_DEBUG("verified I2 signature\n");
-    } else {
-        HIP_DEBUG("No HOST_ID found in control message\n");
-    }
-
-    // TODO: clean up
-    // TEST
     if (tuple->direction == ORIGINAL_DIR) {
-        other_dir      = &tuple->connection->reply;
-        other_dir_esps = tuple->connection->reply.esp_tuples;
+        other_dir = &tuple->connection->reply;
     } else {
-        other_dir      = &tuple->connection->original;
-        other_dir_esps = tuple->connection->original.esp_tuples;
+        other_dir = &tuple->connection->original;
     }
 
-    // try to look up esp_tuple for this connection
-    esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
-    if (!esp_tuple) {
-        // esp_tuple does not exist yet
-        HIP_IFEL(!(esp_tuple = calloc(1, sizeof(struct esp_tuple))), 0,
-                 "failed to allocate memory\n");
-
-        esp_tuple->spi           = ntohl(spi->new_spi);
-        esp_tuple->new_spi       = 0;
-        esp_tuple->spi_update_id = 0;
-        hip_ll_init(&esp_tuple->dst_addresses);
-        esp_tuple->tuple = other_dir;
-        HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
-                 -1, "adding or updating ESP destination address failed");
-        other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
-        insert_esp_tuple(esp_tuple);
+    if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
+        HIP_ERROR("failed to verify midauth challenge\n");
+        return 0;
     }
 
-    // TEST_END
+    if (hip_fw_verify_and_store_host_id(common, tuple)) {
+        HIP_ERROR("unable to create security state from I2 packet\n");
+        return 0;
+    }
+
+    if (esp_tuple_from_esp_info(esp_info, ctx, tuple)) {
+        HIP_ERROR("unable to create esp state from I2 packet\n");
+        return 0;
+    }
 
     /* check if the I2 contains ESP protection anchor and store state */
-    HIP_IFEL(esp_prot_conntrack_I2_anchor(common, tuple), -1,
-             "failed to track esp protection extension state\n");
+    if (esp_prot_conntrack_I2_anchor(common, tuple)) {
+        HIP_ERROR("failed to track esp protection extension state\n");
+        return 0;
+    }
 
-out_err:
-    return err;
+    if (!hipfw_midauth_add_challenge(ctx, tuple->midauth_nonce)) {
+        HIP_ERROR("failed to add midauth challenge\n");
+        return 0;
+    }
+
+    return 1;
 }
 
 /**
@@ -1293,68 +1338,46 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_r2(const struct hip_common *common, struct tuple *tuple,
-                     const struct hip_fw_context *ctx)
+static int handle_r2(struct hip_common *const common,
+                     struct tuple *const tuple,
+                     const struct hip_fw_context *const ctx)
 {
-    const struct hip_esp_info *spi            = NULL;
-    struct tuple              *other_dir      = NULL;
-    struct slist              *other_dir_esps = NULL;
-    struct esp_tuple          *esp_tuple      = NULL;
-    const struct in6_addr     *ip6_src        = &ctx->src;
-    int                        err            = 1;
+    const struct tuple              *other_dir = NULL;
+    const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
-    HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
-             0, "no spi found\n");
-
-    // TODO: clean up
-    // TEST
     if (tuple->direction == ORIGINAL_DIR) {
-        other_dir      = &tuple->connection->reply;
-        other_dir_esps = tuple->connection->reply.esp_tuples;
+        other_dir = &tuple->connection->reply;
     } else {
-        other_dir      = &tuple->connection->original;
-        other_dir_esps = tuple->connection->original.esp_tuples;
+        other_dir = &tuple->connection->original;
     }
 
-    // try to look up esp_tuple for this connection
-    if (!(esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi)))) {
-        if (!(esp_tuple = esp_prot_conntrack_R2_esp_tuple(other_dir_esps))) {
-            HIP_IFEL(!(esp_tuple = calloc(1, sizeof(struct esp_tuple))), 0,
-                     "failed to allocate memory\n");
+    if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
+        HIP_ERROR("failed to verify midauth challenge\n");
+        return 0;
+    }
 
-            //add esp_tuple to list of tuples
-            other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
-                                                    esp_tuple);
-        }
+    if (!hip_fw_verify_packet(common, tuple)) {
+        HIP_ERROR("failed to verify R2 packet\n");
+        return 0;
+    }
 
-        // this also has to be set in esp protection extension case
-        esp_tuple->spi           = ntohl(spi->new_spi);
-        esp_tuple->new_spi       = 0;
-        esp_tuple->spi_update_id = 0;
-        hip_ll_init(&esp_tuple->dst_addresses);
-        esp_tuple->tuple = other_dir;
-        HIP_IFEL(update_esp_address(esp_tuple, ip6_src, NULL) == -1,
-                 -1, "adding or updating ESP destination address failed");
-        insert_esp_tuple(esp_tuple);
-
-        HIP_DEBUG("ESP tuple inserted\n");
-    } else {
-        HIP_DEBUG("ESP tuple already exists!\n");
+    if (esp_tuple_from_esp_info(esp_info, ctx, tuple)) {
+        HIP_ERROR("unable to create esp state from I2 packet\n");
+        return 0;
     }
 
     /* check if the R2 contains ESP protection anchor and store state */
-    HIP_IFEL(esp_prot_conntrack_R2_anchor(common, tuple), -1,
-             "failed to track esp protection extension state\n");
-
-    // TEST_END
-
-    if (esp_relay && ctx->udp_encap_hdr) {
-        HIP_IFEL(hipfw_handle_relay_to_r2(common, ctx),
-                 -1, "handling of relay_to failed\n");
+    if (esp_prot_conntrack_R2_anchor(common, tuple)) {
+        HIP_ERROR("failed to track esp protection extension state\n");
+        return 0;
     }
 
-out_err:
-    return err;
+    if (hipfw_handle_relay_to_r2(common, ctx)) {
+        HIP_ERROR("handling of relay_to failed\n");
+        return 0;
+    }
+
+    return 1;
 }
 
 /**
@@ -1377,10 +1400,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
     int                                      err          = 1;
     int                                      n            = 0;
 
-    HIP_DEBUG("\n");
-
     if (esp_info && locator && seq) {
-        HIP_DEBUG("esp_info, locator and seq, \n");
+        HIP_DEBUG("esp_info, locator and seq\n");
 
         if (ntohl(esp_info->old_spi) != esp_tuple->spi
             || ntohl(esp_info->new_spi) != ntohl(esp_info->old_spi)) {
@@ -1419,7 +1440,7 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
             }
         }
     } else if (esp_info && seq) {
-        HIP_DEBUG("esp_info and seq, ");
+        HIP_DEBUG("esp_info and seq\n");
 
         if (ntohl(esp_info->old_spi) != esp_tuple->spi) {
             HIP_DEBUG("update_esp_tuple: esp_info spi no match esp_info:0x%lx tuple:0x%lx\n",
@@ -1432,7 +1453,7 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         esp_tuple->new_spi       = ntohl(esp_info->new_spi);
         esp_tuple->spi_update_id = seq->update_id;
     } else if (locator && seq) {
-        HIP_DEBUG("locator and seq, ");
+        HIP_DEBUG("locator and seq\n");
 
         if (ntohl(esp_info->new_spi) != esp_tuple->spi) {
             HIP_DEBUG("esp_info spi no match esp_info:0x%lx tuple: 0x%lx\n",
@@ -1470,6 +1491,80 @@ out_err:
     return err;
 }
 
+static int handle_first_update(const struct hip_common *const common,
+                               const struct tuple *const tuple,
+                               const struct hip_esp_info *const esp_info,
+                               const struct hip_locator *const locator,
+                               const struct hip_seq *const seq)
+{
+    /* connection changed to a path passing through this firewall */
+    if (!tuple) {
+        HIP_DEBUG("setting up a new connection...\n");
+
+        /** FIXME the firewall should not care about locator for esp tracking
+         *
+         * NOTE: modify this regardingly! */
+        if (insert_connection_from_update(common, esp_info, locator, seq)) {
+            HIP_ERROR("connection insertion failed\n");
+
+            return -1;
+        }
+    } else {
+        const struct tuple *other_dir = NULL;
+        struct esp_tuple   *esp_tuple = NULL;
+
+        if (tuple->direction == ORIGINAL_DIR) {
+            other_dir = &tuple->connection->reply;
+        } else {
+            other_dir = &tuple->connection->original;
+        }
+
+        if (!(esp_tuple = find_esp_tuple(other_dir->esp_tuples,
+                                         ntohl(esp_info->old_spi)))) {
+            HIP_ERROR("failed to look up ESP state for existing connection\n");
+            return -1;
+        }
+
+        if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
+            HIP_ERROR("failed to update ESP state\n");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int handle_second_update(struct tuple *const tuple,
+                                const struct hip_fw_context *const ctx,
+                                const struct hip_esp_info *const esp_info,
+                                const struct hip_seq *const seq)
+{
+    struct tuple     *other_dir = NULL;
+    struct esp_tuple *esp_tuple = NULL;
+
+    if (tuple->direction == ORIGINAL_DIR) {
+        other_dir = &tuple->connection->reply;
+    } else {
+        other_dir = &tuple->connection->original;
+    }
+
+    if (!(esp_tuple = find_esp_tuple(other_dir->esp_tuples,
+                                     ntohl(esp_info->old_spi)))) {
+        // init and add new esp_tuple
+        if (esp_tuple_from_esp_info(esp_info, ctx, tuple)) {
+            HIP_ERROR("failed to set up ESP state\n");
+            return -1;
+        }
+    } else {
+        if (!update_esp_tuple(esp_info, NULL, seq, esp_tuple)) {
+            HIP_ERROR("failed to update ESP state\n");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 /**
  * Process an UPDATE packet. When announcing new spis/addresses, the other
  * end may still keep sending data with old spis and addresses. Therefore,
@@ -1484,154 +1579,82 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_update(const struct hip_common *common,
-                         struct tuple *tuple,
-                         const struct hip_fw_context *ctx)
+static int handle_update(struct hip_common *const common,
+                         struct tuple **tuple,
+                         struct hip_fw_context *const ctx)
 {
-    const struct hip_seq      *seq             = NULL;
-    const struct hip_esp_info *esp_info        = NULL;
-    const struct hip_locator  *locator         = NULL;
-    struct tuple              *other_dir_tuple = NULL;
-    const struct in6_addr     *ip6_src         = &ctx->src;
-    int                        err             = 1;
+    const struct hip_esp_info *esp_info  = NULL;
+    const struct hip_locator  *locator   = NULL;
+    const struct hip_seq      *seq       = NULL;
+    const struct hip_ack      *ack       = NULL;
+    struct tuple              *other_dir = NULL;
+    int                        err       = 1;
 
-    /* get params from UPDATE message */
-    seq      = hip_get_param(common, HIP_PARAM_SEQ);
+    /* classify UPDATE message */
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
     locator  = hip_get_param(common, HIP_PARAM_LOCATOR);
+    seq      = hip_get_param(common, HIP_PARAM_SEQ);
+    ack      = hip_get_param(common, HIP_PARAM_ACK);
 
-    /* connection changed to a path going through this firewall */
-    if (tuple == NULL) {
-        // @todo this should only be the case, if (old_spi == 0) != new_spi -> check
+    if ((*tuple)->direction == ORIGINAL_DIR) {
+        other_dir = &(*tuple)->connection->reply;
+    } else {
+        other_dir = &(*tuple)->connection->original;
+    }
 
-        /* attempt to create state for new connection */
-        if (esp_info && locator && seq) {
-            struct hip_data *data = NULL;
+    if (esp_info && locator && seq) {
+        if (handle_first_update(common, *tuple, esp_info, locator, seq)) {
+            HIP_ERROR("unable to process first UPDATE message\n");
+            return 0;
+        }
 
-            HIP_DEBUG("setting up a new connection...\n");
+        /* if there was no tuple before, the previous packet processing will have
+         * created it */
+        if (!(*tuple)) {
+            *tuple = get_tuple_by_hits(&common->hits, &common->hitr);
+        }
 
-            data = get_hip_data(common);
+        if (!(*tuple) || !hipfw_midauth_add_challenge(ctx, (*tuple)->midauth_nonce)) {
+            HIP_ERROR("failed to add midauth challenge\n");
+            return 0;
+        }
+    } else if (esp_info && seq && ack) {
+        if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
+            HIP_ERROR("failed to verify midauth challenge\n");
+            return 0;
+        }
 
-            /* TODO also process anchor here
-             *
-             * active_anchor is set, next_anchor might be NULL
-             */
+        if (!hip_fw_verify_packet(common, *tuple)) {
+            HIP_ERROR("failed to verify UPDATE packet\n");
+            return 0;
+        }
 
-            /** FIXME the firewall should not care about locator for esp tracking
-             *
-             * NOTE: modify this regardingly! */
-            if (insert_connection_from_update(data, esp_info, locator, seq) == -1) {
-                /* insertion failed */
-                HIP_DEBUG("connection insertion failed\n");
+        if (handle_second_update(*tuple, ctx, esp_info, seq)) {
+            HIP_ERROR("unable to process second UPDATE message\n");
+            return 0;
+        }
 
-                free(data);
-                err = 0;
-                goto out_err;
-            }
+        if (!hipfw_midauth_add_challenge(ctx, (*tuple)->midauth_nonce)) {
+            HIP_ERROR("failed to add midauth challenge\n");
+            return 0;
+        }
+    } else if (ack) {
+        if (!hipfw_midauth_verify_challenge(ctx, other_dir->midauth_nonce)) {
+            HIP_ERROR("failed to verify midauth challenge\n");
+            return 0;
+        }
 
-            free(data);
-
-            tuple = get_tuple_by_hits(&common->hits, &common->hitr);
-            if (tuple) {
-                HIP_DEBUG("connection insertion successful\n");
-            } else {
-                HIP_ERROR("failed to insert new connection\n");
-                err = 0;
-                goto out_err;
-            }
-        } else {
-            /* unknown connection, but insufficient parameters to set up state */
-            HIP_DEBUG("insufficient parameters to create new connection with UPDATE\n");
-
-            err = 0;
-            goto out_err;
+        if (!hip_fw_verify_packet(common, *tuple)) {
+            HIP_ERROR("failed to verify UPDATE packet\n");
+            return 0;
         }
     } else {
-        /* we already know this connection */
-        struct slist     *other_dir_esps = NULL;
-        struct esp_tuple *esp_tuple      = NULL;
-
-        if (tuple->direction == ORIGINAL_DIR) {
-            other_dir_tuple = &tuple->connection->reply;
-            other_dir_esps  = tuple->connection->reply.esp_tuples;
-        } else {
-            other_dir_tuple = &tuple->connection->original;
-            other_dir_esps  = tuple->connection->original.esp_tuples;
-        }
-
-        /* distinguishing different UPDATE types and type combinations
-         *
-         * TODO check processing of parameter combinations
-         */
-        if (esp_info && locator && seq) {
-            /* Handling single esp_info and locator parameters
-             * Readdress with mobile-initiated rekey */
-            esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-
-            if (!esp_tuple) {
-                err = 0;
-                goto out_err;
-            }
-
-            if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
-                err = 0;
-                goto out_err;
-            }
-        } else if (locator && seq) {
-            /* Readdress without rekeying */
-            esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
-
-            if (esp_tuple == NULL) {
-                err = 0;
-                goto out_err;
-                /* if mobile host spi not intercepted, but valid */
-            }
-
-            if (!update_esp_tuple(NULL, locator, seq, esp_tuple)) {
-                err = 0;
-                goto out_err;
-            }
-        } else if (esp_info && seq) {
-            /* replying to Readdress with mobile-initiated rekey */
-            if (ntohl(esp_info->old_spi) != ntohl(esp_info->new_spi)) {
-                esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-
-                if (esp_tuple == NULL) {
-                    if (tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE) {
-                        err = 0;
-                        goto out_err;
-                    } else {                   /* connection state is being established from update */
-                        struct esp_tuple *new_esp = esp_tuple_from_esp_info(esp_info,
-                                                                            ip6_src,
-                                                                            other_dir_tuple);
-
-                        other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
-                                                                      new_esp);
-                        insert_esp_tuple(new_esp);
-                        tuple->connection->state = STATE_ESTABLISHED;
-                    }
-                } else if (!update_esp_tuple(esp_info, NULL, seq, esp_tuple)) {
-                    err = 0;
-                    goto out_err;
-                }
-            } else {
-                esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-
-                /* only add new tuple, if we don't already have it */
-                if (esp_tuple == NULL) {
-                    struct esp_tuple *new_esp = esp_tuple_from_esp_info(esp_info,
-                                                                        ip6_src, other_dir_tuple);
-
-                    other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
-                                                                  new_esp);
-                    insert_esp_tuple(new_esp);
-                }
-            }
-        }
+        HIP_DEBUG("Unknown parameter combination in UPDATE\n");
+        return 0;
     }
 
     /* everything should be set now in order to process eventual anchor params */
-    HIP_IFEL(esp_prot_conntrack_update(common, tuple), 0,
+    HIP_IFEL(esp_prot_conntrack_update(common, *tuple), 0,
              "failed to process anchor parameter\n");
 
 out_err:
@@ -1649,21 +1672,19 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_close(UNUSED const struct in6_addr *ip6_src,
-                        UNUSED const struct in6_addr *ip6_dst,
-                        UNUSED const struct hip_common *common,
-                        struct tuple *tuple,
-                        UNUSED const struct hip_fw_context *ctx)
+static int handle_close(struct hip_common *const common,
+                        struct tuple *const tuple)
 {
     int err = 1;
-
-    HIP_DEBUG("\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
     hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
-    HIP_IFEL(!tuple, 0, "tuple is NULL\n");
+    HIP_IFEL(!tuple, 1, "no connection state for CLOSE\n");
+
+    HIP_IFEL(!hip_fw_verify_packet(common, tuple), 0,
+             "failed to verify CLOSE packet\n");
 
     tuple->state = STATE_CLOSING;
 
@@ -1687,11 +1708,8 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_close_ack(UNUSED const struct in6_addr *ip6_src,
-                            UNUSED const struct in6_addr *ip6_dst,
-                            UNUSED const struct hip_common *common,
-                            struct tuple *tuple,
-                            UNUSED const struct hip_fw_context *ctx)
+static int handle_close_ack(struct hip_common *const common,
+                            struct tuple *const tuple)
 {
     int err = 1;
 
@@ -1702,7 +1720,10 @@ static int handle_close_ack(UNUSED const struct in6_addr *ip6_src,
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
     hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
-    HIP_IFEL(!tuple, 0, "tuple is NULL\n");
+    HIP_IFEL(!tuple, 1, "no connection state for CLOSE_ACK\n");
+
+    HIP_IFEL(!hip_fw_verify_packet(common, tuple), 0,
+             "failed to verify CLOSE_ACK packet\n");
 
     tuple->state = STATE_CLOSING;
     remove_connection(tuple->connection);
@@ -1729,25 +1750,16 @@ out_err:
  *
  * @return 1 if packet if passed the verifications or otherwise 0
  */
-static int check_packet(const struct in6_addr *ip6_src,
-                        const struct in6_addr *ip6_dst,
-                        struct hip_common *common,
+static int check_packet(struct hip_common *common,
                         struct tuple *tuple,
-                        const int verify_responder,
-                        const int accept_mobile,
                         struct hip_fw_context *ctx)
 {
-    hip_hit_t       phit;
-    struct in6_addr all_zero_addr = { { { 0 } } };
-    struct in6_addr hit;
-    int             err = 1;
+    int err = 1;
 
     HIP_DEBUG("check packet: type %d \n", common->type_hdr);
 
     // new connection can only be started with I1 of from update packets
-    // when accept_mobile is true
-    if (!(tuple || common->type_hdr == HIP_I1 ||
-          (common->type_hdr == HIP_UPDATE && accept_mobile))) {
+    if (!(tuple || common->type_hdr == HIP_I1 || common->type_hdr == HIP_UPDATE)) {
         HIP_DEBUG("hip packet type %d cannot start a new connection\n",
                   common->type_hdr);
 
@@ -1755,98 +1767,24 @@ static int check_packet(const struct in6_addr *ip6_src,
         goto out_err;
     }
 
-    // verify sender signature when required and available
-    // no signature in I1 and handle_r1 does verification
-    if (tuple && common->type_hdr != HIP_I1 && common->type_hdr != HIP_R1
-        && common->type_hdr != HIP_LUPDATE
-        && tuple->hip_tuple->data->src_hi != NULL) {
-        // verify HI -> HIT mapping
-        HIP_DEBUG("verifying hi -> hit mapping...\n");
-
-        /* we have to calculate the hash ourselves to check the
-         * hi -> hit mapping */
-        hip_host_id_to_hit(tuple->hip_tuple->data->src_hi, &hit,
-                           HIP_HIT_TYPE_HASH100);
-
-        // match received hit and calculated hit
-        if (ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit)) {
-            HIP_INFO("HI -> HIT mapping does NOT match\n");
-
-            err = 0;
-            goto out_err;
-        }
-        HIP_INFO("HI -> HIT mapping verified\n");
-
-        HIP_DEBUG("verifying signature...\n");
-        if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
-                                           common)) {
-            HIP_INFO("Signature verification failed\n");
-
-            err = 0;
-            goto out_err;
-        }
-
-        HIP_INFO("Signature successfully verified\n");
-
-        HIP_DEBUG_HIT("src hit", &tuple->hip_tuple->data->src_hit);
-        HIP_DEBUG_HIT("dst hit", &tuple->hip_tuple->data->dst_hit);
-    }
-
     // handle different packet types now
     if (common->type_hdr == HIP_I1) {
-        if (tuple == NULL) {
-            // create a new tuple
-            struct hip_data *data = get_hip_data(common);
-
-            //if peer hit is all-zero in I1 packet, replace it with pseudo hit
-            if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
-                hip_opportunistic_ipv6_to_hit(ip6_dst, &phit,
-                                              HIP_HIT_TYPE_HASH100);
-                data->dst_hit = (struct in6_addr) phit;
-            }
-
-            insert_new_connection(data, ctx);
-
-            // TODO call free for all pointer members of data - comment by Rene
-            free(data);
-        } else {
-            HIP_DEBUG("I1 for existing connection\n");
-
-            // TODO shouldn't we drop this?
-            err = 1;
-            goto out_err;
-        }
+        err = handle_i1(common, tuple, ctx);
     } else if (common->type_hdr == HIP_R1) {
-        err = handle_r1(common, tuple, verify_responder, ctx);
+        err = handle_r1(common, tuple, ctx);
     } else if (common->type_hdr == HIP_I2) {
         err = handle_i2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_R2) {
         err = handle_r2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_UPDATE) {
-        if (!(tuple && tuple->hip_tuple->data->src_hi != NULL)) {
-            HIP_DEBUG("signature was NOT verified\n");
-        }
-
-        if (tuple == NULL) {
-            // new connection
-            if (!accept_mobile) {
-                err = 0;
-            } else if (verify_responder) {
-                err = 0;                 // as responder hi not available
-            }
-        }
-
-        if (err) {
-            err = handle_update(common, tuple, ctx);
-        }
+        err = handle_update(common, &tuple, ctx);
     } else if (common->type_hdr == HIP_NOTIFY) {
-        // don't process and let pass through
         err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {
-        err = handle_close(ip6_src, ip6_dst, common, tuple, ctx);
+        err = handle_close(common, tuple);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {
-        err   = handle_close_ack(ip6_src, ip6_dst, common, tuple, ctx);
-        tuple = NULL;
+        err = handle_close_ack(common, tuple);
+        goto out_err;
     } else if (common->type_hdr == HIP_LUPDATE) {
         err = esp_prot_conntrack_lupdate(common, tuple, ctx);
     } else {
@@ -2043,8 +1981,7 @@ out_err:
  * @return              verdict for the packet (zero means drop, one means pass,
  *                      negative error)
  */
-int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                 struct hip_common *buf, const struct state_option *option,
+int filter_state(struct hip_common *buf, const struct state_option *option,
                  const int must_accept, struct hip_fw_context *ctx)
 {
     struct hip_data *data  = NULL;
@@ -2055,7 +1992,7 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
     // get data form the buffer and put it in a new data structure
     data = get_hip_data(buf);
     // look up the tuple in the database
-    tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
+    tuple = get_tuple_by_hip(data, buf->type_hdr, &ctx->src);
     free(data);
 
     // cases where packet does not match
@@ -2099,8 +2036,7 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
         }
     }
 
-    return_value = check_packet(ip6_src, ip6_dst, buf, tuple, option->verify_responder,
-                                option->accept_mobile, ctx);
+    return_value = check_packet(buf, tuple, ctx);
 
 out_err:
     return return_value;
@@ -2116,9 +2052,7 @@ out_err:
  * @param buf the control packet
  * @param ctx context for the control packet
  */
-int conntrack(const struct in6_addr *ip6_src,
-              const struct in6_addr *ip6_dst,
-              struct hip_common *buf,
+int conntrack(struct hip_common *buf,
               struct hip_fw_context *ctx)
 {
     struct hip_data *data    = NULL;
@@ -2128,11 +2062,11 @@ int conntrack(const struct in6_addr *ip6_src,
     // convert to new data type
     data = get_hip_data(buf);
     // look up tuple in the db
-    tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
+    tuple = get_tuple_by_hip(data, buf->type_hdr, &ctx->src);
 
     // the accept_mobile parameter is true as packets
     // are not filtered here
-    verdict = check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
+    verdict = check_packet(buf, tuple, ctx);
 
     free(data);
 

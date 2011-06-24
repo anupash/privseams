@@ -856,13 +856,11 @@ static int filter_esp(const struct hip_fw_context *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int filter_hip(const struct in6_addr *ip6_src,
-                      const struct in6_addr *ip6_dst,
-                      struct hip_common *buf,
+static int filter_hip(struct hip_common *const buf,
                       const unsigned int hook,
-                      const char *in_if,
-                      const char *out_if,
-                      struct hip_fw_context *ctx)
+                      const char *const in_if,
+                      const char *const out_if,
+                      struct hip_fw_context *const ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
     struct dlist *list = get_rule_list(hook);
@@ -914,10 +912,10 @@ static int filter_hip(const struct in6_addr *ip6_src,
     }
 
     if (print_addr) {
-        HIP_INFO_HIT("src hit", &(buf->hits));
-        HIP_INFO_HIT("dst hit", &(buf->hitr));
-        HIP_INFO_IN6ADDR("src ip", ip6_src);
-        HIP_INFO_IN6ADDR("dst ip", ip6_dst);
+        HIP_INFO_HIT("src hit", &buf->hits);
+        HIP_INFO_HIT("dst hit", &buf->hitr);
+        HIP_INFO_IN6ADDR("src ip", &ctx->src);
+        HIP_INFO_IN6ADDR("dst ip", &ctx->dst);
     }
 
     while (list != NULL) {
@@ -997,8 +995,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
              * this packet this will also check the signature of
              * the packet, if we already have a src_HI stored
              * for the _connection_ */
-            if (!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept,
-                              ctx)) {
+            if (!filter_state(buf, rule->state, rule->accept, ctx)) {
                 match = 0;
             } else {
                 // if it is a valid packet, this also tracked the packet
@@ -1033,7 +1030,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
     }
 
     if (verdict && !conntracked) {
-        verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
+        verdict = conntrack(buf, ctx);
     }
 
     return verdict;
@@ -1053,9 +1050,7 @@ static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
     int verdict = accept_hip_esp_traffic_by_default;
 
     if (filter_traffic) {
-        verdict = filter_hip(&ctx->src,
-                             &ctx->dst,
-                             ctx->transport_hdr.hip,
+        verdict = filter_hip(ctx->transport_hdr.hip,
                              ctx->ipq_packet->hook,
                              ctx->ipq_packet->indev_name,
                              ctx->ipq_packet->outdev_name,

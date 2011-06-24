@@ -49,21 +49,15 @@ enum {
 };
 
 int filter_esp_state(const struct hip_fw_context *ctx);
-int filter_state(const struct in6_addr *ip6_src,
-                 const struct in6_addr *ip6_dst,
-                 struct hip_common *buf,
-                 const struct state_option *option,
-                 const int accept, struct hip_fw_context *ctx);
-int conntrack(const struct in6_addr *ip6_src,
-              const struct in6_addr *ip6_dst,
-              struct hip_common *buf, struct hip_fw_context *ctx);
-
+int filter_state(struct hip_common *const buf,
+                 const struct state_option *const option,
+                 const int accept, struct hip_fw_context *const ctx);
+int conntrack(struct hip_common *const buf, struct hip_fw_context *const ctx);
 struct esp_tuple *find_esp_tuple(const struct slist *esp_list,
                                  const uint32_t spi);
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const struct hip_fw_context *ctx);
-
 void hip_fw_manage_all_esp_tuples(const struct tuple *const tuple,
                                   const bool insert);
 void hip_fw_conntrack_periodic_cleanup(void);
