@@ -742,14 +742,34 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
 }
 
 /**
+ * deallocate dynamically allocated parts of the esp_tuples list
+ *
+ * @param tuple the tuple containing the esp_tuples to be freed
+ */
+static void remove_esp_tuples(struct tuple *const tuple)
+{
+    struct slist *list = tuple->esp_tuples;
+    while (list) {
+        // remove esp_tuples from helper list
+        esp_list = remove_link_dlist(esp_list,
+                                     find_in_dlist(esp_list, list->data));
+
+        tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
+        free_esp_tuple(list->data);
+        list->data = NULL;
+        free(list);
+        list = tuple->esp_tuples;
+    }
+    tuple->esp_tuples = NULL;
+}
+
+/**
  * deallocate dynamically allocated parts of a tuple along with its associated HIP and ESP tuples
  *
  * @param tuple the tuple to be freed
  */
-static void remove_tuple(struct tuple *tuple)
+static void remove_tuple(struct tuple *const tuple)
 {
-    struct slist *list;
-
     if (tuple) {
         // remove hip_tuple from helper list
         hip_list = remove_link_dlist(hip_list,
@@ -758,19 +778,7 @@ static void remove_tuple(struct tuple *tuple)
         free_hip_tuple(tuple->hip_tuple);
         tuple->hip_tuple = NULL;
 
-        list = tuple->esp_tuples;
-        while (list) {
-            // remove esp_tuples from helper list
-            esp_list = remove_link_dlist(esp_list,
-                                         find_in_dlist(esp_list, list->data));
-
-            tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
-            free_esp_tuple(list->data);
-            list->data = NULL;
-            free(list);
-            list = tuple->esp_tuples;
-        }
-        tuple->esp_tuples = NULL;
+        remove_esp_tuples(tuple);
         tuple->connection = NULL;
     }
 }
