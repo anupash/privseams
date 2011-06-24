@@ -127,8 +127,6 @@ struct hip_tuple {
 
 struct tuple {
     struct hip_tuple  *hip_tuple;
-    struct in6_addr   *src_ip;
-    struct in6_addr   *dst_ip;
     in_port_t          src_port;
     in_port_t          dst_port;
     struct slist      *esp_tuples;

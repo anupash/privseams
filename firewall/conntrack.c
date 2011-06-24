@@ -412,7 +412,6 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
     HIP_DEBUG("insert         = %d\n", insert);
     HIP_DEBUG("table          = %s\n", table);
     HIP_DEBUG("esp_tuple->spi = 0x%08X\n", esp_tuple->spi);
-    HIP_DEBUG_IN6ADDR("src  ip", esp_tuple->tuple->src_ip);
     HIP_DEBUG_IN6ADDR("dest ip", dest);
 
     if (IN6_IS_ADDR_V4MAPPED(dest)) {
@@ -773,13 +772,6 @@ static void remove_tuple(struct tuple *tuple)
         }
         tuple->esp_tuples = NULL;
         tuple->connection = NULL;
-
-        // tuple was not malloced -> no free here
-        free(tuple->src_ip);
-        tuple->src_ip = NULL;
-
-        free(tuple->dst_ip);
-        tuple->dst_ip = NULL;
     }
 }
 
@@ -962,15 +954,11 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
                  "No reverse tuple, skip\n");
 
         HIP_DEBUG("tuple src=%d dst=%d\n", tuple->src_port, tuple->dst_port);
-        HIP_DEBUG_IN6ADDR("tuple src ip", tuple->src_ip);
-        HIP_DEBUG_IN6ADDR("tuple dst ip", tuple->dst_ip);
         HIP_DEBUG("tuple dir=%d, sport=%d, dport=%d, rel=%d\n", tuple->direction,
                   tuple->src_port, tuple->dst_port, tuple->esp_relay);
 
         HIP_DEBUG("reverse tuple src=%d dst=%d\n", reverse_tuple->src_port,
                   reverse_tuple->dst_port);
-        HIP_DEBUG_IN6ADDR("reverse tuple src ip", reverse_tuple->src_ip);
-        HIP_DEBUG_IN6ADDR("reverse tuple dst ip", reverse_tuple->dst_ip);
         HIP_DEBUG("reverse tuple dir=%d, sport=%d, dport=%d, rel=%d\n",
                   reverse_tuple->direction, reverse_tuple->src_port,
                   reverse_tuple->dst_port, reverse_tuple->esp_relay);
@@ -1807,9 +1795,7 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
              0, "Destination HIT belongs to us, no relaying\n");
 
     HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
-    HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
     HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
-    HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
 
     HIP_DEBUG("%d %d %d %d %d %d %d %d %d %d\n",
               tuple->src_port,
@@ -1823,8 +1809,6 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
               tuple->direction,
               tuple->esp_relay_dport);
 
-    HIP_DEBUG_IN6ADDR("src", tuple->src_ip);
-    HIP_DEBUG_IN6ADDR("dst", tuple->dst_ip);
     HIP_DEBUG_IN6ADDR("esp_relay_addr", &tuple->esp_relay_daddr);
 
     udph->source = htons(HIP_NAT_UDP_PORT);
