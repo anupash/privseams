@@ -870,7 +870,7 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
  * specific destination address.
  *
  * @param esp_info a pointer to an ESP info parameter in the control message
- * @param addr a pointer to an address
+ * @param ctx context of the packet to be tracked
  * @param tuple a pointer to a tuple structure
  * @return zero on success, -1 otherwise
  */
@@ -919,7 +919,7 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
  * Initialize and insert connection based on the given parameters from UPDATE
  * packet.
  *
- * @param data a pointer a HIP data structure.
+ * @param common UPDATE packet for which new connection should be inserted
  * @param esp_info a pointer to an ESP info message parameter.
  * @param locator a pointer to a locator message parameter.
  * @param seq a pointer to a sequence number of an UPDATE message.
@@ -1209,6 +1209,16 @@ out_err:
     return err;
 }
 
+/**
+ * Process an I1 packet. This function sets up a new connection for the HIT
+ * tuple conveyed in the packet's HIP header.
+ *
+ * @param common the R1 packet
+ * @param tuple the corresponding connection tuple
+ * @param ctx the context
+ *
+ * @return always 1
+ */
 static int handle_i1(const struct hip_common *const common,
                      const struct tuple *const tuple,
                      const struct hip_fw_context *const ctx)
@@ -1241,13 +1251,10 @@ static int handle_i1(const struct hip_common *const common,
  *
  * @param common the R1 packet
  * @param tuple the corresponding connection tuple
- * @param verify_responder currently unused
  * @param ctx the context
  *
  * @return one if the packet was ok or zero otherwise
  */
-
-// first check signature then store hi
 static int handle_r1(struct hip_common *const common,
                      struct tuple *const tuple,
                      struct hip_fw_context *const ctx)
@@ -1491,6 +1498,18 @@ out_err:
     return err;
 }
 
+/**
+ * Process the first UPDATE packet. This function sets up a new connection if
+ * no state for the association already exists.
+ *
+ * @param common the UPDATE packet
+ * @param tuple the corresponding connection tuple
+ * @param esp_info ESP_INFO parameter contained in the UPDATE packet
+ * @param locator LOCATOR parameter contained in the UPDATE packet
+ * @param seq SEQ parameter contained in the UPDATE packet
+ *
+ * @return zero if the packet was ok, negative value otherwise
+ */
 static int handle_first_update(const struct hip_common *const common,
                                const struct tuple *const tuple,
                                const struct hip_esp_info *const esp_info,
@@ -1534,6 +1553,17 @@ static int handle_first_update(const struct hip_common *const common,
     return 0;
 }
 
+/**
+ * Process the second UPDATE packet. This function sets up ESP state if
+ * no state for the association already exists.
+ *
+ * @param tuple the corresponding connection tuple
+ * @param ctx context of the UPDATE packet
+ * @param esp_info ESP_INFO parameter contained in the UPDATE packet
+ * @param seq SEQ parameter contained in the UPDATE packet
+ *
+ * @return zero if the packet was ok, negative value otherwise
+ */
 static int handle_second_update(struct tuple *const tuple,
                                 const struct hip_fw_context *const ctx,
                                 const struct hip_esp_info *const esp_info,
@@ -1666,9 +1696,6 @@ out_err:
  *
  * @param common the CLOSE packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE packet
- * @param ctx packet context
- * @param ip6_src the source address
- * @param ip6_dst the destination address
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1702,9 +1729,6 @@ out_err:
  *
  * @param common the CLOSE_ACK packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE_ACK packet
- * @param ctx packet context
- * @param ip6_src the source address
- * @param ip6_dst the destination address
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1740,12 +1764,8 @@ out_err:
  * Process a HIP packet using the connection tracking procedures and issue
  * a verdict.
  *
- * @param ip6_src source address of the packet
- * @param ip6_dst destination address of the packet
  * @param common the packet to be processed
  * @param tuple the tuple or NULL if a new connection
- * @param verify_responder currently unused
- * @param accept_mobile process UPDATE packets
  * @param ctx context for the packet
  *
  * @return 1 if packet if passed the verifications or otherwise 0
@@ -1972,8 +1992,6 @@ out_err:
 /**
  * Filter connection tracking state (in general)
  *
- * @param ip6_src       source IP address of the control packet
- * @param ip6_dst       destination IP address of the packet
  * @param buf           the control packet
  * @param option        special state options to be checked
  * @param must_accept   force accepting of the packet if set to one
@@ -2047,8 +2065,6 @@ out_err:
  * filtered through any state rules. Find the the tuples for the packet
  * and pass on for more filtering.
  *
- * @param ip6_src source IP address of the control packet
- * @param ip6_dst destination IP address of the control packet
  * @param buf the control packet
  * @param ctx context for the control packet
  */

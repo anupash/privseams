@@ -846,8 +846,6 @@ static int filter_esp(const struct hip_fw_context *ctx)
 /**
  * filter the hip packet according to the connection tracking rules
  *
- * @param ip6_src source address of the HIP control packet
- * @param ip6_dst destination address of the HIP control packet
  * @param buf the HIP control packet
  * @param hook ipqueue hook
  * @param in_if ipqueue input interface
