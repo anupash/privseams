@@ -1506,9 +1506,7 @@ static int handle_update(const struct hip_common *common,
 
         /* attempt to create state for new connection */
         if (esp_info && locator && seq) {
-            struct hip_data  *data           = NULL;
-            struct slist     *other_dir_esps = NULL;
-            struct esp_tuple *esp_tuple      = NULL;
+            struct hip_data *data = NULL;
 
             HIP_DEBUG("setting up a new connection...\n");
 
@@ -1533,26 +1531,6 @@ static int handle_update(const struct hip_common *common,
 
             /* insertion successful -> go on */
             tuple = get_tuple_by_hits(&common->hits, &common->hitr);
-
-
-            if (tuple->direction == ORIGINAL_DIR) {
-                other_dir_tuple = &tuple->connection->reply;
-                other_dir_esps  = tuple->connection->reply.esp_tuples;
-            } else {
-                other_dir_tuple = &tuple->connection->original;
-                other_dir_esps  = tuple->connection->original.esp_tuples;
-            }
-
-            /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
-            esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
-            if (!esp_tuple) {
-                free(data);
-                HIP_OUT_ERR(0, "Unable to create esp_tuple object from update message");
-            }
-
-            other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
-                                                          esp_tuple);
-            insert_esp_tuple(esp_tuple);
 
             HIP_DEBUG("connection insertion successful\n");
 
