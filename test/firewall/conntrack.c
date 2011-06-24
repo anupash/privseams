@@ -69,7 +69,7 @@ static struct esp_tuple *setup_esp_tuple(const uint32_t spi,
     esp_tuple->spi   = spi;
     esp_tuple->tuple = &conn->original;
     update_esp_address(esp_tuple, dest, NULL);
-    insert_esp_tuple(esp_tuple);
+    esp_list = append_to_list(esp_list, esp_tuple);
 
     fail_if(esp_list == NULL, "Failed to insert a new ESP tuple");
 
