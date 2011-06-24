@@ -888,15 +888,17 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
     HIP_ASSERT(tuple);
 
     struct esp_tuple *const new_esp = calloc(1, sizeof(*new_esp));
-    if (new_esp) {
+    if (esp_info) {
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
 
         update_esp_address(new_esp, addr, NULL);
-    } else {
-        HIP_ERROR("Allocating esp_tuple object failed");
+
+        return new_esp;
     }
+
+    HIP_ERROR("Allocating esp_tuple object failed");
     free(new_esp);
 
     return NULL;
