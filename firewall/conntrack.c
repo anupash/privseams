@@ -1529,12 +1529,16 @@ static int handle_update(const struct hip_common *common,
                 goto out_err;
             }
 
-            /* insertion successful -> go on */
-            tuple = get_tuple_by_hits(&common->hits, &common->hitr);
-
-            HIP_DEBUG("connection insertion successful\n");
-
             free(data);
+
+            tuple = get_tuple_by_hits(&common->hits, &common->hitr);
+            if (tuple) {
+                HIP_DEBUG("connection insertion successful\n");
+            } else {
+                HIP_ERROR("failed to insert new connection\n");
+                err = 0;
+                goto out_err;
+            }
         } else {
             /* unknown connection, but insufficient parameters to set up state */
             HIP_DEBUG("insufficient parameters to create new connection with UPDATE\n");
