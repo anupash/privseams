@@ -1221,26 +1221,29 @@ out_err:
  * @return always 1
  */
 static int handle_i1(const struct hip_common *const common,
-                     const struct tuple *const tuple,
+                     struct tuple *const tuple,
                      const struct hip_fw_context *const ctx)
 {
-    if (tuple == NULL) {
-        // create a new tuple
-        const struct in6_addr all_zero_addr = { { { 0 } } };
-        hip_hit_t             phit;
-        struct hip_data      *data = get_hip_data(common);
+    if (tuple) {
+        HIP_DEBUG("I1 for existing connection, "
+                  "re-establishing connection state\n");
 
-        //if peer hit is all-zero in I1 packet, replace it with pseudo hit
-        if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
-            hip_opportunistic_ipv6_to_hit(&ctx->dst, &phit,
-                                          HIP_HIT_TYPE_HASH100);
-            data->dst_hit = (struct in6_addr) phit;
-        }
-
-        insert_new_connection(data, ctx);
-    } else {
-        HIP_DEBUG("I1 for existing connection\n");
+        remove_connection(tuple->connection);
     }
+
+    // create a new tuple
+    const struct in6_addr all_zero_addr = { { { 0 } } };
+    hip_hit_t             phit;
+    struct hip_data      *data = get_hip_data(common);
+
+    //if peer hit is all-zero in I1 packet, replace it with pseudo hit
+    if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
+        hip_opportunistic_ipv6_to_hit(&ctx->dst, &phit,
+                                      HIP_HIT_TYPE_HASH100);
+        data->dst_hit = (struct in6_addr) phit;
+    }
+
+    insert_new_connection(data, ctx);
 
     return 1;
 }
