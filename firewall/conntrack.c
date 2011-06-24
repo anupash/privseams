@@ -1540,7 +1540,7 @@ static int handle_first_update(const struct hip_common *const common,
 
         if (!(esp_tuple = find_esp_tuple(other_dir->esp_tuples,
                                          ntohl(esp_info->old_spi)))) {
-            HIP_DEBUG("existing ESP state does not include current SPI"
+            HIP_DEBUG("existing ESP state does not include current SPI, "
                       "re-establishing connection state\n");
 
             remove_connection(tuple->connection);
