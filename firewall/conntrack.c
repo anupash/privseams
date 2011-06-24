@@ -986,8 +986,9 @@ static int insert_connection_from_update(const struct hip_common *const common,
 
     //add tuples to list
     insert_esp_tuple(esp_tuple);
-    hip_list = append_to_list(hip_list, connection->original.hip_tuple);
-    hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
+    hip_list  = append_to_list(hip_list, connection->original.hip_tuple);
+    hip_list  = append_to_list(hip_list, connection->reply.hip_tuple);
+    conn_list = append_to_slist(conn_list, connection);
 
     return err;
 
