@@ -27,9 +27,9 @@ HIPL_HEADER_LOCATIONS = firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*.h
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,$(HIPL_HEADER_LOCATIONS)))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc patches version.h .uncrustify.cfg
-EXTRA_DIST += .uncrustify-0.57.cfg tools/bazaar/plugins/stylecheck.py
-EXTRA_DIST += packaging process_modules.py tools/maintainer
+EXTRA_DIST  = .dir-locals.el .uncrustify.cfg .uncrustify-0.57.cfg .vimrc
+EXTRA_DIST += process_modules.py version.h
+EXTRA_DIST += debian doc patches packaging tools/bazaar tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh *.xml))
