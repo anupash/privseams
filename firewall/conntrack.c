@@ -890,7 +890,7 @@ static int insert_connection_from_update(const struct hip_common *const common,
     struct hip_data *data  = get_hip_data(common);
     struct tuple    *tuple = NULL;
 
-    if (insert_new_connection(data, ctx)) {
+    if (data == NULL || insert_new_connection(data, ctx)) {
         HIP_ERROR("connection insertion failed\n");
         return -1;
     }
@@ -1114,7 +1114,8 @@ out_err:
  * @param tuple the corresponding connection tuple
  * @param ctx the context
  *
- * @return always 1
+ * @return 1 on success
+ *         0 on error
  */
 static int handle_i1(const struct hip_common *const common,
                      struct tuple *const tuple,
@@ -1131,6 +1132,11 @@ static int handle_i1(const struct hip_common *const common,
     const struct in6_addr all_zero_addr = { { { 0 } } };
     hip_hit_t             phit;
     struct hip_data      *data = get_hip_data(common);
+
+    if (data == NULL) {
+        HIP_ERROR("Failed to get hip_data object.\n");
+        return 0;
+    }
 
     //if peer hit is all-zero in I1 packet, replace it with pseudo hit
     if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
@@ -1891,6 +1897,11 @@ int filter_state(struct hip_common *buf, const struct state_option *option,
 
     // get data form the buffer and put it in a new data structure
     data = get_hip_data(buf);
+    if (data == NULL) {
+        HIP_ERROR("Failed to get hip_data object.\n");
+        return_value = -1;
+        goto out_err;
+    }
     // look up the tuple in the database
     tuple = get_tuple_by_hip(data, buf->type_hdr, &ctx->src);
     free(data);
@@ -1949,9 +1960,11 @@ out_err:
  *
  * @param buf the control packet
  * @param ctx context for the control packet
+ *
+ * @return  1 if the packet passes the verdict
+ *          0 in case of error or if the packet did not pass the verdict
  */
-int conntrack(struct hip_common *buf,
-              struct hip_fw_context *ctx)
+int conntrack(struct hip_common *buf, struct hip_fw_context *ctx)
 {
     struct hip_data *data    = NULL;
     struct tuple    *tuple   = NULL;
@@ -1959,6 +1972,10 @@ int conntrack(struct hip_common *buf,
 
     // convert to new data type
     data = get_hip_data(buf);
+    if (data == NULL) {
+        HIP_ERROR("Failed to get hip_data object.\n");
+        return 0;
+    }
     // look up tuple in the db
     tuple = get_tuple_by_hip(data, buf->type_hdr, &ctx->src);
 
