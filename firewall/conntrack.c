@@ -1890,16 +1890,14 @@ out_err:
 int filter_state(struct hip_common *buf, const struct state_option *option,
                  const int must_accept, struct hip_fw_context *ctx)
 {
-    struct hip_data *data         = NULL;
-    struct tuple    *tuple        = NULL;
-    int              return_value = -1; //invalid value
+    struct hip_data *data  = NULL;
+    struct tuple    *tuple = NULL;
 
     // get data form the buffer and put it in a new data structure
     data = get_hip_data(buf);
     if (data == NULL) {
         HIP_ERROR("Failed to get hip_data object.\n");
-        return_value = -1;
-        goto out_err;
+        return -1;
     }
     // look up the tuple in the database
     tuple = get_tuple_by_hip(data, buf->type_hdr, &ctx->src);
@@ -1909,14 +1907,12 @@ int filter_state(struct hip_common *buf, const struct state_option *option,
     if (!tuple) {
         if ((option->int_opt.value == CONN_NEW && !option->int_opt.boolean) ||
             (option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean)) {
-            return_value = 0;
-            goto out_err;
+            return 0;
         }
     } else {
         if ((option->int_opt.value == CONN_ESTABLISHED && !option->int_opt.boolean) ||
             (option->int_opt.value == CONN_NEW && option->int_opt.boolean)) {
-            return_value = 0;
-            goto out_err;
+            return 0;
         }
     }
 
@@ -1927,12 +1923,10 @@ int filter_state(struct hip_common *buf, const struct state_option *option,
         HIP_DEBUG("filter_state: no tuple found \n");
 
         if (option->int_opt.value == CONN_NEW && option->int_opt.boolean && !must_accept) {
-            return_value = 1;
-            goto out_err;
+            return 1;
         } else if (option->int_opt.value == CONN_ESTABLISHED &&
                    !option->int_opt.boolean && !must_accept) {
-            return_value = 1;
-            goto out_err;
+            return 1;
         }
     } else {
         if ((option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean
@@ -1941,15 +1935,11 @@ int filter_state(struct hip_common *buf, const struct state_option *option,
             remove_connection(tuple->connection);
             tuple->connection = NULL;
 
-            return_value = 1;
-            goto out_err;
+            return 1;
         }
     }
 
-    return_value = check_packet(buf, tuple, ctx);
-
-out_err:
-    return return_value;
+    return check_packet(buf, tuple, ctx);
 }
 
 /**
