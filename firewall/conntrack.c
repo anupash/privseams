@@ -224,6 +224,7 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
  *
  * @param common a HIP control packet
  * @return struct hip_data corresponding to the HITs of the packet
+ *         NULL if memory allocation fails
  */
 static struct hip_data *get_hip_data(const struct hip_common *common)
 {
@@ -231,6 +232,10 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
 
     // init hip_data for this tuple
     data = calloc(1, sizeof(struct hip_data));
+    if (data == NULL) {
+        HIP_ERROR("Allocating hip_data object failed\n");
+        return NULL;
+    }
 
     memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
     memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
