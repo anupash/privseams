@@ -852,6 +852,7 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
         hip_ll_init(&esp_tuple->dst_addresses);
         if (update_esp_address(esp_tuple, &ctx->src, NULL)) {
             HIP_ERROR("adding or updating ESP destination address failed");
+            free(esp_tuple);
             return -1;
         }
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
@@ -859,12 +860,10 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
         esp_list = append_to_list(esp_list, esp_tuple);
 
         return 0;
+    } else {
+        HIP_ERROR("Allocating esp_tuple object failed");
+        return -1;
     }
-
-    HIP_ERROR("Allocating esp_tuple object failed");
-    free(esp_tuple);
-
-    return -1;
 }
 
 /**
