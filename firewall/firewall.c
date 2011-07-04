@@ -989,11 +989,13 @@ static int filter_hip(struct hip_common *const buf,
          * must be last, so not called if packet is going to be
          * dropped */
         if (match && rule->state) {
+            int filter_state_verdict = filter_state(buf, rule->state, rule->accept, ctx);
+
             /* we at least had some packet before -> check
              * this packet this will also check the signature of
              * the packet, if we already have a src_HI stored
              * for the _connection_ */
-            if (!filter_state(buf, rule->state, rule->accept, ctx)) {
+            if (filter_state_verdict == 0 || filter_state_verdict == -1) {
                 match = 0;
             } else {
                 // if it is a valid packet, this also tracked the packet

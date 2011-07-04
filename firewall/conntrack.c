@@ -1890,10 +1890,9 @@ out_err:
 int filter_state(struct hip_common *buf, const struct state_option *option,
                  const int must_accept, struct hip_fw_context *ctx)
 {
-    struct hip_data *data  = NULL;
-    struct tuple    *tuple = NULL;
-    // FIXME results in unsafe use in filter_hip()
-    int return_value = -1;      //invalid value
+    struct hip_data *data         = NULL;
+    struct tuple    *tuple        = NULL;
+    int              return_value = -1; //invalid value
 
     // get data form the buffer and put it in a new data structure
     data = get_hip_data(buf);
