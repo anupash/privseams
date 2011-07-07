@@ -36,36 +36,36 @@
 
 typedef uint32_t hip_closest_prefix_type;
 
-int ipv6_addr_is_hit(const struct in6_addr *hit);
-int ipv6_addr_is_teredo(const struct in6_addr *teredo);
-int ipv6_addr_is_null(const struct in6_addr *ip);
-int hit_is_real_hit(const struct in6_addr *hit);
-int hit_is_opportunistic_hit(const struct in6_addr *hit);
-void set_hit_prefix(struct in6_addr *hit);
-void set_lsi_prefix(hip_lsi_t *lsi);
-int hip_id_type_match(const struct in6_addr *id, int id_type);
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-                                  struct in6_addr *hit, int hit_type);
-void *hip_cast_sa_addr(struct sockaddr *sa);
-int hip_sockaddr_len(const void *sockaddr);
-int hip_sa_addr_len(void *sockaddr);
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
-int hip_sockaddr_is_v6_mapped(const struct sockaddr *const sa);
-int hip_addr_is_loopback(struct in6_addr *addr);
-int hip_lsi_are_equal(const hip_lsi_t *lsi1,
-                      const hip_lsi_t *lsi2);
+int ipv6_addr_is_hit(const struct in6_addr *const hit);
+int ipv6_addr_is_teredo(const struct in6_addr *const teredo);
+int ipv6_addr_is_null(const struct in6_addr *const ip);
+int hit_is_real_hit(const struct in6_addr *const hit);
+int hit_is_opportunistic_hit(const struct in6_addr *const hit);
+void set_hit_prefix(struct in6_addr *const hit);
+void set_lsi_prefix(hip_lsi_t *const lsi);
+int hip_id_type_match(const struct in6_addr *const id, int id_type);
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *const ip,
+                                  struct in6_addr *const hit, int hit_type);
+void *hip_cast_sa_addr(struct sockaddr *const sa);
+int hip_sockaddr_len(const void *const sockaddr);
+int hip_sa_addr_len(void *const sockaddr);
+void hip_addr_to_sockaddr(struct in6_addr *const addr, struct sockaddr_storage *const sa);
+int hip_sockaddr_is_v6_mapped(const struct sockaddr *const const sa);
+int hip_addr_is_loopback(const struct in6_addr *const addr);
+int hip_lsi_are_equal(const hip_lsi_t *const lsi1,
+                      const hip_lsi_t *const lsi2);
 
-int ipv4_addr_cmp(const struct in_addr *a1,
-                  const struct in_addr *a2);
-void ipv4_addr_copy(struct in_addr *dest, const struct in_addr *src);
-int ipv6_addr_cmp(const struct in6_addr *a1,
-                  const struct in6_addr *a2);
-void ipv6_addr_copy(struct in6_addr *dest, const struct in6_addr *src);
-int ipv6_addr_any(const struct in6_addr *a);
-void hip_copy_in6addr_null_check(struct in6_addr *to,
-                                 const struct in6_addr *from);
-void hip_copy_inaddr_null_check(struct in_addr *to,
-                                const struct in_addr *from);
+int ipv4_addr_cmp(const struct in_addr *const a1,
+                  const struct in_addr *const a2);
+void ipv4_addr_copy(struct in_addr *const dest, const struct in_addr *const src);
+int ipv6_addr_cmp(const struct in6_addr *const a1,
+                  const struct in6_addr *const a2);
+void ipv6_addr_copy(struct in6_addr *const dest, const struct in6_addr *const src);
+int ipv6_addr_any(const struct in6_addr *const a);
+void hip_copy_in6addr_null_check(struct in6_addr *const to,
+                                 const struct in6_addr *const from);
+void hip_copy_inaddr_null_check(struct in_addr *const to,
+                                const struct in_addr *const from);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

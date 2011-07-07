@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,6 +29,7 @@
  *
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -37,14 +38,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/icomm.h"
 #include "lib/core/ife.h"
-#include "lib/core/list.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/tool/pk.h"
@@ -376,20 +375,5 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
  */
 int hip_recreate_all_precreated_r1_packets(void)
 {
-    HIP_HASHTABLE      *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    LHASH_NODE         *curr, *iter;
-    struct hip_host_id *tmp;
-    int                 c;
-
-    hip_for_each_hi(hip_recreate_r1s_for_entry_move, ht);
-
-    list_for_each_safe(curr, iter, ht, c)
-    {
-        tmp = list_entry(curr);
-        hip_ht_add(HIP_DB_LOCAL_HID, tmp);
-        list_del(tmp, ht);
-    }
-
-    hip_ht_uninit(ht);
-    return 0;
+    return hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
 }

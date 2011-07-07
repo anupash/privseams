@@ -71,10 +71,9 @@ build_rpm()
     done
 
     SPECFILE=$BUILDDIR/SPECS/hipl.spec
-    RELEASE=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
-    echo "Release: $RELEASE" >> $SPECFILE
+    echo "Release: $VCS_REVISION" >> $SPECFILE
     echo "%define _topdir $BUILDDIR" >> $SPECFILE
     cat $SRCDIR_PACKAGING/hipl.spec >> $SPECFILE
 
@@ -86,6 +85,8 @@ build_rpm()
 
 build_deb()
 {
+    cp debian/changelog.template debian/changelog
+    debchange --newversion ${VERSION}-${VCS_REVISION} "entry automatically added by $0"
     dpkg-buildpackage -us -uc -I.bzr $BUILDPACKAGE_OPTS
 }
 
@@ -95,6 +96,7 @@ set -e
 
 SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
 VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
+VCS_REVISION=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 SRCDIR_PACKAGING=$SRCDIR/packaging
 REPO_BASE=/var/www/packages/html
 

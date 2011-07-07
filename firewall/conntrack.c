@@ -796,10 +796,10 @@ static void remove_connection(struct connection *connection)
 {
     struct slist *conn_link;
 
-    HIP_DEBUG("remove_connection: tuple list before: \n");
+    HIP_DEBUG("tuple list before: \n");
     print_tuple_list();
 
-    HIP_DEBUG("remove_connection: esp list before: \n");
+    HIP_DEBUG("esp list before: \n");
     print_esp_list();
 
     if (connection) {
@@ -813,10 +813,10 @@ static void remove_connection(struct connection *connection)
         free(connection);
     }
 
-    HIP_DEBUG("remove_connection: tuple list after: \n");
+    HIP_DEBUG("tuple list after: \n");
     print_tuple_list();
 
-    HIP_DEBUG("remove_connection: esp list after: \n");
+    HIP_DEBUG("esp list after: \n");
     print_esp_list();
 }
 
@@ -888,15 +888,17 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
     HIP_ASSERT(tuple);
 
     struct esp_tuple *const new_esp = calloc(1, sizeof(*new_esp));
-    if (new_esp) {
+    if (esp_info) {
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
 
         update_esp_address(new_esp, addr, NULL);
-    } else {
-        HIP_ERROR("Allocating esp_tuple object failed");
+
+        return new_esp;
     }
+
+    HIP_ERROR("Allocating esp_tuple object failed");
     free(new_esp);
 
     return NULL;
@@ -1504,9 +1506,7 @@ static int handle_update(const struct hip_common *common,
 
         /* attempt to create state for new connection */
         if (esp_info && locator && seq) {
-            struct hip_data  *data           = NULL;
-            struct slist     *other_dir_esps = NULL;
-            struct esp_tuple *esp_tuple      = NULL;
+            struct hip_data *data = NULL;
 
             HIP_DEBUG("setting up a new connection...\n");
 
@@ -1529,32 +1529,16 @@ static int handle_update(const struct hip_common *common,
                 goto out_err;
             }
 
-            /* insertion successful -> go on */
-            tuple = get_tuple_by_hits(&common->hits, &common->hitr);
-
-
-            if (tuple->direction == ORIGINAL_DIR) {
-                other_dir_tuple = &tuple->connection->reply;
-                other_dir_esps  = tuple->connection->reply.esp_tuples;
-            } else {
-                other_dir_tuple = &tuple->connection->original;
-                other_dir_esps  = tuple->connection->original.esp_tuples;
-            }
-
-            /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
-            esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
-            if (!esp_tuple) {
-                free(data);
-                HIP_OUT_ERR(0, "Unable to create esp_tuple object from update message");
-            }
-
-            other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
-                                                          esp_tuple);
-            insert_esp_tuple(esp_tuple);
-
-            HIP_DEBUG("connection insertion successful\n");
-
             free(data);
+
+            tuple = get_tuple_by_hits(&common->hits, &common->hitr);
+            if (tuple) {
+                HIP_DEBUG("connection insertion successful\n");
+            } else {
+                HIP_ERROR("failed to insert new connection\n");
+                err = 0;
+                goto out_err;
+            }
         } else {
             /* unknown connection, but insufficient parameters to set up state */
             HIP_DEBUG("insufficient parameters to create new connection with UPDATE\n");

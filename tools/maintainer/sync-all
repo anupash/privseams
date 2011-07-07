@@ -4,16 +4,16 @@ TMP_DIR='$HOME/.hipl.syncall.tmp.dir'
 EXTRACT_DIR='hipl-1.0.6'
 
 HOSTS="
+terokkar.infrahip.net
 halko.pc.infrahip.net
 allerian.infrahip.net
 garadar.infrahip.net
-cenarion.infrahip.net
-netherstorm.infrahip.net
-shadowmoon.infrahip.net
 hellfire.infrahip.net
 zangarmash.infrahip.net
 nagrand.infrahip.net
 ironforge.infrahip.net
+hipl-fc32.cs.hut.fi
+hipl-fc64.cs.hut.fi
 "
 
 COMMANDS="
@@ -31,22 +31,23 @@ mkdir -p $TMP_DIR &&
 #set -e
 
 # configured hosts:
-# ubuntu lucid 32-bit allerian
-# ubuntu lucid 64-bit halko
-# ubuntu maverick 32-bit MISSING
-# ubuntu maverick 64-bit garadar
-# f13-i386            netherstorm.infrahip.net
-# F13-x86_64          shadowmoon.infrahip.net
-# F14 32bit           ironforge
-# F14-x86_64          nagrand.infrahip.net
-# CentOS-5.5 i386     hellfire.infrahip.net
-# CentOS-5.5 x86_64   zangarmash.infrahip.net
+# ubuntu lucid 32-bit    allerian
+# ubuntu lucid 64-bit    halko
+# ubuntu natty 32-bit    terokkar.infrahip.net
+# ubuntu natty 64-bit    garadar
+# F14 32-bit             ironforge
+# F14 64-bit             nagrand.infrahip.net
+# CentOS-5.5 32-bit      hellfire.infrahip.net
+# CentOS-5.5 64-bit      zangarmash.infrahip.net
+# FC15 32-bit            hipl-fc32.cs.hut.fi
+# FC15 64-bit            hipl-fc64.cs.hut.fi
 #
 # disabled hosts:
-# fc11-i386           blacktemple
-# fc11-x86_64         stonebreaker
-# Ubuntu lucid 32-bit terokkar.infrahip.net
-# ubuntu maverick 64-bit cenarion 64-bit
+# fc15 32-bit             blacktemple
+# fc15 64-bit            stonebreaker
+# ubuntu maverick 64-bit cenarion
+# f13 32-bit             netherstorm.infrahip.net
+# F13 64-bit             shadowmoon.infrahip.net
 
 if test $# != 0; then
     HOSTS="$@"

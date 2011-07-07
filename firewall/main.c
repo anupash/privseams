@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -97,10 +97,11 @@ static void hipfw_usage(void)
  */
 int main(int argc, char *argv[])
 {
-    bool        foreground         = true;
-    bool        kill_old           = false;
-    bool        limit_capabilities = false;
-    const char *rule_file          = NULL;
+    bool        foreground          = true;
+    bool        kill_old            = false;
+    bool        limit_capabilities  = false;
+    bool        timeout_set_by_user = false;
+    const char *rule_file           = NULL;
 
     char *end_of_number;
     int   ch;
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
                 /* we must poll at least once per timeout interval */
                 cleanup_interval = connection_timeout;
             }
+            timeout_set_by_user = true;
             break;
         case 'u':
             esp_speedup = 1;
@@ -193,7 +195,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (connection_timeout > 0 && !filter_traffic) {
+    if (timeout_set_by_user && !filter_traffic) {
         puts("Warning: timeouts (-t) have no effect with connection");
         puts("         tracking disabled (-F)");
     }
@@ -230,6 +232,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    return hipfw_main(rule_file, kill_old, limit_capabilities) == 0 ? EXIT_SUCCESS
-                                                                    : EXIT_FAILURE;
+    return hipfw_main(rule_file, kill_old, limit_capabilities) == 0
+           ? EXIT_SUCCESS : EXIT_FAILURE;
 }
