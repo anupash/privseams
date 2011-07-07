@@ -46,6 +46,8 @@
 #include <netinet/in.h>
 #include <netinet/udp.h>
 #include <openssl/lhash.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -1494,6 +1496,13 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     struct in6_addr       *src_addr        = NULL;
     LHASH_NODE            *item            = NULL, *tmp = NULL;
     int                    i               = 0;
+    unsigned int           mtu_val         = HIP_HIT_DEV_MTU;
+
+
+    /* Check packet size */
+    if (hip_get_msg_total_len(msg) > mtu_val) {
+        HIP_DEBUG("WARNING: Packet size exceeds MTU (%i), this may cause fragmentation.", mtu_val);
+    }
 
     /* Notice that the shotgun logic requires us to check always the address family.
      *  Depending on the address family, we send the packet using UDP encapsulation or
