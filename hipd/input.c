@@ -518,6 +518,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         !hip_addr_is_loopback(&ctx->src_addr) &&
         !IN6_ARE_ADDR_EQUAL(&ctx->src_addr, &ctx->dst_addr)) {
         HIP_DEBUG("Invalid loopback packet. Dropping.\n");
+        err = -1;
         goto out_err;
     }
 
