@@ -522,6 +522,10 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         goto out_err;
     }
 
+    /* Check packet destination */
+    HIP_IFEL(!hip_hidb_hit_is_our(&ctx->input_msg->hitr),
+             -1, "Packet is not destined for this host. Dropping.\n");
+
     /* Debug printing of received packet information. All received HIP
      * control packets are first passed to this function. Therefore
      * printing packet data here works for all packets. To avoid excessive
