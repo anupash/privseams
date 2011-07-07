@@ -2256,7 +2256,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     struct list list;
     char       *c, line[128], str[128];
     const char *args[64];
-    char       *comment;
+    char       *comment, *newline;
     char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
     if (optc != 1) {
@@ -2286,6 +2286,12 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
         /* Line is a comment or empty */
         if (c[0] == '#' || c[0] == '\n' || c[0] == '\0') {
             continue;
+        }
+
+        /* Terminate before the newline */
+        newline = strchr(c, '\n');
+        if (newline) {
+            *newline = '\0';
         }
 
         /* Terminate before (the first) trailing comment */
