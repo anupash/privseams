@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Aalto University and RWTH Aachen University.
+# Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -101,7 +101,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/esp_prot_hipd_msg.c     \
                     hipd/esp_prot_light_update.c \
                     hipd/hadb.c                  \
-                    hipd/hadb_legacy.c           \
                     hipd/hidb.c                  \
                     hipd/hip_socket.c            \
                     hipd/hipd.c                  \

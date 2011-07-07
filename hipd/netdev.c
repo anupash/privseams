@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -1433,29 +1433,4 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 
 out_err:
     return err;
-}
-
-/**
- * Copy the addresses stored in entry->peer_addr_list_to_be_added
- * into entry->spi_out->peer_addr_list after R2 has been received.
- *
- * @param ha ha state after base exchange
- */
-void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
-{
-    LHASH_NODE                     *item = NULL, *tmp = NULL;
-    struct hip_peer_addr_list_item *addr_li;
-    int                             i = 0;
-
-    if (!ha->peer_addr_list_to_be_added) {
-        return;
-    }
-
-    list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-        addr_li = list_entry(item);
-        list_add(addr_li, ha->peer_addresses_old);
-        HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-    }
-    hip_ht_uninit(ha->peer_addr_list_to_be_added);
-    ha->peer_addr_list_to_be_added = NULL;
 }

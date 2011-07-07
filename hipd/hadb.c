@@ -89,7 +89,6 @@
 #include "lib/tool/xfrmapi.h"
 #include "config.h"
 #include "accessor.h"
-#include "hadb_legacy.h"
 #include "hidb.h"
 #include "hipd.h"
 #include "input.h"
@@ -547,8 +546,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     hip_hadb_insert_state(entry);
 
     /* Add initial HIT-IP mapping. */
-    if (hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE,
-                               hip_get_peer_nat_udp_port())) {
+    if (hip_hadb_add_peer_addr(entry, peer_addr)) {
         HIP_ERROR("error while adding a new peer address\n");
         return -2;
     }
@@ -704,8 +702,6 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     /* Initialize the peer host name */
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    entry->peer_addresses_old = hip_linked_list_init();
-
     /* Randomize inbound SPI */
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
@@ -775,77 +771,40 @@ int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr)
  * Adds a new peer IPv6 address to the entry's list of peer addresses.
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
- * @param spi outbound SPI to which the @c new_addr is related to
- * @param lifetime address lifetime of the address
- * @param state address state
- * @param port the port
  *
  * @return zero on success and negative on error
  */
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
-                           const struct in6_addr *new_addr,
-                           uint32_t spi, uint32_t lifetime, int state,
-                           in_port_t port)
+                           const struct in6_addr *new_addr)
 {
-    int                             err = 0;
     struct hip_peer_addr_list_item *a_item;
     char                            addrstr[INET6_ADDRSTRLEN];
 
     /* assumes already locked entry */
 
-    /* check if we are adding the peer's address during the base exchange */
-    if (spi == 0) {
-        HIP_DEBUG("SPI is 0, set address as the bex address\n");
-        if (!ipv6_addr_any(&entry->peer_addr)) {
-            hip_in6_ntop(&entry->peer_addr, addrstr);
-            HIP_DEBUG("warning, overwriting existing preferred address %s\n",
-                      addrstr);
+    if (!ipv6_addr_any(&entry->peer_addr)) {
+        hip_in6_ntop(&entry->peer_addr, addrstr);
+        HIP_DEBUG("warning, overwriting existing preferred address %s\n",
+                  addrstr);
+    }
+    ipv6_addr_copy(&entry->peer_addr, new_addr);
+    HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
+
+    if (entry->peer_addr_list_to_be_added) {
+        /* Adding the peer address to the entry->peer_addr_list_to_be_added
+         * so that later after base exchange it can be transferred to
+         * SPI OUT's peer address list */
+        a_item = malloc(sizeof(struct hip_peer_addr_list_item));
+        if (!a_item) {
+            HIP_ERROR("item malloc failed\n");
+            return -ENOMEM;
         }
-        ipv6_addr_copy(&entry->peer_addr, new_addr);
-        HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
+        ipv6_addr_copy(&a_item->address, new_addr);
 
-        if (entry->peer_addr_list_to_be_added) {
-            /* Adding the peer address to the entry->peer_addr_list_to_be_added
-             * so that later after base exchange it can be transferred to
-             * SPI OUT's peer address list */
-            a_item = malloc(sizeof(struct hip_peer_addr_list_item));
-            if (!a_item) {
-                HIP_ERROR("item malloc failed\n");
-                err = -ENOMEM;
-                goto out_err;
-            }
-            a_item->lifetime = lifetime;
-            ipv6_addr_copy(&a_item->address, new_addr);
-            a_item->address_state = state;
-            gettimeofday(&a_item->modified_time, NULL);
-
-            list_add(a_item, entry->peer_addr_list_to_be_added);
-        }
-        goto out_err;
+        list_add(a_item, entry->peer_addr_list_to_be_added);
     }
 
-    err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
-    if (err) {
-        goto out_err;
-    }
-
-    a_item = malloc(sizeof(struct hip_peer_addr_list_item));
-    if (!a_item) {
-        HIP_ERROR("item malloc failed\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
-
-    a_item->lifetime = lifetime;
-    a_item->port     = port;
-    ipv6_addr_copy(&a_item->address, new_addr);
-    a_item->address_state = state;
-    gettimeofday(&a_item->modified_time, NULL);
-
-    list_add(a_item, entry->peer_addresses_old);
-
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -898,16 +857,6 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
         }
         hip_ht_uninit(ha->peer_addr_list_to_be_added);
-    }
-
-    if (ha->peer_addresses_old) {
-        list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = list_entry(item);
-            list_del(addr_li, ha->peer_addresses_old);
-            free(addr_li);
-            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-        }
-        hip_ht_uninit(ha->peer_addresses_old);
     }
 
     list_del(ha, hadb_hit);

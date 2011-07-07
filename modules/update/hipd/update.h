@@ -93,11 +93,6 @@ struct hip_locator {
     /* fixed part ends */
 } __attribute__ ((packed));
 
-/**
- * Fixed start of this struct must match to struct hip_peer_addr_list_item
- * for the part of address item. It is used in hip_update_locator_match().
- * @todo Maybe fix this in some better way?
- */
 struct hip_locator_info_addr_item {
     uint8_t         traffic_type;
     uint8_t         locator_type;

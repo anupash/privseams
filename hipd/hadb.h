@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -71,9 +71,7 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr);
 
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
-                           const struct in6_addr *new_addr,
-                           uint32_t interface_id, uint32_t lifetime,
-                           int state, in_port_t port);
+                           const struct in6_addr *new_addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 

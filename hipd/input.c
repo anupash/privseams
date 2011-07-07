@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -76,7 +76,6 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
 #include "hadb.h"
-#include "hadb_legacy.h"
 #include "hidb.h"
 #include "hipd.h"
 #include "hiprelay.h"
@@ -707,13 +706,8 @@ int hip_check_r1(RVS const uint8_t packet_type,
         HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
         HIP_HEXDUMP("Mapping", &daddr, 16);
         HIP_HEXDUMP("Received", &ctx->src_addr, 16);
-        hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
         hip_hadb_add_peer_addr(ctx->hadb_entry,
-                               &ctx->src_addr,
-                               0,
-                               0,
-                               PEER_ADDR_STATE_ACTIVE,
-                               ctx->msg_ports.src_port);
+                               &ctx->src_addr);
     }
 
     hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
@@ -1108,10 +1102,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
 #endif /* CONFIG_HIP_RVS */
-
-    /* Copying address list from temp location in entry
-     * "entry->peer_addr_list_to_be_added" */
-    hip_copy_peer_addrlist_changed(ctx->hadb_entry);
 
     /* Handle REG_RESPONSE and REG_FAILED parameters. */
     hip_handle_param_reg_response(ctx->hadb_entry, ctx->input_msg);
@@ -1689,11 +1679,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     ctx->hadb_entry->peer_controls |= ntohs(ctx->input_msg->control);
 
     HIP_IFEL(hip_hadb_add_peer_addr(ctx->hadb_entry,
-                                    &ctx->src_addr,
-                                    0,
-                                    0,
-                                    PEER_ADDR_STATE_ACTIVE,
-                                    ctx->msg_ports.src_port),
+                                    &ctx->src_addr),
              -1,
              "Error while adding the preferred peer address\n");
 

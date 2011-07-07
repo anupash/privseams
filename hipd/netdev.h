@@ -53,8 +53,6 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 int hip_netdev_white_list_add(const char *const device_name);
 int hip_exists_address_in_list(struct sockaddr *addr, int ifindex);
 
-void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha);
-
 int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
                        struct in6_addr *addr);
 

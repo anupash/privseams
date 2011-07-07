@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -399,7 +399,6 @@ void uint16_to_binstring(uint16_t val, char *buffer);
 void uint32_to_binstring(uint32_t val, char *buffer);
 
 void hip_print_locator_addresses(const struct hip_common *);
-void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *);
 void hip_print_peer_addresses(struct hip_hadb_state *);
 
 /**
