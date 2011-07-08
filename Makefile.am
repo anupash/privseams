@@ -205,6 +205,7 @@ test_check_firewall_SOURCES = test/check_firewall.c          \
                               $(firewall_hipfw_sources)
 
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
+                              test/lib/core/crypto.c         \
                               test/lib/core/hit.c            \
                               test/lib/core/solve.c          \
                               test/lib/core/straddr.c
