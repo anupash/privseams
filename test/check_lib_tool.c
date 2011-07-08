@@ -27,6 +27,7 @@
  * @file
  * @brief Unit tests of lib/tool (see doc/HACKING on unit tests).
  * @author Christof Mroz <christof.mroz@rwth-aachen.de>
+ * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
  */
 
 #include <stdlib.h>
@@ -39,6 +40,7 @@ int main(void)
     int      number_failed;
     SRunner *sr = srunner_create(NULL);
     srunner_add_suite(sr, lib_tool_checksum());
+    srunner_add_suite(sr, lib_tool_pk());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);

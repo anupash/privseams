@@ -211,7 +211,8 @@ test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/straddr.c
 
 test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
-                              test/lib/tool/checksum.c
+                              test/lib/tool/checksum.c       \
+                              test/lib/tool/pk.c
 
 # Include module Makefile.am's.
 # TODO: Make this inclusion dynamic
