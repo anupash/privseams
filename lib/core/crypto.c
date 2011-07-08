@@ -797,12 +797,8 @@ EC_KEY *create_ecdsa_key(const int nid)
     HIP_IFEL(!(eckey = EC_KEY_new()),
              -1, "Could not init new key.\n");
 
-    if (!(group = EC_GROUP_new_by_curve_name(nid))) {
-        HIP_ERROR("Could not create curve.\n");
-        HIP_DEBUG("Retrying with standard curve NIST_ECDSA_384 \n");
-        HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(NID_secp384r1)),
-                 -1, "Failed creating new key\n");
-    }
+    HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
+             -1, "Could not create curve. No curve with NID: %i.\n", nid);
 
     // this is important, otherwise parameters will be saved explicitly
     EC_GROUP_set_asn1_flag(group, asn1_flag);
