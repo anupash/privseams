@@ -1145,7 +1145,11 @@ static int handle_i1(const struct hip_common *const common,
         data->dst_hit = (struct in6_addr) phit;
     }
 
-    insert_new_connection(data, ctx);
+    if (insert_new_connection(data, ctx) == -1) {
+        HIP_ERROR("Failed to insert new connection.\n");
+        free(data);
+        return 0;
+    }
 
     return 1;
 }
