@@ -80,7 +80,7 @@ struct esp_anchor_item {
  * NOTE set to the preferred anti-replay window size of ESP */
 int window_size;
 
-struct esp_prot_conntrack_tfm esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
+static struct esp_prot_conntrack_tfm esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
 
 /**
@@ -491,10 +491,6 @@ int esp_prot_conntrack_init(void)
      *      config-file */
     hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length_g;
 
-    // init all possible transforms
-    memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
-           * sizeof(struct esp_prot_conntrack_tfm));
-
     // set available transforms to used
     esp_prot_conntrack_tfms[token_transform].is_used = 1;
 
@@ -871,9 +867,6 @@ int esp_prot_conntrack_update(const struct hip_common *update,
     if (hip_esp_protection) {
         HIP_ASSERT(update != NULL);
         HIP_ASSERT(tuple != NULL);
-
-        memset(esp_anchors, 0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_anchor *));
-        memset(esp_roots,   0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_root *));
 
         seq      = hip_get_param(update, HIP_PARAM_SEQ);
         esp_info = hip_get_param(update, HIP_PARAM_ESP_INFO);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,26 +23,38 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Antti Partanen
- * @author  Alberto Garcia
- */
+#define _BSD_SOURCE
 
-#ifndef HIP_HIPD_OPPIPDB_H
-#define HIP_HIPD_OPPIPDB_H
+#include <check.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <netinet/in.h>
+#include "lib/core/common.h"
+#include "firewall/helpers.h"
+#include "test/mocks.h"
+#include "test_suites.h"
 
 
-typedef struct in6_addr hip_oppip_t;
+START_TEST(test_system_printf)
+{
+    mock_system = true;
 
-int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque);
-void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *arg);
-int hip_oppipdb_add_entry(const struct in6_addr *ip_peer);
-int hip_init_oppip_db(void);
-hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer);
-void hip_oppipdb_delentry(const struct in6_addr *ip_peer);
-void hip_oppipdb_uninit(void);
+    char str[MAX_COMMAND_LINE + 1];
+    memset(str, '.', sizeof(str));
+    str[MAX_COMMAND_LINE] = '\0';
 
-#endif /* HIP_HIPD_OPPIPDB_H */
+    fail_unless(system_printf("_%s",  str) == -1, "Truncated command line executed");
+    fail_unless(system_printf("%s", str)   ==  0, "Fitting command line not executed");
+}
+END_TEST
+
+Suite *firewall_helpers(void)
+{
+    Suite *s = suite_create("firewall/helpers");
+
+    TCase *tc_helpers = tcase_create("helpers");
+    tcase_add_test(tc_helpers, test_system_printf);
+    suite_add_tcase(s, tc_helpers);
+
+    return s;
+}

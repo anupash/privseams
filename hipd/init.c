@@ -44,6 +44,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <openssl/aes.h>
+#include <openssl/evp.h>
 #include <openssl/lhash.h>
 #include <openssl/rand.h>
 #include <sys/syscall.h>
@@ -63,6 +64,7 @@
 #include "lib/core/hostid.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/ife.h"
+#include "lib/core/modularization.h"
 #include "lib/tool/nlink.h"
 #include "lib/core/performance.h"
 #include "lib/core/straddr.h"
@@ -83,13 +85,12 @@
 #include "nat.h"
 #include "netdev.h"
 #include "nsupdate.h"
-#include "oppdb.h"
-#include "oppipdb.h"
 #include "output.h"
 #include "pkt_handling.h"
 #include "registration.h"
 #include "user.h"
 #include "init.h"
+#include "hipd/esp_prot_hipd_msg.h"
 
 
 /**
@@ -105,7 +106,7 @@
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
 #define BIT_SET(nr,   addr) do { ((uint32_t *) (addr))[(nr) >> 5] |=  (1U << ((nr) & 31)); } while (0)
-#define BIT_TEST(nr,  addr) do {  (uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
+#define BIT_TEST(nr,  addr) do { ((uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
 
 #ifndef ICMP6_FILTER_WILLPASS
 #define ICMP6_FILTER_WILLPASS(type, filterp) (BIT_TEST((type),  filterp) == 0)
@@ -148,13 +149,16 @@ static void hip_sig_chld(int signum)
 static void hip_create_file_unless_exists(const char *path, const char *contents)
 {
     struct stat status;
+    FILE       *fp;
+    size_t      items;
+
     if (stat(path, &status)  == 0) {
         return;
     }
 
-    FILE *fp = fopen(path, "w");
+    fp = fopen(path, "w");
     HIP_ASSERT(fp);
-    size_t items = fwrite(contents, strlen(contents), 1, fp);
+    items = fwrite(contents, strlen(contents), 1, fp);
     HIP_ASSERT(items > 0);
     fclose(fp);
 }
@@ -174,6 +178,7 @@ nsupdate on # send dynamic DNS updates\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
+# broadcast on # broadcast to LAN if no matching IP address found\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
@@ -289,7 +294,7 @@ static int hip_init_raw_sock_v4(int proto)
 
     sock = socket(AF_INET, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket v4 creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -426,50 +431,6 @@ static inline int hip_rmmod(const char *name)
 }
 
 /**
- * Cleanup/unload the kernel modules on hipd exit.
- * Unused for now because of unprivileged executions.
- * @todo Make hip_exit call it with root privileges in order to clean up.
- */
-static void hip_remove_kernel_modules(void)
-{
-    /* some net modules depend on crypto, so keep net modules first */
-    const char **mods[] = { kernel_net_mod, kernel_crypto_mod };
-    int          count[2], type, i, ret;
-    char         cmd[MODPROBE_MAX_LINE];
-
-    count[0] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
-    count[1] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
-
-    for (type = 0; type < 2; type++) {
-        for (i = 0; i < count[type]; i++) {
-            if (sflags & HIPD_START_LOWCAP) {
-                /* Although we still retain the CAP_SYS_MODULE capability,
-                 * because of the new (post-2.6.24) rules governing capability
-                 * inheritance (i.e. "permitted" and "effective") on execve
-                 * we cannot call modprobe or rmmod, because their thread
-                 * will run without CAP_SYS_MODULE and thus fail to do the job.
-                 * Not as good as 'modprobe -r', but (way) better that nothing.
-                 */
-                ret = hip_rmmod(mods[type][i]);
-            } else {
-                /* no privilege separation whatsoever, we are almighty */
-                snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s 2> /dev/null",
-                         mods[type][i]);
-                ret = system(cmd);
-            }
-
-            if (ret) {
-                /* the errno is relevant in the hip_rmmod() case */
-                HIP_DEBUG("Unable to remove the %s module: %s.\n",
-                          mods[type][i], strerror(errno));
-            } else {
-                HIP_DEBUG("Removed the %s module.\n", mods[type][i]);
-            }
-        }
-    }
-}
-
-/**
  * Initialize random seed.
  */
 static int init_random_seed(void)
@@ -507,7 +468,7 @@ static int hip_init_raw_sock_v6(int proto)
 
     sock = socket(AF_INET6, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -529,19 +490,19 @@ out_err:
  *
  * @return the host id or NULL if none found
  */
-static struct hip_host_id_entry *hip_return_first_rsa(void)
+static struct local_host_id *hip_return_first_rsa(void)
 {
-    LHASH_NODE               *curr, *iter;
-    struct hip_host_id_entry *tmp = NULL;
-    int                       c;
-    uint16_t                  algo = 0;
+    LHASH_NODE           *curr, *iter;
+    struct local_host_id *tmp = NULL;
+    int                   c;
+    uint16_t              algo = 0;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
     list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
         tmp = list_entry(curr);
-        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
-        algo = hip_get_host_id_algo(tmp->host_id);
+        HIP_DEBUG_HIT("Found HIT", &tmp->hit);
+        algo = hip_get_host_id_algo(&tmp->host_id);
         HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
                   algo, HIP_HI_RSA);
         if (algo == HIP_HI_RSA) {
@@ -620,7 +581,6 @@ out_err:
     return err;
 }
 
-
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10
 
@@ -631,29 +591,26 @@ out_err:
  */
 static int hip_init_certs(void)
 {
-    int                       err = 0;
-    char                      hit[41];
-    FILE                     *conf_file;
-    struct hip_host_id_entry *entry;
-    char                      hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    int                   err = 0;
+    char                  hit[41];
+    FILE                 *conf_file;
+    struct local_host_id *entry;
+    char                  hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-    memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-    HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+    HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
              "gethostname failed\n");
 
     conf_file = fopen(HIP_CERT_CONF_PATH, "r");
     if (!conf_file) {
         HIP_DEBUG("Configuration file did NOT exist creating it and "
                   "filling it with default information\n");
-        HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
-                 "Failed to memset memory for hit presentation format\n");
         /* Fetch the first RSA HIT */
         entry = hip_return_first_rsa();
         if (entry == NULL) {
             HIP_DEBUG("Failed to get the first RSA HI");
             goto out_err;
         }
-        hip_in6_ntop(&entry->lhi.hit, hit);
+        hip_in6_ntop(&entry->hit, hit);
         conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
         fprintf(conf_file,
                 "# Section containing SPKI related information\n"
@@ -690,10 +647,11 @@ static int hip_init_certs(void)
                 hit, HIP_CERT_INIT_DAYS,
                 hit, HIP_CERT_INIT_DAYS,
                 hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
-        fclose(conf_file);
     } else {
         HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
     }
+    fclose(conf_file);
+
 out_err:
     return err;
 }
@@ -704,16 +662,11 @@ static void hip_init_packet_types(void)
     lmod_register_packet_type(HIP_R1,        "HIP_R1");
     lmod_register_packet_type(HIP_I2,        "HIP_I2");
     lmod_register_packet_type(HIP_R2,        "HIP_R2");
-    lmod_register_packet_type(HIP_CER,       "HIP_CER");
     lmod_register_packet_type(HIP_NOTIFY,    "HIP_NOTIFY");
     lmod_register_packet_type(HIP_CLOSE,     "HIP_CLOSE");
     lmod_register_packet_type(HIP_CLOSE_ACK, "HIP_CLOSE_ACK");
-    lmod_register_packet_type(HIP_PSIG,      "HIP_PSIG");
-    lmod_register_packet_type(HIP_TRIG,      "HIP_TRIG");
     lmod_register_packet_type(HIP_UPDATE,    "HIP_UPDATE");
     lmod_register_packet_type(HIP_LUPDATE,   "HIP_LUPDATE");
-    lmod_register_packet_type(HIP_DATA,      "HIP_DATA");
-    lmod_register_packet_type(HIP_PAYLOAD,   "HIP_PAYLOAD");
 }
 
 static int hip_init_handle_functions(void)
@@ -746,31 +699,6 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I1, HIP_STATE_NONE, &hip_check_i1,  20000);
     hip_register_handle_function(HIP_I1, HIP_STATE_NONE, &hip_handle_i1, 30000);
     hip_register_handle_function(HIP_I1, HIP_STATE_NONE, &hip_send_r1,   40000);
-
-    hip_register_handle_function(HIP_DATA, HIP_STATE_UNASSOCIATED, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_UNASSOCIATED, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_UNASSOCIATED, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I1_SENT, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I1_SENT, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I1_SENT, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I2_SENT, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I2_SENT, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_I2_SENT, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_R2_SENT, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_R2_SENT, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_R2_SENT, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_ESTABLISHED, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_ESTABLISHED, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_ESTABLISHED, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSING, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSING, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSING, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSED, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSED, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSED, &hip_send_r1,   40000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_NONE, &hip_check_i1,  20000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_NONE, &hip_handle_i1, 30000);
-    hip_register_handle_function(HIP_DATA, HIP_STATE_NONE, &hip_send_r1,   40000);
 
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_check_i2,  20000);
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_handle_i2, 30000);
@@ -840,30 +768,46 @@ static int hip_init_handle_functions(void)
 
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_add_signed_echo_response, 41000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_sign_and_mac_packet, 42000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_mac_and_sign_handler, 42000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_add_unsigned_echo_response, 43000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_add_signed_echo_response, 41000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_sign_and_mac_packet, 42000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_mac_and_sign_handler, 42000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_add_unsigned_echo_response, 43000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_add_signed_echo_response, 41000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_sign_and_mac_packet, 42000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_mac_and_sign_handler, 42000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_add_unsigned_echo_response, 43000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_send_i2,   50000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_check_r1,  20000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_build_esp_info, 31000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_build_solution, 32000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_diffie_hellman, 33000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &esp_prot_r1_handle_transforms, 34000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2, 40000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_add_signed_echo_response, 41000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_sign_and_mac_packet, 42000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_mac_and_sign_handler, 42000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_add_unsigned_echo_response, 43000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_send_i2, 50000);
 
@@ -944,6 +888,7 @@ void hip_exit(void)
     hip_delete_all_addresses();
 
     set_up_device(HIP_HIT_DEV, 0);
+    hip_remove_iface_all_local_hits();
 
     /* Next line is needed only if RVS or hiprelay is in use. */
     hip_uninit_services();
@@ -956,9 +901,11 @@ void hip_exit(void)
 
     lmod_uninit_packet_types();
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_oppdb_uninit();
-#endif
+    lmod_uninit_parameter_types();
+
+    lmod_uninit_state_init_functions();
+
+    lmod_uninit_state_uninit_functions();
 
 #ifdef CONFIG_HIP_RVS
     HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
@@ -1028,11 +975,11 @@ void hip_exit(void)
     hip_perf_destroy(perf_set);
 #endif
 
+    hip_unregister_sockets();
+
     hip_dh_uninit();
 
     lmod_uninit_disabled_modules();
-
-    hip_remove_kernel_modules();
 
     return;
 }
@@ -1070,18 +1017,14 @@ static void hip_close(int signum)
  */
 int hipd_init(const uint64_t flags)
 {
-    int                 err     = 0, certerr = 0, hitdberr = 0, i, j;
-    int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
+    int                 err     = 0, certerr = 0, i, j;
+    int                 killold = (flags & HIPD_START_KILL_OLD) > 0;
     unsigned int        mtu_val = HIP_HIT_DEV_MTU;
     char                str[64];
-    char                mtu[16];
-    struct sockaddr_in6 daemon_addr;
+    struct sockaddr_in6 daemon_addr = { 0 };
 
     /* Keep the flags around: they will be used at kernel module removal */
     sflags = flags;
-
-    memset(str, 0, 64);
-    memset(mtu, 0, 16);
 
     /* Make sure that root path is set up correcly (e.g. on Fedora 9).
      * Otherwise may get warnings from system() commands.
@@ -1117,21 +1060,11 @@ int hipd_init(const uint64_t flags)
     signal(SIGTERM, hip_close);
     signal(SIGCHLD, hip_sig_chld);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    HIP_IFEL(hip_init_oppip_db(), -1,
-             "Cannot initialize opportunistic mode IP database for " \
-             "non HIP capable hosts!\n");
-#endif
-    HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
+    HIP_IFEL(hip_init_cipher() < 0, -1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
     hip_init_hadb();
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_init_opp_db();
-#endif
-
 
     /* Resolve our current addresses, afterwards the events from kernel
      * will maintain the list This needs to be done before opening
@@ -1200,11 +1133,9 @@ int hipd_init(const uint64_t flags)
 
     HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
     set_up_device(HIP_HIT_DEV, 0);
-    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
     HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
-    sprintf(mtu, "%u", mtu_val);
-    strcpy(str, "ifconfig dummy0 mtu ");
-    strcat(str, mtu);
+    snprintf(str, sizeof(str), "ifconfig %s mtu %u", HIP_HIT_DEV, mtu_val);
     /* MTU is set using system call rather than in do_chflags to avoid
      * chicken and egg problems in hipd start up. */
     if (system(str) == -1) {
@@ -1212,12 +1143,11 @@ int hipd_init(const uint64_t flags)
     }
 
 
-    HIP_IFE(hip_init_host_ids(), 1);
+    HIP_IFE(hip_init_host_ids(), -1);
 
     hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL(hip_user_sock < 0, 1,
+    HIP_IFEL(hip_user_sock < 0, -1,
              "Could not create socket for user communication.\n");
-    bzero(&daemon_addr, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     daemon_addr.sin6_addr   = in6addr_loopback;
@@ -1234,8 +1164,6 @@ int hipd_init(const uint64_t flags)
     if (certerr < 0) {
         HIP_DEBUG("Initializing cert configuration file returned error\n");
     }
-
-    hitdberr = 0;
 
     /* Service initialization. */
     hip_init_services();
@@ -1278,7 +1206,7 @@ int hipd_init(const uint64_t flags)
                  "Module initialization failed.\n");
     }
 
-    hip_init_sockets();
+    hip_register_sockets();
 
 out_err:
     return err;

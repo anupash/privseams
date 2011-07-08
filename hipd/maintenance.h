@@ -31,6 +31,9 @@
 #include <sys/time.h>
 
 
+extern int hip_firewall_sock_lsi_fd;
+extern int hip_firewall_status;
+
 int hip_register_maint_function(int (*maint_function)(void),
                                 const uint16_t priority);
 int hip_unregister_maint_function(int (*maint_function)(void));
@@ -38,6 +41,7 @@ void hip_uninit_maint_functions(void);
 int hip_periodic_maintenance(void);
 void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);
+int hip_firewall_is_alive(void);
 
 /*Communication with firewall daemon*/
 int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r);

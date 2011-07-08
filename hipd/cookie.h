@@ -31,25 +31,25 @@
 
 #include "lib/core/protodefs.h"
 
+#define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
+
 struct hip_r1entry {
-    struct hip_common *r1;
-    uint32_t           generation;
-    uint64_t           Ci;
-    uint8_t            Ck;
-    uint8_t            Copaque[3];
+    union hip_msg_bfr buf;
+    uint32_t          generation;
+    uint8_t           Ci[PUZZLE_LENGTH];
+    uint8_t           Ck;
+    uint8_t           Copaque[HIP_PUZZLE_OPAQUE_LEN];
 };
 
 struct hip_common *hip_get_r1(struct in6_addr *ip_i,
                               struct in6_addr *ip_r,
                               struct in6_addr *peer_hit);
-struct hip_r1entry *hip_init_r1(void);
-void hip_uninit_r1(struct hip_r1entry *);
 int hip_recreate_all_precreated_r1_packets(void);
-int hip_precreate_r1(struct hip_r1entry *r1table,
-                     const struct in6_addr *hit,
-                     int (*sign)(void *key, struct hip_common *m),
-                     void *privkey,
-                     struct hip_host_id *pubkey);
+int hip_precreate_r1(struct hip_r1entry *const r1table,
+                     const struct in6_addr *const hit,
+                     int (*sign)(void *const key, struct hip_common *const m),
+                     void *const privkey,
+                     const struct hip_host_id *const pubkey);
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
                       struct hip_common *hdr,
                       const struct hip_solution *cookie);

@@ -71,8 +71,6 @@ int hip_add_pending_request(struct hip_pending_request *request);
 int hip_del_pending_request(struct hip_hadb_state *entry);
 int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
                                  struct hip_hadb_state *entry_new);
-int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
-                                    uint8_t reg_type);
 int hip_handle_param_reg_info(struct hip_hadb_state *entry,
                               struct hip_common *source_msg,
                               struct hip_common *target_msg);
@@ -85,5 +83,6 @@ int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
                                 struct hip_common *msg);
 
 int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg);
+int hip_handle_req_user_msg(const struct hip_common *const msg);
 
 #endif /* HIP_HIPD_REGISTRATION_H */

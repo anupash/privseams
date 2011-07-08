@@ -151,14 +151,14 @@ int hip_set_lowcapability(void)
     HIP_DEBUG("Going to clear all capabilities except the ones needed\n");
     data.effective = data.permitted = data.inheritable = 0;
     /* for CAP_NET_RAW capability */
-    data.effective |= (1 << CAP_NET_RAW);
-    data.permitted |= (1 << CAP_NET_RAW);
+    data.effective |= 1 << CAP_NET_RAW;
+    data.permitted |= 1 << CAP_NET_RAW;
     /* for CAP_NET_ADMIN capability */
-    data.effective |= (1 << CAP_NET_ADMIN);
-    data.permitted |= (1 << CAP_NET_ADMIN);
+    data.effective |= 1 << CAP_NET_ADMIN;
+    data.permitted |= 1 << CAP_NET_ADMIN;
     /* kernel module loading and removal capability */
-    data.effective |= (1 << CAP_SYS_MODULE);
-    data.permitted |= (1 << CAP_SYS_MODULE);
+    data.effective |= 1 << CAP_SYS_MODULE;
+    data.permitted |= 1 << CAP_SYS_MODULE;
 
     HIP_IFEL(hip_capset(&header, &data), -1,
              "error in capset (do you have capabilities kernel module?)");

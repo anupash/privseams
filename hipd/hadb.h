@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,9 +33,6 @@
 #include "lib/core/state.h"
 
 
-/* For switch userspace / kernel IPsec */
-extern int hip_use_userspace_ipsec;
-
 extern HIP_HASHTABLE *hadb_hit;
 
 void hip_hadb_hold_entry(void *entry);
@@ -65,7 +62,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(struct hip_hadb_state *ha);
-void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha);
 int hip_init_peer(struct hip_hadb_state *entry, const struct hip_host_id *peer);
 int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 
@@ -74,9 +71,7 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr);
 
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
-                           const struct in6_addr *new_addr,
-                           uint32_t interface_id, uint32_t lifetime,
-                           int state, in_port_t port);
+                           const struct in6_addr *new_addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
@@ -93,7 +88,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const char *peer_hostname);
 
 int hip_del_peer_info_entry(struct hip_hadb_state *ha);
-int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 
 /* Utilities */
@@ -127,8 +121,8 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi);
 struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
                                                         hip_lsi_t *lsi_dst);
 
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
-                                              struct in6_addr *src_addr,
-                                              struct in6_addr *dst_addr);
+int hip_create_or_update_security_associations_and_sp(struct hip_hadb_state *const ha,
+                                                      const struct in6_addr *const src_addr,
+                                                      const struct in6_addr *const dst_addr);
 
 #endif /* HIP_HIPD_HADB_H */

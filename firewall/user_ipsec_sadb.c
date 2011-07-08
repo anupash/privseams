@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  * @brief Security association database for IPsec connections
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>
@@ -52,7 +53,6 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/ife.h"
 #include "lib/core/keylen.h"
-#include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/core/state.h"
 #include "esp_prot_api.h"
@@ -80,9 +80,9 @@ struct hip_link_entry {
 };
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
-HIP_HASHTABLE *sadb = NULL;
+static HIP_HASHTABLE *sadb = NULL;
 /* database storing shortcuts to sa entries for incoming packets */
-HIP_HASHTABLE *linkdb = NULL;
+static HIP_HASHTABLE *linkdb = NULL;
 
 
 /**
@@ -96,8 +96,6 @@ static unsigned long hip_sa_entry_hash(const struct hip_sa_entry *sa_entry)
     struct in6_addr addr_pair[2];               /* in BEET-mode these are HITs */
     unsigned char   hash[INDEX_HASH_LENGTH];
     int             err = 0;
-
-    memset(&hash, 0, INDEX_HASH_LENGTH);
 
     if (sa_entry->mode == 3) {
         /* use hits to index in beet mode
@@ -171,8 +169,6 @@ static unsigned long hip_link_entry_hash(const struct hip_link_entry *link_entry
 
     // values have to be present
     HIP_ASSERT(link_entry != NULL && link_entry->spi != 0);
-
-    memset(hash, 0, INDEX_HASH_LENGTH);
 
     /* concatenate dst_addr and spi */
     memcpy(&hash_input[0], &link_entry->dst_addr, sizeof(struct in6_addr));
@@ -406,10 +402,6 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
         case HIP_ESP_3DES_SHA1:
         case HIP_ESP_3DES_MD5:
             key_len = hip_enc_key_length(ealg) / 3;
-
-            memset(key1, 0, key_len);
-            memset(key2, 0, key_len);
-            memset(key3, 0, key_len);
 
             memcpy(key1, &enc_key[0], key_len);
             memcpy(key2, &enc_key[8], key_len);
@@ -705,21 +697,12 @@ out_err:
 
 /**
  * uninits the sadb and linkdb by deleting all entries stored in there
- *
- * @return -1, if error occurred, else 0
  */
-int hip_sadb_uninit(void)
+void hip_sadb_uninit(void)
 {
-    int err = 0;
-
-    if ((err = hip_sadb_flush())) {
-        HIP_ERROR("failed to flush sadb\n");
-    }
-
+    hip_sadb_flush();
     free(sadb);
     free(linkdb);
-
-    return err;
 }
 
 /**
@@ -832,29 +815,32 @@ out_err:
 }
 
 /**
- * flushes all entries in the sadb
+ * Call-back function for deleting a hip_sa_entry object.
  *
- * @return      -1, if error occurred, else 0
+ * @param ptr points to the hip_sa_entry object to delete.
  */
-int hip_sadb_flush(void)
+static void delete_sa_entry(void *const ptr)
 {
-    int                  err   = 0, i = 0;
-    LHASH_NODE          *item  = NULL, *tmp = NULL;
-    struct hip_sa_entry *entry = NULL;
+    int                        err   = 0;
+    struct hip_sa_entry *const entry = ptr;
 
-    // iterating over all elements
-    list_for_each_safe(item, tmp, sadb, i)
-    {
-        HIP_IFEL(!(entry = list_entry(item)), -1,
-                 "failed to get list entry\n");
-        HIP_IFEL(hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr), -1,
-                 "failed to delete sa entry\n");
+    err = hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr);
+    if (err) {
+        char src[INET6_ADDRSTRLEN];
+        char dst[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &entry->inner_src_addr, src, sizeof(src));
+        inet_ntop(AF_INET6, &entry->inner_dst_addr, dst, sizeof(dst));
+        HIP_ERROR("Deleting SA entry %s -> %s failed with error %d\n", src, dst,
+                  err);
     }
+}
 
-    HIP_DEBUG("sadb flushed\n");
-
-out_err:
-    return err;
+/**
+ * flushes all entries in the sadb
+ */
+void hip_sadb_flush(void)
+{
+    hip_ht_doall(sadb, delete_sa_entry);
 }
 
 /**

@@ -74,7 +74,7 @@
 #define ERR -1
 
 
-int hip_nsupdate_status = 0;
+static int hip_nsupdate_status = 0;
 
 /**
  * This function is an interface to turn on/off DNS updates
@@ -109,23 +109,21 @@ int hip_get_nsupdate_status(void)
  * @return          newly allocated string with result or NULL in case of error
  */
 
-static char *make_env(const char *name, char *value)
+static char *make_env(const char *const name, const char *const value)
 {
     char *result = NULL;
-    int   err    = 0;
 
-    if ((name == NULL) || (value == NULL)) {
+    /* Malloc enough space for both strings, the '=' and a '\0'. */
+    if (!name || !value ||
+        !(result = malloc(strlen(name) + strlen(value) + 2))) {
         return NULL;
     }
 
-    HIP_IFEL(!(result = malloc(strlen(name) + 1 + strlen(value) + 1)),
-             -1, "malloc");     // name,'=',value,0
-
+    /* strcpy first part of result as strcat relies on null-termination to append
+     * a string and this is not guaranteed on memory provided by malloc */
     strcpy(result, name);
     strcat(result, "=");
     strcat(result, value);
-
-out_err:
 
     return result;
 }
@@ -140,9 +138,8 @@ out_err:
  */
 static void sig_chld(UNUSED int signo)
 {
-    pid_t child_pid;
-    int   child_status;   // child exit code
-    child_pid = waitpid(0, &child_status, WNOHANG);
+    int child_status;     // child exit code
+    waitpid(0, &child_status, WNOHANG);
 }
 
 /**
@@ -272,7 +269,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
  * @return          0
  */
 
-static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
+static int run_nsupdate_for_hit(struct local_host_id *entry, void *opaq)
 {
     int         start = 0;
     char        ip_str[40]; // buffer for one IP address
@@ -287,7 +284,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 
     HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-    hip_convert_hit_to_str(&entry->lhi.hit, NULL, hit);
+    hip_convert_hit_to_str(&entry->hit, NULL, hit);
 
     /* make space-separated list of IP addresses in ips_str */
     list_for_each_safe(item, tmp, addresses, i) {

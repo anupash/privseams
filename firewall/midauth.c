@@ -86,7 +86,7 @@ static void update_ipv4_header(struct iphdr *ip, int len)
     }
 
     checksum  = (checksum >> 16) + (checksum & 0xffff);
-    checksum += (checksum >> 16);
+    checksum +=  checksum >> 16;
 
     ip->check = ~checksum;
 }
@@ -145,7 +145,7 @@ static void update_udp_header(struct iphdr *ip, int len)
     sum += udp->len;
 
     /* set the checksum */
-    udp->check = (CHECKSUM_CARRY(sum));
+    udp->check = CHECKSUM_CARRY(sum);
 }
 
 /**
@@ -157,12 +157,9 @@ static void update_udp_header(struct iphdr *ip, int len)
  */
 static void update_hip_checksum_ipv4(struct iphdr *ip)
 {
-    struct sockaddr_in src, dst;
+    struct sockaddr_in src = { 0 }, dst = { 0 };
     struct hip_common *msg = (struct hip_common *) ((char *) ip +
                                                     (ip->ihl * 4));
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     src.sin_family = AF_INET;
     memcpy(&src.sin_addr, &ip->saddr, sizeof(uint32_t));
@@ -183,12 +180,9 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
  */
 static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 {
-    struct sockaddr_in6 src, dst;
+    struct sockaddr_in6 src = { 0 }, dst = { 0 };
     struct hip_common  *msg = (struct hip_common *) ((char *) ip +
                                                      sizeof(struct ip6_hdr));
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     src.sin6_family = AF_INET6;
     memcpy(&src.sin6_addr, &ip->ip6_src, sizeof(struct in6_addr));
@@ -246,26 +240,30 @@ static void midauth_update_all_headers(struct hip_fw_context *ctx)
 /**
  * Verify that the challenge response in a packet is valid
  *
- * @param hip packet that contains the challenge response
- * @param s   challenge response parameter
+ * @param solution      challenge response parameter
+ * @param initiator_hit HIT of the initiator
+ * @param responder_hit HIT of the receiver
  * @return    0 on success, <0 otherwise
  */
-int midauth_verify_challenge_response(struct hip_common *hip,
-                                      struct hip_challenge_response *s)
+int midauth_verify_challenge_response(const struct hip_challenge_response *const solution,
+                                      const hip_hit_t initiator_hit,
+                                      const hip_hit_t responder_hit)
 {
-    int                 err = 0;
-    struct hip_solution solution;
-    uint8_t             digist[HIP_AH_SHA_LEN];
+    int                      err = 0;
+    struct puzzle_hash_input puzzle_input;
+    uint8_t                  digest[HIP_AH_SHA_LEN];
 
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, solution->opaque, 24, digest) < 0,
              -1, "Building of SHA1 Random seed I failed\n");
-    solution.K        = s->K;
-    solution.reserved = 0;
-    solution.I        = *digist & 0x40;
-    solution.J        = s->J;
-    HIP_DEBUG("solution: %d \n", solution.J);
 
-    HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0,
+    memcpy(puzzle_input.puzzle,
+           &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
+           PUZZLE_LENGTH);
+    puzzle_input.initiator_hit = initiator_hit;
+    puzzle_input.responder_hit = responder_hit;
+    memcpy(puzzle_input.solution, solution->J, PUZZLE_LENGTH);
+
+    HIP_IFEL(hip_verify_puzzle_solution(&puzzle_input, solution->K),
              -1, "Solution is wrong\n");
 
 out_err:

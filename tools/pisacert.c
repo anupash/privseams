@@ -59,10 +59,11 @@ static int get_default_hit(struct in6_addr *result)
     const struct hip_tlv_common *param = NULL;
     const struct in6_addr       *hit   = NULL;
 
-    msg = hip_msg_alloc();
-    HIP_IFE(!msg, -1);
+    if (!(msg = hip_msg_alloc())) {
+        return -1;
+    }
 
-    HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1);
+    HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_GET_DEFAULT_HIT, 0), -1);
     HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);
 
     param = hip_get_param(msg, HIP_PARAM_HIT);
@@ -91,8 +92,6 @@ static int create_certificate(time_t *not_before, time_t *not_after,
     int                       err = 0;
     struct hip_cert_spki_info cert;
 
-    memset(&cert, 0, sizeof(cert));
-
     HIP_IFEL(!not_before || !not_after || !hit || !certificate, -1,
              "NULL parameter found.\n");
 
@@ -115,7 +114,6 @@ int main(int argc, char *argv[])
     int             err               = 0, days = 0;
     FILE           *f                 = NULL;
     char            certificate[1024] = "";
-    size_t          ignored;
 
     HIP_IFEL(argc != 3, -1, "Wrong number of arguments.\n");
 
@@ -136,7 +134,7 @@ int main(int argc, char *argv[])
                                 certificate, sizeof(certificate)) != 0,
              -1, "Could not create the certificate.\n");
 
-    ignored = fwrite(certificate, strlen(certificate), 1, f);
+    fwrite(certificate, strlen(certificate), 1, f);
 
 out_err:
     if (err == -1) {

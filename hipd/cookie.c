@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,6 +29,7 @@
  *
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -37,14 +38,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/icomm.h"
 #include "lib/core/ife.h"
-#include "lib/core/list.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/tool/pk.h"
@@ -54,9 +53,7 @@
 #include "cookie.h"
 
 
-#define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
-
-int hip_cookie_difficulty = 1ULL; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
+static uint8_t hip_cookie_difficulty = 0; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 /**
  * query for current puzzle difficulty
@@ -75,11 +72,11 @@ static int hip_get_cookie_difficulty(void)
  * @param k the new puzzle difficulty
  * @return the k value on success or negative on error
  */
-static int hip_set_cookie_difficulty(int k)
+static int hip_set_cookie_difficulty(const uint8_t k)
 {
-    if (k > HIP_PUZZLE_MAX_K || k < 1) {
+    if (k > MAX_PUZZLE_DIFFICULTY) {
         HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
-                  k, 1, HIP_PUZZLE_MAX_K);
+                  k, 1, MAX_PUZZLE_DIFFICULTY);
         return -1;
     }
     hip_cookie_difficulty = k;
@@ -97,13 +94,7 @@ static int hip_set_cookie_difficulty(int k)
  */
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int              err     = 0, diff = 0;
-    const hip_hit_t *dst_hit = NULL;
-    hip_hit_t        all_zero_hit;
-    bzero(&all_zero_hit, sizeof(all_zero_hit));
-
-    /* obtain the hit */
-    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+    int err = 0, diff = 0;
 
     diff = hip_get_cookie_difficulty();
 
@@ -121,21 +112,23 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int              err     = 0;
-    const int       *newVal  = NULL;
+    const int       *new_val = NULL;
     const hip_hit_t *dst_hit = NULL;
-    hip_hit_t        all_zero_hit;
-    bzero(&all_zero_hit, sizeof(all_zero_hit));
 
-    HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-             -1, "No HIT set\n");
-    HIP_IFEL(!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT)),
-             -1, "No difficulty set\n");
+    if (!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT))) {
+        HIP_ERROR("No HIT set\n");
+        return -1;
+    }
+    if (!(new_val = hip_get_param_contents(msg, HIP_PARAM_INT))) {
+        HIP_ERROR("No difficulty set\n");
+        return -1;
+    }
+    if (hip_set_cookie_difficulty(*new_val), -1) {
+        HIP_ERROR("Setting difficulty failed\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_set_cookie_difficulty(*newVal), -1,
-             "Setting difficulty failed\n");
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -179,7 +172,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
     }
 
     for (i = 0; i < 3; i++) {
-        base ^= ((base >> (24 - i * 8)) & 0xFF);
+        base ^= (base >> (24 - i * 8)) & 0xFF;
     }
 
     /* base ready */
@@ -201,14 +194,15 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
                               struct in6_addr *our_hit)
 {
-    struct hip_common        *err         = NULL, *r1 = NULL;
-    struct hip_r1entry       *hip_r1table = NULL;
-    struct hip_host_id_entry *hid         = NULL;
-    int                       idx, len;
+    struct hip_common    *err         = NULL, *r1 = NULL;
+    struct hip_r1entry   *hip_r1table = NULL;
+    struct local_host_id *hid         = NULL;
+    int                   idx, len;
 
     /* Find the proper R1 table and copy the R1 message from the table */
     HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)),
+    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                          our_hit, HIP_ANY_ALGO, -1)),
              NULL, "Unknown HIT\n");
 
     hip_r1table = hid->r1;
@@ -216,9 +210,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     HIP_DEBUG("Calculated index: %d\n", idx);
 
     /* Create a copy of the found entry */
-    len = hip_get_msg_total_len(hip_r1table[idx].r1);
+    len = hip_get_msg_total_len(&hip_r1table[idx].buf.msg);
     r1  = hip_msg_alloc();
-    memcpy(r1, hip_r1table[idx].r1, len);
+    memcpy(r1, &hip_r1table[idx].buf.msg, len);
     err = r1;
 
 out_err:
@@ -227,21 +221,6 @@ out_err:
     }
 
     HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
-    return err;
-}
-
-/**
- * initialize an R1 entry structure
- *
- * @return The allocated R1 entry structure. Caller deallocates.
- */
-struct hip_r1entry *hip_init_r1(void)
-{
-    struct hip_r1entry *err;
-
-    HIP_IFE(!(err = calloc(HIP_R1TABLESIZE, sizeof(struct hip_r1entry))), NULL);
-
-out_err:
     return err;
 }
 
@@ -255,9 +234,11 @@ out_err:
  * @param pubkey the host id (public key)
  * @return zero on success and non-zero on error
  */
-int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
-                     int (*sign)(void *key, struct hip_common *m),
-                     void *privkey, struct hip_host_id *pubkey)
+int hip_precreate_r1(struct hip_r1entry *const r1table,
+                     const struct in6_addr *const hit,
+                     int (*sign)(void *const key, struct hip_common *const m),
+                     void *const privkey,
+                     const struct hip_host_id *const pubkey)
 {
     int i = 0;
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
@@ -265,44 +246,17 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
 
         cookie_k = hip_get_cookie_difficulty();
 
-        r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
-                                      cookie_k);
-        if (!r1table[i].r1) {
+        hip_msg_init(&r1table[i].buf.msg);
+
+        if (hip_create_r1(&r1table[i].buf.msg, hit, sign, privkey, pubkey, cookie_k)) {
             HIP_ERROR("Unable to precreate R1s\n");
-            goto err_out;
+            return 0;
         }
 
         HIP_DEBUG("Packet %d created\n", i);
     }
 
     return 1;
-
-err_out:
-    return 0;
-}
-
-/**
- * uninitialize R1 table
- *
- * @param hip_r1table R1 table
- */
-void hip_uninit_r1(struct hip_r1entry *hip_r1table)
-{
-    int i;
-
-    /* The R1 packet consist of 2 memory blocks. One contains the actual
-     * buffer where the packet is formed, while the other contains
-     * pointers to different TLVs to speed up parsing etc.
-     * The r1->common is the actual buffer, and r1 is the structure
-     * holding only pointers to the TLVs.
-     */
-    if (hip_r1table) {
-        for (i = 0; i < HIP_R1TABLESIZE; i++) {
-            free(hip_r1table[i].r1);
-        }
-        free(hip_r1table);
-        hip_r1table = NULL;
-    }
 }
 
 /**
@@ -325,10 +279,11 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
      * of this function was inverted. I.e. This function now returns
      * negative for error conditions, zero otherwise. It used to be the
      * other way around. -Lauri 23.07.2008. */
-    const struct hip_puzzle  *puzzle = NULL;
-    struct hip_r1entry       *result = NULL;
-    struct hip_host_id_entry *hid    = NULL;
-    int                       err    = 0;
+    const struct hip_puzzle *puzzle = NULL;
+    struct hip_r1entry      *result = NULL;
+    struct local_host_id    *hid    = NULL;
+    struct puzzle_hash_input puzzle_input;
+    int                      err = 0;
 
     /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
@@ -338,7 +293,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
              -1, "Requested source HIT not (any more) available.\n");
     result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 
-    puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
+    puzzle = hip_get_param(&result->buf.msg, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
     HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                     HIP_PUZZLE_OPAQUE_LEN), -1,
@@ -353,29 +308,31 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
         HIP_IFEL(solution->K != result->Ck, -1,
                  "Solution's K did not match any sent Ks.\n");
-        HIP_IFEL(solution->I != result->Ci, -1,
+        HIP_IFEL(memcmp(solution->I, result->Ci, PUZZLE_LENGTH), -1,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, result->Copaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
-                 "Solution's opaque data does not match sent opaque " \
-                 "data.\n");
+                 "Solution's opaque data does not match sent opaque data.\n");
         HIP_DEBUG("Received solution to an old puzzle\n");
     } else {
         HIP_HEXDUMP("solution", solution, sizeof(*solution));
         HIP_HEXDUMP("puzzle", puzzle, sizeof(*puzzle));
-        HIP_IFEL(solution->I != puzzle->I, -1,
+        HIP_IFEL(memcmp(solution->I, puzzle->I, PUZZLE_LENGTH), -1,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
-                 "Solution's opaque data does not match the opaque " \
-                 "data sent\n");
+                 "Solution's opaque data does not match the opaque data sent\n");
     }
 
-    HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), -1,
-             "Puzzle incorrectly solved.\n");
+    memcpy(puzzle_input.puzzle, solution->I, PUZZLE_LENGTH);
+    puzzle_input.initiator_hit = hdr->hits;
+    puzzle_input.responder_hit = hdr->hitr;
+    memcpy(puzzle_input.solution, solution->J, PUZZLE_LENGTH);
+
+    HIP_IFEL(hip_verify_puzzle_solution(&puzzle_input, solution->K),
+             -1, "Puzzle incorrectly solved.\n");
 
 out_err:
-
     return err;
 }
 
@@ -386,15 +343,12 @@ out_err:
  * @param opaque unused, required for compatibility with hip_for_each_hi()
  * @return zero on success or negative on error
  */
-static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
+static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
-    int err = 0;
-    int (*signature_func)(void *key, struct hip_common *m);
+    int (*signature_func)(void *const key, struct hip_common *const m);
 
-    hip_uninit_r1(entry->r1);
-    HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
-    switch (hip_get_host_id_algo(entry->host_id)) {
+    switch (hip_get_host_id_algo(&entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
         break;
@@ -405,15 +359,16 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
         signature_func = hip_ecdsa_sign;
         break;
     default:
-        HIP_IFEL(1, -1, "Unkown algorithm");
+        HIP_ERROR("Unkown algorithm");
+        return -1;
     }
 
-    HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
-                              signature_func,
-                              entry->private_key, entry->host_id), -1);
+    if (!hip_precreate_r1(entry->r1, &entry->hit, signature_func,
+                          entry->private_key, &entry->host_id)) {
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -423,20 +378,5 @@ out_err:
  */
 int hip_recreate_all_precreated_r1_packets(void)
 {
-    HIP_HASHTABLE      *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    LHASH_NODE         *curr, *iter;
-    struct hip_host_id *tmp;
-    int                 c;
-
-    hip_for_each_hi(hip_recreate_r1s_for_entry_move, ht);
-
-    list_for_each_safe(curr, iter, ht, c)
-    {
-        tmp = list_entry(curr);
-        hip_ht_add(HIP_DB_LOCAL_HID, tmp);
-        list_del(tmp, ht);
-    }
-
-    hip_ht_uninit(ht);
-    return 0;
+    return hip_for_each_hi(hip_recreate_r1s_for_entry_move, NULL);
 }

@@ -71,12 +71,11 @@ build_rpm()
     done
 
     SPECFILE=$BUILDDIR/SPECS/hipl.spec
-    RELEASE=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
-    echo "Release: $RELEASE" >> $SPECFILE
+    echo "Release: $VCS_REVISION" >> $SPECFILE
     echo "%define _topdir $BUILDDIR" >> $SPECFILE
-    cat $SRCDIR_PACKAGING/hipl-rpm.spec >> $SPECFILE
+    cat $SRCDIR_PACKAGING/hipl.spec >> $SPECFILE
 
     make dist > /dev/null
     cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
@@ -86,7 +85,9 @@ build_rpm()
 
 build_deb()
 {
-    dpkg-buildpackage -us -uc -I.bzr -j32 -tc
+    cp debian/changelog.template debian/changelog
+    debchange --newversion ${VERSION}-${VCS_REVISION} "entry automatically added by $0"
+    dpkg-buildpackage -us -uc -I.bzr $BUILDPACKAGE_OPTS
 }
 
 ############### Main program #####################
@@ -95,33 +96,37 @@ set -e
 
 SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
 VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
+VCS_REVISION=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 SRCDIR_PACKAGING=$SRCDIR/packaging
 REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=..
-    PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     INDEXING_CMD=mkindex_deb
     PACKAGING_CMD=build_deb
+    if test -r /etc/maemo_version; then
+        export PATH=/usr/bin/dh7:/usr/bin:$PATH
+        export SBOX_REDIRECT_IGNORE=/usr/bin/perl
+        BUILDPACKAGE_OPTS="-d -rfakeroot"
+    else
+        DISTRO_RELEASE=$(lsb_release -c | cut -f2)
+        PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
+        BUILDPACKAGE_OPTS=-j32
+    fi
 elif test -r /etc/redhat-release; then
-    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
-    PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
     PACKAGING_CMD=build_rpm
-    case $(lsb_release -d) in
-        "Description:	CentOS release 5.5 (Final)")
-            export CPPFLAGS=-U__STRICT_ANSI__;;
-    esac
+    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
+    PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
 else
     die "unknown distribution"
 fi

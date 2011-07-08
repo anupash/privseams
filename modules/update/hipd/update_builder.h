@@ -32,18 +32,19 @@
  * @author Rene Hummen
  */
 
-#ifndef MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
-#define MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
 
 #include <stdint.h>
 
 #include "lib/core/protodefs.h"
 #include "update.h"
 
-int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
-int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
-int hip_build_param_locator(struct hip_common *msg,
-                            struct hip_locator_info_addr_item *addrs,
-                            int addr_count);
+int hip_build_param_seq(struct hip_common *const msg, const uint32_t update_id);
+int hip_build_param_ack(struct hip_common *const msg,
+                        const uint32_t peer_update_id);
+int hip_build_param_locator(struct hip_common *const msg,
+                            const struct hip_locator_info_addr_item *const addrs,
+                            const int addr_count);
 
-#endif /* MODULES_UPDATE_HIPD_UPDATE_BUILDER_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H */

@@ -30,7 +30,7 @@
 #include <stdio.h>
 
 #include "firewall/port_bindings.h"
-#include "firewall/port_bindings.c"
+#include "test_suites.h"
 
 // these tests do not clean up after themselves because they assume that
 // check runs them in dedicated processes so the OS does the cleanup.
@@ -100,10 +100,6 @@ START_TEST(test_hip_port_bindings_get_without_cache)
     test_hip_port_bindings_get(false);
 }
 END_TEST
-
-// For unknown reasons, this file does not compile without the following,
-// seemingly useless forward declaration
-Suite *firewall_port_bindings(void);
 
 Suite *firewall_port_bindings(void)
 {

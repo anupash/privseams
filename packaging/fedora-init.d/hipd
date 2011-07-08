@@ -17,7 +17,7 @@ BASENAME="hipd"
 
 #PID_FILE=/var/run/hipd.pid
 LOCK_FILE=/var/lock/subsys/hipd
-OPTIONS="-bk"
+OPTIONS="-bkN"
 
 # pull in sysconfig settings
 [ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd

@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Aalto University and RWTH Aachen University.
+# Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -23,12 +23,13 @@
 
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h))
+HIPL_HEADER_LOCATIONS = firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*.h test/*/*.h test/*/*/*.h
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,$(HIPL_HEADER_LOCATIONS)))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc patches version.h .uncrustify.cfg
-EXTRA_DIST += .uncrustify-0.57.cfg tools/bazaar/plugins/stylecheck.py
-EXTRA_DIST += packaging process_modules.py tools/maintainer
+EXTRA_DIST  = .dir-locals.el .uncrustify.cfg .uncrustify-0.57.cfg .vimrc
+EXTRA_DIST += process_modules.py version.h
+EXTRA_DIST += debian doc patches packaging tools/bazaar tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh *.xml))
@@ -66,14 +67,13 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 
 
 ### tests ###
-TESTS           =
-check_PROGRAMS  =
-
 if HIP_UNITTESTS
-TESTS           += test/check_firewall \
-                   test/check_lib_core
-check_PROGRAMS  += test/check_firewall \
-                   test/check_lib_core
+TESTS           = test/check_firewall \
+                  test/check_lib_core \
+                  test/check_lib_tool
+check_PROGRAMS  = test/check_firewall \
+                  test/check_lib_core \
+                  test/check_lib_tool
 endif
 
 
@@ -101,7 +101,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/esp_prot_hipd_msg.c     \
                     hipd/esp_prot_light_update.c \
                     hipd/hadb.c                  \
-                    hipd/hadb_legacy.c           \
                     hipd/hidb.c                  \
                     hipd/hip_socket.c            \
                     hipd/hipd.c                  \
@@ -114,6 +113,7 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/nat.c                   \
                     hipd/netdev.c                \
                     hipd/nsupdate.c              \
+                    hipd/opp_mode.c              \
                     hipd/output.c                \
                     hipd/pkt_handling.c          \
                     hipd/registration.c          \
@@ -125,13 +125,7 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/oppdb.c                \
-                     hipd/oppipdb.c
-endif
-
-firewall_hipfw_SOURCES = firewall/cache.c               \
-                         firewall/conntrack.c           \
+firewall_hipfw_sources = firewall/cache.c               \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
                          firewall/esp_prot_config.c     \
@@ -147,18 +141,23 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/port_bindings.c       \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
-                         firewall/sysopp.c              \
                          firewall/user_ipsec_api.c      \
                          firewall/user_ipsec_esp.c      \
                          firewall/user_ipsec_fw_msg.c   \
                          firewall/user_ipsec_sadb.c
 
 if HIP_MIDAUTH
-firewall_hipfw_SOURCES += firewall/midauth.c   \
+firewall_hipfw_sources += firewall/midauth.c   \
                           firewall/pisa.c      \
                           firewall/pisa_cert.c
 endif
 
+# The firewall unit test program is linked against the firewall object files.
+# To avoid duplicate symbols during linking some object files need to excluded.
+# Add all files that need to be excluded here.
+firewall_hipfw_SOURCES = $(firewall_hipfw_sources) \
+                         firewall/conntrack.c      \
+                         firewall/main.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/capability.c      \
@@ -197,13 +196,21 @@ endif
 
 
 test_check_firewall_SOURCES = test/check_firewall.c          \
+                              test/mocks.c                   \
+                              test/firewall/conntrack.c      \
                               test/firewall/file_buffer.c    \
+                              test/firewall/helpers.c        \
                               test/firewall/line_parser.c    \
-                              test/firewall/port_bindings.c
+                              test/firewall/port_bindings.c  \
+                              $(firewall_hipfw_sources)
 
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \
+                              test/lib/core/solve.c          \
                               test/lib/core/straddr.c
+
+test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
+                              test/lib/tool/checksum.c
 
 # Include module Makefile.am's.
 # TODO: Make this inclusion dynamic
@@ -211,19 +218,24 @@ include modules/heartbeat/Makefile.am
 include modules/heartbeat_update/Makefile.am
 include modules/update/Makefile.am
 
-### library dependencies ###
+### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
+test_check_lib_tool_LDADD                = lib/core/libhipcore.la
 test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
+
+### dynamic library dependencies ###
+
+test_check_firewall_LDFLAGS              = -ldl
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
@@ -253,12 +265,13 @@ tools_hipdnsproxydir    = $(pythondir)/hipdnsproxy
 
 
 ### misc stuff ###
+
+# This is supposed to be a sanity check target to run before pushing changes
+# to the world at large. It should catch a number of easily-avoidable mistakes.
+alltests: doxygen checkheaders check distcheck
+
 doxygen: doc/Doxyfile
 	doxygen $<
-
-# CentOS 5.5 requires this or otherwise autoreconf gives the error:
-# Makefile.am:213: `nodist_doc_DATA' is used but `docdir' is undefined
-docdir = ${datadir}/doc/${PACKAGE}
 
 if HAVE_XMLTO
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
@@ -285,13 +298,12 @@ HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 DISTCLEANFILES       = $(wildcard modules/*.h)
 
+$(HIPL_HEADER_OBJS): $(BUILT_SOURCES)
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(AM_V_CC) $(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-# Ensure that version.h is created before everything else. This does not work
-# when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/checkout/dirstate)
 	bzr version-info $(srcdir) --custom --template='#define VCS_REVISION "{revno}"\n#define VCS_DATE "{date}"\n#define VCS_BRANCH "{branch_nick}"\n' > $@
@@ -301,5 +313,6 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/checkout/dirstate)
 dist-hook:
 	rm -f $(addprefix $(distdir)/doc/,Doxyfile HOWTO.xml)
 	rm -f $(addprefix $(distdir)/tools/,nsupdate.pl hipdnsproxy/hipdnsproxy hipdnskeyparse/hipdnskeyparse)
+	rm -f $(addprefix $(distdir)/debian/,hipl-dnsproxy.dirs hipl-dnsproxy.install)
 
-.PHONY: bin checkheaders deb doxygen rpm syncrepo*
+.PHONY: alltests bin checkheaders deb doxygen rpm syncrepo*

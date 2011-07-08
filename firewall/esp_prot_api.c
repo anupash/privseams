@@ -40,21 +40,19 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <openssl/rand.h>
+#include <openssl/sha.h>
 
+#include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashchain.h"
 #include "lib/core/hashchain_store.h"
 #include "lib/core/hashtree.h"
 #include "lib/core/ife.h"
+#include "lib/core/state.h"
 #include "esp_prot_config.h"
 #include "esp_prot_fw_msg.h"
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
-
-#include <openssl/sha.h>
-
-#include "lib/core/common.h"
-#include "lib/core/state.h"
 
 
 /********* esp protection modes config *********/
@@ -286,9 +284,6 @@ int esp_prot_init(void)
              "failed to initialize the update-store\n");
 
     HIP_DEBUG("setting up esp_prot_transforms...\n");
-
-    // init all possible transforms
-    memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(struct esp_prot_tfm));
 
     // set available transforms to used
     esp_prot_transforms[token_transform].is_used = 1;
@@ -636,15 +631,13 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
                                const uint16_t esp_length,
                                struct hip_sa_entry *entry)
 {
-    int           err         = 0;
-    hash_function hash_func   = NULL;
-    int           hash_length = 0;
+    int           err       = 0;
+    hash_function hash_func = NULL;
 
     // check whether cumulative authentication is active
     if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE ||
         entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL) {
-        hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
-        hash_func   = esp_prot_get_hash_function(entry->esp_prot_transform);
+        hash_func = esp_prot_get_hash_function(entry->esp_prot_transform);
 
         HIP_DEBUG("adding IPsec packet with SEQ %u to ring buffer at position %u...\n",
                   entry->sequence - 1, entry->next_free);
@@ -653,12 +646,8 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
         hash_func(esp_packet, esp_length,
                   entry->hash_buffer[entry->next_free].packet_hash);
         entry->hash_buffer[entry->next_free].seq = entry->sequence - 1;
-
-        HIP_HEXDUMP("added packet hash: ",
-                    entry->hash_buffer[entry->next_free].packet_hash,
-                    hash_length);
-
-        entry->next_free = (entry->next_free + 1) % ring_buffer_size;
+        entry->next_free                         = (entry->next_free + 1) %
+                                                   ring_buffer_size;
     }
 
     return err;

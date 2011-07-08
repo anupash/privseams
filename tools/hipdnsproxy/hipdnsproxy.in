@@ -57,7 +57,10 @@ import copy
 import errno
 
 #local imports
-sys.path.append('@pythondir@/hipdnsproxy')
+
+# prepending (instead of appending) to make sure hosts.py does not
+# collide with the system default
+sys.path.insert(0, '@pythondir@/hipdnsproxy')
 import hosts
 import util
 import DNS
@@ -151,7 +154,7 @@ class ResolvConf:
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
 
-        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
+        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart > /dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = self.filetowatch
@@ -215,7 +218,9 @@ class ResolvConf:
             os.system(self.dnsmasq_restart)
             self.fout.write('Hooked with dnsmasq\n')
             # Restarting of dnsproxy changes also resolv conf. Reset timer
-            # to make sure that we don't load dnsproxy's IP address (bug 909)
+            # to make sure that we don't load dnsproxy's IP address. Otherwise
+            # all DNS requests are blocked when running dnsproxy in
+            # combination with dnsmasq.
             self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
@@ -284,7 +289,7 @@ class ResolvConf:
         os.system("ifconfig lo:53 down")
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
-        os.system('killall --quiet hipconf 2>/dev/null')
+        os.system('killall --quiet hipconf 2> /dev/null')
 
 class Global:
     default_hiphosts = "@sysconfdir@/hosts"
@@ -514,7 +519,9 @@ class Global:
         f.write('%s\n' % myid)
         f.close()
 
-    # Add local HITs to hosts files (bug id 737).
+    # Add local HITs to the hosts files. Otherwise certain services (sendmail,
+    # cups, httpd) timeout when they are started and they query the local
+    # HITs from the DNS.
     # xx fixme: should we really write the local hits
     #           to a file rather than just adding them
     #           to the cache?
@@ -564,7 +571,7 @@ class Global:
 
     def add_hit_ip_map(gp, hit, ip):
         cmd = "hipconf add map " + hit + " " + ip + \
-            " >/dev/null 2>&1"
+            " > /dev/null 2>&1"
         gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
         os.system(cmd)
 

@@ -8,6 +8,7 @@
 .libs
 .project
 .pydevproject
+.vimrc_custom
 Makefile
 Makefile.in
 TAGS
@@ -15,6 +16,7 @@ aclocal.m4
 autom4te.cache/
 build-stamp
 compile
+config.cache
 config.guess
 config.h
 config.h.in
@@ -22,10 +24,13 @@ config.log
 config.status
 config.sub
 configure
+debian/changelog
 debian/files
 debian/hipl-all/
 debian/hipl-daemon/
 debian/hipl-dnsproxy/
+debian/hipl-dnsproxy.dirs
+debian/hipl-dnsproxy.install
 debian/hipl-doc/
 debian/hipl-firewall/
 debian/tmp/
@@ -64,3 +69,4 @@ tools/nsupdate.pl
 tools/pisacert
 modules/hipd_modules.h
 version.h
+test/check_lib_tool

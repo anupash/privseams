@@ -128,4 +128,17 @@ int hip_setup_ipsec_sa(const uint8_t packet_type,
                        const uint32_t ha_state,
                        struct hip_packet_context *ctx);
 
+int hip_build_esp_info(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+
+
+int hip_build_solution(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+
+int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
+                              UNUSED const uint32_t ha_state,
+                              struct hip_packet_context *ctx);
+
 #endif /* HIP_HIPD_INPUT_H */

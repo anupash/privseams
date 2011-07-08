@@ -32,13 +32,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-SCRATCHBOX="/srv/power/scratchbox"
+SCRATCHBOX="/opt/scratchbox"
 HIPL="$HOME/src/hipl/trunk"
 
 ### DON'T CHANGE BELOW THIS LINE ###
 
 SCRATCHBOX_HOME=$SCRATCHBOX/users/$USER/home/$USER
-VERSION=$(grep '^AC_INIT' ${HIPL}/configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+VERSION=$(grep '^AC_INIT' ${HIPL}/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 
 if [ ! -e $SCRATCHBOX ]; then
     echo "ERROR: There seems to be no ScratchBox installation at $SCRATCHBOX"
@@ -76,7 +76,8 @@ if [ -e $HIPL ]; then
     echo "    Done."
 
     echo "    Compiling HIPL for Maemo..."
-    $SCRATCHBOX/login -d hipl-${VERSION} dpkg-buildpackage -rfakeroot -b
+    $SCRATCHBOX/login -d hipl-${VERSION} ./configure
+    $SCRATCHBOX/login -d hipl-${VERSION} make deb
     echo "    Done."
 else
     echo "ERROR: $HIPL does not exist."

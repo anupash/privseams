@@ -118,8 +118,7 @@ uint16_t ipv6_checksum(uint8_t protocol,
                        void *data, uint16_t len)
 {
     uint32_t         chksum = 0;
-    struct pseudo_v6 pseudo;
-    memset(&pseudo, 0, sizeof(struct pseudo_v6));
+    struct pseudo_v6 pseudo = { { { { 0 } } } };
 
     pseudo.src    = *src;
     pseudo.dst    = *dst;

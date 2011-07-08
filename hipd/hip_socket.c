@@ -189,7 +189,10 @@ static int hip_handle_nl_route_sock(UNUSED struct hip_packet_context *ctx)
     return 0;
 }
 
-void hip_init_sockets(void)
+/**
+ * Register the hip sockets with their associated handler functions.
+ */
+void hip_register_sockets(void)
 {
     hip_register_socket(hip_raw_sock_input_v6,  &hip_handle_raw_input_v6,  10000);
     hip_register_socket(hip_raw_sock_input_v4,  &hip_handle_raw_input_v4,  10100);
@@ -199,6 +202,27 @@ void hip_init_sockets(void)
     hip_register_socket(hip_nl_route.fd,        &hip_handle_nl_route_sock, 10500);
 }
 
+/**
+ * Free memory used for storage of the socket list.
+ */
+void hip_unregister_sockets(void)
+{
+    hip_ll_uninit(hip_sockets, free);
+    free(hip_sockets);
+}
+
+/**
+ * Register a socket with a handler function and priority.
+ *
+ * @note Free allocated memory from all registered sockets with
+ *       hip_unregister_sockets().
+ *
+ * @param socketfd The socket descriptor.
+ * @param func_ptr The associated handler function.
+ * @param priority Execution priority for the handler function.
+ * @return Success =  0
+ *         Error   = -1
+ */
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority)
@@ -214,22 +238,21 @@ int hip_register_socket(int socketfd,
     new_socket->fd       = socketfd;
     new_socket->func_ptr = func_ptr;
 
-    hip_sockets = lmod_register_function(hip_sockets,
-                                         new_socket,
-                                         priority);
-    if (!hip_sockets) {
-        HIP_ERROR("Error on registering a maintenance function.\n");
-        err = -1;
-    }
+    HIP_IFEL(!(hip_sockets = lmod_register_function(hip_sockets, new_socket, priority)),
+             -1,
+             "Error on registering a maintenance function.\n");
+
+    return 0;
 
 out_err:
+    free(new_socket);
     return err;
 }
 
 int hip_get_highest_descriptor(void)
 {
-    int                 highest_descriptor = 0;
-    struct hip_ll_node *iter               = NULL;
+    int                       highest_descriptor = 0;
+    const struct hip_ll_node *iter               = NULL;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
@@ -246,7 +269,7 @@ int hip_get_highest_descriptor(void)
 
 void hip_prepare_fd_set(fd_set *read_fdset)
 {
-    struct hip_ll_node *iter = NULL;
+    const struct hip_ll_node *iter = NULL;
 
     FD_ZERO(read_fdset);
 
@@ -273,8 +296,8 @@ void hip_prepare_fd_set(fd_set *read_fdset)
  */
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
-    struct hip_ll_node *iter = NULL;
-    int                 socketfd;
+    const struct hip_ll_node *iter = NULL;
+    int                       socketfd;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {

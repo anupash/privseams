@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
  * @brief i.e. 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE
@@ -42,13 +43,12 @@
 
 #include "hit_to_ip.h"
 #include "lib/core/conf.h"
-#include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
 
 
-int hip_hit_to_ip_status = 0;
+static int hip_hit_to_ip_status = 0;
 
 /**
  * This function is an interface to turn on/off locators lookup in hit-to-ip domain
@@ -74,7 +74,7 @@ int hip_get_hit_to_ip_status(void)
 // append unless set in configuration
 #define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
 
-char *hip_hit_to_ip_zone = NULL;
+static char *hip_hit_to_ip_zone = NULL;
 
 /**
  * Set the zone for hit-to-ip domain lookups
@@ -105,13 +105,14 @@ static const char hex_digits[] = {
  */
 static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, const int hostname_len)
 {
+    const uint8_t *bytes = (const uint8_t *) hit->s6_addr;
+    char          *cp    = hostname;
+    int            i;
+
     if ((hit == NULL) || (hostname == NULL)) {
         return -1;
     }
 
-    const uint8_t *bytes = (const uint8_t *) hit->s6_addr;
-    char          *cp    = hostname;
-    int            i; // no C99 :(
     for (i = 15; i >= 0; i--) {
         *cp++ = hex_digits[bytes[i] & 0x0f];
         *cp++ = '.';
@@ -141,8 +142,8 @@ int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
     struct addrinfo *rp = NULL;     // no C99 :(
     char             hit_to_ip_hostname[64 + HIT_TO_IP_ZONE_MAX_LEN + 1];
     int              found_addr = 0;
-    struct addrinfo  hints;
-    struct addrinfo *result = NULL;
+    struct addrinfo  hints      = { 0 };
+    struct addrinfo *result     = NULL;
     int              res;
 
     if ((hit == NULL) || (retval == NULL)) {
@@ -153,14 +154,9 @@ int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
         return -1;
     }
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family    = AF_UNSPEC;     /* Allow IPv4 or IPv6 */
-    hints.ai_socktype  = SOCK_DGRAM;    /* Datagram socket. Right? */
-    hints.ai_flags     = AI_PASSIVE;    /* For wildcard IP address */
-    hints.ai_protocol  = 0;             /* Any protocol */
-    hints.ai_canonname = NULL;
-    hints.ai_addr      = NULL;
-    hints.ai_next      = NULL;
+    hints.ai_family   = AF_UNSPEC;      /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_DGRAM;     /* Datagram socket. Right? */
+    hints.ai_flags    = AI_PASSIVE;     /* For wildcard IP address */
 
     /* getaddrinfo is too complex for DNS lookup, but let us use it now */
     res = getaddrinfo(hit_to_ip_hostname, NULL, &hints, &result);

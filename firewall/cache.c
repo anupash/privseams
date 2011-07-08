@@ -63,14 +63,13 @@ static HIP_HASHTABLE *firewall_cache_db = NULL;
  *
  * @return the allocated cache entry
  */
-struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
+static struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
 {
     struct hip_hadb_user_info_state *entry = NULL;
-    int                              err   = 0;
 
-    HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_hadb_user_info_state))),
-             -ENOMEM, "No memory available for firewall database entry\n");
-out_err:
+    if (!(entry = calloc(1, sizeof(struct hip_hadb_user_info_state)))) {
+        HIP_ERROR("No memory available for firewall database entry.\n");
+    }
     return entry;
 }
 
@@ -120,48 +119,35 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
                                                                       const void *peer,
                                                                       enum fw_cache_query_type type)
 {
-    int                                    err           = 0;
-    struct       hip_hadb_user_info_state *ha_ret        = NULL;
-    const struct hip_hadb_user_info_state *ha_match      = NULL;
+    struct       hip_hadb_user_info_state *err           = NULL;
     const struct hip_hadb_user_info_state *ha_curr       = NULL;
     struct       hip_common               *msg           = NULL;
     const struct hip_tlv_common           *current_param = NULL;
 
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), NULL, "malloc failed\n");
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
-             -1, "Building of daemon header failed\n");
+             NULL, "Building of daemon header failed\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock),
-             -1, "send recv daemon info\n");
+             NULL, "send recv daemon info\n");
 
     while ((current_param = hip_get_next_param(msg, current_param))) {
         ha_curr = hip_get_param_contents_direct(current_param);
 
-        if (type == FW_CACHE_HIT &&
-            !ipv6_addr_cmp(peer, &ha_curr->hit_peer) &&
-            (!local || !ipv6_addr_cmp(local,  &ha_curr->hit_our))) {
-            ha_match = ha_curr;
-            break;
-        } else if (type == FW_CACHE_LSI &&
-                   !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
-                   (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our))) {
-            ha_match = ha_curr;
-            break;
-        } else if (type == FW_CACHE_IP &&
-                   !ipv6_addr_cmp(peer, &ha_curr->ip_peer) &&
-                   (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our))) {
-            ha_match = ha_curr;
+        if ((type == FW_CACHE_HIT && !ipv6_addr_cmp(peer, &ha_curr->hit_peer) &&
+             (!local || !ipv6_addr_cmp(local,  &ha_curr->hit_our))) ||
+            (type == FW_CACHE_LSI && !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
+             (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our)))  ||
+            (type == FW_CACHE_IP  && !ipv6_addr_cmp(peer, &ha_curr->ip_peer)  &&
+             (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our)))) {
+            err = firewall_add_new_entry(ha_curr);
             break;
         }
     }
 
-    if (ha_match) {
-        ha_ret = firewall_add_new_entry(ha_match);
-    }
-
 out_err:
     free(msg);
-    return ha_ret;
+    return err;
 }
 
 /**
@@ -215,7 +201,7 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
     }
 
     if (!ha_match && query_daemon) {
-        HIP_DEBUG("No cache found, querying daemon\n");
+        HIP_DEBUG("No match found in cache, querying daemon\n");
         ha_match = hip_firewall_cache_hadb_match(local, peer, type);
     }
 
@@ -225,25 +211,6 @@ out_err:
     }
 
     return ha_match;
-}
-
-/**
- * Delete a database entry identified by HITs, LSIs or IPs
- *
- * @param local local identifier or locator (optional)
- * @param peer peer identifier or locator
- * @param type whether the parameters are HITs, LSIs or IPs
- */
-void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
-                                     enum fw_cache_query_type type)
-{
-    struct hip_hadb_user_info_state *entry;
-
-    entry = hip_firewall_cache_db_match(local, peer, type, 0);
-    if (entry) {
-        hip_ht_delete(firewall_cache_db, entry);
-        free(entry);
-    }
 }
 
 /**
@@ -307,11 +274,13 @@ void hip_firewall_cache_delete_hldb(int exiting)
 
     HIP_DEBUG("Start hldb delete\n");
 
-    list_for_each_safe(item, tmp, firewall_cache_db, i)
-    {
-        this = list_entry(item);
-        hip_ht_delete(firewall_cache_db, this);
-        free(this);
+    if (firewall_cache_db) {
+        list_for_each_safe(item, tmp, firewall_cache_db, i)
+        {
+            this = list_entry(item);
+            hip_ht_delete(firewall_cache_db, this);
+            free(this);
+        }
     }
 
     /* Note: this function is also reached by "hipconf rst all"
@@ -321,7 +290,7 @@ void hip_firewall_cache_delete_hldb(int exiting)
     if (exiting) {
         hip_ht_uninit(firewall_cache_db);
     }
-    HIP_DEBUG("End hldbdb delete\n");
+    HIP_DEBUG("End hldb delete\n");
 }
 
 /**
@@ -343,47 +312,6 @@ int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
     entry = hip_firewall_cache_db_match(hit_our, hit_peer, FW_CACHE_HIT, 0);
     HIP_IFEL(!entry, -1, "No cache entry found\n");
 
-    entry->state = state;
-
-out_err:
-    return err;
-}
-
-/**
- * Update the HIT and state information of an entry identified by a pair
- * of IP addresses. Used for opportunistic base exchange.
- *
- * @param ip_our local IP to search for (optional)
- * @param ip_peer peer IP to search for
- * @param hit_our new local hit (optional)
- * @param hit_peer new peer hit (optional)
- * @param state new state
- * @return 0 on success, negative on error
- */
-
-int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
-                                    const struct in6_addr *ip_peer,
-                                    const struct in6_addr *hit_our,
-                                    const struct in6_addr *hit_peer,
-                                    int state)
-{
-    int                              err = 0;
-    struct hip_hadb_user_info_state *entry;
-
-    HIP_IFEL(!ip_peer, -1, "Need peer IP to search\n");
-
-    entry = hip_firewall_cache_db_match(ip_our, ip_peer, FW_CACHE_IP, 0);
-    HIP_IFEL(!entry, -1, "No cache entry found\n");
-
-    if (hit_our) {
-        ipv6_addr_copy(&entry->hit_our, hit_our);
-    }
-    if (hit_peer) {
-        /* A hash of the peer HIT is used as the key. Re-add to update. */
-        hip_ht_delete(firewall_cache_db, entry);
-        ipv6_addr_copy(&entry->hit_peer, hit_peer);
-        hip_ht_add(firewall_cache_db, entry);
-    }
     entry->state = state;
 
 out_err:

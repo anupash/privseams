@@ -54,7 +54,6 @@
 #include "hiprelay.h"
 #include "input.h"
 #include "maintenance.h"
-#include "oppipdb.h"
 #include "output.h"
 #include "user.h"
 #include "close.h"
@@ -90,11 +89,6 @@ static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
         goto out_err;
     }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
-
     if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
         HIP_DEBUG("Not sending CLOSE message, invalid hip state " \
                   "in current host association. State is %s.\n",
@@ -115,7 +109,9 @@ static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
                               &entry->hit_our,
                               &entry->hit_peer);
 
-    HIP_IFE(!(msg_close = hip_msg_alloc()), -ENOMEM);
+    if (!(msg_close = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
 
     hip_build_network_hdr(msg_close,
                           HIP_CLOSE,
@@ -167,10 +163,10 @@ out_err:
 int hip_send_close(struct hip_common *msg,
                    int delete_ha_info)
 {
-    int                 err    = 0, retry, n;
-    char               *opaque = NULL;
-    const hip_hit_t    *hit    = NULL;
-    struct sockaddr_in6 sock_addr;
+    int                 err             = 0, retry, n;
+    char               *opaque          = NULL;
+    const hip_hit_t    *hit             = NULL;
+    struct sockaddr_in6 sock_addr       = { 0 };
     struct hip_common  *msg_to_firewall = NULL;
 
     HIP_DEBUG("msg=%p\n", msg);
@@ -198,7 +194,6 @@ int hip_send_close(struct hip_common *msg,
     hip_msg_init(msg_to_firewall);
     HIP_IFE(hip_build_user_hdr(msg_to_firewall,
                                HIP_MSG_RESET_FIREWALL_DB, 0), -1);
-    bzero(&sock_addr, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
@@ -228,11 +223,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -282,11 +276,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -337,11 +330,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -398,11 +390,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -467,11 +458,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -489,13 +479,7 @@ int hip_close_ack_handle_packet(UNUSED const uint8_t packet_type,
 
     HIP_DEBUG("CLOSED\n");
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
-#endif
-
-    HIP_IFEL(hip_del_peer_info(&ctx->hadb_entry->hit_our,
-                               &ctx->hadb_entry->hit_peer),
+    HIP_IFEL(hip_del_peer_info_entry(ctx->hadb_entry),
              -1, "Deleting peer info failed\n");
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -523,7 +507,7 @@ int hip_purge_closing_ha(struct hip_hadb_state *ha, UNUSED void *opaque)
     if ((ha->state == HIP_STATE_CLOSING || ha->state == HIP_STATE_CLOSED)) {
         if (ha->purge_timeout <= 0) {
             HIP_DEBUG("Purging HA (state=%d)\n", ha->state);
-            HIP_IFEL(hip_del_peer_info(&ha->hit_our, &ha->hit_peer), -1,
+            HIP_IFEL(hip_del_peer_info_entry(ha), -1,
                      "Deleting peer info failed.\n");
         } else {
             ha->purge_timeout--;

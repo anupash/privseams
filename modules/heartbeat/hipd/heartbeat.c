@@ -94,7 +94,7 @@
 #define HIP_HEARTBEAT_INTERVAL 20
 #define HIP_MAX_ICMP_PACKET 512
 
-int        hip_icmp_sock;
+static int hip_icmp_sock;
 static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
@@ -109,26 +109,19 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 {
     int                   err   = 0, i = 0, identifier = 0;
     struct icmp6_hdr     *icmph = NULL;
-    struct sockaddr_in6   dst6;
-    u_char                cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char               *icmp_pkt = NULL;
-    struct msghdr         mhdr;
+    struct sockaddr_in6   dst6  = { 0 };
+    struct msghdr         mhdr  = { 0 };
     struct iovec          iov[1];
     struct cmsghdr       *chdr = NULL;
     struct inet6_pktinfo *pkti = NULL;
     struct timeval        tval;
+    unsigned char         cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))] = { 0 };
+    unsigned char        *icmp_pkt                                          = NULL;
 
     HIP_IFEL(!entry, 0, "No entry\n");
 
     HIP_IFEL(entry->outbound_sa_count == 0, 0,
              "No outbound sa, ignoring keepalive\n")
-
-    /* memset and malloc everything you need */
-    memset(&mhdr, 0, sizeof(struct msghdr));
-    memset(&tval, 0, sizeof(struct timeval));
-    memset(cmsgbuf, 0, sizeof(cmsgbuf));
-    memset(iov, 0, sizeof(struct iovec));
-    memset(&dst6, 0, sizeof(dst6));
 
     icmp_pkt = calloc(1, HIP_MAX_ICMP_PACKET);
     HIP_IFEL(!icmp_pkt, -1, "Malloc for icmp_pkt failed\n");
@@ -256,15 +249,15 @@ out_err:
  */
 static int hip_icmp_recvmsg(int sockfd)
 {
-    int                   err = 0, ret = 0, identifier = 0;
-    struct msghdr         mhdr;
+    int                   err  = 0, ret = 0, identifier = 0;
+    struct msghdr         mhdr = { 0 };
     struct cmsghdr       *chdr;
     struct iovec          iov[1];
+    unsigned char         iovbuf[HIP_MAX_ICMP_PACKET] = { 0 };
     unsigned char         cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    unsigned char         iovbuf[HIP_MAX_ICMP_PACKET];
-    struct icmp6_hdr     *icmph = NULL;
+    struct sockaddr_in6   src_sin6 = { 0 };
+    struct icmp6_hdr     *icmph    = NULL;
     struct inet6_pktinfo *pktinfo;
-    struct sockaddr_in6   src_sin6;
     struct in6_addr      *src   = NULL, *dst = NULL;
     struct timeval       *stval = NULL, *rtval = NULL, *ptr = NULL;
 
@@ -281,12 +274,6 @@ static int hip_icmp_recvmsg(int sockfd)
     /* cast */
     chdr    = (struct cmsghdr *) cmsgbuf;
     pktinfo = (struct inet6_pktinfo *) CMSG_DATA(chdr);
-
-    /* clear memory */
-    memset(&src_sin6, 0, sizeof(struct sockaddr_in6));
-    memset(&iov, 0, sizeof(&iov));
-    memset(&iovbuf, 0, sizeof(iovbuf));
-    memset(&mhdr, 0, sizeof(mhdr));
 
     /* receive control msg */
     chdr->cmsg_level = IPPROTO_IPV6;

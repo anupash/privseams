@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@
  * @brief Inter-process communication with the hipd for userspace IPsec
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>
@@ -209,7 +210,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
     uint32_t                     spi       = 0;
     const struct in6_addr       *peer_addr = NULL;
     const struct in6_addr       *dst_addr  = NULL;
-    int                          family    = 0, src_port = 0, dst_port = 0;
     int                          err       = 0;
 
     /* get all attributes from the message */
@@ -226,18 +226,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
     dst_addr = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("dst address: ", dst_addr);
 
-    param  = hip_get_param(msg, HIP_PARAM_INT);
-    family = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("family: %i\n", family);
-
-    param    = hip_get_next_param(msg, param);
-    src_port = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("src_port: %i\n", src_port);
-
-    param    = hip_get_next_param(msg, param);
-    dst_port = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("dst_port: %i\n", dst_port);
-
     /* work-around due to broken sa_delete in hipd */
     /** @todo remove when fixed */
     if (ipv6_addr_is_hit(peer_addr) || spi == 0) {
@@ -250,22 +238,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
 
     /* the only useful information here are the spi and peer address */
     hip_sadb_delete(peer_addr, spi);
-
-out_err:
-    return err;
-}
-
-/**
- * handles a SA flush request sent by the hipd
- *
- * @return 0, if message sent and received ok, != 0 else
- */
-int handle_sa_flush_all_request(void)
-{
-    int err = 0;
-
-    /* this message does not have any parameters, only triggers flushing */
-    HIP_IFEL(hip_sadb_flush(), -1, "failed to flush sadb\n");
 
 out_err:
     return err;

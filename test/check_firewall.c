@@ -26,21 +26,15 @@
 #include <check.h>
 #include <stdlib.h>
 
-/* Import test suite functions from their respective C files via forward
- * declarations.
- * Since each test C file exports only one such function which is only used
- * right here, a dedicated header file for each of them adds unnecessary file
- * clutter in this particular case of unit tests.
- * Do not adopt this HFAS (header-file-avoidance-scheme) (TM) in HIPL production
- * code as header files are generally a good idea, just not here. */
-extern Suite *firewall_file_buffer(void);
-extern Suite *firewall_line_parser(void);
-extern Suite *firewall_port_bindings(void);
+#include "test/firewall/test_suites.h"
 
 int main(void)
 {
     int      number_failed;
-    SRunner *sr = srunner_create(firewall_file_buffer());
+    SRunner *sr = srunner_create(NULL);
+    srunner_add_suite(sr, firewall_conntrack());
+    srunner_add_suite(sr, firewall_file_buffer());
+    srunner_add_suite(sr, firewall_helpers());
     srunner_add_suite(sr, firewall_line_parser());
     srunner_add_suite(sr, firewall_port_bindings());
 

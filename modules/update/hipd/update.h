@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,12 +26,13 @@
 /**
  * @file
  * @author  Baris Boyvat <baris#boyvat.com>
+ * @author  Stefan Götz <stefan.goetz@web.de>
  * @version 0.1
  * @date    3.5.2009
  */
 
-#ifndef HIP_MODULES_HIPD_UPDATE_LEGACY_H
-#define HIP_MODULES_HIPD_UPDATE_LEGACY_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_H
 
 #include <stdint.h>
 #include <netinet/in.h>
@@ -50,6 +51,41 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
+/**
+ * The maximum number of locators the current implementation supports per
+ * update message. This number is arbitrarily chosen. It may be increased
+ * at the expense of more memory being used per struct update_state
+ * instance.
+ */
+#define HIP_MAX_LOCATORS 16
+
+enum update_types { UNKNOWN_UPDATE_PACKET, FIRST_UPDATE_PACKET,
+                    SECOND_UPDATE_PACKET, THIRD_UPDATE_PACKET };
+
+struct update_state {
+    /** A kludge to get the UPDATE retransmission to work.
+     *  @todo Remove this kludge. */
+    int update_state;
+
+    /**
+     * The set of locators we received in the initial UPDATE packet.
+     *
+     * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+     * addresses.
+     */
+    struct in6_addr addresses_to_send_echo_request[HIP_MAX_LOCATORS];
+
+    /**
+     * The number of valid entries in the addresses_to_send_echo_request
+     * array.
+     */
+    unsigned valid_locators;
+
+    /** Stored outgoing UPDATE ID counter. */
+    uint32_t update_id_out;
+    /** Stored incoming UPDATE ID counter. */
+    uint32_t update_id_in;
+};
 
 struct hip_locator {
     hip_tlv     type;
@@ -57,11 +93,6 @@ struct hip_locator {
     /* fixed part ends */
 } __attribute__ ((packed));
 
-/**
- * Fixed start of this struct must match to struct hip_peer_addr_list_item
- * for the part of address item. It is used in hip_update_locator_match().
- * @todo Maybe fix this in some better way?
- */
 struct hip_locator_info_addr_item {
     uint8_t         traffic_type;
     uint8_t         locator_type;
@@ -96,18 +127,12 @@ union hip_locator_info_addr {
     struct hip_locator_info_addr_item2 type2;
 } __attribute__ ((packed));
 
-int hip_get_locator_addr_item_count(const struct hip_locator *locator);
+uint32_t hip_update_get_out_id(const struct update_state *const state);
 
-int hip_create_locators(struct hip_common *locator_msg,
-                        struct hip_locator_info_addr_item **locators);
+int hip_trigger_update(struct hip_hadb_state *const hadb_entry);
 
-int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
-                                struct hip_hadb_state *ha,
-                                struct in6_addr *src_addr,
-                                struct in6_addr *dst_addr,
-                                struct hip_locator_info_addr_item *locators,
-                                int type);
+enum update_types hip_classify_update_type(const struct hip_common *const hip_msg);
 
 int hip_update_init(void);
 
-#endif /* HIP_MODULES_HIPD_UPDATE_LEGACY_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */

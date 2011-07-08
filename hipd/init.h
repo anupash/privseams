@@ -42,8 +42,6 @@
 /*
  * HIP daemon initialization functions.
  */
-extern int hip_firewall_sock_lsi_fd;
-
 int set_cloexec_flag(int desc, int value);
 
 int hipd_init(const uint64_t flags);

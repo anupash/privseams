@@ -81,7 +81,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
     const struct hip_cert_spki_info *p_cert;
     struct hip_cert_spki_info       *cert;
     struct hip_host_id              *host_id = NULL;
-    unsigned char                    sha_digest[21];
+    unsigned char                    sha_digest[SHA_DIGEST_LENGTH];
     unsigned char                   *signature_b64 = NULL;
     unsigned char                   *digest_b64    = NULL;
     unsigned char                   *sha_retval;
@@ -92,14 +92,14 @@ int hip_cert_spki_sign(struct hip_common *msg)
     RSA           *rsa   = NULL;
     unsigned char *e_bin = NULL, *n_bin = NULL;
     unsigned char *e_hex = NULL, *n_b64 = NULL;
+
     /* DSA needed variables */
     DSA           *dsa   = NULL;
     unsigned char *p_bin = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64 = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;
 
-    cert = calloc(1, sizeof(struct hip_cert_spki_info));
-    HIP_IFEL(!cert, -1, "calloc for cert failed\n");
-
+    HIP_IFEL(!(cert = calloc(1, sizeof(struct hip_cert_spki_info))),
+             -1, "calloc for cert failed\n");
     HIP_IFEL(!(p_cert = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No cert_info struct found\n");
     memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
@@ -109,14 +109,17 @@ int hip_cert_spki_sign(struct hip_common *msg)
     HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, &cert->issuer_hit,
                                           HIP_ANY_ALGO, &host_id, (void **) &rsa),
              -1, "Private key not found\n");
+
     algo = host_id->rdata.algorithm;
     if (algo == HIP_HI_DSA) {
         dsa = (DSA *) rsa;
     }
 
-    memset(sha_digest, '\0', sizeof(sha_digest));
-
-    digest_b64 = calloc(1, 30);
+    // Note: EVP_EncodeBlock(unsigned char *t, const unsigned char *f, int dlen) (vintage SSLeay
+    //  code) is used to generate the different BASE64 representations. It requires an area of
+    //  ((dlen + 2) / 3 * 4 + 1) bytes - so, obviously larger than the size of the input - to be
+    //  available for its output (at location "t") - you have been warned.
+    digest_b64 = calloc(1, (SHA_DIGEST_LENGTH + 2) / 3 * 4 + 1);
     HIP_IFEL(!digest_b64, -1, "calloc for digest_b64 failed\n");
 
     /* build sha1 digest that will be signed */
@@ -125,30 +128,31 @@ int hip_cert_spki_sign(struct hip_common *msg)
 
     switch (algo) {
     case HIP_HI_RSA:
-        signature_b64 = calloc(1, RSA_size(rsa));
-        HIP_IFEL(!signature_b64, -1, "calloc for signature_b64 failed\n");
+        sig_len = RSA_size(rsa);
 
-        n_bin = calloc(1, RSA_size(rsa) + 1);
-        HIP_IFEL(!n_bin, -1, "calloc for n_bin failed\n");
-
-        n_b64 = calloc(1, RSA_size(rsa) + 20);
-        HIP_IFEL(!n_b64, -1, "calloc for n_b64 failed\n");
-
-        e_bin = calloc(1, BN_num_bytes(rsa->e) + 1);
-        HIP_IFEL(!e_bin, -1, "calloc for e_bin failed\n");
-
-        /* RSA sign the digest */
-        sig_len   = RSA_size(rsa);
         signature = calloc(1, sig_len);
         HIP_IFEL(!signature, -1, "calloc for signature failed\n");
 
+        signature_b64 = calloc(1, (sig_len + 2) / 3 * 4 + 1);
+        HIP_IFEL(!signature_b64, -1, "calloc for signature_b64 failed\n");
+
+        n_bin = calloc(1, BN_num_bytes(rsa->n));
+        HIP_IFEL(!n_bin, -1, "calloc for n_bin failed\n");
+
+        n_b64 = calloc(1, (BN_num_bytes(rsa->n) + 2) / 3 * 4 + 1);
+        HIP_IFEL(!n_b64, -1, "calloc for n_b64 failed\n");
+
+        e_bin = calloc(1, BN_num_bytes(rsa->e));
+        HIP_IFEL(!e_bin, -1, "calloc for e_bin failed\n");
+
+        /* RSA sign the digest */
         err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
                        (unsigned int *) &sig_len, rsa);
         HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
         break;
     case HIP_HI_DSA:
         p_bin = malloc(BN_num_bytes(dsa->p) + 1);
@@ -189,16 +193,14 @@ int hip_cert_spki_sign(struct hip_common *msg)
         sig_len = SHA_DIGEST_LENGTH + DSA_PRIV * 2;
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
     }
 
-    /* clearing signature field just to be sure */
-    memset(cert->signature, '\0', sizeof(cert->signature));
-
-    HIP_IFEL(EVP_EncodeBlock(digest_b64, sha_digest, sizeof(sha_digest)) > 0,
+    HIP_IFEL(!EVP_EncodeBlock(digest_b64, sha_digest, SHA_DIGEST_LENGTH),
              -1, "Failed to encode digest_b64\n");
-    HIP_IFEL(EVP_EncodeBlock(signature_b64, signature, sig_len) > 0,
+    HIP_IFEL(!EVP_EncodeBlock(signature_b64, signature, sig_len),
              -1, "Failed to encode signature_b64\n");
+
     /* create (signature (hash sha1 |digest|)|signature|) */
     sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)",
             digest_b64, signature_b64);
@@ -218,7 +220,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        HIP_IFEL(EVP_EncodeBlock(n_b64, n_bin, RSA_size(rsa)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(n_b64, n_bin, BN_num_bytes(rsa->n)),
                  -1,
                  "Failed to encode n_b64\n");
 
@@ -249,22 +251,22 @@ int hip_cert_spki_sign(struct hip_common *msg)
          */
         HIP_IFEL(!BN_bn2bin(dsa->p, p_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(p_b64, p_bin, BN_num_bytes(dsa->p)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(p_b64, p_bin, BN_num_bytes(dsa->p)),
                  -1, "Failed to encode p_b64\n");
 
         HIP_IFEL(!BN_bn2bin(dsa->q, q_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(q_b64, q_bin, BN_num_bytes(dsa->q)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(q_b64, q_bin, BN_num_bytes(dsa->q)),
                  -1, "Failed to encode q_64");
 
         HIP_IFEL(!(BN_bn2bin(dsa->g, g_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(g_b64, g_bin, BN_num_bytes(dsa->g)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(g_b64, g_bin, BN_num_bytes(dsa->g)),
                  -1, "Failed to encode g_b64\n");
 
         HIP_IFEL(!BN_bn2bin(dsa->pub_key, y_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(y_b64, y_bin, BN_num_bytes(dsa->pub_key)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(y_b64, y_bin, BN_num_bytes(dsa->pub_key)),
                  -1, "Failed to encode y_b64\n");
 
         sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
@@ -272,7 +274,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                 p_b64, q_b64, g_b64, y_b64);
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm for public-key element\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for public-key element\n");
     }
 
     /* Put the results into the msg back */
@@ -310,6 +312,8 @@ out_err:
     free(y_b64);
 
     DSA_SIG_free(dsa_sig);
+
+    free(cert);
 
     return err;
 }
@@ -542,13 +546,12 @@ algo_check_done:
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
-    memset(sha_digest, '\0', sizeof(sha_digest));
     /* build sha1 digest that will be signed */
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert,
                                  strlen(cert->cert), sha_digest)),
@@ -615,10 +618,10 @@ algo_check_done:
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_EAE(-1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     hip_msg_init(msg);
@@ -685,8 +688,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     char                            saltname[45];
     struct in6_addr                *issuer_hit_n;
     struct hip_host_id             *host_id;
-    RSA                            *rsa = NULL;
-    DSA                            *dsa = NULL;
+    RSA                            *rsa          = NULL;
+    DSA                            *dsa          = NULL;
     unsigned char                  *der_cert     = NULL;
     int                             der_cert_len = 0;
     char                            arg1[21];
@@ -696,16 +699,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
              "Malloc for subject failed\n");
     HIP_IFEL(!(pkey = malloc(sizeof(EVP_PKEY))), -1,
              "Malloc for pkey failed\n");
-    HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(issuer_hit_n)), -1,
-             "Failed to memset memory for issuer\n");
-    HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
-             "Failed to memset memory for subject\n");
-    HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
-             "Failed to memset memory for issuer HIT\n");
-    HIP_IFEL(!memset(ialtname, 0, sizeof(ialtname)), -1,
-             "Failed to memset memory for ialtname\n");
-    HIP_IFEL(!memset(saltname, 0, sizeof(saltname)), -1,
-             "Failed to memset memory for saltname\n");
 
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
@@ -737,8 +730,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
                 HIP_IFEL(ret < 0 && errno == EAFNOSUPPORT, -1,
                          "Failed to convert issuer HIT to hip_hit_t\n");
                 HIP_DEBUG_HIT("Issuer HIT", issuer_hit_n);
-                /* on conversion more to get rid of padding 0s*/
-                memset(issuer_hit, 0, sizeof(issuer_hit));
                 HIP_IFEL(!inet_ntop(AF_INET6, issuer_hit_n,
                                     issuer_hit, sizeof(issuer_hit)),
                          -1, "Failed to convert subject hit to "
@@ -837,10 +828,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_EAE(-1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     if (sec_ext != NULL) {
@@ -927,10 +918,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_EAE(-1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     HIP_IFEL(!X509_sign(cert, pkey, digest), -1,
@@ -980,18 +971,18 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
     X509_STORE                      *store      = NULL;
     X509_STORE_CTX                  *verify_ctx = NULL;
     unsigned char                   *der_cert   = NULL;
+    const unsigned char             *vessel;
 
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
 
-    memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
     HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
              "Failed to get cert info from the msg\n");
     memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
 
     der_cert = (unsigned char *) &p->der;
 
-    const unsigned char *vessel = p->der;
+    vessel = p->der;
     HIP_IFEL((cert = d2i_X509(NULL, &vessel, verify.der_len)) == NULL, -1,
              "Failed to convert cert from DER to internal format\n");
     /*

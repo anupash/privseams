@@ -28,31 +28,24 @@
 
 #include <openssl/lhash.h>
 
-#include "list.h"
-
-/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
- * These backwards compatibility hacks can be removed when all platforms
- * support OpenSSL 1.0.0 by default. */
-#ifdef LHASH_OF
-#define HIPL_OPENSSL_100
-#endif /* LHASH_OF */
-
 #define STATIC_IMPLEMENT_LHASH_COMP_FN      static IMPLEMENT_LHASH_COMP_FN
 #define STATIC_IMPLEMENT_LHASH_DOALL_FN     static IMPLEMENT_LHASH_DOALL_FN
 #define STATIC_IMPLEMENT_LHASH_DOALL_ARG_FN static IMPLEMENT_LHASH_DOALL_ARG_FN
 #define STATIC_IMPLEMENT_LHASH_HASH_FN      static IMPLEMENT_LHASH_HASH_FN
 
+/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
+ * These backwards compatibility hacks can be removed when all platforms
+ * support OpenSSL 1.0.0 by default. */
+#ifdef LHASH_OF
 
-#ifdef HIPL_OPENSSL_100
-
-#define LHASH100_CAST _LHASH
+#define LHASH_CAST (_LHASH *)
 
 typedef DECLARE_LHASH_OF(HIP_HT) HIP_HASHTABLE;
 typedef LHASH_OF(HIP_HT)         HIP_HASHTABLE_TYPE;
 
 #else
 
-#define LHASH100_CAST void
+#define LHASH_CAST
 
 #define LHASH_OF(type) struct lhash_st_ ## type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }

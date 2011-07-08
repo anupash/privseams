@@ -39,9 +39,6 @@
 #define HIPD_STATE_CLOSING      0x01
 /** Daemon is closed, exiting main(). */
 #define HIPD_STATE_CLOSED       0x02
-
-/** Daemon is restarting. */
-#define HIPD_FLAG_RESTART       0x00000100
 /* @} */
 
 

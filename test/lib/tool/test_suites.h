@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,11 +23,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
-#define HIP_MODULES_UPDATE_HIPD_UPDATE_H
+#ifndef HIP_TEST_LIB_TOOL_TEST_SUITES_H
+#define HIP_TEST_LIB_TOOL_TEST_SUITES_H
 
-#include "lib/core/protodefs.h"
+#include <check.h>
 
-int hip_build_locators_old(struct hip_common *msg);
+Suite *lib_tool_checksum(void);
 
-#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */
+#endif /* HIP_TEST_LIB_TOOL_TEST_SUITES_H */

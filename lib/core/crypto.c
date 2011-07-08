@@ -78,7 +78,7 @@
  */
 
 /* 384-bit Group */
-unsigned char dhprime_384[] = {
+static unsigned char dhprime_384[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -86,7 +86,7 @@ unsigned char dhprime_384[] = {
 };
 
 /* RFC 2412 Oakley Group 1 768-bit, 96 bytes */
-unsigned char dhprime_oakley_1[] = {
+static unsigned char dhprime_oakley_1[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -98,7 +98,7 @@ unsigned char dhprime_oakley_1[] = {
 };
 
 /* RFC 3526 MODP 1536-bit = RFC 2412 Oakley Group 5 */
-unsigned char dhprime_modp_1536[] = {
+static unsigned char dhprime_modp_1536[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -118,7 +118,7 @@ unsigned char dhprime_modp_1536[] = {
 };
 
 /* RFC 3526 MODP 3072-bit, 384 bytes */
-unsigned char dhprime_modp_3072[] = {
+static unsigned char dhprime_modp_3072[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -154,7 +154,7 @@ unsigned char dhprime_modp_3072[] = {
 };
 
 /* RFC 3526 MODP 6144-bit, 768 bytes */
-unsigned char dhprime_modp_6144[] = {
+static unsigned char dhprime_modp_6144[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -222,7 +222,7 @@ unsigned char dhprime_modp_6144[] = {
 };
 
 /* RFC 3526 MODP 8192-bit, 1024 bytes */
-unsigned char dhprime_modp_8192[] = {
+static unsigned char dhprime_modp_8192[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
     0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
     0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6,
@@ -312,7 +312,7 @@ unsigned char dhprime_modp_8192[] = {
 };
 
 /* load DH arrays for easy access */
-const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
+static const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
     0,
     dhprime_384,
     dhprime_oakley_1,
@@ -322,7 +322,7 @@ const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
     dhprime_modp_8192,
 };
 
-int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
+static int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     -1,
     sizeof(dhprime_384),
     sizeof(dhprime_oakley_1),
@@ -332,8 +332,13 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     sizeof(dhprime_modp_8192),
 };
 
-unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,    0x02,    0x02,    0x02,
-                                             0x02, 0x02,    0x02 };
+static unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
+                                                    0x02,
+                                                    0x02,
+                                                    0x02,
+                                                    0x02,
+                                                    0x02,
+                                                    0x02 };
 
 /**
  * Calculates a hmac.
@@ -448,7 +453,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         break;
 
     default:
-        HIP_IFEL(1, -EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
+        HIP_OUT_ERR(-EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
     }
 
     err = 0;
@@ -611,7 +616,7 @@ out_err:
  * @return 1 on success, 0 otherwise
  */
 int hip_gen_dh_shared_key(DH *dh,
-                          uint8_t *peer_key,
+                          const uint8_t *peer_key,
                           size_t peer_len,
                           uint8_t *dh_shared_key,
                           size_t outlen)
@@ -659,7 +664,7 @@ out_err:
  * @param group_id the group id of the D-H
  * @return a new Diffie-Hellman key (caller deallocates)
  */
-DH *hip_generate_dh_key(int group_id)
+DH *hip_generate_dh_key(const int group_id)
 {
     int            err;
     DH            *dh;
@@ -950,7 +955,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
     ret = snprintf(pubfilename, pubfilename_len, "%s%s",
                    filenamebase,
                    DEFAULT_PUB_FILE_SUFFIX);
-    HIP_IFEL(ret < pubfilename_len-1, 1, "Failed to create pubfilename\n");
+    HIP_IFEL(ret < pubfilename_len - 1, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving RSA keys to: pub='%s' priv='%s'\n", pubfilename,
              filenamebase);

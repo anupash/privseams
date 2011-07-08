@@ -98,8 +98,9 @@ out_err:
  * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
  * @return          zero on success, negative otherwise.
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                           struct in6_addr *const hit, const int hit_type)
+static int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                  struct in6_addr *const hit,
+                                  const int hit_type)
 {
     int            err = 0;
     uint8_t        digest[HIP_AH_SHA_LEN];
@@ -114,7 +115,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
     int      khi_data_len     = key_rr_len + sizeof(khi_context_id);
     int      khi_index        = 0;
 
-    HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
+    if (hit_type != HIP_HIT_TYPE_HASH100) {
+        return -ENOSYS;
+    }
 
     /* Hash Input :=  Context ID | Input */
     khi_data  = malloc(khi_data_len);
@@ -142,6 +145,24 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
 out_err:
     free(khi_data);
     return err;
+}
+
+/**
+ * @todo useless abstraction
+ */
+static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                         struct in6_addr *const hit, const int hit_type)
+{
+    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+}
+
+/**
+ * @todo useless abstraction
+ */
+static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                           struct in6_addr *const hit, const int hit_type)
+{
+    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
 /**
@@ -184,9 +205,9 @@ int hip_host_id_to_hit(const struct hip_host_id *const host_id,
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type)
+static int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                          struct in6_addr *const hit,
+                                          const int hit_type)
 {
     uint16_t           temp;
     int                contents_len;
@@ -199,7 +220,6 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
 
     HIP_IFEL(contents_len <= 20, -EMSGSIZE, "Host id too short\n");
 
-    memset(&host_id_pub, 0, sizeof(struct hip_host_id));
     memcpy(&host_id_pub.rdata, &host_id->rdata, contents_len - DSA_PRIV);
 
     temp                  = ntohs(host_id->hi_length) - DSA_PRIV;
@@ -227,9 +247,9 @@ out_err:
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type)
+static int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                          struct in6_addr *const hit,
+                                          const int hit_type)
 {
     int                   err = 0;
     int                   rsa_pub_len, rsa_priv_len;
@@ -273,9 +293,9 @@ out_err:
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                     struct in6_addr *const hit,
-                                     const int hit_type)
+static int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                            struct in6_addr *const hit,
+                                            const int hit_type)
 {
     int                     err = 0;
     struct hip_ecdsa_keylen key_lens;
@@ -685,30 +705,30 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int dsa_key_bits,
                                  const int ecdsa_nid)
 {
-    int                  err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0, ecdsa_key_rr_len = 0;
-    int                  dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
-    hip_hdr              numeric_action     = 0;
-    char                 hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    const char          *rsa_filenamebase       = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char          *dsa_filenamebase       = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char          *ecdsa_filenamebase     = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char          *rsa_filenamebase_pub   = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char          *dsa_filenamebase_pub   = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char          *ecdsa_filenamebase_pub = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    unsigned char       *dsa_key_rr             = NULL, *rsa_key_rr = NULL, *ecdsa_key_rr = NULL;
-    unsigned char       *dsa_pub_key_rr         = NULL, *rsa_pub_key_rr = NULL, *ecdsa_pub_key_rr = NULL;
-    DSA                 *dsa_key                = NULL, *dsa_pub_key = NULL;
-    RSA                 *rsa_key                = NULL, *rsa_pub_key = NULL;
-    EC_KEY              *ecdsa_key              = NULL, *ecdsa_pub_key = NULL;
-    struct hip_lhi       rsa_lhi, dsa_lhi, ecdsa_lhi, rsa_pub_lhi, dsa_pub_lhi, ecdsa_pub_lhi;
-    struct hip_host_id  *dsa_host_id            = NULL, *rsa_host_id = NULL, *ecdsa_host_id = NULL;
-    struct hip_host_id  *dsa_pub_host_id        = NULL, *rsa_pub_host_id = NULL, *ecdsa_pub_host_id = NULL;
-    struct endpoint_hip *endpoint_dsa_hip       = NULL;
-    struct endpoint_hip *endpoint_dsa_pub_hip   = NULL;
-    struct endpoint_hip *endpoint_rsa_hip       = NULL;
-    struct endpoint_hip *endpoint_rsa_pub_hip   = NULL;
-    struct endpoint_hip *endpoint_ecdsa_hip     = NULL;
-    struct endpoint_hip *endpoint_ecdsa_pub_hip = NULL;
+    int                      err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0, ecdsa_key_rr_len = 0;
+    int                      dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
+    hip_hdr                  numeric_action     = 0;
+    char                     hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    const char              *rsa_filenamebase       = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char              *dsa_filenamebase       = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char              *ecdsa_filenamebase     = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char              *rsa_filenamebase_pub   = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    const char              *dsa_filenamebase_pub   = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    const char              *ecdsa_filenamebase_pub = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    unsigned char           *dsa_key_rr             = NULL, *rsa_key_rr = NULL, *ecdsa_key_rr = NULL;
+    unsigned char           *dsa_pub_key_rr         = NULL, *rsa_pub_key_rr = NULL, *ecdsa_pub_key_rr = NULL;
+    DSA                     *dsa_key                = NULL, *dsa_pub_key = NULL;
+    RSA                     *rsa_key                = NULL, *rsa_pub_key = NULL;
+    EC_KEY                  *ecdsa_key              = NULL, *ecdsa_pub_key = NULL;
+    struct hip_host_id_local rsa_lhi, dsa_lhi, ecdsa_lhi, rsa_pub_lhi, dsa_pub_lhi, ecdsa_pub_lhi;
+    struct hip_host_id      *dsa_host_id            = NULL, *rsa_host_id = NULL, *ecdsa_host_id = NULL;
+    struct hip_host_id      *dsa_pub_host_id        = NULL, *rsa_pub_host_id = NULL, *ecdsa_pub_host_id = NULL;
+    struct endpoint_hip     *endpoint_dsa_hip       = NULL;
+    struct endpoint_hip     *endpoint_dsa_pub_hip   = NULL;
+    struct endpoint_hip     *endpoint_rsa_hip       = NULL;
+    struct endpoint_hip     *endpoint_rsa_pub_hip   = NULL;
+    struct endpoint_hip     *endpoint_ecdsa_hip     = NULL;
+    struct endpoint_hip     *endpoint_ecdsa_pub_hip = NULL;
 
     if (action == ACTION_ADD) {
         numeric_action = HIP_MSG_ADD_LOCAL_HI;
@@ -719,12 +739,8 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         goto out_err;
     }
 
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    if ((err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))) {
-        HIP_ERROR("Failed to get hostname. Err is (%d).\n", err);
-        goto out_err;
-    }
+    HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
+             "gethostname failed.\n");
 
     HIP_INFO("Using hostname: %s\n", hostname);
 

@@ -41,10 +41,6 @@
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
-#define HIP_OPP_WAIT              5 /* seconds */
-#define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
-#define HIP_OPP_FALLBACK_INIT \
-    (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
     (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -66,7 +62,6 @@
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern struct rtnl_handle hip_nl_generic;
-extern time_t             load_time;
 
 extern int hip_raw_sock_input_v6;
 extern int hip_raw_sock_input_v4;
@@ -85,14 +80,13 @@ extern int hip_wait_addr_changes_to_stabilize;
 
 extern int hip_user_sock;
 
-extern int                 hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int hit_db_lock;
-extern int is_active_mhaddr;
-extern int is_hard_handover;
 
 extern int hip_shotgun_status;
+
+extern int hip_broadcast_status;
 
 extern int hip_encrypt_i2_hi;
 
@@ -109,9 +103,8 @@ extern int            suppress_af_family;
 extern int            address_count;
 extern HIP_HASHTABLE *addresses;
 
-extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-
-int hip_firewall_is_alive(void);
+/* For switch userspace / kernel IPsec */
+extern int hip_use_userspace_ipsec;
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_firewall(void);

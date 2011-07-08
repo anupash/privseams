@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -56,6 +56,7 @@
  * @brief Host Association Database (HADB) for HIP
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <errno.h>
@@ -88,19 +89,16 @@
 #include "lib/tool/xfrmapi.h"
 #include "config.h"
 #include "accessor.h"
-#include "hadb_legacy.h"
 #include "hidb.h"
 #include "hipd.h"
 #include "input.h"
 #include "keymat.h"
 #include "netdev.h"
-#include "oppdb.h"
 #include "output.h"
 #include "hadb.h"
 
 
 HIP_HASHTABLE *hadb_hit = NULL;
-struct in_addr peer_lsi_index;
 
 struct hip_peer_map_info {
     hip_hit_t       peer_hit;
@@ -236,28 +234,56 @@ static void hip_hadb_set_lsi_pair(struct hip_hadb_state *entry)
  * This function searches for a struct hip_hadb_state entry from the
  * hip_hadb_hit by a HIT pair (local,peer).
  *
- * @param hit local HIT
- * @param hit2 peer HIT
+ * @param hit_local local HIT
+ * @param hit_remote peer HIT
  * @return the corresponding host association or NULL if not found
  */
-struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
-                                            const hip_hit_t *hit2)
+struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
+                                            const hip_hit_t *hit_remote)
 {
     struct hip_hadb_state ha, *ret = NULL;
 
-    memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
-    memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
-    HIP_DEBUG_HIT("HIT1", hit);
-    HIP_DEBUG_HIT("HIT2", hit2);
+    memcpy(&ha.hit_our, hit_local, sizeof(hip_hit_t));
+    memcpy(&ha.hit_peer, hit_remote, sizeof(hip_hit_t));
+    HIP_DEBUG_HIT("Local HIT", hit_local);
+    HIP_DEBUG_HIT("Remote HIT", hit_remote);
 
     ret = hip_ht_find(hadb_hit, &ha);
     if (!ret) {
-        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
-        memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
+        memcpy(&ha.hit_peer, hit_local, sizeof(hip_hit_t));
+        memcpy(&ha.hit_our, hit_remote, sizeof(hip_hit_t));
         ret = hip_ht_find(hadb_hit, &ha);
     }
 
     return ret;
+}
+
+/**
+ * Context information used during a search by
+ * hip_hadb_try_to_find_by_peer_hit().
+ */
+struct ha_pattern {
+    const hip_hit_t        peer_hit;
+    struct hip_hadb_state *ha;
+};
+
+/**
+ * A call-back function for finding a host association between a given peer HIT
+ * and any of the iteratively provided local HIs.
+ *
+ * @param lhi     Points to a local_host_id object from which contains the
+ *                local HIT of the HA to find.
+ * @param context Points to a ha_pattern object which contains the peer HIT of
+ *                the HA to find and where the result is stored if a HA is
+ *                found.
+ * @return        0 if no matching HA is found, 1 if a matching HA is found.
+ */
+static int find_ha_by_lhi(struct local_host_id *const lhi,
+                          void *const context)
+{
+    struct ha_pattern *pattern = context;
+    pattern->ha = hip_hadb_find_byhits(&pattern->peer_hit, &lhi->hit);
+    return pattern->ha != NULL;
 }
 
 /**
@@ -283,13 +309,9 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    LHASH_NODE               *item, *tmp;
-    struct hip_host_id_entry *e;
-    struct hip_hadb_state    *entry = NULL;
-    hip_hit_t                 our_hit;
-    int                       i;
-
-    memset(&our_hit, 0, sizeof(our_hit));
+    struct hip_hadb_state *entry = NULL;
+    hip_hit_t              our_hit;
+    struct ha_pattern      pattern = { *hit, NULL };
 
     /* Let's try with the default HIT first */
     hip_get_default_hit(&our_hit);
@@ -299,18 +321,9 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     }
 
     /* and then with rest (actually default HIT is here redundantly) */
-    list_for_each_safe(item, tmp, hip_local_hostid_db, i)
-    {
-        e = list_entry(item);
-        ipv6_addr_copy(&our_hit, &e->lhi.hit);
-        entry = hip_hadb_find_byhits(hit, &our_hit);
-        if (!entry) {
-            continue;
-        } else {
-            return entry;
-        }
-    }
-    return NULL;
+    hip_for_each_hi(find_ha_by_lhi, &pattern);
+
+    return pattern.ha;
 }
 
 /**
@@ -330,8 +343,6 @@ int hip_hadb_insert_state(struct hip_hadb_state *ha)
 {
     enum   hip_hastate     st  = 0;
     struct hip_hadb_state *tmp = NULL;
-
-    HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 
     /* assume already locked ha */
 
@@ -457,7 +468,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const struct in6_addr *peer_addr,
                                     const char *peer_hostname)
 {
-    int                    err   = 0;
     struct hip_hadb_state *entry = NULL, *aux = NULL;
     hip_lsi_t              lsi_aux;
     in_port_t              nat_udp_port_local = hip_get_local_nat_udp_port();
@@ -478,8 +488,10 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     } else {
         HIP_DEBUG("hip_hadb_create_state\n");
         entry = hip_hadb_create_state();
-        HIP_IFEL(!entry, -1, "Unable to create a new entry");
-
+        if (!entry) {
+            HIP_ERROR("Unable to create a new entry");
+            return -1;
+        }
         entry->peer_addr_list_to_be_added =
             hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
     }
@@ -487,8 +499,10 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     ipv6_addr_copy(&entry->hit_peer, peer_hit);
     ipv6_addr_copy(&entry->hit_our, local_hit);
     ipv6_addr_copy(&entry->our_addr, local_addr);
-    HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
-             "Unable to find local hit");
+    if (hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our)) {
+        HIP_ERROR("Unable to find local hit");
+        return -1;
+    }
 
     /* Copying peer_lsi */
     if (peer_lsi != NULL && peer_lsi->s_addr != 0) {
@@ -532,11 +546,12 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     hip_hadb_insert_state(entry);
 
     /* Add initial HIT-IP mapping. */
-    HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
-             -2, "error while adding a new peer address\n");
+    if (hip_hadb_add_peer_addr(entry, peer_addr)) {
+        HIP_ERROR("error while adding a new peer address\n");
+        return -2;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -546,24 +561,22 @@ out_err:
  * @param  peer_map_void a pointer to hip_peer_map_info
  * @return zero on success or negative on error
  */
-static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+static int hip_hadb_add_peer_info_wrapper(struct local_host_id *entry,
                                           void *peer_map_void)
 {
     struct hip_peer_map_info *peer_map = peer_map_void;
-    int                       err      = 0;
 
-    HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
-    HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
-                                             &peer_map->peer_hit,
-                                             &peer_map->peer_lsi,
-                                             &peer_map->our_addr,
-                                             &peer_map->peer_addr,
-                                             (char *) &peer_map->peer_hostname),
-             -1,
-             "Failed to add peer info\n");
+    if (hip_hadb_add_peer_info_complete(&entry->hit,
+                                        &peer_map->peer_hit,
+                                        &peer_map->peer_lsi,
+                                        &peer_map->our_addr,
+                                        &peer_map->peer_addr,
+                                        (char *) &peer_map->peer_hostname)) {
+        HIP_ERROR("Failed to add peer info\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -580,10 +593,7 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                            const hip_lsi_t *peer_lsi,
                            const char *peer_hostname)
 {
-    int                      err = 0;
-    struct hip_peer_map_info peer_map;
-
-    HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
+    struct hip_peer_map_info peer_map = { { { { 0 } } } };
 
     in_port_t nat_local_udp_port = hip_get_local_nat_udp_port();
     in_port_t nat_peer_udp_port  = hip_get_peer_nat_udp_port();
@@ -596,15 +606,15 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                          &nat_local_udp_port,
                          &nat_peer_udp_port);
 
-    HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
-
-    memset(&peer_map, 0, sizeof(peer_map));
+    if (!ipv6_addr_is_hit(peer_hit)) {
+        HIP_ERROR("Not a HIT\n");
+        return -1;
+    }
 
     memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
     if (peer_addr) {
         memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
     }
-    memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
     if (peer_lsi) {
         memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
@@ -615,14 +625,17 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
 
-    HIP_IFEL(hip_select_source_address(&peer_map.our_addr, &peer_map.peer_addr),
-             -1, "Cannot find source address\n");
+    if (hip_select_source_address(&peer_map.our_addr, &peer_map.peer_addr)) {
+        HIP_ERROR("Cannot find source address\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
-             "for_each_hi err.\n");
+    if (hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map)) {
+        HIP_ERROR("for_each_hi err.\n");
+        return 0;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -649,8 +662,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
     if (!ip && (!lsi || !hit)) {
         HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
-        err = -ENODATA;
-        goto out_err;
+        return -ENODATA;
     }
 
     if (lsi) {
@@ -665,12 +677,10 @@ int hip_add_peer_map(const struct hip_common *input)
 
     if (err) {
         HIP_ERROR("Failed to insert peer map (%d)\n", err);
-        goto out_err;
+        return err;
     }
 
-out_err:
-
-    return err;
+    return 0;
 }
 
 /**
@@ -680,9 +690,10 @@ out_err:
  */
 static int hip_hadb_init_entry(struct hip_hadb_state *entry)
 {
-    int err = 0;
-
-    HIP_IFEL(!entry, -1, "HA is NULL\n");
+    if (!entry) {
+        HIP_ERROR("HA is NULL\n");
+        return -1;
+    }
 
     entry->state         = HIP_STATE_UNASSOCIATED;
     entry->hastate       = HIP_HASTATE_INVALID;
@@ -691,14 +702,14 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     /* Initialize the peer host name */
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    entry->peer_addresses_old = hip_linked_list_init();
-
     /* Randomize inbound SPI */
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET)),
-            -ENOMEM);
+    if (!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET))) {
+        return -ENOMEM;
+    }
+
     entry->hip_msg_retrans.count = 0;
 
     /* Initialize module states */
@@ -706,8 +717,7 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     lmod_init_state_items(entry->hip_modular_state);
     HIP_DEBUG("Modular state initialized.\n");
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -761,77 +771,40 @@ int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr)
  * Adds a new peer IPv6 address to the entry's list of peer addresses.
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
- * @param spi outbound SPI to which the @c new_addr is related to
- * @param lifetime address lifetime of the address
- * @param state address state
- * @param port the port
  *
  * @return zero on success and negative on error
  */
 int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
-                           const struct in6_addr *new_addr,
-                           uint32_t spi, uint32_t lifetime, int state,
-                           in_port_t port)
+                           const struct in6_addr *new_addr)
 {
-    int                             err = 0;
     struct hip_peer_addr_list_item *a_item;
     char                            addrstr[INET6_ADDRSTRLEN];
 
     /* assumes already locked entry */
 
-    /* check if we are adding the peer's address during the base exchange */
-    if (spi == 0) {
-        HIP_DEBUG("SPI is 0, set address as the bex address\n");
-        if (!ipv6_addr_any(&entry->peer_addr)) {
-            hip_in6_ntop(&entry->peer_addr, addrstr);
-            HIP_DEBUG("warning, overwriting existing preferred address %s\n",
-                      addrstr);
+    if (!ipv6_addr_any(&entry->peer_addr)) {
+        hip_in6_ntop(&entry->peer_addr, addrstr);
+        HIP_DEBUG("warning, overwriting existing preferred address %s\n",
+                  addrstr);
+    }
+    ipv6_addr_copy(&entry->peer_addr, new_addr);
+    HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
+
+    if (entry->peer_addr_list_to_be_added) {
+        /* Adding the peer address to the entry->peer_addr_list_to_be_added
+         * so that later after base exchange it can be transferred to
+         * SPI OUT's peer address list */
+        a_item = malloc(sizeof(struct hip_peer_addr_list_item));
+        if (!a_item) {
+            HIP_ERROR("item malloc failed\n");
+            return -ENOMEM;
         }
-        ipv6_addr_copy(&entry->peer_addr, new_addr);
-        HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
+        ipv6_addr_copy(&a_item->address, new_addr);
 
-        if (entry->peer_addr_list_to_be_added) {
-            /* Adding the peer address to the entry->peer_addr_list_to_be_added
-             * so that later after base exchange it can be transferred to
-             * SPI OUT's peer address list */
-            a_item = malloc(sizeof(struct hip_peer_addr_list_item));
-            if (!a_item) {
-                HIP_ERROR("item malloc failed\n");
-                err = -ENOMEM;
-                goto out_err;
-            }
-            a_item->lifetime = lifetime;
-            ipv6_addr_copy(&a_item->address, new_addr);
-            a_item->address_state = state;
-            gettimeofday(&a_item->modified_time, NULL);
-
-            list_add(a_item, entry->peer_addr_list_to_be_added);
-        }
-        goto out_err;
+        list_add(a_item, entry->peer_addr_list_to_be_added);
     }
 
-    err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
-    if (err) {
-        goto out_err;
-    }
-
-    a_item = malloc(sizeof(struct hip_peer_addr_list_item));
-    if (!a_item) {
-        HIP_ERROR("item malloc failed\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
-
-    a_item->lifetime = lifetime;
-    a_item->port     = port;
-    ipv6_addr_copy(&a_item->address, new_addr);
-    a_item->address_state = state;
-    gettimeofday(&a_item->modified_time, NULL);
-
-    list_add(a_item, entry->peer_addresses_old);
-
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -889,16 +862,6 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
         hip_ht_uninit(ha->peer_addr_list_to_be_added);
     }
 
-    if (ha->peer_addresses_old) {
-        list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = list_entry(item);
-            list_del(addr_li, ha->peer_addresses_old);
-            free(addr_li);
-            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-        }
-        hip_ht_uninit(ha->peer_addresses_old);
-    }
-
     list_del(ha, hadb_hit);
     free(ha);
 }
@@ -911,50 +874,15 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
  */
 int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 {
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    struct hip_opp_blocking_request *opp_entry = NULL;
-#endif
-
     /* by now, if everything is according to plans, the refcnt
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
     HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 1);
+    hip_delete_security_associations_and_sp(ha);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
-#endif
-
-    /* Delete hadb entry before oppdb entry to avoid a loop */
     hip_hadb_delete_state(ha);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (opp_entry) {
-        hip_oppdb_entry_clean_up(opp_entry);
-    }
-#endif
-
     return 0;
-}
-
-/**
- * Search and delete a host association based on HITs
- *
- * @param our_hit the local HIT
- * @param peer_hit the remote HIT
- *
- * @return zero on success and negative on error
- */
-int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
-{
-    struct hip_hadb_state *ha;
-
-    ha = hip_hadb_find_byhits(our_hit, peer_hit);
-    if (!ha) {
-        return -ENOENT;
-    }
-
-    return hip_del_peer_info_entry(ha);
 }
 
 /**
@@ -1002,7 +930,7 @@ int hip_init_peer(struct hip_hadb_state *entry,
             (struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
     default:
-        HIP_IFEL(1, -1, "Unkown algorithm");
+        HIP_OUT_ERR(-1, "Unkown algorithm");
     }
 
 out_err:
@@ -1157,7 +1085,7 @@ void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
                                     hip_controls mask)
 {
     if (entry != NULL) {
-        entry->local_controls &= (~mask);
+        entry->local_controls &= ~mask;
     }
 }
 
@@ -1282,10 +1210,9 @@ int hip_count_open_connections(void)
 int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 {
     int                             err = 0;
-    struct hip_hadb_user_info_state hid;
+    struct hip_hadb_user_info_state hid = { { { { 0 } } } };
     struct hip_common              *msg = opaq;
 
-    memset(&hid, 0, sizeof(hid));
     hid.state = entry->state;
     ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
     ipv6_addr_copy(&hid.hit_peer, &entry->hit_peer);
@@ -1308,6 +1235,8 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 
     hid.nat_udp_port_peer  = entry->peer_udp_port;
     hid.nat_udp_port_local = entry->local_udp_port;
+
+    hid.broadcast_status = hip_broadcast_status;
 
     hid.peer_controls = entry->peer_controls;
 
@@ -1507,7 +1436,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst
  *
  * @param ha the host association
  */
-void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha)
 {
     int prev_spi_out = ha->spi_outbound_current;
     int prev_spi_in  = ha->spi_inbound_current;
@@ -1543,64 +1472,59 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
  * @param dst_addr the new destination address for the SAs
  * @return zero on success and negative on error
  */
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
-                                              struct in6_addr *src_addr,
-                                              struct in6_addr *dst_addr)
+int hip_create_or_update_security_associations_and_sp(struct hip_hadb_state *const ha,
+                                                      const struct in6_addr *const src_addr,
+                                                      const struct in6_addr *const dst_addr)
 {
     int err = 0;
 
-    int new_spi_out = ha->spi_outbound_new;
-    int new_spi_in  = ha->spi_inbound_current;
-
+    /* If we have old SAs with these HITs delete them */
     hip_delete_security_associations_and_sp(ha);
 
-    // Create a new security policy
+    // Create a new inbound SA
+    HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", ha->spi_inbound_current);
+    HIP_IFEL(hip_add_sa(src_addr,
+                        dst_addr,
+                        &ha->hit_peer,
+                        &ha->hit_our,
+                        ha->spi_inbound_current,
+                        ha->esp_transform,
+                        &ha->esp_in,
+                        &ha->auth_in,
+                        HIP_SPI_DIRECTION_IN,
+                        ha),
+             -1, "Error while changing inbound security association\n");
+
+    // Create a new outbound SA
+    HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", ha->spi_outbound_new);
+    HIP_IFEL(hip_add_sa(dst_addr,
+                        src_addr,
+                        &ha->hit_our,
+                        &ha->hit_peer,
+                        ha->spi_outbound_new,
+                        ha->esp_transform,
+                        &ha->esp_out,
+                        &ha->auth_out,
+                        HIP_SPI_DIRECTION_OUT,
+                        ha),
+             -1, "Error while changing outbound security association\n");
+
+    // Create a new security policy pointing to SAs after SA setup
     HIP_IFEL(hip_setup_hit_sp_pair(&ha->hit_peer,
                                    &ha->hit_our,
                                    src_addr,
                                    dst_addr,
                                    IPPROTO_ESP,
-                                   1,
-                                   0),
+                                   1),
              -1, "Setting up SP pair failed\n");
 
-    // Create a new inbound SA
-    HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
-
-    HIP_IFEL(hip_add_sa(src_addr,
-                        dst_addr,
-                        &ha->hit_peer,
-                        &ha->hit_our,
-                        new_spi_in,
-                        ha->esp_transform,
-                        &ha->esp_in,
-                        &ha->auth_in,
-                        HIP_SPI_DIRECTION_IN,
-                        0,
-                        ha),
-             -1, "Error while changing inbound security association\n");
-
-    HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
-
-    // Create a new outbound SA
-    HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
-    ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
-
-    HIP_IFEL(hip_add_sa(dst_addr,
-                        src_addr,
-                        &ha->hit_our,
-                        &ha->hit_peer,
-                        new_spi_out,
-                        ha->esp_transform,
-                        &ha->esp_out,
-                        &ha->auth_out,
-                        HIP_SPI_DIRECTION_OUT,
-                        0,
-                        ha),
-             -1, "Error while changing outbound security association\n");
-
-    HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
-
 out_err:
+    if (err) {
+        HIP_ERROR("Failed to setup IPsec SAs, removing IPsec state!");
+
+        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
+        hip_delete_security_associations_and_sp(ha);
+    }
+
     return err;
 };

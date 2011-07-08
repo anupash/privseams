@@ -274,10 +274,9 @@ algo_check_done:
     } else if (algo == HIP_HI_ECDSA) {
         HIP_IFEL(1, -1, "Call to unimplemented ECDSA case.\n");
     } else {
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
-    memset(sha_digest, '\0', sizeof(sha_digest));
     /* build sha1 digest that will be signed */
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert,
                                  strlen((char *) cert->cert), sha_digest)),
@@ -342,7 +341,7 @@ algo_check_done:
     } else if (algo == HIP_HI_ECDSA) {
         HIP_IFEL(1, -1, "Call to unimplemented ECDSA case.\n");
     } else {
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
 out_err:
@@ -439,13 +438,14 @@ out_err:
  *                hip_send_recv_daemon_info
  * @return 0 if ok -1 if error
  */
-int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
-                                   const char *issuer_type,
-                                   struct in6_addr *issuer,
-                                   const char *subject_type,
-                                   struct in6_addr *subject,
-                                   time_t *not_before, time_t *not_after,
-                                   int hip_user_socket)
+static int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
+                                          const char *issuer_type,
+                                          struct in6_addr *issuer,
+                                          const char *subject_type,
+                                          struct in6_addr *subject,
+                                          time_t *not_before,
+                                          time_t *not_after,
+                                          int hip_user_socket)
 {
     int                              err         = 0;
     char                            *tmp_issuer  = NULL;
@@ -455,10 +455,10 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     struct tm                       *ts          = NULL;
     char                             buf_before[80];
     char                             buf_after[80];
-    char                             present_issuer[41];
-    char                             present_subject[41];
-    struct hip_common               *msg      = NULL;
-    const struct hip_cert_spki_info *returned = NULL;
+    char                             present_issuer[41]  = { 0 };
+    char                             present_subject[41] = { 0 };
+    struct hip_common               *msg                 = NULL;
+    const struct hip_cert_spki_info *returned            = NULL;
 
     /* Malloc needed */
     tmp_issuer = calloc(1, 128);
@@ -479,16 +479,6 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     }
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "Malloc for msg failed\n");
-
-    /* Memset everything */
-    HIP_IFEL(!memset(buf_before, '\0', sizeof(buf_before)), -1,
-             "Failed to memset memory for tmp buffers variables\n");
-    HIP_IFEL(!memset(buf_after, '\0', sizeof(buf_after)), -1,
-             "Failed to memset memory for tmp buffers variables\n");
-    HIP_IFEL(!memset(present_issuer, '\0', sizeof(present_issuer)), -1,
-             "Failed to memset memory for tmp variables\n");
-    HIP_IFEL(!memset(present_subject, '\0', sizeof(present_subject)), -1,
-             "Failed to memset memory for tmp variables\n");
 
     /* Make needed transforms to the date */
     /*  Format and print the time, "yyyy-mm-dd hh:mm:ss"
@@ -789,9 +779,7 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
                                                   CONF * conf)
 {
     long err = 0;
-    int  i;
     STACK_OF(CONF_VALUE) * sec = NULL;
-    CONF_VALUE *item;
 
     /* XXTODO conf is opened and reopened here why -Samu */
     conf = NCONF_new(NCONF_default());
@@ -802,9 +790,6 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
              "Section %s was not in the configuration (%s)\n",
              section_name, HIP_CERT_CONF_PATH);
 
-    for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-        item = sk_CONF_VALUE_value(sec, i);
-    }
 out_err:
     if (err == -1) {
         return NULL;

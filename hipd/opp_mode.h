@@ -23,22 +23,26 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_HADB_LEGACY_H
-#define HIP_HIPD_HADB_LEGACY_H
+/**
+ * @file
+ * This file represents the interface of the opportunistic mode for the Host
+ * Identity Protocol (HIP).
+ *
+ * @brief Interface of the HIP opportunistic mode
+ *
+ * @author Rene Hummen
+ */
 
-#include <stdint.h>
+#ifndef HIP_HIPD_OPP_MODE_H
+#define HIP_HIPD_OPP_MODE_H
+
 #include <netinet/in.h>
-#include <sys/time.h>
 
 #include "lib/core/protodefs.h"
 
 
-int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
-                                    const struct in6_addr *addr,
-                                    uint32_t *lifetime,
-                                    struct timeval *modified_time);
+struct hip_hadb_state *hip_opp_get_hadb_entry_i1_r1(struct hip_common *msg,
+                                                    const struct in6_addr *const src_addr);
+int hip_handle_opp_r1(struct hip_packet_context *ctx);
 
-void hip_hadb_delete_peer_addrlist_one_old(struct hip_hadb_state *ha,
-                                           struct in6_addr *addr);
-
-#endif /* HIP_HIPD_HADB_LEGACY_H */
+#endif /* HIP_HIPD_OPP_MODE_H */

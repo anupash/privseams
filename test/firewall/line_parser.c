@@ -27,7 +27,7 @@
 #include <check.h>
 
 #include "firewall/line_parser.h"
-#include "firewall/line_parser.c"
+#include "test_suites.h"
 
 // four lines, each 50 characters long (including \n)
 char data[] = "I'm not knocking your want to carry that home    \n\
@@ -35,7 +35,7 @@ Took it with you when you moved and got it broke \n\
 Found the pieces we counted them all alone       \n\
 Didn't add up forgot to carry a zero             ";
 // four pointers to the beginning of the lines
-char *const lines[4] = {
+static char *const lines[4] = {
     data,
     data + 50,
     data + 100,
@@ -125,10 +125,6 @@ START_TEST(test_hip_lp_next_null_lp)
     fail_unless(hip_lp_next(NULL) == NULL, NULL);
 }
 END_TEST
-
-// For unknown reasons, this file does not compile without the following,
-// seemingly useless forward declaration
-Suite *firewall_line_parser(void);
 
 Suite *firewall_line_parser(void)
 {

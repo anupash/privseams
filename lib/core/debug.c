@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,23 +30,23 @@
  * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
  * variable below).
  * Examples:
- **<pre>
+ * <pre>
  * HIP_INFO("test foobar");
  * HIP_INFO("%s\n", "debug test");
  * HIP_ERROR("%s%d\n", "serious error!", 123);
  * HIP_DIE("%s\n", "really bad error, exiting!");
  * HIP_PERROR("socket");
  * HIP_HEXDUMP("foobar", data, len);
- **</pre>
+ * </pre>
  *
  * Adjusting of log types and format dynamically. (there really should not be a
  * reason to call these in the code, because default settings should be
  * reasonable)
  *
- **<pre>
+ * <pre>
  * hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
  * hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
- **</pre>
+ * </pre>
  *
  * @todo debug messages should not be compiled at all in a production release
  * @todo set_log{type|format}(XX_DEFAULT)
@@ -85,7 +85,6 @@
 #include "builder.h"
 #include "common.h"
 #include "ife.h"
-#include "list.h"
 #include "prefix.h"
 #include "state.h"
 #include "straddr.h"
@@ -102,13 +101,13 @@
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
 /* must be in the same order as enum debug_level (straight mapping) */
-const int debug2syslog_map[] = { LOG_ALERT,
-                                 LOG_ERR,
-                                 LOG_INFO,
-                                 LOG_DEBUG };
+static const int debug2syslog_map[] = { LOG_ALERT,
+                                        LOG_ERR,
+                                        LOG_INFO,
+                                        LOG_DEBUG };
 
 /* must be in the same order as enum debug_level (straight mapping) */
-const char *debug_prefix[] = { "die", "error", "info", "debug" };
+static const char *debug_prefix[] = { "die", "error", "info", "debug" };
 /* printed just on stderr */
 
 /* Production quality code prints debugging stuff on syslog, testing code
@@ -578,7 +577,7 @@ static size_t hip_mem2pretty_hex(const void *in, const size_t in_len, char *out,
         HIP_ASSERT(line_result == 1);
 
         // advance input pointer by at most the maximum available input so the return value is calculated correctly
-        in_cur  += (in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining);
+        in_cur  += in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining;
         out_cur += HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH;
     }
 
@@ -796,28 +795,5 @@ void hip_print_locator_addresses(const struct hip_common *in_msg)
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
             }
         }
-    }
-}
-
-/**
- * display peer_addr_list_to_be_added structure from a host association
- *
- * @param entry the host association
- */
-void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
-{
-    LHASH_NODE                     *item = NULL, *tmp = NULL;
-    struct hip_peer_addr_list_item *addr;
-    int                             i = 0;
-
-    HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
-    if (entry->peer_addr_list_to_be_added == NULL) {
-        return;
-    }
-
-    list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
-    {
-        addr = list_entry(item);
-        HIP_DEBUG_HIT("Peer address", &addr->address);
     }
 }

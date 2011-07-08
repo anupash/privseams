@@ -72,7 +72,7 @@ struct perf_set *hip_perf_create(int num)
     set->running   = calloc(num, sizeof(int));
     set->writable  = calloc(num, sizeof(int));
 
-    return perf_set;
+    return set;
 }
 
 /**
@@ -195,10 +195,11 @@ void hip_perf_stop_benchmark(struct perf_set *set, int slot)
  */
 int hip_perf_write_benchmark(struct perf_set *set, int slot)
 {
-    int err = 0;
-    HIP_IFEL(!set, -1, "Performance set is empty\n");
+    int  err = 0;
     char buffer[30];
-    memset(buffer, 0, 30);
+
+    HIP_IFEL(!set, -1, "Performance set is empty\n");
+
     if (set->num_files > slot && set->writable[slot] == 1) {
         if (set->files[slot]) {
             sprintf(buffer, "%4d\t%8.8lf\n", set->linecount[slot]++,
@@ -227,6 +228,12 @@ out_err:
 void hip_perf_destroy(struct perf_set *set)
 {
     int slot = 0;
+
+    if (!set) {
+        HIP_ERROR("Performance set is NULL\n");
+        return;
+    }
+
 
     free(set->files);
     set->files = NULL;

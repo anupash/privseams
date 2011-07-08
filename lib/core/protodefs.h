@@ -66,19 +66,12 @@
 #define HIP_R1                  2
 #define HIP_I2                  3
 #define HIP_R2                  4
-#define HIP_CER                 5
 
 #define HIP_UPDATE              16
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
-/* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
-/* free slot */
-#define HIP_PSIG                21 ///< lightweight HIP pre signature
-#define HIP_TRIG                22 ///< lightweight HIP signature trigger
 #define HIP_LUPDATE             23
-#define HIP_DATA                32
-#define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
 
@@ -142,20 +135,9 @@
  * @{
  */
 
-/** Defines the minimum parameter type value.
- * @note exclusive */
-#define HIP_PARAM_MIN                  -1
-
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-// NAT branch
-/* 195 is temp value, check me later */
-#define HIP_PARAM_STUN                 195
-// end NAT branch
-#define HIP_PARAM_HASH_CHAIN_VALUE     221 ///< lhip hash chain. 221 is is temporary.
-#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 ///< lhip hash chain anchors. 222 is temporary.
-#define HIP_PARAM_HASH_CHAIN_PSIG      223 ///< lhip hash chain signature. 223 is temporary.
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_CHALLENGE_RESPONSE   322
@@ -163,11 +145,6 @@
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
-//NAT branch
-#define HIP_PARAM_NAT_TRANSFORM        608
-#define HIP_PARAM_NAT_PACING           610
-//end NAT branch
-
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
@@ -242,7 +219,6 @@
 /* #define HIP_PARAM_TURN_INFO             32821 */
 #define HIP_PARAM_ITEM_LENGTH           32822
 /* End of HIPL private parameters. */
-
 #define HIP_PARAM_HMAC                  61505
 #define HIP_PARAM_HMAC2                 61569
 #define HIP_PARAM_HIP_SIGNATURE2        61633
@@ -624,7 +600,7 @@ struct hip_host_id_priv {
  * Localhost Host Identity. Used only internally in the implementation.
  * Used for wrapping anonymous bit with the corresponding HIT.
  */
-struct hip_lhi {
+struct hip_host_id_local {
     struct in6_addr hit;
     uint16_t        anonymous;        /**< Is this an anonymous HI */
     uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA or HIP_ECDSA*/
@@ -736,6 +712,19 @@ struct hip_common_user {
 } __attribute__ ((packed));
 
 /**
+ * A memory buffer for a HIP message.
+ * Instances of this type occupy HIP_MAX_PACKET bytes of memory.
+ * This type is useful where HIP messages are constructed and to express that
+ * the message needs to be backed by memory for that.
+ * It is also useful where dynamic allocation of message buffers is unwanted.
+ */
+union hip_msg_bfr {
+    struct hip_common      msg;
+    struct hip_common_user usr;
+    unsigned char          bfr[HIP_MAX_PACKET];
+};
+
+/**
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and length conversion.
  */
@@ -772,13 +761,17 @@ struct hip_r1_counter {
     uint64_t    generation;
 } __attribute__ ((packed));
 
+
+/* puzzle and solutions are defined to have a length of 8 bytes */
+#define PUZZLE_LENGTH 8
+
 struct hip_puzzle {
     hip_tlv     type;
     hip_tlv_len length;
     uint8_t     K;
     uint8_t     lifetime;
     uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t    I;
+    uint8_t     I[PUZZLE_LENGTH];
 } __attribute__ ((packed));
 
 struct hip_solution {
@@ -787,8 +780,8 @@ struct hip_solution {
     uint8_t     K;
     uint8_t     reserved;
     uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t    I;
-    uint64_t    J;
+    uint8_t     I[PUZZLE_LENGTH];
+    uint8_t     J[PUZZLE_LENGTH];
 } __attribute__ ((packed));
 
 
@@ -806,7 +799,7 @@ struct hip_challenge_response {
     hip_tlv_len length;
     uint8_t     K;
     uint8_t     lifetime;
-    uint64_t    J;
+    uint8_t     J[PUZZLE_LENGTH];
     uint8_t     opaque[24];           /**< variable length */
 } __attribute__ ((packed));
 

@@ -19,7 +19,7 @@
     <title>Software Requirements</title>
     <para>
       In addition to the HIPL userspace software,
-      you need a linux system with BEET IPsec support. You can install BEET IPsec
+      you need a Linux system with BEET IPsec support. You can install BEET IPsec
       by following one of the following methods:
     </para>
     <orderedlist>
@@ -34,7 +34,7 @@
       </para></listitem>
       <listitem><para>
                 Patch your kernel by installing the binary kernel images
-                (debian and redhat based distributions)
+                (Debian and Red Hat based distributions)
                 from here: <ulink url="http://infrahip.hiit.fi/index.php?index=download" />. The
                 binary kernel images are based on vanilla kernel and therefore do
                 not include any proprietary drivers or firmware images. As a result,
@@ -84,8 +84,9 @@
     The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
     </para>
     <para>
-    SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
-    configuring SElinux yet. Contributions are welcome.
+    SELinux should be disabled with HIPL in /etc/selinux/config (you have
+    to reboot the machine after this). We don't have yet instructions on
+    configuring SELinux yet. Contributions are welcome.
     </para>
   </section>
   <section id="ch_building_doc">
@@ -98,7 +99,7 @@
     <title>Compiling the Kernel</title>
 
     <para>
-      The kernel modifications for HIP are available in vanilla linux
+      The kernel modifications for HIP are available in vanilla Linux
       kernel 2.6.27 and above. With older kernel version, it is possible
       to use the userspace IPsec in HIPL. If you want to optimize performance
       for an older kernel version, you can patch and compile the kernel.
@@ -107,16 +108,16 @@
       wireless firmware images manually. The HIPL
       website has some readily built images, but you may still have to
       install some firmware images manually. If you are unsure, you can
-      try the userspace ipsec as described later in this manual.
+      try the userspace IPsec as described later in this manual.
     </para>
 
     <para>
-      If you haven't configured linux kernel before, please use the userspace
-      ipsec instead (as described later in this document), or at least consult
+      If you haven't configured Linux kernel before, please use the userspace
+      IPsec instead (as described later in this document), or at least consult
       linux/README.
     </para>
     <para>
-      Download linux kernel 2.6.x.y. Compile the kernel with
+      Download Linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
     <itemizedlist>
@@ -366,7 +367,7 @@
   </section>
 
   <section id="ch_openwrt">
-    <title>HIPL on OpenWRT</title>
+    <title>HIPL on OpenWrt</title>
     <para>
       HIPL compiles fine on OpenWrt trunk and Backfire branch versions
       from the end of 2010 onwards.
@@ -472,26 +473,26 @@ $ make package/hipl/install
       firmware.
       </para>
 
-      <section><title>Prerequisites</title>
+      <section id="maemo_prerequisites"><title>Prerequisites</title>
 
       <para>The kernel needs to be updated to support the various
             features required by HIPL that aren't present in the
-            standard distribution. These include ipv6 support and
-            various IPSec- and packet filtering related options.</para>
+            standard distribution. These include IPv6 support and
+            various IPsec- and packet filtering related options.</para>
 
-      <para>A pre-compiled version of the kernel for the 2008, r.36
+      <para>A precompiled version of the kernel for the 2008, r.36
             firmware can be found <ulink
             url="http://hipl.hiit.fi/MERCoNe/diablo/kernel/">here</ulink>
             </para>
 
       <para>Instructions on installing a new kernel can be found from
-            the maemo documentation (wiki) at <ulink
+            the Maemo documentation (wiki) at <ulink
             url="http://www.maemo.org/">www.maemo.org</ulink>.</para>
 
       <para>Note that the firmware loaded on the device must match the
-      versio for which the kernel is compiled. In case you do not know
-      which firmware you have, you should re-flash the whole device
-      image with the correct version (found from the maemo-release
+      version for which the kernel is compiled. In case you do not know
+      which firmware you have, you should reflash the whole device
+      image with the correct version (found from the Maemo release
       downloads at <ulink url="http://tablets-dev.nokia.com/">Nokia's tablet development site</ulink>).</para>
 
       <para>Alternatively, in case a further customized kernel is
@@ -500,43 +501,43 @@ $ make package/hipl/install
 
       <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
             on how to do this. However, to enable HIPL, the kernel
-            needs to be patched to fix a couple of issues in the IPSec
+            needs to be patched to fix a couple of issues in the IPsec
             stack. These patches can be found from the HIPL Bazaar
             repository under patches/kernel/2.6.21. Instructions on
             enabling the HIPL-required options in the kernel can be
             found in the HIPL manual.</para>
 
 
-      <para>Note that the kernel sources got from the maemo repository
+      <para>Note that the kernel sources got from the Maemo repository
             usually corresponds only to the latest firmware release.
       </para>
 
       </section>
 
-      <section><title>Installing from Pre-compiled Packages</title>
+      <section id="maemo_precompiled"><title>Installing from Precompiled Packages</title>
 
-      <para>Instructions on installing HIPL using the pre-compiled
+      <para>Instructions on installing HIPL using the precompiled
             packages can be found from the
             <ulink url="http://hipl.hiit.fi/index.php?index=download">download
             section</ulink> of the HIPL homepage.</para>
 
       </section>
 
-      <section><title>Supported features</title>
+      <section id="maemo_features"><title>Supported features</title>
 
       <para>
 
-      The maemo/diablo version of HIPL supports most features of HIPL, except
+      The Maemo/diablo version of HIPL supports most features of HIPL, except
       the firewall extensions.
 
       </para>
 
       </section>
 
-      <section><title>Compiling HIPL from Source</title>
+      <section id="maemo_source"><title>Compiling HIPL from Source</title>
 
       <para>
-      HIPL can be compiled from source for maemo/diablo with the following
+      HIPL can be compiled from source for Maemo/diablo with the following
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
@@ -561,10 +562,10 @@ $ make package/hipl/install
     </para>
 
     <para>
-      The quickest way to install HIPL on your linux system is use the
+      The quickest way to install HIPL on your Linux system is use the
       precompiled release packages. Binary packages exist for a number
-      of debian and redhat based linux distributions. Install all of
-      the binary packages to your linux system according to
+      of Debian and Red Hat based Linux distributions. Install all of
+      the binary packages to your Linux system according to
       instructions on the download pages:
       <ulink url="http://infrahip.hiit.fi/index.php?index=download" />
     </para>
@@ -592,7 +593,7 @@ $ make package/hipl/install
     </para>
 
     <itemizedlist>
-      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Redhat-based distros: rpm -qa | grep hipl</programlisting></listitem>
+      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Red Hat-based distros: rpm -qa | grep hipl</programlisting></listitem>
       <listitem><programlisting>hipconf get ha all</programlisting></listitem>
       <listitem><programlisting>ip xfrm state</programlisting></listitem>
       <listitem><programlisting>uname -a</programlisting></listitem>
@@ -617,11 +618,11 @@ $ make package/hipl/install
 
     <programlisting>
     ulimit -c unlimited
-    echo /tmp/%e.core >/proc/sys/kernel/core_pattern
+    echo /tmp/%e.core > /proc/sys/kernel/core_pattern
     </programlisting>
 
     <para>
-    To see e.g. where HIP daemon has back fired, use gdb to analyse th
+    To see e.g. where HIP daemon has back fired, use gdb to analyze the
     core file as follows:
     </para>
 
@@ -652,7 +653,7 @@ $ make package/hipl/install
     </table>
 
     <para>
-      The servers are running public http service and respond to ICMPv4 and ICMPv6.
+      The servers are running public HTTP service and respond to ICMPv4 and ICMPv6.
     </para>
 
     <para>To use access the servers using HIP behind a NAT box, you
@@ -705,7 +706,7 @@ $ make package/hipl/install
               section we will demonstrate few command line applications.</para>
             <para> You should run nc6 with root privileges at the server side
               if the port number is less than 1024.</para>
-            <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses.
+            <para>In this section we will use IPv6 addresses, but you can use also IPv4 addresses.
               Furthermore, the use of hipfw is optional.</para>
     <para>
       oops:
@@ -845,7 +846,7 @@ $ make package/hipl/install
             </para>
             <para>
               See the log messages for information about the result of HIP base
-              exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
+              exchange and USAGI IPsec negotiation. tcpdump or ethereal are good
               tools for dumping the network traffic during the base exchange.
               For tcpdump, you can use
               "tcpdump -n -i any esp or proto 139 or port 10500"
@@ -954,7 +955,7 @@ $ make package/hipl/install
     </para>
     <itemizedlist>
       <listitem><para>
-        &lt;first, establish a HIP connection as intructed in <xref linkend="ch_basictest" />&gt;
+        &lt;first, establish a HIP connection as instructed in <xref linkend="ch_basictest" />&gt;
       </para></listitem>
       <listitem><para>
         oops  # nc6 -l -p 12345
@@ -1001,7 +1002,7 @@ $ make package/hipl/install
       Make sure to add the route for the new address as soon as the new address is
       added. If the route is missing, the update packets might not get sent at all.
       The daemon waits for a couple of seconds if a transmit of an update fails for
-      restransmitting it.
+      retransmitting it.
     </para>
   </section> <!-- handover -->
 
@@ -1056,28 +1057,6 @@ $ make package/hipl/install
         hipconf command also to @sysconfdir@/hipd_config and restart hipd.
       </para>
     </section>
-    <section id="sec_advanced_methods">
-      <title>Experimental Methods</title>
-      <para>
-        These methods are experimental. Use with care and only if you know what you are doing!
-      </para>
-      <para>
-        1. Use the opportunistic mode as described in
-        <xref linkend="opportunistic" />. This method works with both IPv4 and
-        IPv6 applications. It does not require any HIP name configuration at all.
-      </para>
-      <para>
-        1a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <para>
-        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
-      </para>
-      <para>
-        2. Use the system-based opportunistic mode as instructed in
-           <xref linkend="sys_based_opp_mode" />. Does not require either
-           any kind of HIP name configuration at all.
-      </para>
-    </section>
 
   <section id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
@@ -1086,7 +1065,7 @@ $ make package/hipl/install
       <para>
         In the deployment phase, it is interesting to set-up a proxy server that
         translates the TCP/IP traffic into HIP. For instance, this is convenient
-        in http proxy servers. Thus all http traffic between our host and the proxy
+        in HTTP proxy servers. Thus all HTTP traffic between our host and the proxy
         server will benefit from the usage of HIP.
       </para>
       <para>
@@ -1128,10 +1107,10 @@ $ make package/hipl/install
       </para>
     </section>
     <section id="sec_sendmail">
-      <title>Sendmail and Spamassassin</title>
+      <title>Sendmail and SpamAssassin</title>
       <para>
-        Sendmail works fine with HIP after you enable IPv6 in sendmail. We
-        did some experimentation with spamassassin to integrate it with HIP
+        Sendmail works fine with HIP after you enable IPv6 in Sendmail. We
+        did some experimentation with SpamAssassin to integrate it with HIP
         puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
         README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
         examples of configuration changes and instructions.
@@ -1145,8 +1124,8 @@ $ make package/hipl/install
     make use of HITs.
   </para>
   <para>
-    You may have to bind apache to the local HIT (or LSI). Alternatively, you
-    can bind apache to :: (or 0.0.0.0) to allow both HIP and non-HIP based
+    You may have to bind Apache to the local HIT (or LSI). Alternatively, you
+    can bind Apache to :: (or 0.0.0.0) to allow both HIP and non-HIP based
     communications. You can set the binding using the Listen directive, but
     probably want to specify local HITs (or LSIs) also to the NameVirtualHost
     and VirtualHost directives.
@@ -1203,7 +1182,7 @@ $ make package/hipl/install
   </para>
   <para>
     In the case VLC seems insufficient for your purposes,
-    we have also expiremented successfully music streaming with
+    we have also experimented successfully music streaming with
     <ulink url="http://www.icecast.org/">Icecast</ulink> earlier.
     Unfortunately, we don't have any documentation yet on this.
   </para>
@@ -1254,7 +1233,7 @@ $ make package/hipl/install
       </para>
       <para>
         On the client side install package xtightvncviewer. Then with the
-        following command you should have an successfull connection.
+        following command you should have a successful connection.
       </para>
       <programlisting>
         xtightvncviewer &lt;LSI-of-server&gt;:1
@@ -1314,8 +1293,8 @@ $ make package/hipl/install
   <section id="sec_networking_scripts">
   <title>Networking scripts and instructions for virtual machines and HIP</title>
   <para>
-  These pages contain some scripts for vmware, virtualbox and UML
-  users. For UML there is a more complete tutorial on howto compile
+  These pages contain some scripts for VMware, VirtualBox and UML
+  users. For UML there is a more complete tutorial on HOWTO compile
   HIP enabled host and guest
   kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
   </para>
@@ -1368,7 +1347,7 @@ VPN
     <para>
       Then you can try the connection e.g. with "ping &lt;REMOTE_LSI&gt;".
       Note that the capitalized identifiers should not be taken literally.
-      Replacate them with the local and remote LSIs and virtual VPN addresses
+      Replicate them with the local and remote LSIs and virtual VPN addresses
       according to your configuration.
     </para>
     </section> <!-- openvpn over hip -->
@@ -1494,7 +1473,7 @@ VPN
   </section> <!-- telnet -->
 
   <section id="sec_torrent">
-  <title>Bittorrent over HIP</title>
+  <title>BitTorrent over HIP</title>
 
   <para>
     The following link shows how to run torrent over HIP:
@@ -1514,7 +1493,7 @@ VPN
     <title>DNS Proxy</title>
 
     <para>
-      The linux libc library does not (yet) support look up of HI
+      The Linux libc library does not (yet) support look up of HI
       records from the DNS. As a workaround for this problem, HIPL
       provides a DNS proxy that intercepts DNS requests and handles
       the HI record look up. The proxy intercepts the DNS requests by
@@ -1541,18 +1520,20 @@ VPN
       running the DNS proxy on e.g. a SSH server or IRC server has the
       benefit that it speeds up logins. The server software will try
       to resolve the HIT of the client to a hostname and introduces an
-      articifial delay to the client if the HIT was not found. Running
+      artificial delay to the client if the HIT was not found. Running
       DNS proxy at the server avoids this delay.
     </para>
 
     <para>
-     The DNS proxy tries to find host identities from two places,
-     the "hosts" files or HI records in DNS. The @sysconfdir@/hosts file
-     can be used to isolate all HITs or LSIs, or they can be overloaded
-     all in the /etc/hosts file. In the case of DNS, the DNS proxy
-     converts the HI records automatically to HITs and returns also
-     LSIs to the application when requested. The DNS proxy handles
-     the LSI conversion through hipd.
+     The DNS proxy tries to find host identities from two places, the
+     "hosts" files or HI records in DNS. The @sysconfdir@/hosts file
+     can be used to isolate all HITs or LSIs, or they can be
+     overloaded all in the /etc/hosts file. If you prefer isolation to
+     @sysconfdir@/hosts, you may have to change the "hosts" line in
+     /etc/nsswitch.conf so that "dns" occurs before "hosts". In the case
+     of DNS, the DNS proxy converts the HI records automatically to
+     HITs and returns also LSIs to the application when requested. The
+     DNS proxy handles the LSI conversion through hipd.
     </para>
 
     <para>
@@ -1937,7 +1918,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           The rendezvous server is similar to the home agent in Mobile IP. The
           rendezvous server provides a stable IP address for the responder and forwards
           the initial I1 packet to the current location of the responder. The
-          idea is that I wants to connect to R's HIT but only knows RVS's IP
+          idea is that I wants to connect to R's HIT but only knows RVS' IP
           address (and that RVS is representing R).
         </para>
         <mediaobject>
@@ -2740,13 +2721,13 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
       </para>
       <para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
-      <para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
+      <para>Mobility from behind NAT to publicly addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
   </section>
 
     <section id="teredo">
       <title>Teredo and HIP</title>
       <para>
-        Teredo is a traversal solution for HIP. You can expirement with Teredo
+        Teredo is a traversal solution for HIP. You can experiment with Teredo
         by installing the Miredo client software. Then, establish HIP connections
         to Teredo addresses (check ifconfig teredo) at the client side as
         instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
@@ -2785,7 +2766,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       relays HIP control and ESP data traffic. You can use one the InfraHIP servers
       or set up your own as instructed in <xref linkend="ch_rvs_relay"
       />. Both Initiator and Responder must be configured with
-      "hipconf nat ice-udp".  Then Initiator must run the base exchange throught the
+      "hipconf nat ice-udp".  Then Initiator must run the base exchange through the
       relay server.
     </para>
 
@@ -2796,210 +2777,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 <chapter id="ch_exp_extensions">
     <title>Other Experimental HIP Extensions</title>
 
-  <section id="opportunistic">
-    <title>Using Opportunistic mode</title>
-    <itemizedlist>
-    <listitem><para>
-           Opportunistic mode has two benefits. First, you don't have to know
-    the HIT of the peer. This is makes HIP more suitable to "ad-hoc"
-    environments where preconfiguration of HITs is difficult. Second, the
-    opp. mode implementation allows the use of IPv4 addresses at the
-    application. This way, even IPv4-only legacy applications can benefit
-    from the security and mobility features of HIP.
-    </para></listitem>
-    <listitem><para>
-           Opportunistic mode is compiled on by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
-    </para></listitem>
-    <listitem><para>
-              Move to top level of HIPL
-    </para></listitem>
-    <listitem><para>
-           e.g. cd hipl
-    </para></listitem>
-    <listitem><para>
-              Run autoreconf
-    </para></listitem>
-    <listitem><para>
-           autoreconf --install
-    </para></listitem>
-    <listitem><para>
-              Run configure
-    </para></listitem>
-    <listitem><para>
-           ./configure
-    </para></listitem>
-    <listitem><para>
-              Run make
-    </para></listitem>
-    <listitem><para>
-           make
-    </para></listitem>
-    <listitem><para>
-              Run make install
-    </para></listitem>
-    <listitem><para>
-           make install
-    </para></listitem>
-    <listitem><para>
-              Run hip daemon on both "crash" and "oops"
-    </para></listitem>
-    <listitem><para>
-           hipd
-    </para></listitem>
-    <listitem><para>
-            Use the hipconf tool to set up HIP Opportunistic mode on both
-            hosts manually. "hipconf set opp on|off" is used to
-            enable/disable opportunistic mode. By default it is on.
-    </para></listitem>
-    <listitem><para>
-           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from @sysconfdir@/hosts, and then following the steps in <xref linkend="ch_basictest" />.
-    </para></listitem>
-    </itemizedlist>
-
-    <para>
-    HIPL supports also opportunistic mode that is uses TCP options to
-    detect whether peer supports HIP or not. This is particularly
-    useful in networking environments without HIP look up
-    infrastructure (DNS/etc) and where the number of HIP hosts
-    is small. This "advanced" version of the opportunistic mode
-    enables fast and backwards compatible fallback to non-HIP
-    communications for TCP connections when the peer does not support
-    HIP.  To use the opportunistic mode, start both the hipd and hipfw (e.g. with option -A).
-    Then instruct "hipconf set opp advanced" and use the opportunistic mode as instructed
-    earlier in this section.
-</para>
-
-  <section id="efficient_HIP_detection">
-    <title>Opportunistic mode with efficient detection of peer HIP capability</title>
-        <para>
-        The normal HIP opportunistic mode experiences a delay when
-        a HIP peer tries to communicate with a non-HIP peer. This happens
-        because the initiator waits for a HIP response before falling
-        back on normal TCP communication. The efficient detection of
-        peer HIP capability enables us to detect peer HIP capability or
-        the lack thereof. If we detect that the peer supports HIP, we
-        continue the HIP opportunistic communication. Otherwise,
-        communication falls back on plain TCP. Efficient detection of
-        peer HIP capability is enabled with the second of the following
-        commands.
-        </para>
-        <para>
-        As an example, we run the HIP daemon first.
-        </para>
-        <para>
-        1. hipd
-        </para>
-        <para>
-        Afterwards, we run the firewall as shown in the following command. The
-        firewall is needed in case the peer does not support HIP, because it
-        captures the incoming TCP SYN_ACK packet and notifies the HIPD of the
-        lack of HIP support at the peer:
-        </para>
-        <para>
-        2. hipfw -dA
-        </para>
-        <para>
-        Then, we enable efficient, undelayed detection of peer HIP
-        capability with the following command:
-        </para>
-        <para>
-        3. hipconf set opp advanced
-        </para>
-        <para>
-        To try the feature, we initiate a TCP connection using the HIP
-        opportunistic library:
-        </para>
-        <para>
-        4. hipconf run opp wget IP-number
-        </para>
-        <para>
-        One thing to stress here is that the receiver should also run the
-        firewall and enable the efficient HIP opportunistic mode in order
-        to be ensure being detected correctly. If this feature is not enabled
-        at the receiver, correct detection depends on the relative latency of a
-        TCP and a HIP packet.
-        </para>
-        <para>
-        The enabling at the receiver is done by executing step 2 after
-        the HIP daemon has started.
-        </para>
-  </section>
-
-  <section id="sys_based_opp_mode">
-    <title>System-based opportunistic mode (experimental)</title>
-        <para>
-        The system-based opportunistic mode enables HIP communication
-        without the use of the opportunistic library. If the peer does
-        not support HIP, communication falls back on normal TCP
-        communication.
-        </para>
-        <para>
-        The system-based opportunistic mode is implemented at the HIP
-        firewall. It is enabled with the -o option as shown below:
-        </para>
-        <para>
-        hipfw -dAo
-        </para>
-        <para>
-        Following is an example of all the steps to be followed at two peers
-        for using the system-based opportunistic mode between them.
-        </para>
-        <para>
-        At the responder, one can execute these steps:
-        </para>
-        <para>
-        1. hipd
-        </para>
-        <para>
-        2. hipfw -Aod
-        </para>
-        <para>
-        3. nc -l 1111
-        </para>
-        <para>
-        At the initiator, one can execute these steps:
-        </para>
-        <para>
-        1. hipd
-        </para>
-        <para>
-        2. hipfw -dAo
-        </para>
-        <para>
-        3. nc &lt;responder-ip&gt; 1111
-        </para>
-  </section>
-
-<!--
-  <section>
-
-    <title>Accessing the kernel peer list</title>
-    <itemizedlist>
-      <listitem>
-        <para>You can access the kernel's list of known HIP peers using the native
-          getendpointinfo name resolution interface.</para>
-      </listitem>
-      <listitem>
-        <para>By default, the interface first checks the @sysconfdir@/hosts file for
-          a matching host. If one is not found, the kernel is queried for its
-          list of known HIP peers and the list is examined for matches.</para>
-      </listitem>
-      <listitem>
-        <para>To only check the kernel list, set the hints.ei_flags to
-          AI_HIP | AI_KERNEL_LIST. This will use only the kernel list and will
-          not check the hosts file.</para>
-      </listitem>
-      <listitem>
-        <para>To retrieve the list of known peers from the kernel, set the
-          hints.ei_flags to AI_HIP | AI_KERNEL_LIST and the nodename to NULL.
-          This will query the kernel for the list and return the entire
-          list.</para>
-        </listitem>
-        </itemizedlist>
-  </section>
--->
-  </section>
-
   <section id="ch_shotgun">
     <title>"Shotgun" Extension</title>
 
@@ -3007,7 +2784,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     I1 or UPDATE-with-locator packets sequentially. The idea is to
     scan through all possible source and destination IP pairs at the
     HIP layer to improve the chances for successful initial contact
-    (I1) and to re-establish contact (UPDATE-with-locator) in way
+    (I1) and to reestablish contact (UPDATE-with-locator) in way
     similar to the NAT-ICE extensions. We have playfully called the
     extension as "shotgun" mode in the implementation.</para>
 
@@ -3016,7 +2793,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     approach supports also fault-tolerance for a single
     relay/rendezvous (Responder's RVS has crashed) and it can make use
     of multiple relay/rendezvous servers for better redundancy. At the
-    moment, neither of these are possible direcly with the ICE-NAT
+    moment, neither of these are possible directly with the ICE-NAT
     extensions. I actually believe the shotgun approach can be applied
     even with the ICE-NAT extensions to improve fault-tolerance.</para>
 

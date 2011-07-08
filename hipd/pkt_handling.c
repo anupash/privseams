@@ -58,9 +58,9 @@ static struct hip_ll *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function which should be called
- *                         when the combination of packet type and host
- *                         association state is reached.
+ * @param handle_function Pointer to the function which should be called
+ *                        when the combination of packet type and host
+ *                        association state is reached.
  * @param priority Execution priority for the handle function.
  *
  * @return Success =  0
@@ -107,7 +107,7 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function which should be unregistered.
+ * @param handle_function Pointer to the function which should be unregistered.
  *
  * @return Success =  0
  *         Error   = -1
@@ -128,9 +128,9 @@ int hip_unregister_handle_function(const uint8_t packet_type,
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx The packet context containing the received message, source and
- *             destination address, the ports and the corresponding entry from
- *             the host association database.
+ * @param ctx The packet context containing the received message, source and
+ *            destination address, the ports and the corresponding entry from
+ *            the host association database.
  *
  * @return Success =  0
  *         Error   = -1
@@ -139,8 +139,8 @@ int hip_run_handle_functions(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
-    int                 err  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,

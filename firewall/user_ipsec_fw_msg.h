@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@
  * @brief Inter-process communication with the hipd for userspace IPsec
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_FW_MSG_H
@@ -40,6 +41,5 @@
 int send_userspace_ipsec_to_hipd(const int activate);
 int handle_sa_add_request(const struct hip_common *msg);
 int handle_sa_delete_request(const struct hip_common *msg);
-int handle_sa_flush_all_request(void);
 
 #endif /* HIP_FIREWALL_USER_IPSEC_FW_MSG_H */

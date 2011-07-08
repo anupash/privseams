@@ -33,6 +33,8 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
@@ -79,15 +81,58 @@ struct in6_addr *numeric_to_addr(const char *num)
 }
 
 /**
- * Executes a system command and prints an error if
- * command wasn't successfull.
+ * Executes a command and prints an error if command wasn't successful.
  *
- * @param command The system command. The caller of this function must take
+ * @param command The command. The caller of this function must take
  *                care that command does not contain malicious code.
+ * @return        Exit code on success, -1 on failure.
  */
-void system_print(const char *command)
+int system_print(const char *const command)
 {
-    if (system(command) == -1) {
-        HIP_ERROR("Could not execute system command %s", command);
+    int ret;
+
+    if ((ret = system(command)) == -1) {
+        HIP_ERROR("Could not execute command `%s'", command);
+        return -1;
     }
+
+    HIP_DEBUG("$ %s -> %d\n", command, WEXITSTATUS(ret));
+
+    return WEXITSTATUS(ret);
+}
+
+/**
+ * printf()-like wrapper around system_print.
+ * Fails and returns an error if the resulting command line
+ * would be longer than ::MAX_COMMAND_LINE characters.
+ *
+ * @param command The command. This is a printf format string.
+ *                The caller of this function must take care that command
+ *                does not contain malicious code.
+ * @return        Exit code on success, -1 on failure.
+ */
+int system_printf(const char *const command, ...)
+{
+    char bfr[MAX_COMMAND_LINE + 1];
+
+    va_list vargs;
+    va_start(vargs, command);
+
+    const int ret = vsnprintf(bfr, sizeof(bfr), command, vargs);
+    if (ret <= 0) {
+        HIP_ERROR("vsnprintf failed\n");
+        va_end(vargs);
+        return -1;
+    }
+
+    // cast to unsigned value (we know that ret >= 0)
+    if ((unsigned) ret > MAX_COMMAND_LINE) {
+        HIP_ERROR("Format '%s' results in unexpectedly large command line "
+                  "(%d characters): not executed.\n", command, ret);
+        va_end(vargs);
+        return -1;
+    }
+
+    va_end(vargs);
+    return system_print(bfr);
 }

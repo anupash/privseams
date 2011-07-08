@@ -45,7 +45,6 @@
 #include "config.h"
 #include "builder.h"
 #include "debug.h"
-#include "ife.h"
 #include "protodefs.h"
 #include "prefix.h"
 
@@ -59,8 +58,9 @@
  * @param hit the address to be tested
  * @return 1 if the address has the HIT prefix or zero otherwise
  */
-int ipv6_addr_is_hit(const struct in6_addr *hit)
+int ipv6_addr_is_hit(const struct in6_addr *const hit)
 {
+    HIP_ASSERT(hit);
     hip_closest_prefix_type hit_begin;
     memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type));
     hit_begin  = ntohl(hit_begin);
@@ -74,8 +74,9 @@ int ipv6_addr_is_hit(const struct in6_addr *hit)
  * @param teredo the IPv6 address to be tested for Teredo prefix
  * @return 1 if the address has the Teredo prefix or zero otherwise
  */
-int ipv6_addr_is_teredo(const struct in6_addr *teredo)
+int ipv6_addr_is_teredo(const struct in6_addr *const teredo)
 {
+    HIP_ASSERT(teredo);
     hip_closest_prefix_type teredo_begin;
     memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type));
     teredo_begin  = ntohl(teredo_begin);
@@ -89,8 +90,9 @@ int ipv6_addr_is_teredo(const struct in6_addr *teredo)
  * @param ip the IPv6 address to test
  * @return one if the address is all zeroes and zero otherwise
  */
-int ipv6_addr_is_null(const struct in6_addr *ip)
+int ipv6_addr_is_null(const struct in6_addr *const ip)
 {
+    HIP_ASSERT(ip);
     return (ip->s6_addr32[0] | ip->s6_addr32[1] |
             ip->s6_addr32[2] | ip->s6_addr32[3]) == 0;
 }
@@ -103,8 +105,9 @@ int ipv6_addr_is_null(const struct in6_addr *ip)
  * @return one if the IPv6 address was a real HIT and
  * '          zero if it was a pseudo HIT
  */
-int hit_is_real_hit(const struct in6_addr *hit)
+int hit_is_real_hit(const struct in6_addr *const hit)
 {
+    HIP_ASSERT(hit);
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
 }
 
@@ -116,8 +119,9 @@ int hit_is_real_hit(const struct in6_addr *hit)
  * @return zero if the IPv6 address was a real HIT and
  * '          one if it was a pseudo HIT
  */
-int hit_is_opportunistic_hit(const struct in6_addr *hit)
+int hit_is_opportunistic_hit(const struct in6_addr *const hit)
 {
+    HIP_ASSERT(hit);
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] == 0);
 }
 
@@ -126,8 +130,9 @@ int hit_is_opportunistic_hit(const struct in6_addr *hit)
  *
  * @param hit an IPv6 address for which to set the HIT prefix
  */
-void set_hit_prefix(struct in6_addr *hit)
+void set_hit_prefix(struct in6_addr *const hit)
 {
+    HIP_ASSERT(hit);
     hip_closest_prefix_type hit_begin;
     memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type));
     hit_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
@@ -140,8 +145,9 @@ void set_hit_prefix(struct in6_addr *hit)
  *
  * @param lsi an IPv4 address for which to set the LSI prefix
  */
-void set_lsi_prefix(hip_lsi_t *lsi)
+void set_lsi_prefix(hip_lsi_t *const lsi)
 {
+    HIP_ASSERT(lsi);
     hip_closest_prefix_type lsi_begin;
     memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type));
     lsi_begin &= htonl(HIP_LSI_TYPE_MASK_CLEAR);
@@ -156,9 +162,11 @@ void set_lsi_prefix(hip_lsi_t *lsi)
  * @param lsi2 an LSI
  * @return one if the LSIs are equal or zero otherwise
  */
-int hip_lsi_are_equal(const hip_lsi_t *lsi1,
-                      const hip_lsi_t *lsi2)
+int hip_lsi_are_equal(const hip_lsi_t *const lsi1,
+                      const hip_lsi_t *const lsi2)
 {
+    HIP_ASSERT(lsi1);
+    HIP_ASSERT(lsi2);
     return ipv4_addr_cmp(lsi1, lsi2) == 0;
 }
 
@@ -171,10 +179,12 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
  * @return zero for type match, greater than zero for mismatch or
  * negative on error
  */
-int hip_id_type_match(const struct in6_addr *id, int id_type)
+int hip_id_type_match(const struct in6_addr *const id, const int id_type)
 {
     int       ret = 0, is_lsi = 0, is_hit = 0;
     hip_lsi_t lsi;
+
+    HIP_ASSERT(id);
 
     if (ipv6_addr_is_hit(id)) {
         is_hit = 1;
@@ -188,17 +198,16 @@ int hip_id_type_match(const struct in6_addr *id, int id_type)
     HIP_ASSERT(!(is_lsi && is_hit));
 
     if (id_type == HIP_ID_TYPE_HIT) {
-        ret = (is_hit ? 1 : 0);
+        ret = is_hit ? 1 : 0;
     } else if (id_type == HIP_ID_TYPE_LSI) {
-        ret = (is_lsi ? 1 : 0);
+        ret = is_lsi ? 1 : 0;
     } else {
-        ret = ((is_hit || is_lsi) ? 0 : 1);
+        ret = (is_hit || is_lsi) ? 0 : 1;
     }
 
     return ret;
 }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
  * Convert a given IP address into a pseudo HIT
  *
@@ -212,17 +221,23 @@ int hip_id_type_match(const struct in6_addr *id, int id_type)
  * and Legacy Software and Networks , final project, December 2008</a>
  *
  */
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-                                  struct in6_addr *hit,
-                                  int hit_type)
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *const ip,
+                                  struct in6_addr *const hit,
+                                  const int hit_type)
 {
     int     err = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
 
-    HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest)),
-             err,
-             "Building of digest failed\n");
+    HIP_ASSERT(ip);
+    HIP_ASSERT(hit);
+
+    if (hit_type != HIP_HIT_TYPE_HASH100) {
+        return -ENOSYS;
+    }
+    if ((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest))) {
+        HIP_ERROR("Building of digest failed\n");
+        return err;
+    }
 
     memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
            sizeof(struct in6_addr));
@@ -231,12 +246,8 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 
     set_hit_prefix(hit);
 
-out_err:
-
     return err;
 }
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 /**
  * cast a socket address to an IPv4 or IPv6 address.
@@ -251,7 +262,7 @@ out_err:
  *                  NULL if the cast fails.
  */
 
-void *hip_cast_sa_addr(struct sockaddr *sa)
+void *hip_cast_sa_addr(struct sockaddr *const sa)
 {
     if (sa == NULL) {
         HIP_ERROR("sockaddr is NULL, skipping type conversion\n");
@@ -271,21 +282,20 @@ void *hip_cast_sa_addr(struct sockaddr *sa)
 }
 
 /**
- * Test if a sockaddr_in6 structure is in IPv6 mapped format (i.e.
- * contains an IPv4 address)
+ * Test if a sockaddr structure contains an IPv4 address mapped to an IPv6
+ * address format (AF_INET6).
  *
  * @param sa socket address structure
- * @return one if the structure is in IPv6 mapped format or zero otherwise
+ * @return one if the structure is an IPv4 address mapped to IPv6 format or
+ * zero otherwise
  */
-int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
+int hip_sockaddr_is_v6_mapped(const struct sockaddr *const sa)
 {
-    int family = sa->sa_family;
-
-    HIP_ASSERT(family == AF_INET || family == AF_INET6);
-    if (family != AF_INET6) {
+    HIP_ASSERT(sa);
+    if (sa->sa_family != AF_INET6) {
         return 0;
     } else {
-        return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+        return IN6_IS_ADDR_V4MAPPED(&(((const struct sockaddr_in6 *const) sa)->sin6_addr));
     }
 }
 
@@ -295,10 +305,12 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
  * @param sockaddr the sockaddr structure
  * @return the length of the actual sockaddr structure in bytes
  */
-int hip_sockaddr_len(const void *sockaddr)
+int hip_sockaddr_len(const void *const sockaddr)
 {
-    const struct sockaddr *sa = sockaddr;
-    int                    len;
+    const struct sockaddr *const sa = sockaddr;
+    int                          len;
+
+    HIP_ASSERT(sockaddr);
 
     switch (sa->sa_family) {
     case AF_INET:
@@ -322,10 +334,12 @@ int hip_sockaddr_len(const void *sockaddr)
  * @param sockaddr the sockaddr structure
  * @return the length of the address field in the @c sockaddr structure
  */
-int hip_sa_addr_len(void *sockaddr)
+int hip_sa_addr_len(void *const sockaddr)
 {
-    struct sockaddr *sa = (struct sockaddr *) sockaddr;
-    int              len;
+    struct sockaddr *const sa = (struct sockaddr *) sockaddr;
+    int                    len;
+
+    HIP_ASSERT(sockaddr);
 
     switch (sa->sa_family) {
     case AF_INET:
@@ -348,16 +362,20 @@ int hip_sa_addr_len(void *sockaddr)
  * @note remember to fill in the port number by yourself
  *       if necessary
  */
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
+void hip_addr_to_sockaddr(struct in6_addr *const addr,
+                          struct sockaddr_storage *const sa)
 {
+    HIP_ASSERT(addr);
+    HIP_ASSERT(sa);
+
     memset(sa, 0, sizeof(struct sockaddr_storage));
 
     if (IN6_IS_ADDR_V4MAPPED(addr)) {
-        struct sockaddr_in *in = (struct sockaddr_in *) sa;
+        struct sockaddr_in *const in = (struct sockaddr_in *) sa;
         in->sin_family = AF_INET;
         IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
     } else {
-        struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
+        struct sockaddr_in6 *const in6 = (struct sockaddr_in6 *) sa;
         in6->sin6_family = AF_INET6;
         ipv6_addr_copy(&in6->sin6_addr, addr);
     }
@@ -370,9 +388,11 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
  * @param addr the address to verify
  * @return one if the address if loopback or zero otherwise
  */
-int hip_addr_is_loopback(struct in6_addr *addr)
+int hip_addr_is_loopback(const struct in6_addr *const addr)
 {
     struct in_addr addr_in;
+
+    HIP_ASSERT(addr);
 
     if (!IN6_IS_ADDR_V4MAPPED(addr)) {
         return IN6_IS_ADDR_LOOPBACK(addr);
@@ -381,36 +401,46 @@ int hip_addr_is_loopback(struct in6_addr *addr)
     return IS_IPV4_LOOPBACK(addr_in.s_addr);
 }
 
-int ipv4_addr_cmp(const struct in_addr *a1, const struct in_addr *a2)
+int ipv4_addr_cmp(const struct in_addr *const a1,
+                  const struct in_addr *const a2)
 {
+    HIP_ASSERT(a1);
+    HIP_ASSERT(a2);
     return memcmp(a1, a2, sizeof(struct in_addr));
 }
 
-void ipv4_addr_copy(struct in_addr *a1, const struct in_addr *a2)
+void ipv4_addr_copy(struct in_addr *const dest,
+                    const struct in_addr *const src)
 {
-    memcpy(a1, a2, sizeof(struct in_addr));
+    HIP_ASSERT(dest);
+    HIP_ASSERT(src);
+    memcpy(dest, src, sizeof(struct in_addr));
 }
 
-int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr *a2)
+int ipv6_addr_cmp(const struct in6_addr *const a1,
+                  const struct in6_addr *const a2)
 {
+    HIP_ASSERT(a1);
+    HIP_ASSERT(a2);
     return memcmp(a1, a2, sizeof(struct in6_addr));
 }
 
-void ipv6_addr_copy(struct in6_addr *a1, const struct in6_addr *a2)
+void ipv6_addr_copy(struct in6_addr *dest, const struct in6_addr *src)
 {
-    memcpy(a1, a2, sizeof(struct in6_addr));
+    memcpy(dest, src, sizeof(struct in6_addr));
 }
 
-int ipv6_addr_any(const struct in6_addr *a)
+int ipv6_addr_any(const struct in6_addr *const a)
 {
+    HIP_ASSERT(a);
     return (a->s6_addr[0] | a->s6_addr[1] | a->s6_addr[2] | a->s6_addr[3] |
             a->s6_addr[4] | a->s6_addr[5] | a->s6_addr[6] | a->s6_addr[7] |
             a->s6_addr[8] | a->s6_addr[9] | a->s6_addr[10] | a->s6_addr[11] |
             a->s6_addr[12] | a->s6_addr[13] | a->s6_addr[14] | a->s6_addr[15]) == 0;
 }
 
-void hip_copy_in6addr_null_check(struct in6_addr *to,
-                                 const struct in6_addr *from)
+void hip_copy_in6addr_null_check(struct in6_addr *const to,
+                                 const struct in6_addr *const from)
 {
     HIP_ASSERT(to);
     if (from) {
@@ -420,7 +450,8 @@ void hip_copy_in6addr_null_check(struct in6_addr *to,
     }
 }
 
-void hip_copy_inaddr_null_check(struct in_addr *to, const struct in_addr *from)
+void hip_copy_inaddr_null_check(struct in_addr *const to,
+                                const struct in_addr *const from)
 {
     HIP_ASSERT(to);
     if (from) {

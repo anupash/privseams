@@ -23,17 +23,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_FIREWALL_SYSOPP_H
-#define HIP_FIREWALL_SYSOPP_H
-
-#define _BSD_SOURCE
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H
 
 #include "lib/core/protodefs.h"
-#include "firewall_defines.h"
+#include "update.h"
 
-int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
-                                            const int default_verdict);
-int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg);
-void hip_fw_flush_system_based_opp_chains(void);
+int hip_build_locators_old(struct hip_common *const msg);
 
-#endif /* HIP_FIREWALL_SYSOPP_H */
+int hip_create_locators(struct hip_common *const locator_msg,
+                        struct hip_locator_info_addr_item **locators);
+
+union hip_locator_info_addr *hip_get_locator_item(void *item_list,
+                                                  int idx);
+
+struct in6_addr *hip_get_locator_item_address(void *item);
+
+int hip_get_locator_addr_item_count(const struct hip_locator *locator);
+
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_LOCATOR_H */

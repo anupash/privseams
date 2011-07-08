@@ -38,12 +38,12 @@
 
 static double time_clock(const unsigned int iterations)
 {
-    clock_t      start, end, tmp;
+    clock_t      start, end;
     unsigned int i;
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        tmp = clock();
+        clock();
     }
     end = clock();
 
@@ -114,7 +114,6 @@ static double time_hip_lp_first(const unsigned int iterations)
     clock_t                start, end;
     unsigned int           i;
     struct hip_line_parser lp;
-    char                  *line;
     struct hip_mem_area    ma = { 0, 0 };
     int                    err;
 
@@ -123,7 +122,7 @@ static double time_hip_lp_first(const unsigned int iterations)
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        line = hip_lp_first(&lp);
+        hip_lp_first(&lp);
     }
     end = clock();
 
@@ -212,15 +211,14 @@ static double time_hip_port_bindings_get(const unsigned int iterations,
                                          const in_port_t port,
                                          const bool enable_cache)
 {
-    clock_t               start, end;
-    unsigned int          i;
-    enum hip_port_binding pi;
+    clock_t      start, end;
+    unsigned int i;
 
     hip_port_bindings_init(enable_cache);
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        pi = hip_port_bindings_get(proto, port);
+        hip_port_bindings_get(proto, port);
     }
     end = clock();
 

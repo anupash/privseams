@@ -45,11 +45,12 @@ extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
-                                 int (*sign)(void *key, struct hip_common *m),
-                                 void *private_key,
-                                 const struct hip_host_id *host_id_pub,
-                                 int cookie_k);
+int hip_create_r1(struct hip_common *const msg,
+                  const struct in6_addr *const src_hit,
+                  int (*sign)(void *const key, struct hip_common *const m),
+                  void *const private_key,
+                  const struct hip_host_id *const host_id_pub,
+                  const int cookie_k);
 
 int hip_send_r1(const uint8_t packet_type,
                 const uint32_t ha_state,
@@ -81,9 +82,12 @@ int hip_add_signed_echo_response(const uint8_t packet_type,
                                  const uint32_t ha_state,
                                  struct hip_packet_context *ctx);
 
-int hip_sign_and_mac_packet(const uint8_t packet_type,
-                            const uint32_t ha_state,
-                            struct hip_packet_context *ctx);
+int hip_mac_and_sign_packet(struct hip_common *msg,
+                            const struct hip_hadb_state *const hadb_entry);
+
+int hip_mac_and_sign_handler(const uint8_t packet_type,
+                             const uint32_t ha_state,
+                             struct hip_packet_context *ctx);
 
 int hip_add_unsigned_echo_response(const uint8_t packet_type,
                                    const uint32_t ha_state,

@@ -110,7 +110,6 @@ out_err:
  */
 static int hip_get_dsa_public_key(const struct hip_host_id_priv *const hi, struct hip_host_id *const ret)
 {
-    int key_len;
     /* T could easily have been an int, since the compiler will
      * probably add 3 alignment bytes here anyway. */
     uint8_t  T;
@@ -125,7 +124,6 @@ static int hip_get_dsa_public_key(const struct hip_host_id_priv *const hi, struc
     if (T != 8) {
         HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n", T);
     }
-    key_len = 64 + (T * 8);
 
     /* Copy the header and key_rr header */
     memcpy(ret, hi, sizeof(struct hip_host_id) - sizeof(ret->key) - sizeof(ret->hostname));
@@ -211,12 +209,12 @@ static int hip_get_public_key(const struct hip_host_id_priv *hid, struct hip_hos
 /**
  * hashing function required by hashtable/linked list implementation
  *
- * @param ptr a pointer to a hip_host_id_entry structure
+ * @param ptr a pointer to a local_host_id structure
  * @return the calculated hash value
  */
 unsigned long hip_hidb_hash(const void *ptr)
 {
-    const hip_hit_t *hit = &((const struct hip_host_id_entry *) ptr)->lhi.hit;
+    const hip_hit_t *hit = &((const struct local_host_id *) ptr)->hit;
     uint8_t          hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
@@ -233,14 +231,14 @@ unsigned long hip_hidb_hash(const void *ptr)
  * the entries (or rather the part used to calculate the hash) themselves are
  * equal or whether they are different and this is just a hash collision.
  *
- * @param ptr1 a pointer to hip_host_id_entry
- * @param ptr2 a pointer to hip_host_id_entry
+ * @param ptr1 a pointer to local_host_id
+ * @param ptr2 a pointer to local_host_id
  * @return zero on match or non-zero on unmatch
  */
 int hip_hidb_match(const void *ptr1, const void *ptr2)
 {
-    const hip_hit_t *hit1 = &((const struct hip_host_id_entry *) ptr1)->lhi.hit;
-    const hip_hit_t *hit2 = &((const struct hip_host_id_entry *) ptr2)->lhi.hit;
+    const hip_hit_t *hit1 = &((const struct local_host_id *) ptr1)->hit;
+    const hip_hit_t *hit2 = &((const struct local_host_id *) ptr2)->hit;
     return memcmp(hit1, hit2, sizeof(*hit1));
 }
 
@@ -257,20 +255,18 @@ void hip_init_hostid_db(void)
  * based on the HIT.
  *
  * @param db  database from which to delete.
- * @param lhi the HIT to be deleted from the database.
+ * @param hit the HIT to be deleted from the database.
  * @return    zero on success, otherwise negative.
  */
-static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
+static int hip_del_host_id(HIP_HASHTABLE *db, hip_hit_t hit)
 {
-    int                       err = -ENOENT;
-    struct hip_host_id_entry *id  = NULL;
+    int                   err = -ENOENT;
+    struct local_host_id *id  = NULL;
 
-    HIP_ASSERT(lhi != NULL);
-
-    id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO, -1);
+    id = hip_get_hostid_entry_by_lhi_and_algo(db, &hit, HIP_ANY_ALGO, -1);
     if (id == NULL) {
         HIP_WRITE_UNLOCK_DB(db);
-        HIP_ERROR("lhi not found\n");
+        HIP_ERROR("hit not found\n");
         err = -ENOENT;
         return err;
     }
@@ -281,13 +277,7 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
         id->remove(id, &id->arg);
     }
 
-    /* free the dynamically reserved memory and
-     * set host_id to null to signal that it is free */
-    if (id->r1) {
-        hip_uninit_r1(id->r1);
-    }
-
-    switch (hip_get_host_id_algo(id->host_id)) {
+    switch (hip_get_host_id_algo(&id->host_id)) {
     case HIP_HI_RSA:
         RSA_free(id->private_key);
         break;
@@ -298,10 +288,9 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
         DSA_free(id->private_key);
         break;
     default:
-        HIP_ERROR("Cannot free key, because key type is unkown.\n");
+        HIP_ERROR("Cannot free key because key type is unknown.\n");
     }
 
-    free(id->host_id);
     list_del(id, db);
     free(id);
     id = NULL;
@@ -319,19 +308,19 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
  */
 static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
 {
-    LHASH_NODE               *curr, *iter;
-    struct hip_host_id_entry *tmp;
-    int                       count, err;
+    LHASH_NODE           *curr, *iter;
+    struct local_host_id *tmp;
+    int                   count;
 
     HIP_WRITE_LOCK_DB(db);
 
     list_for_each_safe(curr, iter, db, count) {
-        struct hip_lhi lhi;
+        hip_hit_t hit;
 
         tmp = list_entry(curr);
 
-        memcpy(&lhi, &tmp->lhi, sizeof(lhi));
-        err = hip_del_host_id(db, &lhi);
+        memcpy(&hit, &tmp->hit, sizeof(hit));
+        hip_del_host_id(db, hit);
     }
 
     hip_ht_uninit(db);
@@ -352,25 +341,25 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
  * @param algo the algorithm
  * @return     NULL, if failed or non-NULL if succeeded.
  */
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
-                                                               const struct in6_addr *hit,
-                                                               int algo,
-                                                               int anon)
+struct local_host_id *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
+                                                           const struct in6_addr *hit,
+                                                           int algo,
+                                                           int anon)
 {
-    struct hip_host_id_entry *id_entry;
-    LHASH_NODE               *item;
-    int                       c;
+    struct local_host_id *id_entry;
+    LHASH_NODE           *item;
+    int                   c;
     list_for_each(item, db, c) {
         id_entry = list_entry(item);
 
-        if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
+        if ((hit == NULL || !ipv6_addr_cmp(&id_entry->hit, hit)) &&
             (algo == HIP_ANY_ALGO ||
-             (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
-            (anon == -1 || id_entry->lhi.anonymous == anon)) {
+             (hip_get_host_id_algo(&id_entry->host_id) == algo)) &&
+            (anon == -1 || id_entry->anonymous == anon)) {
             return id_entry;
         }
     }
-    HIP_DEBUG("Failed to find a host ID entry, Returning NULL.\n");
+    HIP_DEBUG("Failed to find a host ID entry.\n");
     return NULL;
 }
 
@@ -395,13 +384,13 @@ int hip_hidb_hit_is_our(const hip_hit_t *our)
  */
 int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 {
-    struct hip_host_id_entry *id_entry;
-    LHASH_NODE               *item;
-    int                       c, err = 1;
+    struct local_host_id *id_entry;
+    LHASH_NODE           *item;
+    int                   c, err = 1;
 
     list_for_each(item, hip_local_hostid_db, c) {
         id_entry = list_entry(item);
-        if (memcmp(&id_entry->lhi.hit, our, sizeof(*our)) == 0) {
+        if (memcmp(&id_entry->hit, our, sizeof(*our)) == 0) {
             memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
             return 0;
         }
@@ -416,13 +405,13 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
  * @param id_entry contains an entry to the db, will contain an unsigned lsi
  * @return zero on success, or negative error value on failure.
  */
-static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry)
+static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct local_host_id *id_entry)
 {
-    struct hip_host_id_entry *id_entry_aux;
-    LHASH_NODE               *item;
-    hip_lsi_t                 lsi_aux;
-    int                       err = 0, used_lsi, c, i;
-    int                       len = sizeof(lsi_addresses) / sizeof(*lsi_addresses);
+    struct local_host_id *id_entry_aux;
+    LHASH_NODE           *item;
+    hip_lsi_t             lsi_aux;
+    int                   err = 0, used_lsi, c, i;
+    int                   len = sizeof(lsi_addresses) / sizeof(*lsi_addresses);
 
     for (i = 0; i < len; i++) {
         inet_aton(lsi_addresses[i], &lsi_aux);
@@ -474,7 +463,8 @@ void hip_uninit_host_id_dbs(void)
  * the current HI is @b NOT stored.
  *
  * @param db      database structure.
- * @param lhi     HIT
+ * @param hit     HIT
+ * @param anon    whether the host ID is anonymous or not
  * @param host_id HI
  * @param add     the handler to call right after the host id is added
  * @param del     the handler to call right before the host id is removed
@@ -483,34 +473,34 @@ void hip_uninit_host_id_dbs(void)
  * @return        0 on success, otherwise an negative error value is returned.
  */
 static int hip_add_host_id(HIP_HASHTABLE *db,
-                           const struct hip_lhi *lhi,
+                           const hip_hit_t hit,
+                           bool anon,
                            hip_lsi_t *lsi,
                            const struct hip_host_id_priv *host_id,
-                           int (*add)(struct hip_host_id_entry *, void **arg),
-                           int (*del)(struct hip_host_id_entry *, void **arg),
+                           int (*add)(struct local_host_id *, void **arg),
+                           int (*del)(struct local_host_id *, void **arg),
                            void *arg)
 {
-    int                       err      = 0;
-    struct hip_host_id_entry *id_entry = NULL;
-    struct hip_host_id_entry *old_entry;
-    int                       algo;
-    int                       (*signature_func)(void *key, struct hip_common *m);
+    int                   err      = 0;
+    struct local_host_id *id_entry = NULL;
+    struct local_host_id *old_entry;
+    int                   (*signature_func)(void *key, struct hip_common *m);
+    int                   algo;
 
     HIP_WRITE_LOCK_DB(db);
 
-    HIP_ASSERT(&lhi->hit != NULL);
-    HIP_IFEL(!(id_entry = calloc(1, sizeof(struct hip_host_id_entry))),
+    HIP_IFEL(!(id_entry = calloc(1, sizeof(struct local_host_id))),
              -ENOMEM, "No memory available for host id\n");
 
-    ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
-    id_entry->lhi.anonymous = lhi->anonymous;
+    ipv6_addr_copy(&id_entry->hit, &hit);
+    id_entry->anonymous = anon;
 
     /* check for duplicates */
-    old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit,
+    old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &hit,
                                                      HIP_ANY_ALGO, -1);
     if (old_entry != NULL) {
         HIP_WRITE_UNLOCK_DB(db);
-        HIP_ERROR("Trying to add duplicate lhi\n");
+        HIP_ERROR("Trying to add duplicate local host ID\n");
         err = -EEXIST;
         goto out_err;
     }
@@ -537,16 +527,13 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
         id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
         break;
     default:
-        HIP_EAE(-1, "Cannot deserialize key because algorithm is unknown");
+        HIP_OUT_ERR(-1, "Cannot deserialize key because algorithm is unknown");
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
-    HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
-    HIP_IFEL(!(id_entry->host_id = malloc(sizeof(struct hip_host_id))),
-             -ENOMEM, "Unable to allocate host id\n");
-    HIP_IFEL(hip_get_public_key(host_id, id_entry->host_id),
+    HIP_IFEL(hip_get_public_key(host_id, &id_entry->host_id),
              -1, "Unable to get public key from private host id\n");
-    switch (hip_get_host_id_algo(id_entry->host_id)) {
+    switch (hip_get_host_id_algo(&id_entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
         break;
@@ -563,9 +550,9 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     }
 
     HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                               &lhi->hit,
+                               &hit,
                                signature_func,
-                               id_entry->private_key, id_entry->host_id),
+                               id_entry->private_key, &id_entry->host_id),
              -ENOENT,
              "Unable to precreate R1s.\n");
 
@@ -577,21 +564,18 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
 out_err:
     if (err && id_entry) {
-        if (id_entry->host_id) {
-            switch (hip_get_host_id_algo(id_entry->host_id)) {
-            case HIP_HI_RSA:
-                RSA_free(id_entry->private_key);
-                break;
-            case HIP_HI_ECDSA:
-                EC_KEY_free(id_entry->private_key);
-                break;
-            case HIP_HI_DSA:
-                DSA_free(id_entry->private_key);
-                break;
-            default:
-                HIP_DEBUG("Could not free key, because key type is unknown\n");
-            }
-            free(id_entry->host_id);
+        switch (hip_get_host_id_algo(&id_entry->host_id)) {
+        case HIP_HI_RSA:
+            RSA_free(id_entry->private_key);
+            break;
+        case HIP_HI_ECDSA:
+            EC_KEY_free(id_entry->private_key);
+            break;
+        case HIP_HI_DSA:
+            DSA_free(id_entry->private_key);
+            break;
+        default:
+            HIP_DEBUG("Could not free key, because key type is unknown\n");
         }
         free(id_entry);
     }
@@ -610,11 +594,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 {
     int                            err           = 0;
     const struct hip_host_id_priv *host_identity = NULL;
-    struct hip_lhi                 lhi;
+    hip_hit_t                      hit;
     const struct hip_tlv_common   *param        = NULL;
     const struct hip_eid_endpoint *eid_endpoint = NULL;
     struct in6_addr                in6_lsi;
     hip_lsi_t                      lsi = { 0 };
+    bool                           anonymous;
 
     HIP_DEBUG("/* --------- */ \n");
     HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
@@ -639,18 +624,14 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
         host_identity = &eid_endpoint->endpoint.id.host_id;
 
-        HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
+        HIP_IFEL(hip_private_host_id_to_hit(host_identity, &hit,
                                             HIP_HIT_TYPE_HASH100),
                  -EFAULT, "Host id to hit conversion failed\n");
 
-        lhi.anonymous =
-            (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
-            ?
-            1 : 0;
+        anonymous = (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON);
 
-        err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
-                              &lsi, host_identity,
-                              NULL, NULL, NULL);
+        err = hip_add_host_id(HIP_DB_LOCAL_HID, hit, anonymous, &lsi,
+                              host_identity, NULL, NULL, NULL);
 
         /* Currently only RSA pub is added by default (bug id 592127).
          * Ignore redundant adding in case user wants to enable
@@ -664,11 +645,11 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
         IPV4_TO_IPV6_MAP(&lsi, &in6_lsi);
         /* Adding routes just in case they don't exist */
-        hip_add_iface_local_route(&lhi.hit);
+        hip_add_iface_local_route(&hit);
         hip_add_iface_local_route(&in6_lsi);
 
         /* Adding HITs and LSIs to the interface */
-        HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
+        HIP_IFEL(hip_add_iface_local_hit(&hit), -1,
                  "Failed to add HIT to the device\n");
         HIP_IFEL(hip_add_iface_local_hit(&in6_lsi), -1,
                  "Failed to add LSI to the device\n");
@@ -689,7 +670,6 @@ out_err:
 int hip_handle_del_local_hi(const struct hip_common *input)
 {
     const struct in6_addr *hit;
-    struct hip_lhi         lhi;
     char                   buf[46];
     int                    err = 0;
 
@@ -699,9 +679,7 @@ int hip_handle_del_local_hi(const struct hip_common *input)
     hip_in6_ntop(hit, buf);
     HIP_INFO("del HIT: %s\n", buf);
 
-    ipv6_addr_copy(&lhi.hit, hit);
-
-    if ((err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi))) {
+    if ((err = hip_del_host_id(HIP_DB_LOCAL_HID, *hit))) {
         HIP_ERROR("deleting of local host identity failed\n");
         goto out_err;
     }
@@ -721,10 +699,11 @@ out_err:
  * @param anon   -1 if you don't care, 1 if anon, 0 if public
  * @return       0 if ok, and negative if failed.
  */
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
+static int hip_get_any_localhost_hit(struct in6_addr *target, int algo,
+                                     int anon)
 {
-    struct hip_host_id_entry *entry;
-    int                       err = 0;
+    struct local_host_id *entry;
+    int                   err = 0;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
@@ -735,7 +714,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
         goto out;
     }
 
-    ipv6_addr_copy(target, &entry->lhi.hit);
+    ipv6_addr_copy(target, &entry->hit);
     err = 0;
 
 out:
@@ -751,9 +730,9 @@ out:
  */
 int hip_hidb_exists_lsi(hip_lsi_t *lsi)
 {
-    struct hip_host_id_entry *id_entry;
-    LHASH_NODE               *item;
-    int                       c, res = 0;
+    struct local_host_id *id_entry;
+    LHASH_NODE           *item;
+    int                   c, res = 0;
 
     list_for_each(item, hip_local_hostid_db, c) {
         id_entry = list_entry(item);
@@ -773,18 +752,18 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi)
  *
  * @note Works like hip_for_each_ha().
  */
-int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque)
+int hip_for_each_hi(int (*func)(struct local_host_id *entry, void *opaq), void *opaque)
 {
-    LHASH_NODE               *curr, *iter;
-    struct hip_host_id_entry *tmp;
-    int                       err = 0, c;
+    LHASH_NODE           *curr, *iter;
+    struct local_host_id *tmp;
+    int                   err = 0, c;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
     list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
         tmp = list_entry(curr);
-        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+        HIP_DEBUG_HIT("Found HIT", &tmp->hit);
         HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
         err = func(tmp, opaque);
         if (err) {
@@ -805,12 +784,12 @@ out_err:
  * @param lsi the local LSI to be matched
  * @return the local host identifier structure
  */
-static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
-                                                           const struct in_addr *lsi)
+static struct local_host_id *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
+                                                       const struct in_addr *lsi)
 {
-    struct hip_host_id_entry *id_entry;
-    LHASH_NODE               *item;
-    int                       c;
+    struct local_host_id *id_entry;
+    LHASH_NODE           *item;
+    int                   c;
 
     list_for_each(item, db, c) {
         id_entry = list_entry(item);
@@ -830,10 +809,10 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
  */
 int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi)
 {
-    int                       err = 0;
-    hip_lsi_t                 aux_lsi;
-    struct hip_host_id_entry *tmp1;
-    struct hip_host_id_entry *tmp2;
+    int                   err = 0;
+    hip_lsi_t             aux_lsi;
+    struct local_host_id *tmp1;
+    struct local_host_id *tmp2;
 
     //1. Check if default_hit already associated with default_lsi
     HIP_IFEL((err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi)),
@@ -870,80 +849,26 @@ out_err:
 int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
                                  int algo, struct hip_host_id **host_id, void **key)
 {
-    int                       err   = 0, host_id_len;
-    struct hip_host_id_entry *entry = NULL;
+    int                   err   = 0, host_id_len;
+    struct local_host_id *entry = NULL;
 
     HIP_READ_LOCK_DB(db);
 
     entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
     HIP_IFE(!entry, -1);
 
-    host_id_len = hip_get_param_total_len(entry->host_id);
+    host_id_len = hip_get_param_total_len(&entry->host_id);
     HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
 
     *host_id = malloc(host_id_len);
     HIP_IFE(!*host_id, -ENOMEM);
-    memcpy(*host_id, entry->host_id, host_id_len);
+    memcpy(*host_id, &entry->host_id, host_id_len);
 
     *key = entry->private_key;
     HIP_IFE(!*key, -1);
 
 out_err:
     HIP_READ_UNLOCK_DB(db);
-    return err;
-}
-
-/**
- * append a HOST id parameter and signature into the message to be sent on the wire
- *
- * @param msg the msg where the host id and signature should be appended
- * @param hit the local HIT corresding to the host id
- * @return zero on success or negative on error
- */
-int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
-{
-    struct hip_host_id *hi_public = NULL;
-    int                 err       = 0;
-    int                 alg       = -1;
-    void               *private_key;
-
-    HIP_IFEL(hit == NULL, -1, "Null HIT\n");
-
-    /*
-     * Below is the code for getting host id and appending it to the message
-     * (after removing private key from it hi_public)
-     * Where as hi_private is used to create signature on message
-     * Both of these are appended to the message sequally
-     */
-
-    if ((err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
-                                            hit,
-                                            HIP_ANY_ALGO,
-                                            &hi_public,
-                                            &private_key))) {
-        HIP_ERROR("Unable to locate HI from HID with HIT as key");
-        goto out_err;
-    }
-
-    HIP_IFE(hip_build_param(msg, hi_public), -1);
-
-    alg = hip_get_host_id_algo(hi_public);
-    switch (alg) {
-    case HIP_HI_RSA:
-        err = hip_rsa_sign(private_key, msg);
-        break;
-    case HIP_HI_DSA:
-        err = hip_dsa_sign(private_key, msg);
-        break;
-    case HIP_HI_ECDSA:
-        err = hip_ecdsa_sign(private_key, msg);
-    default:
-        HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
-        break;
-    }
-
-out_err:
-    free(hi_public);
     return err;
 }
 
@@ -999,7 +924,6 @@ int hip_get_default_lsi(struct in_addr *lsi)
     struct in6_addr lsi_aux6;
     hip_lsi_t       lsi_tmpl;
 
-    memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
     set_lsi_prefix(&lsi_tmpl);
     IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
     HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL,

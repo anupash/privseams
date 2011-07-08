@@ -115,9 +115,9 @@ enum {
     HOOK
 };
 
-struct dlist *input_rules;
-struct dlist *output_rules;
-struct dlist *forward_rules;
+static struct dlist *input_rules;
+static struct dlist *output_rules;
+static struct dlist *forward_rules;
 
 /**
  * Writes the default firewall configuration file to the disk if it does
@@ -531,7 +531,7 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
         HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")
         break;
     default:
-        HIP_IFEL(1, -1, "Could not load host identity, because algorithm is unknown.\n");
+        HIP_OUT_ERR(-1, "Could not load host identity, because algorithm is unknown.\n");
     }
 
     /* verify hi => hit */
@@ -579,8 +579,6 @@ static struct int_option *parse_type(char *token)
         option->value = HIP_I2;
     } else if (!strcmp(token, "R2")) {
         option->value = HIP_R2;
-    } else if (!strcmp(token, "CER")) {
-        option->value = HIP_CER;
     } else if (!strcmp(token, "UPDATE")) {
         option->value = HIP_UPDATE;
     } else if (!strcmp(token, "NOTIFY")) {
@@ -589,8 +587,6 @@ static struct int_option *parse_type(char *token)
         option->value = HIP_CLOSE;
     } else if (!strcmp(token, "CLOSE_ACK")) {
         option->value = HIP_CLOSE_ACK;
-    } else if (!strcmp(token, "PAYLOAD")) {
-        option->value = HIP_PAYLOAD;
     } else {
         HIP_DEBUG("parse_type error\n");
         free(option);

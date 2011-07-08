@@ -30,10 +30,32 @@
 
 #include "protodefs.h"
 
-#define HIP_PUZZLE_MAX_K        28
+/* ensure that the max puzzle difficulty (here 28) is limited by sizeof(int),
+ * as ffs() is working on int type.
+ *
+ * NOTE: ffsll() allowing for sizeof(long long int) is currently not available
+ *       on OpenWRT. */
+static const uint8_t MAX_PUZZLE_DIFFICULTY = sizeof(int) * 8 >= 28 ? 28 : sizeof(int) * 8;
 
-uint64_t hip_solve_puzzle(const void *puzzle,
-                          const struct hip_common *hdr, int mode);
-int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in);
+/** This data type represents the ordered input for the hash function used to
+ *  solve a given puzzle challenge as defined in RFC 5201 - Appendix A
+ *
+ *  solution is correct iff:
+ *  0 == V := Ltrunc( RHASH( I2.I | I2.hit_i | I2.hit_r | I2.J ), K ) */
+struct puzzle_hash_input {
+    uint8_t   puzzle[PUZZLE_LENGTH];
+    hip_hit_t initiator_hit;
+    hip_hit_t responder_hit;
+    uint8_t   solution[PUZZLE_LENGTH];
+} __attribute__ ((packed));
+
+int hip_solve_puzzle(struct puzzle_hash_input *puzzle_input,
+                     const uint8_t difficulty);
+
+int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_input,
+                               const uint8_t difficulty);
+
+int hip_solve_puzzle_m(struct hip_common *const out,
+                       const struct hip_common *const in);
 
 #endif /* HIP_LIB_CORE_SOLVE_H */

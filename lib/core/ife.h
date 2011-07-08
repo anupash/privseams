@@ -40,15 +40,10 @@
  * as destination after proper actions.
  *
  * @param eval Set variable called 'err' to this value.
- *
- * @note EAE stands for ERROR and EXIT.
+ * @param args Arguments for HIP_OUT_ERR(), use like with printf().
  */
-#define HIP_EAE(eval, args ...) \
-    { \
-        HIP_ERROR(args); \
-        err = eval; \
-        goto out_err; \
-    }
+
+#define HIP_OUT_ERR(eval, args ...) HIP_IFEL(1, eval, args)
 
 /**
  * Use this macro to detect failures and exit function in case
@@ -82,16 +77,6 @@
         if (cond) { \
             HIP_ERROR(args); \
             err = eval; \
-            goto out_err; \
-        } \
-    }
-
-#define HIP_IFF(cond, eval, finally, args ...) \
-    { \
-        if (cond) { \
-            HIP_ERROR(args); \
-            err = eval; \
-            finally; \
             goto out_err; \
         } \
     }

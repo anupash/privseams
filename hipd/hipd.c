@@ -40,13 +40,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/un.h>
+#include <sys/time.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -68,14 +67,6 @@
 #include "netdev.h"
 #include "hipd.h"
 
-
-/* Defined as a global just to allow freeing in exit(). Do not use outside
- * of this file! */
-struct hip_common *hipd_msg    = NULL;
-struct hip_common *hipd_msg_v4 = NULL;
-
-int is_active_mhaddr = 1;                 /**< Which mhaddr to use active or lazy? (default: active) */
-int is_hard_handover = 0;                 /**< if hard handover is forced to be used (default: no) */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
  *  0 = none = default, AF_INET, AF_INET6 */
@@ -110,8 +101,7 @@ hip_transform_suite hip_nat_status = 0;
 int hip_encrypt_i2_hi = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
-int                hip_user_sock = 0;
-struct sockaddr_un hip_user_addr;
+int hip_user_sock = 0;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec;
@@ -121,7 +111,7 @@ struct rtnl_handle hip_nl_ipsec;
 struct rtnl_handle hip_nl_route;
 
 struct sockaddr_in6 hip_firewall_addr;
-int                 hip_firewall_sock = 0;
+static int          hip_firewall_sock = 0;
 
 /* used to change the transform order see hipconf usage to see the usage
  * This is set to AES, 3DES, NULL by default see hipconf trasform order for
@@ -142,7 +132,6 @@ int hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
 
 int            address_count;
 HIP_HASHTABLE *addresses;
-time_t         load_time;
 
 int address_change_time_counter = -1;
 
@@ -152,12 +141,13 @@ int address_change_time_counter = -1;
  */
 int hip_use_userspace_ipsec = 0;
 
-int     esp_prot_active         = 0;
-int     esp_prot_num_transforms = 0;
-uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-long    esp_prot_num_parallel_hchains = 0;
+int  esp_prot_active               = 0;
+int  esp_prot_num_transforms       = 0;
+long esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = HIP_MSG_SHOTGUN_OFF;
+
+int hip_broadcast_status = HIP_MSG_BROADCAST_OFF;
 
 int hip_wait_addr_changes_to_stabilize = 1;
 
@@ -172,7 +162,7 @@ static void usage(void)
     fprintf(stderr, "  -i <device name> add interface to the white list. " \
                     "Use additional -i for additional devices.\n");
     fprintf(stderr, "  -k kill existing hipd\n");
-    fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
+    fprintf(stderr, "  -N do not flush all IPsec databases during start\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
@@ -291,7 +281,7 @@ static int hipd_main(uint64_t flags)
     int                       highest_descriptor = 0, err = 0;
     struct timeval            timeout;
     fd_set                    read_fdset;
-    struct hip_packet_context ctx;
+    struct hip_packet_context ctx = { 0 };
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -346,10 +336,8 @@ static int hipd_main(uint64_t flags)
     }
 
     HIP_INFO("hipd pid=%d starting\n", getpid());
-    time(&load_time);
 
     /* prepare the one and only hip_packet_context instance */
-    memset(&ctx, 0, sizeof(ctx));
     HIP_IFEL(!(ctx.input_msg  = hip_msg_alloc()), ENOMEM, "Insufficient memory");
     HIP_IFEL(!(ctx.output_msg = hip_msg_alloc()), ENOMEM, "Insufficient memory");
 
@@ -475,11 +463,6 @@ int main(int argc, char *argv[])
 
     if (hipd_main(sflags)) {
         return EXIT_FAILURE;
-    }
-
-    if (hipd_get_flag(HIPD_FLAG_RESTART)) {
-        HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
-        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, (const char *const *) argv);
     }
 
     return EXIT_SUCCESS;

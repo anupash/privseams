@@ -55,14 +55,14 @@
  * At the same time, a small interval also causes the somewhat expensive
  * hip_port_bindings_reload() to be called more frequently.
  */
-const unsigned int INVALIDATION_INTERVAL = 1;
+static const unsigned int INVALIDATION_INTERVAL = 1;
 
 /**
  * Indicates whether the caches should be invalidated.
  * This is periodically set to 1 by a timer and reset the next time a lookup is
  * performed.
  */
-volatile sig_atomic_t cache_invalidation_flag = 1;
+static volatile sig_atomic_t cache_invalidation_flag = 1;
 
 /**
  * Pointer to the port bindings cache.

@@ -38,12 +38,14 @@
 #include <netinet/in.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/ec.h>
 
 #include "config.h"
 #include "certtools.h"
 #include "debug.h"
 #include "icomm.h"
 #include "state.h"
+
 
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
@@ -97,9 +99,9 @@ int hip_build_param_hmac_contents(struct hip_common *,
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                                 struct hip_common *msg_copy,
                                 struct hip_host_id *host_id);
-int hip_build_host_id_from_param(const struct hip_host_id *param,
-                                 struct hip_host_id *peer_host_id);
-int hip_build_param_host_id(struct hip_common *msg,
+int hip_build_host_id_from_param(const struct hip_host_id *const wire_host_id,
+                                 struct hip_host_id *const peer_host_id);
+int hip_build_param_host_id(struct hip_common *const msg,
                             const struct hip_host_id *const host_id);
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  const char *hostname,
@@ -125,11 +127,11 @@ int hip_build_param_cert(struct hip_common *,
                          uint8_t,
                          void *,
                          size_t);
-int hip_build_param_puzzle(struct hip_common *,
-                           uint8_t,
-                           uint8_t,
-                           uint32_t,
-                           uint64_t);
+int hip_build_param_puzzle(struct hip_common *const msg,
+                           const uint8_t val_K,
+                           const uint8_t lifetime,
+                           const uint32_t opaque,
+                           const uint8_t *const random_i);
 
 int hip_build_param_challenge_request(struct hip_common *,
                                       uint8_t,
@@ -149,11 +151,11 @@ int hip_build_param_signature_contents(struct hip_common *,
                                        uint8_t);
 int hip_build_param_solution(struct hip_common *,
                              const struct hip_puzzle *,
-                             uint64_t);
+                             uint8_t *const);
 
-int hip_build_param_challenge_response(struct hip_common *,
-                                       const struct hip_challenge_request *,
-                                       uint64_t);
+int hip_build_param_challenge_response(struct hip_common *const msg,
+                                       const struct hip_challenge_request *const pz,
+                                       const uint8_t *const solution);
 
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
@@ -186,8 +188,8 @@ int hip_verify_network_header(struct hip_common *hip_common,
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
-struct hip_dh_public_value
-*hip_dh_select_key(struct hip_diffie_hellman *);
+const struct hip_dh_public_value
+*hip_dh_select_key(const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);

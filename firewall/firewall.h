@@ -26,9 +26,18 @@
 #ifndef HIP_FIREWALL_FIREWALL_H
 #define HIP_FIREWALL_FIREWALL_H
 
+#include <stdbool.h>
+
 #include "lib/core/protodefs.h"
 
+
 /** globally used variables defined in firewall.c */
+extern int accept_normal_traffic_by_default;
+extern int accept_hip_esp_traffic_by_default;
+extern int log_level;
+extern int hip_userspace_ipsec;
+extern int restore_filter_traffic;
+extern int restore_accept_hip_esp_traffic;
 extern int filter_traffic;
 extern int hip_kernel_ipsec_fallback;
 extern int hip_lsi_support;
@@ -36,9 +45,12 @@ extern int esp_relay;
 extern int hip_esp_protection;
 extern int use_midauth;
 extern int hip_fw_sock;
-extern int hip_fw_async_sock;
 extern int system_based_opp_mode;
+extern int esp_speedup;
 
+int hipfw_main(const char *const rule_file,
+               const bool        kill_old,
+               const bool        limit_capabilities);
 int hip_fw_init_esp_relay(void);
 void hip_fw_uninit_esp_relay(void);
 hip_hit_t *hip_fw_get_default_hit(void);

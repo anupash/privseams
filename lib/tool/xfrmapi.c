@@ -46,10 +46,10 @@
 
 /* For receiving netlink IPsec events (acquire, expire, etc);
  * thread unfriendly! */
-struct rtnl_handle *hip_xfrmapi_nl_ipsec;
+static struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 
-int hip_xfrmapi_beet;
-int hip_xfrmapi_sa_default_prefix;
+static int hip_xfrmapi_beet;
+static int hip_xfrmapi_sa_default_prefix;
 
 static const char *const *e_algo_names;
 static const char *const *a_algo_names;
@@ -235,14 +235,10 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         struct nlmsghdr             n;
         struct xfrm_userpolicy_info xpinfo;
         char                        buf[RTA_BUF_SIZE];
-    } req;
-    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE];
-    int                    tmpls_len = 0, err = 0;
-    unsigned               flags     = 0;
-    struct xfrm_user_tmpl *tmpl;
-
-    memset(&req, 0, sizeof(req));
-    memset(&tmpls_buf, 0, sizeof(tmpls_buf));
+    } req                       = { { 0 } };
+    struct xfrm_user_tmpl tmpl  = { { { 0 } } };
+    int                   err   = 0;
+    unsigned              flags = 0;
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpinfo));
     req.n.nlmsg_flags = NLM_F_REQUEST | flags;
@@ -257,40 +253,36 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     HIP_IFE(hip_xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
                                    id_prefix, preferred_family), -1);
 
-    /* TEMPLATE */
-    tmpl = (struct xfrm_user_tmpl *) ((char *) tmpls_buf);
-
     if (IN6_IS_ADDR_V4MAPPED(tmpl_saddr) || IN6_IS_ADDR_V4MAPPED(tmpl_daddr)) {
         HIP_DEBUG("IPv4 address found in tmpl policy\n");
-        tmpl->family = AF_INET;
+        tmpl.family = AF_INET;
     } else {
-        tmpl->family = preferred_family;
+        tmpl.family = preferred_family;
     }
 
 
     /* The mode has to be BEET */
     if (proto) {
-        tmpl->mode     = XFRM_MODE_BEET;
-        tmpl->id.proto = proto;
+        tmpl.mode     = XFRM_MODE_BEET;
+        tmpl.id.proto = proto;
     }
 
-    tmpl->aalgos   = (~(uint32_t) 0);
-    tmpl->ealgos   = (~(uint32_t) 0);
-    tmpl->calgos   = (~(uint32_t) 0);
-    tmpl->optional = 0;     /* required */
-    tmpls_len     += sizeof(*tmpl);
+    tmpl.aalgos   = ~(uint32_t) 0;
+    tmpl.ealgos   = ~(uint32_t) 0;
+    tmpl.calgos   = ~(uint32_t) 0;
+    tmpl.optional = 0;     /* required */
+
     if (tmpl_saddr && tmpl_daddr) {
-        if (tmpl->family == AF_INET) {
-            tmpl->saddr.a4    = tmpl_saddr->s6_addr32[3];
-            tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
+        if (tmpl.family == AF_INET) {
+            tmpl.saddr.a4    = tmpl_saddr->s6_addr32[3];
+            tmpl.id.daddr.a4 = tmpl_daddr->s6_addr32[3];
         } else {
-            memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
-            memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+            memcpy(&tmpl.saddr, tmpl_saddr, sizeof(tmpl.saddr));
+            memcpy(&tmpl.id.daddr, tmpl_daddr, sizeof(tmpl.id.daddr));
         }
     }
 
-    addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
-              tmpls_buf, tmpls_len);
+    addattr_l(&req.n, sizeof(req), XFRMA_TMPL, &tmpl, sizeof(tmpl));
 
     if (req.xpinfo.sel.family == AF_UNSPEC) {
         req.xpinfo.sel.family = AF_INET6;
@@ -314,10 +306,8 @@ static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
     struct {
         struct nlmsghdr          n;
         struct xfrm_usersa_flush xfs;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xfs));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -341,10 +331,8 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
 {
     struct {
         struct nlmsghdr n;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(0);
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -378,10 +366,8 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     struct {
         struct nlmsghdr           n;
         struct xfrm_userpolicy_id xpid;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpid));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -393,7 +379,7 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
                                    hit_prefix, preferred_family), -1);
     HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
-             "No associated policies to be deleted\n");
+             "Security policy deletion failed.\n");
 
 out_err:
     return err;
@@ -441,14 +427,11 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         struct nlmsghdr         n;
         struct xfrm_usersa_info xsinfo;
         char                    buf[RTA_BUF_SIZE];
-    } req;
+    } req = { { 0 } };
 
-    HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
     HIP_DEBUG("sport %d, dport %d\n", sport, dport);
     HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
     HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
-
-    memset(&req, 0, sizeof(req));
 
     if (IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr)) {
         req.xsinfo.saddr.a4    = saddr->s6_addr32[3];
@@ -488,7 +471,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         struct {
             struct xfrm_algo algo;
             char             buf[XFRM_ALGO_KEY_BUF_SIZE];
-        } alg;
+        } alg                    = { { { 0 } } };
         const char *const e_name = e_algo_names[ealg];
         const char *const a_name = a_algo_names[aalg];
         int               len;
@@ -496,10 +479,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         HIP_ASSERT(ealg < (int) sizeof(e_algo_names));
         HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
 
-        memset(alg.buf, 0, sizeof(alg.buf));
-
         /* XFRMA_ALG_AUTH */
-        memset(&alg, 0, sizeof(alg));
         HIP_IFE(hip_xfrm_algo_parse((void *) &alg, a_name,
                                     authkey->key, authkey_len,
                                     sizeof(alg.buf)), -1);
@@ -547,11 +527,9 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
         struct nlmsghdr       n;
         struct xfrm_usersa_id xsid;
         char                  buf[RTA_BUF_SIZE];
-    } req;
+    } req = { { 0 } };
     struct xfrm_encap_tmpl encap;
     int                    err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xsid));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -722,7 +700,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
  * @param enckey encryption key for ESP
  * @param authkey authentication key for ESP
  * @param direction the direction of the SA (HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN)
- * @param update zero if new SA or one if an old SA
  * @param entry corresponding host association
  * @return zero on success and non-zero on error
  * @note IPv4 addresses in IPv6 mapped format
@@ -738,12 +715,10 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const struct hip_crypto_key *enckey,
                     const struct hip_crypto_key *authkey,
                     const int direction,
-                    const int update,
                     struct hip_hadb_state *entry)
 {
     int       err  = 0, enckey_len, authkey_len;
     int       aalg = ealg;
-    int       cmd  = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
     in_port_t sport, dport;
 
     HIP_ASSERT(spi != 0);
@@ -769,7 +744,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
              "Bad enc or auth key len\n");
 
     HIP_DEBUG("************************************\n");
-    HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
     HIP_DEBUG_HIT("src_hit", src_hit);
     HIP_DEBUG_HIT("dst_hit", dst_hit);
     HIP_DEBUG_IN6ADDR("saddr", saddr);
@@ -779,7 +753,7 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     HIP_DEBUG("SPI=0x%x\n", spi);
     HIP_DEBUG("************************************\n");
 
-    HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
+    HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, XFRM_MSG_NEWSA,
                                   saddr, daddr,
                                   src_hit, dst_hit, spi,
                                   ealg, enckey, enckey_len, aalg,
@@ -800,7 +774,6 @@ out_err:
  * @param proto protocol for the SP (IPPROTO_ESP)
  * @param use_full_prefix one if we should use /128 prefix for HITs
  *                        or zero otherwise
- * @param update zero if the the SP is new or one otherwise
  * @note  IPv4 addresses in IPv6 mapped format
  */
 int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
@@ -808,29 +781,23 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                           const struct in6_addr *src_addr,
                           const struct in6_addr *dst_addr,
                           uint8_t proto,
-                          int use_full_prefix,
-                          int update)
+                          int use_full_prefix)
 {
-    HIP_DEBUG("Start\n");
-
     int     err    = 0;
     uint8_t prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
-    int     cmd    = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
     /* XX FIXME: remove the proto argument */
-    HIP_DEBUG("hip_setup_hit_sp_pair\n");
-    HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
+    HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, XFRM_MSG_NEWPOLICY,
                                    dst_id, src_id,
                                    src_addr, dst_addr,
                                    XFRM_POLICY_IN, proto, prefix,
                                    AF_INET6), -1);
 
-    HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
+    HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, XFRM_MSG_NEWPOLICY,
                                    src_id, dst_id,
                                    dst_addr, src_addr,
                                    XFRM_POLICY_OUT, proto, prefix,
                                    AF_INET6), -1);
-    HIP_DEBUG("End\n");
 
 out_err:
     return err;
@@ -862,9 +829,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
  */
 void hip_delete_default_prefix_sp_pair(void)
 {
-    hip_hit_t src_hit, dst_hit;
-    memset(&src_hit, 0, sizeof(hip_hit_t));
-    memset(&dst_hit, 0, sizeof(hip_hit_t));
+    hip_hit_t src_hit = { { { 0 } } }, dst_hit = { { { 0 } } };
 
     /* See the comment in hip_setup_sp_prefix_pair() */
     set_hit_prefix(&src_hit);
@@ -881,19 +846,15 @@ void hip_delete_default_prefix_sp_pair(void)
  */
 int hip_setup_default_sp_prefix_pair(void)
 {
-    int             err = 0;
-    hip_hit_t       src_hit, dst_hit;
-    struct in6_addr ip;
-
-    memset(&ip, 0, sizeof(hip_hit_t));
-    memset(&src_hit, 0, sizeof(hip_hit_t));
-    memset(&dst_hit, 0, sizeof(hip_hit_t));
+    int             err     = 0;
+    hip_hit_t       src_hit = { { { 0 } } }, dst_hit = { { { 0 } } };
+    struct in6_addr ip      = { { { 0 } } };
 
     /* The OUTGOING and INCOMING policy is set to the generic value */
     set_hit_prefix(&src_hit);
     set_hit_prefix(&dst_hit);
 
-    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0), -1);
+    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0), -1);
 
 out_err:
     return err;

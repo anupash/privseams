@@ -28,121 +28,151 @@
  * @brief HIP computation puzzle solving algorithms
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Rene Hummen
  */
 
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
+#include <openssl/rand.h>
 
 #include "config.h"
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "ife.h"
 #include "prefix.h"
 #include "protodefs.h"
 #include "solve.h"
 
+// max. 2^max_puzzle_difficulty tries to solve a puzzle
+#define MAX_PUZZLE_SOLUTION_TRIES (1ULL << MAX_PUZZLE_DIFFICULTY)
+
 /**
- * solve a computational puzzle for HIP
+ * Computes a single iteration for a computational puzzle
  *
- * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
- * @param hdr The incoming R1/I2 packet header.
- * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
- *
- * @note The K and I is read from the @c puzzle_or_solution.
- * @note Regarding to return value of zero, I don't see why 0 couldn't solve the
- *       puzzle too, but since the odds are 1/2^64 to try 0, I don't see the point
- *       in improving this now.
- * @return The J that solves the puzzle is returned, or 0 to indicate an error.
+ * @param puzzle_input      puzzle to be solved or verified
+ * @param difficulty        difficulty of the puzzle (number of leading zeros)
+ * @return 0 when hash has >= @a difficulty least significant bits as zeros, 1
+ *         when hash has < @a difficulty least significant bits as zeros,
+ *         -1 in case of an error
  */
-uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
-                          const struct hip_common *hdr,
-                          int mode)
+static int hip_single_puzzle_computation(const struct puzzle_hash_input *const puzzle_input,
+                                         const uint8_t difficulty)
 {
-    uint64_t mask     = 0;
-    uint64_t randval  = 0;
-    uint64_t maxtries = 0;
-    uint64_t digest   = 0;
-    uint8_t  cookie[48];
-    int      err = 0;
-    const union {
-        struct hip_puzzle   pz;
-        struct hip_solution sl;
-    } *u;
+    unsigned char sha_digest[SHA_DIGEST_LENGTH];
+    uint32_t      truncated_digest = 0;
 
-    HIP_HEXDUMP("puzzle", puzzle_or_solution,
-                (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) :
-                 sizeof(struct hip_puzzle)));
-
-    /* pre-create cookie */
-    u = puzzle_or_solution;
-
-    HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0,
-             "Cookie K %u is higher than we are willing to calculate"
-             " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
-
-    mask = hton64((1ULL << u->pz.K) - 1);
-    memcpy(cookie, &u->pz.I, sizeof(uint64_t));
-
-    HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
-
-    if (mode == HIP_VERIFY_PUZZLE) {
-        ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hits);
-        ipv6_addr_copy((hip_hit_t *) (cookie + 24), &hdr->hitr);
-        randval  = u->sl.J;
-        maxtries = 1;
-    } else if (mode == HIP_SOLVE_PUZZLE) {
-        ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hitr);
-        ipv6_addr_copy((hip_hit_t *) (cookie + 24), &hdr->hits);
-        maxtries = 1ULL << (u->pz.K + 3);
-        get_random_bytes(&randval, sizeof(uint64_t));
-    } else {
-        HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
+    /* any puzzle solution is acceptable for difficulty 0 */
+    if (difficulty == 0) {
+        return 0;
     }
 
-    HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
-    /* while loops should work even if the maxtries is unsigned
-     * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]...
-     * the next round while (0 > 0) [maxtries > 0 now]
-     */
-    while (maxtries-- > 0) {
-        uint8_t sha_digest[HIP_AH_SHA_LEN];
+    if (difficulty > MAX_PUZZLE_DIFFICULTY) {
+        HIP_ERROR("difficulty exceeds max. configured difficulty\n");
+        return -1;
+    }
 
-        /* must be 8 */
-        memcpy(cookie + 40, (uint8_t *) &randval, sizeof(uint64_t));
+    if (hip_build_digest(HIP_DIGEST_SHA1, puzzle_input,
+                         sizeof(struct puzzle_hash_input), sha_digest)) {
+        HIP_ERROR("failed to compute hash digest\n");
+        return -1;
+    }
 
-        hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
+    /* In reference to RFC 5201, we need to interpret the hash digest as an
+     * integer in network byte-order. We are interested in least significant
+     * bits here. */
+    truncated_digest = *(uint32_t *) &sha_digest[SHA_DIGEST_LENGTH - sizeof(truncated_digest)];
 
-        /* copy the last 8 bytes for checking */
-        memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
+    /* Make sure to interpret the solution equally across platforms
+     * (i.e., network byte-order), when calculating the puzzle solution.
+     *
+     * The problem is that ffs() interprets its input not as a byte array
+     * but as an integer with an encoding that depends on the host byte order.
+     * htonl() ensures that ffs() performs the check in network byte order
+     * independent from the actual host byte order. */
+    truncated_digest = htonl(truncated_digest);
 
-        /* now, in order to be able to do correctly the bitwise
-         * AND-operation we have to remember that little endian
-         * processors will interpret the digest and mask reversely.
-         * digest is the last 64 bits of the sha1-digest.. how that is
-         * ordered in processors registers etc.. does not matter to us.
-         * If the last 64 bits of the sha1-digest is
-         * 0x12345678DEADBEEF, whether we have 0xEFBEADDE78563412
-         * doesn't matter because the mask matters... if the mask is
-         * 0x000000000000FFFF (or in other endianness
-         * 0xFFFF000000000000). Either ways... the result is
-         * 0x000000000000BEEF or 0xEFBE000000000000, which the cpu
-         * interprets as 0xBEEF. The mask is converted to network byte
-         * order (above).
-         */
-        if ((digest & mask) == 0) {
-            return randval;
+    /* check if position of first least significant 1-bit is higher than
+     * difficulty */
+    if (ffs(truncated_digest) > difficulty) {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ * Solve a computational puzzle for HIP
+ *
+ * @param puzzle_input  puzzle to be solved or verified
+ * @param difficulty    difficulty of the puzzle
+ * @return 0 when solution was found, 1 in case no solution was found after
+ *         ::MAX_PUZZLE_SOLUTION_TRIES, -1 in case of an error
+ *
+ * @note provide data for all members of puzzle_input when calling this function
+ * @note puzzle_input will contain the solution on successful exit
+ */
+int hip_solve_puzzle(struct puzzle_hash_input *const puzzle_input,
+                     const uint8_t difficulty)
+{
+    int err = -1;
+
+    // any puzzle solution is acceptable for difficulty 0
+    if (difficulty == 0) {
+        return 0;
+    }
+
+    /* If max_puzzle_difficulty >= 64, MAX_PUZZLE_SOLUTION_TRIES will be 0.
+     * Hence, no solution will be found for these cases. */
+    HIP_ASSERT(MAX_PUZZLE_DIFFICULTY < sizeof(unsigned long long) * 8);
+
+    if (difficulty > MAX_PUZZLE_DIFFICULTY) {
+        HIP_ERROR("Cookie (K = %u) is higher than we are willing to calculate "
+                  "(current max K = %u)\n", difficulty, MAX_PUZZLE_DIFFICULTY);
+        return -1;
+    }
+
+    for (unsigned long long i = 0; i < MAX_PUZZLE_SOLUTION_TRIES; i++) {
+        err = hip_single_puzzle_computation(puzzle_input,
+                                            difficulty);
+        if (err == 0) {
+            return 0;
+        } else if (err > 0) {
+            // increase random value by one and try again
+            (*(uint64_t *) puzzle_input->solution)++;
+        } else {
+            HIP_ERROR("error while computing the puzzle solution\n");
+            memset(puzzle_input, 0, PUZZLE_LENGTH);
+            return -1;
         }
-
-        /* It seems like the puzzle was not correctly solved */
-        HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
-        randval++;
     }
 
     HIP_ERROR("Could not solve the puzzle, no solution found\n");
-out_err:
-    return err;
+    return 1;
+}
+
+/**
+ * Verify a computational puzzle for HIP
+ *
+ * @param puzzle_input  puzzle to be solved or verified
+ * @param difficulty    difficulty of the puzzle
+ * @return 0 when solution is correct, -1 otherwise
+ */
+int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_input,
+                               const uint8_t difficulty)
+{
+    // any puzzle solution is acceptable for difficulty 0
+    if (difficulty == 0) {
+        return 0;
+    }
+
+    if (hip_single_puzzle_computation(puzzle_input, difficulty)) {
+        HIP_ERROR("failed to verify puzzle solution\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -158,13 +188,12 @@ out_err:
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
+int hip_solve_puzzle_m(struct hip_common *const out,
+                       const struct hip_common *const in)
 {
+    struct puzzle_hash_input            puzzle_input;
     const struct hip_challenge_request *pz;
-    struct hip_puzzle                   tmp;
-    uint64_t                            solution;
-    int                                 err = 0;
-    uint8_t                             digist[HIP_AH_SHA_LEN];
+    uint8_t                             digest[HIP_AH_SHA_LEN];
 
     pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
     while (pz) {
@@ -172,28 +201,32 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
             break;
         }
 
-        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0,
-                 -1, "Building of SHA1 Random seed I failed\n");
-        tmp.type      = pz->type;
-        tmp.length    = pz->length;
-        tmp.K         = pz->K;
-        tmp.lifetime  = pz->lifetime;
-        tmp.opaque[0] = tmp.opaque[1] = 0;
-        tmp.I         = *digist & 0x40; //truncate I to 8 byte length
+        if (hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digest) < 0) {
+            HIP_ERROR("Building of SHA1 Random seed I failed\n");
+            return -1;
+        }
 
-        HIP_IFEL((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0,
-                 -EINVAL,
-                 "Solving of puzzle failed\n");
+        memcpy(puzzle_input.puzzle,
+               &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
+               PUZZLE_LENGTH);
+        puzzle_input.initiator_hit = out->hits;
+        puzzle_input.responder_hit = out->hitr;
+        RAND_bytes(puzzle_input.solution, PUZZLE_LENGTH);
 
-        HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0,
-                 -1,
-                 "Error while creating solution_m reply parameter\n");
+        if ((hip_solve_puzzle(&puzzle_input, pz->K))) {
+            HIP_ERROR("Solving of puzzle failed\n");
+            return -EINVAL;
+        }
+
+        if (hip_build_param_challenge_response(out, pz, puzzle_input.solution) < 0) {
+            HIP_ERROR("Error while creating solution_m reply parameter\n");
+            return -1;
+        }
         pz = (const struct hip_challenge_request *)
              hip_get_next_param(in, (const struct hip_tlv_common *) pz);
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 #endif /* CONFIG_HIP_MIDAUTH */

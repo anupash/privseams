@@ -49,10 +49,5 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m,
                                struct in_addr *ip_dst);
 
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi);
-int hip_reinject_packet(const struct in6_addr *src_hit,
-                        const struct in6_addr *dst_hit,
-                        const ipq_packet_msg_t *m,
-                        const int ipOrigTraffic,
-                        const int incoming);
 
 #endif /* HIP_FIREWALL_LSI_H */

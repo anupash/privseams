@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -108,33 +108,8 @@ struct hip_msg_retrans {
     struct hip_common *buf;
 };
 
-/*
- * Fixed start of this struct must match to struct hip_locator_info_addr_item
- * for the part of address item. It is used in hip_update_locator_match().
- */
-/// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item {
-    uint32_t        padding;
-    unsigned long   hash_key;
     struct in6_addr address;
-
-    int address_state;                  /* current state of the
-                                         * address (PEER_ADDR_STATE_xx) */
-    int is_preferred;                   /* 1 if this address was set as
-                                         * preferred address in the LOCATOR */
-    uint32_t       lifetime;
-    struct timeval modified_time;       /* time when this address was
-                                         * added or updated */
-    uint8_t echo_data[4];               /* data put into the ECHO_REQUEST parameter */
-//NAT branch
-    uint8_t transport_protocol;                     /*value 1 for UDP*/
-
-    uint16_t port /*port number for transport protocol*/;
-
-    uint32_t priority;
-
-    uint8_t kind;
-//end NAT branch
 };
 
 struct hip_spi_in_item {
@@ -294,13 +269,13 @@ struct hip_hadb_state {
     /** A function pointer to a function that verifies peer's host identity. */
     int (*verify)(void *, struct hip_common *);
     /** For retransmission. */
-    uint64_t puzzle_solution;
+    uint8_t puzzle_solution[PUZZLE_LENGTH];
     /** LOCATOR parameter. Just tmp save if sent in R1 no @c esp_info so
      *  keeping it here 'till the hip_update_locator_parameter can be done.
      *  @todo Remove this kludge. */
     struct hip_locator *locator;
     /** For retransmission. */
-    uint64_t puzzle_i;
+    uint8_t puzzle_i[PUZZLE_LENGTH];
     /** Used for UPDATE and CLOSE. When we sent multiple identical UPDATE
      * packets between different address combinations, we don't modify
      * the opaque data. */
@@ -342,9 +317,6 @@ struct hip_hadb_state {
     int spi_outbound_current;
     int spi_outbound_new;
 
-    // Has struct hip_peer_addr_list_item s
-    HIP_HASHTABLE *peer_addresses_old;
-
     /* modular state */
     struct modular_state *hip_modular_state;
 } __attribute__((packed));
@@ -368,6 +340,7 @@ struct hip_hadb_user_info_state {
     in_port_t       nat_udp_port_local;
     in_port_t       nat_udp_port_peer;
     int             shotgun_status;
+    int             broadcast_status;
     hip_controls    peer_controls;
     struct timeval  bex_duration;
 };

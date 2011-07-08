@@ -371,10 +371,10 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
     struct udphdr          *udp               = NULL;
     struct tcphdr          *tcp               = NULL;
     struct icmphdr         *icmp              = NULL;
-    struct sockaddr_storage src, dst;
-    struct sockaddr_in6    *sock_src6 = NULL, *sock_dst6 = NULL;
-    struct sockaddr_in     *sock_src4 = NULL, *sock_dst4 = NULL;
-    struct in6_addr         any       = IN6ADDR_ANY_INIT;
+    struct sockaddr_storage src               = { 0 }, dst       = { 0 };
+    struct sockaddr_in6    *sock_src6         = NULL, *sock_dst6 = NULL;
+    struct sockaddr_in     *sock_src4         = NULL, *sock_dst4 = NULL;
+    struct in6_addr         any               = IN6ADDR_ANY_INIT;
 
     HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
 
@@ -382,9 +382,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
     sock_dst4 = (struct sockaddr_in *) &dst;
     sock_src6 = (struct sockaddr_in6 *) &src;
     sock_dst6 = (struct sockaddr_in6 *) &dst;
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     if (IN6_IS_ADDR_V4MAPPED(src_hit)) {
         sock_src4->sin_family = AF_INET;
@@ -534,7 +531,7 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
     int err               = 0, sent, sa_size;
     int firewall_raw_sock = 0, is_ipv6 = 0;
 
-    struct sockaddr_storage src, dst;
+    struct sockaddr_storage src = { 0 }, dst = { 0 };
     struct sockaddr_in6    *sock_src6, *sock_dst6;
     struct sockaddr_in     *sock_src4, *sock_dst4;
     struct in6_addr         any = IN6ADDR_ANY_INIT;
@@ -545,9 +542,6 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
     sock_dst4 = (struct sockaddr_in *) &dst;
     sock_src6 = (struct sockaddr_in6 *) &src;
     sock_dst6 = (struct sockaddr_in6 *) &dst;
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     if (IN6_IS_ADDR_V4MAPPED(src_hit)) {
         sock_src4->sin_family = AF_INET;

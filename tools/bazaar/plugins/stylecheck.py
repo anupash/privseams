@@ -1,7 +1,8 @@
-#!/usr/bin/env python	
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 #
-# Copyright (c) 2010 Aalto University and RWTH Aachen University.
+# Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -23,6 +24,11 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+#
+
+#
+# Contributors:
+# Stefan Götz <stefan.goetz@web.de>
 #
 
 _stylecheck_tutorial = """
@@ -70,7 +76,7 @@ check and allows the commit to succeed.
 
 """
 
-version_info = (0, 1, 0, 'dev', 0)
+version_info = (0, 2, 0, 'dev', 0)
 plugin_name = 'stylecheck'
 
 from bzrlib import branch, help_topics
@@ -84,21 +90,21 @@ import re
 
 def get_local_file_name(branch, file_name):
     """Determine the absolute path of the file in a local Bazaar working branch.
-    
+
     Arguments:
     branch -- an instance of bzrlib's Branch representing a local working
     branch. file_name is resolved relative to the base location of branch.
     file_name -- a string containing the relative path of a file in the file
     tree of branch.
-    
+
     This function returns a string that contains the absolute path of the
     specified file. This file is the actual on-disk working copy and can be
     accessed and modified. If file_name does not exist in branch or the
     corresponding local file cannot be found, a RuntimeError is raised.
-    
+
     """
     base = branch.base
-    if base.startswith('file://'):    
+    if base.startswith('file://'):
         base = base[7:]
     local_file_name = os.path.join(base, file_name)
     if os.path.exists(local_file_name):
@@ -106,43 +112,43 @@ def get_local_file_name(branch, file_name):
     else:
         raise RuntimeError("The file '%s' in branch '%s' could not be found at \
 '%s' as expected!" % (file_name, branch, local_file_name))
-    
+
 
 class Beautifier(object):
     """A common base class for locally installed source code beautification
     tools.
-    
+
     This class allows to check whether a specific code beautifier can be
     expected to work and it wraps the tool-specific handling of configuration
     files and command lines.
-    
+
     """
     def __init__(self):
         """Creates and initializes an Beautifier object and its attributes.
-        
+
         If the initialization fails, e.g., because a tool is not available, an
         Exception is raised.
-        
+
         """
         self.cfg = None
         self.local_cfg = None
-    
+
     def supports(self, file_name):
         """Return whether this tool supports the specified file."""
         raise NotImplementedError()
-    
+
     def get_command(self, local_file_name):
         """Retrieve a command line that, when executed, provides the beautified
         version of a file.
-        
+
         Arguments:
         local_file_name -- a local file to run the tool on. The returned
         command line is guaranteed to not modify this file.
-        
+
         This function returns a command line that can be executed as a shell
         command. The command line runs the tool such that the beautified
         version of local_file_name is available on stdout.
-        
+
         """
         raise NotImplementedError()
 
@@ -150,28 +156,28 @@ class Beautifier(object):
 class Uncrustify(Beautifier):
     """Represents the locally installed version of uncrustify and its
     configuration data.
-    
+
     """
     def __init__(self, branch, tree):
         """Creates and initializes an Uncrustify object and its attributes.
-        
+
         Arguments:
         branch -- a bzrlib Branch instance representing the repository this
         commit hook applies to.
         tree -- a bzrlib Tree instance representing the future repository
         contents after the commit.
-        
+
         If the initialization fails, e.g., because the uncrustify binary or
         other required resources are not a available, a RuntimeError or
         CalledProcessError is raised.
-        
+
         """
         super(Uncrustify, self).__init__()
         self.version = self._get_version()
         self.cfg = self._get_cfg(tree)
         self.local_cfg = get_local_file_name(branch, file_name = self.cfg)
         self._check_prerequisites([self.local_cfg])
-    
+
     def supports(self, file_name):
         """Return whether this tool supports the specified file."""
         # check whether the given file is supported by uncrustify
@@ -180,33 +186,33 @@ class Uncrustify(Beautifier):
                                '.pawn', '.p', '.sma', '.inl', '.h', '.cxx',
                                '.hpp', '.hxx', '.cc', '.di', '.m', '.mm',
                                '.sqc', '.es' ]
-    
+
     def get_command(self, local_file_name):
         """Retrieve a command line that, when executed, provides the beautified
         version of a file.
-        
+
         Arguments:
         local_file_name -- a local file to run uncrustify on. The returned
         command line is guaranteed to not modify this file.
-        
+
         This function returns a command line that can be executed as a shell
         command. The command line runs uncrustify such that the beautified
         version of local_file_name is available on stdout.
-        
+
         """
         return "uncrustify -c '%s' -f '%s'" % (self.local_cfg, local_file_name)
-    
+
     def _check_prerequisites(self, files):
         """Check whether the necessary tools and files are available to run
         uncrustify and perform the code style check.
-        
+
         Arguments:
         files -- files that must be accessible on the host file system for the
         code style check to work.
-        
+
         If the runtime environment lacks a required feature, a
         RuntimeError is raised that specifies the missing component.
-        
+
         """
         for file_name in files:
             if not os.path.exists(file_name):
@@ -222,7 +228,7 @@ checking cannot be found" % (binary))
 
     def _get_version(self):
         """Retrieve the version of uncrustify installed on the local system.
-        
+
         If the uncrustify version can be determined successfully, this function
         returns a string of the format '0.57'.
         If the version of uncrustify cannot be determined, a RuntimeError or
@@ -242,19 +248,19 @@ output '%s'" % (command_output))
         else:
             raise CalledProcessError("The command '%s' exited with return code \
 %d" % (" ".join(cmd), process.returncode))
-    
+
     def _get_cfg(self, tree):
         """In a Bazaar repository tree, look for the uncrustify configuration
         file that best matches the uncrustify version.
-        
+
         Arguments:
         tree -- the Bazaar repository tree to walk to find the configuration
         file in.
-        
+
         If a configuration file is found, its path name in the tree is returned
         as a string.
         If no configuration file is found, a ValueError is raised.
-        
+
         """
         # first try to use the config file that has the version of uncrustify
         # as a suffix to get a better version match.
@@ -272,17 +278,17 @@ this repository")
 class Beautification(object):
     """Represents the results of running a code beautifier tool (such as
     uncrustify) on a certain set of files from a Bazaar tree.
-    
+
     An instance of this class holds the tree, a subset of its files, and the
     tool to use.
     It can then be used to run the beautifier tool, access the changes it
     would make, and apply the changes to the original files on disk.
-    
+
     """
     def __init__(self, branch, tree, files, tool = None):
         """Create a Beautification object that holds information on a code
         beautification run.
-        
+
         Arguments:
         branch -- a bzrlib Branch instance representing the working branch
         containing tree.
@@ -294,32 +300,32 @@ class Beautification(object):
         (or rather the subset supported by the beautification tool).
         tool -- the beautification tool to use. If not specified here, it needs
         to be supplied to the run() function.
-        
+
         When a Beautification object is no longer used, its cleanup() function
         should be called to release all associated resources.
-        
+
         """
         self._branch = branch
         self._tree = tree
         self._files = files
         self._tool = tool
         self._diff_file = None
-    
+
     def run(self, tool = None):
         """Retrieve the results of running a code beautification tool on the
         file set of this Beautification object.
-        
+
         Arguments:
         tool -- the beautification tool to use. If no tool object is supplied to
         both the contstructor and this function, a RuntimeError is raised. If a
         tool object is supplied to both the constructor and this function, the
         one specified here takes precedence.
-        
+
         This function returns a file object which contains the differences
         between the original files and their beautified version. The file is
         deleted automatically from the file system when the file object is
         closed. If there are no differences, this function returns None.
-        
+
         """
         tl = tool or self._tool
         errors = []
@@ -345,24 +351,24 @@ class Beautification(object):
             self._diff_file = diff_file
         else:
             diff_file.close()
-            
+
         if errors:
             print "\n".join(errors)
 
         return self._diff_file
-    
+
     def apply_to_branch(self):
         """Apply a code beautification to the local Bazaar branch.
-        
+
         While the run() function only analyzes the differences between the
         original code and its beautified version, this function applies those
         differences (i.e., the beautification) to the on-disk files in the
         specified Bazaar branch.
-        
+
         If this function is called before the run() function or if the run()
         function returned None, a ValueError is raised.
         If applying the beautification fails, a CalledProcessError is raised.
-        
+
         """
         if self._diff_file:
             subprocess.check_call(['patch', '-p0', '-i', self._diff_file.name])
@@ -377,13 +383,13 @@ class Beautification(object):
 def get_files_to_check(tree_delta):
     """From all modifications in a commit, retrieve those files which should be
     checked for style violations.
-    
+
     That is: added and modified files while ignoring meta-data changes or
     renamed files.
-    
+
     The return value is a list of strings, each containing the path name of a
     file to check in the Bazaar repository tree.
-    
+
     """
     # include added and modified, skip removed, renamed, and changed
     files = [path for path, file_id, kind in tree_delta.added if kind == 'file']
@@ -403,10 +409,10 @@ def pre_commit_hook(local, master, old_revno, old_revid, future_revno,
                     future_revid, tree_delta, future_tree):
     """Check the code style of files to commit and abort the commit if there are
     style violations.
-    
+
     This is the pre-commit hook interface of bzrlib.
     The real work is performed in the Uncrustify and Beautification classes.
-    
+
     """
     try:
         uncrustify = Uncrustify(local or master, future_tree)
@@ -426,8 +432,14 @@ for code-style checking, remove the plugin file %s.py" % (str(e), plugin_name)
             beautification.apply_to_branch()
             print "Style changes successfully applied.\n"
         diff_file.close()
-        raise bzrlib.errors.BzrError("This commit has been aborted. Your original commit message was:\n--\n%s\n--" % (get_commit_message(local, master, future_revid)))
         
+        # Store the commit message in a file so it can be retrieved later
+        msg_file = tempfile.NamedTemporaryFile(prefix = "bzr-commit-revno-%d-" % (future_revno), delete = False)
+        msg_file.write(get_commit_message(local, master, future_revid))
+        msg_file.close()
+        
+        raise bzrlib.errors.BzrError("This commit has been aborted. Your original commit message (see %s) was:\n--\n%s\n--" % (msg_file.name, get_commit_message(local, master, future_revid)))
+
 
 help_topics.topic_registry.register(plugin_name + '-tutorial',
                                     _stylecheck_tutorial,

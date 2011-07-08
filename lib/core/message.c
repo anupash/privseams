@@ -100,17 +100,17 @@
 #include "message.h"
 
 
-#define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
+#define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanoseconds */
 
 /**
- * Finds out how much data is coming from a socket
+ * Find out how much data is coming from a socket.
  *
- * @param  sockfd         the socked file descriptor.
- * @param  encap_hdr_size udp etc header size
+ * @param  sockfd         the socked file descriptor
+ * @param  encap_hdr_size UDP etc header size
  * @param  timeout        -1 for blocking sockets, 0 or positive nonblocking
- * @return Number of bytes received on success or a negative error value on
- *         error.
- * @todo This function had some portability issues on symbian. It should be ok
+ * @return number of bytes received on success or a negative error value on
+ *         error
+ * @todo This function had some portability issues on Symbian. It should be OK
  *       to read HIP_MAX_PACKET because the socket call returns the number of
  *       actual bytes read. If you decide to reimplement this functionality,
  *       remember to preserve the timeout property.
@@ -126,9 +126,9 @@ static int hip_peek_recv_total_len(int sockfd,
     struct timespec ts;
 
     ts.tv_sec  = 0;
-    ts.tv_nsec =  100000000;
+    ts.tv_nsec = 100000000;
 
-    /* We're using system call here add thus reseting errno. */
+    /* We're using system call here add thus resetting errno. */
     errno = 0;
 
     msg = malloc(hdr_size);
@@ -191,12 +191,11 @@ out_err:
  */
 int hip_daemon_connect(int hip_user_sock)
 {
-    int                 err = 0;
-    struct sockaddr_in6 daemon_addr;
-    // We're using system call here add thus reseting errno.
+    int                 err         = 0;
+    struct sockaddr_in6 daemon_addr = { 0 };
+    // We're using system call here add thus resetting errno.
     errno = 0;
 
-    memset(&daemon_addr, 0, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     daemon_addr.sin6_addr   = in6addr_loopback;
@@ -223,7 +222,7 @@ out_err:
  * @param sockfd the socket to bind to
  * @param sa     An IPv6-based socket address structure. The sin6_port
  *               field may be filled in in the case of e.g. sockets
- *               remaining open for long time periods. Alternetively,
+ *               remaining open for long time periods. Alternatively,
  *               the sin6_port can be zero to allow the function to
  *               determine a suitable port number (see the description
  *               of the function).
@@ -251,7 +250,7 @@ static int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
         goto out_err;
     }
 
-    /* try to bind first to a priviledged port and then to ephemeral */
+    /* try to bind first to a privileged port and then to ephemeral */
     port = 1000;
     while (port++ < 61000) {
         addr->sin6_port = htons(port);
@@ -268,7 +267,7 @@ static int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
                 errno = 0;
                 err   = 0;
             } else {
-                HIP_ERROR("Error %d bind() wasn't succesful\n",
+                HIP_ERROR("Error %d bind() wasn't successful\n",
                           errno);
                 err = -1;
                 goto out_err;
@@ -300,10 +299,9 @@ out_err:
 static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
 {
     /* Variables. */
-    struct sockaddr_in6 sock_addr;
-    int                 n = -1, alen;
+    struct sockaddr_in6 sock_addr = { 0 };
+    int                 alen, n   = -1;
 
-    memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
@@ -320,7 +318,6 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
     return n;
 }
 
-
 /** A generic HIP error. This should be a value whose value does not overlap
  *  with the global errno values. */
 #define EHIP       500
@@ -336,23 +333,25 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
  * @return zero on success and negative on failure
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  */
-static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket)
+static int hip_send_recv_daemon_info_internal(struct hip_common *msg,
+                                              int opt_socket)
 {
     int                 hip_user_sock = 0, err = 0, n = 0, len = 0;
-    struct sockaddr_in6 addr;
+    struct sockaddr_in6 addr          = { 0 };
     uint8_t             msg_type_old, msg_type_new;
 
     msg_type_old = hip_get_msg_type(msg);
 
-    // We're using system call here and thus reseting errno.
+    // We're using system call here and thus resetting errno.
     errno = 0;
 
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, EHIP);
+        if ((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+            return EHIP;
+        }
 
-        memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
 
@@ -445,7 +444,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
                               int opt_socket)
 {
     int                 hip_user_sock = 0, err = 0, n, len;
-    struct sockaddr_in6 addr;
+    struct sockaddr_in6 addr          = { 0 };
 
     if (!send_only) {
         return hip_send_recv_daemon_info_internal(msg, opt_socket);
@@ -454,8 +453,10 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, -1);
-        memset(&addr, 0, sizeof(addr));
+        if ((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+            return -1;
+        }
+
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
 
@@ -510,7 +511,7 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
              "recv peek failed\n");
 
     HIP_IFEL((bytes = recvfrom(sockfd, hip_msg, total, 0,
-                               (struct sockaddr *) saddr,&len)) != total,
+                               (struct sockaddr *) saddr, &len)) != total,
              -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
@@ -542,28 +543,23 @@ static int hip_read_control_msg_all(int sockfd,
                                     int encap_hdr_size,
                                     int is_ipv4)
 {
-    struct sockaddr_storage addr_from, addr_to;
-    struct sockaddr_in     *addr_from4 = ((struct sockaddr_in *) &addr_from);
-    struct sockaddr_in6    *addr_from6 = ((struct sockaddr_in6 *) &addr_from);
+    struct sockaddr_storage addr_from, addr_to = { 0 };
+    struct sockaddr_in     *addr_from4 = (struct sockaddr_in *) &addr_from;
+    struct sockaddr_in6    *addr_from6 = (struct sockaddr_in6 *) &addr_from;
     struct cmsghdr         *cmsg       = NULL;
-    struct msghdr           msg;
+    struct msghdr           msg        = { 0 };
     union {
         struct in_pktinfo    *pktinfo_in4;
         struct inet6_pktinfo *pktinfo_in6;
     } pktinfo;
     struct iovec iov;
-    char         cbuff[CMSG_SPACE(256)];
-    int          err = 0, len;
+    char         cbuff[CMSG_SPACE(256)] = { 0 };
+    int          len, err               = 0;
     int          cmsg_level, cmsg_type;
 
     hip_msg_init(ctx->input_msg);
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
-
-//    memset(msg_info, 0, sizeof(struct hip_portpair));
-    memset(&msg, 0, sizeof(msg));
-    memset(cbuff, 0, sizeof(cbuff));
-    memset(&addr_to, 0, sizeof(addr_to));
 
     /* setup message header with control and receive buffers */
     msg.msg_name    = &addr_from;
@@ -571,7 +567,6 @@ static int hip_read_control_msg_all(int sockfd,
     msg.msg_iov     = &iov;
     msg.msg_iovlen  = 1;
 
-    memset(cbuff, 0, sizeof(cbuff));
     msg.msg_control    = cbuff;
     msg.msg_controllen = sizeof(cbuff);
     msg.msg_flags      = 0;
@@ -584,26 +579,25 @@ static int hip_read_control_msg_all(int sockfd,
     len = recvmsg(sockfd, &msg, 0);
 
     HIP_IFEL(len < 0, -1, "ICMP%s error: errno=%d, %s\n",
-             (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
+             is_ipv4 ? "v4" : "v6", errno, strerror(errno));
 
-    cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
-    cmsg_type  = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
+    cmsg_level = is_ipv4 ? IPPROTO_IP : IPPROTO_IPV6;
+    cmsg_type  = is_ipv4 ? IP_PKTINFO : IPV6_2292PKTINFO;
 
     /* destination address comes from ancillary data passed
      * with msg due to IPV6_PKTINFO socket option */
     for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-        if ((cmsg->cmsg_level == cmsg_level) &&
-            (cmsg->cmsg_type == cmsg_type)) {
+        if (cmsg->cmsg_level == cmsg_level &&
+            cmsg->cmsg_type  == cmsg_type) {
             /* The structure is a union, so this fills also the
              * pktinfo_in6 pointer */
-            pktinfo.pktinfo_in4 =
-                (struct in_pktinfo *) CMSG_DATA(cmsg);
+            pktinfo.pktinfo_in4 = (struct in_pktinfo *) CMSG_DATA(cmsg);
             break;
         }
     }
 
     /* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
-     * hip_init_raw_sock_v6 */
+     * hip_init_raw_sock_v6. */
     HIP_IFEL(!pktinfo.pktinfo_in4, -1,
              "Could not determine dst addr, dropping\n");
 
@@ -627,8 +621,7 @@ static int hip_read_control_msg_all(int sockfd,
         addr_to4->sin_addr   = pktinfo.pktinfo_in4->ipi_addr;
         addr_to4->sin_port   = ctx->msg_ports.dst_port;
     } else {   /* IPv6 addresses */
-        struct sockaddr_in6 *addr_to6 =
-            (struct sockaddr_in6 *) &addr_to;
+        struct sockaddr_in6 *addr_to6 = (struct sockaddr_in6 *) &addr_to;
         memcpy(&ctx->src_addr, &addr_from6->sin6_addr,
                sizeof(struct in6_addr));
         memcpy(&ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
@@ -664,9 +657,9 @@ out_err:
 }
 
 /**
- * Read an IPv6 control message
+ * Read an IPv6 control message.
  *
- * @param  sockfd         a socket file descriptor.
+ * @param  sockfd         a socket file descriptor
  * @param  ctx            .
  * @param  encap_hdr_size .
  * @return                .
@@ -681,9 +674,9 @@ int hip_read_control_msg_v6(int sockfd,
 }
 
 /**
- * Read an IPv4 control message
+ * Read an IPv4 control message.
  *
- * @param  sockfd         a socket file descriptor.
+ * @param  sockfd         a socket file descriptor
  * @param  ctx            .
  * @param  encap_hdr_size .
  * @return                .

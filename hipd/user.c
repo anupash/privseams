@@ -86,7 +86,6 @@
 #include "nat.h"
 #include "netdev.h"
 #include "nsupdate.h"
-#include "oppdb.h"
 #include "output.h"
 #include "registration.h"
 #include "user.h"
@@ -105,19 +104,17 @@ static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
  * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
  * Interprocess communications only.
  *
- * @param entry an hip_host_id_entry structure
+ * @param entry an local_host_id structure
  * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
  *            parameter will be written
  * @return zero on success and negative on error
  */
-static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
+static int host_id_entry_to_hit_info(struct local_host_id *entry, void *msg)
 {
     struct hip_hit_info data;
     int                 err = 0;
 
-    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
-    /* FIXME: algo is 0 in entry->lhi */
-    data.lhi.algo = hip_get_host_id_algo(entry->host_id);
+    data.lhi = (struct hip_host_id_local) { entry->hit, entry->anonymous, hip_get_host_id_algo(&entry->host_id) };
     memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
 
     HIP_IFEL(hip_build_param_contents(msg,
@@ -136,9 +133,9 @@ out_err:
  * type and host association state.
  *
  * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
- * @param *handle_func Pointer to the function which should be called
- *                         when the combination of packet type and host
- *                         association state is reached.
+ * @param handle_func Pointer to the function which should be called when
+ *                    the combination of packet type and host association
+ *                    state is reached.
  * @param priority Execution priority for the handle function.
  *
  * @return Success =  0
@@ -186,7 +183,7 @@ int hip_user_run_handles(const uint8_t msg_type,
                          struct hip_common *msg,
                          struct sockaddr_in6 *src)
 {
-    struct hip_ll_node *iter = NULL;
+    const struct hip_ll_node *iter = NULL;
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
@@ -246,11 +243,13 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
-    const hip_hit_t             *src_hit   = NULL, *dst_hit = NULL;
-    struct hip_hadb_state       *entry     = NULL;
-    int                          err       = 0, msg_type = 0, reti = 0;
-    int                          access_ok = 0, is_root = 0;
-    const struct hip_tlv_common *param     = NULL;
+    const hip_hit_t                       *src_hit   = NULL, *dst_hit = NULL;
+    struct hip_hadb_state                 *entry     = NULL;
+    int                                    err       = 0, msg_type = 0, reti = 0;
+    int                                    access_ok = 0, is_root = 0, name_len;
+    const struct hip_tlv_common           *param     = NULL;
+    const struct hip_transformation_order *transorder;
+    struct hip_hit_to_ip_set              *name_info;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -284,11 +283,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
 
     switch (msg_type) {
-    case HIP_MSG_NULL_OP:
-        HIP_DEBUG("Null op\n");
-        break;
-    case HIP_MSG_PING:
-        break;
     case HIP_MSG_ADD_LOCAL_HI:
         err = hip_handle_add_local_hi(msg);
         break;
@@ -364,11 +358,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
         hip_dec_cookie_difficulty();
         break;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    case HIP_MSG_GET_PEER_HIT:
-        err = hip_opp_get_peer_hit(msg, src);
-        break;
-#endif
     case HIP_MSG_CERT_SPKI_VERIFY:
     {
         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -406,7 +395,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_TRANSFORM_ORDER:
     {
         err = 0;
-        const struct hip_transformation_order *transorder;
         HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
                  "no transform order struct found (should contain transform order)\n");
         HIP_DEBUG("Transform order received from hipconf: %d\n", transorder->transorder);
@@ -416,196 +404,8 @@ int hip_handle_user_msg(struct hip_common *msg,
     break;
 #ifdef CONFIG_HIP_RVS
     case HIP_MSG_ADD_DEL_SERVER:
-    {
-        /* RFC 5203 service registration. The requester, i.e. the client
-         * of the server handles this message. Message indicates that
-         * the hip daemon wants either to register to a server for
-         * additional services or it wants to cancel a registration.
-         * Cancellation is identified with a zero lifetime. */
-        const struct hip_reg_request *reg_req       = NULL;
-        struct hip_pending_request   *pending_req   = NULL;
-        const uint8_t                *reg_types     = NULL;
-        const struct in6_addr        *dst_ip        = NULL;
-        int                           i             = 0, type_count = 0;
-        int                           opp_mode      = 0;
-        int                           add_to_global = 0;
-        struct sockaddr_in6           sock_addr6;
-        struct sockaddr_in            sock_addr;
-        struct in6_addr               server_addr;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-        struct in6_addr *hit_local;
-#endif
-
-        /* Get RVS IP address, HIT and requested lifetime given as
-         * commandline parameters to hipconf. */
-
-        dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-        dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-        reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
-
-        /* Register to an LSI, no IP address */
-        if (dst_ip && !dst_hit && !ipv6_addr_is_hit(dst_ip)) {
-            struct in_addr lsi;
-
-            IPV6_TO_IPV4_MAP(dst_ip, &lsi);
-            memset(&server_addr, 0, sizeof(server_addr));
-
-            if (IS_LSI32(lsi.s_addr) &&
-                !hip_map_id_to_addr(NULL, &lsi, &server_addr)) {
-                dst_ip = &server_addr;
-                /* Note: next map_id below fills the HIT */
-            }
-        }
-
-        /* Register to a HIT without IP address */
-        if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
-            struct in_addr bcast = { INADDR_BROADCAST };
-            if (hip_map_id_to_addr(dst_ip, NULL, &server_addr)) {
-                IPV4_TO_IPV6_MAP(&bcast, &server_addr);
-            }
-            dst_hit = dst_ip;
-            dst_ip  = &server_addr;
-        }
-
-        if (dst_hit == NULL) {
-            HIP_DEBUG("No HIT parameter found from the user " \
-                      "message. Trying opportunistic mode \n");
-            opp_mode = 1;
-        } else if (dst_ip == NULL) {
-            HIP_ERROR("No IPV6 parameter found from the user " \
-                      "message.\n");
-            err = -1;
-            goto out_err;
-        } else if (reg_req == NULL) {
-            HIP_ERROR("No REG_REQUEST parameter found from the " \
-                      "user message.\n");
-            err = -1;
-            goto out_err;
-        }
-
-        if (!opp_mode) {
-            HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_ip,
-                                            NULL, NULL),
-                     -1, "Error on adding server "  \
-                         "HIT to IP address mapping to the hadb.\n");
-
-            /* Fetch the hadb entry just created. */
-            entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-            if (entry == NULL) {
-                HIP_ERROR("Error on fetching server HIT to IP address " \
-                          "mapping from the haDB.\n");
-                err = -1;
-                goto out_err;
-            }
-        }
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-        else {
-            hit_local = malloc(sizeof(struct in6_addr));
-            HIP_IFEL(hip_get_default_hit(hit_local), -1,
-                     "Error retrieving default HIT \n");
-            entry = hip_opp_add_map(dst_ip, hit_local, src);
-        }
-#endif
-        reg_types  = reg_req->reg_type;
-        type_count = hip_get_param_contents_len(reg_req) -
-                     sizeof(reg_req->lifetime);
-
-        for (; i < type_count; i++) {
-            pending_req = malloc(sizeof(struct hip_pending_request));
-            if (pending_req == NULL) {
-                HIP_ERROR("Error on allocating memory for a " \
-                          "pending registration request.\n");
-                err = -1;
-                goto out_err;
-            }
-
-            pending_req->entry    = entry;
-            pending_req->reg_type = reg_types[i];
-            pending_req->lifetime = reg_req->lifetime;
-            pending_req->created  = time(NULL);
-
-            HIP_DEBUG("Adding pending service request for service %u.\n",
-                      reg_types[i]);
-            hip_add_pending_request(pending_req);
-
-            /* Set the request flag. */
-            switch (reg_types[i]) {
-            case HIP_SERVICE_RENDEZVOUS:
-                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-                add_to_global = 1;
-                break;
-            case HIP_SERVICE_RELAY:
-                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-                /* Don't ask for ICE from relay */
-                entry->nat_mode = 1;
-                add_to_global   = 1;
-                break;
-            case HIP_SERVICE_FULLRELAY:
-                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-                entry->nat_mode = 1;
-                add_to_global   = 1;
-                break;
-            default:
-                HIP_INFO("Undefined service type (%u) requested in the service request.\n",
-                         reg_types[i]);
-                /* For testing purposes we allow the user to
-                 * request services that HIPL does not support.
-                 */
-                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
-                break;
-            }
-        }
-
-        if (add_to_global) {
-            if (IN6_IS_ADDR_V4MAPPED(dst_ip)) {
-                memset(&sock_addr, 0, sizeof(sock_addr));
-                IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
-                sock_addr.sin_family = AF_INET;
-                /* The server address is added with 0 interface index */
-                hip_add_address_to_list((struct sockaddr *) &sock_addr,
-                                        0,
-                                        HIP_FLAG_CONTROL_TRAFFIC_ONLY);
-            } else {
-                memset(&sock_addr6, 0, sizeof(sock_addr6));
-                sock_addr6.sin6_family = AF_INET6;
-                sock_addr6.sin6_addr   = *dst_ip;
-                /* The server address is added with 0 interface index */
-                hip_add_address_to_list((struct sockaddr *) &sock_addr6,
-                                        0,
-                                        HIP_FLAG_CONTROL_TRAFFIC_ONLY);
-            }
-        }
-
-        /* Workaround for registration when a mapping already pre-exists
-         * (inserted e.g. with "hipconf add map"). This can be removed
-         * after bug id 592135 is resolved. */
-        if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
-            struct hip_common *msg2 = calloc(HIP_MAX_PACKET, 1);
-            HIP_IFE(msg2 == 0, -1);
-            HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
-            HIP_IFE(hip_build_param_contents(msg2,
-                                             &entry->hit_peer,
-                                             HIP_PARAM_HIT,
-                                             sizeof(hip_hit_t)),
-                    -1);
-            hip_send_close(msg2, 0);
-            free(msg2);
-        }
-
-        /* Send a I1 packet to the server (registrar). */
-
-        /** @todo When registering to a service or cancelling a service,
-         *  we should first check the state of the host association that
-         *  is registering. When it is ESTABLISHED or R2-SENT, we have
-         *  already successfully carried out a base exchange and we
-         *  must use an UPDATE packet to carry a REG_REQUEST parameter.
-         *  When the state is not ESTABLISHED or R2-SENT, we launch a
-         *  base exchange using an I1 packet. */
-        HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
-                 "Error on sending I1 packet to the server.\n");
+        err = hip_handle_req_user_msg(msg);
         break;
-    }
     case HIP_MSG_OFFER_RVS:
         /* draft-ietf-hip-registration-02 RVS registration. Rendezvous
          * server handles this message. Message indicates that the
@@ -691,9 +491,9 @@ int hip_handle_user_msg(struct hip_common *msg,
         err = hip_recreate_all_precreated_r1_packets();
         break;
 #endif /* CONFIG_HIP_RVS */
-    case HIP_MSG_GET_HITS:
+    case HIP_MSG_GET_LOCAL_HITS:
         hip_msg_init(msg);
-        hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0);
+        hip_build_user_hdr(msg, HIP_MSG_GET_LOCAL_HITS, 0);
         err = hip_for_each_hi(host_id_entry_to_hit_info, msg);
         break;
     case HIP_MSG_GET_HA_INFO:
@@ -701,26 +501,8 @@ int hip_handle_user_msg(struct hip_common *msg,
         hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0);
         err = hip_for_each_ha(hip_handle_get_ha_info, msg);
         break;
-    case HIP_MSG_DEFAULT_HIT:
+    case HIP_MSG_GET_DEFAULT_HIT:
         err = hip_get_default_hit_msg(msg);
-        break;
-    case HIP_MSG_MHADDR_ACTIVE:
-        is_active_mhaddr = 1;
-        break;
-    case HIP_MSG_MHADDR_LAZY:
-        is_active_mhaddr = 0;
-        break;
-    case HIP_MSG_HANDOVER_HARD:
-        is_hard_handover = 1;
-        break;
-    case HIP_MSG_HANDOVER_SOFT:
-        is_hard_handover = 0;
-        break;
-    case HIP_MSG_RESTART:
-        HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
-        hipd_set_flag(HIPD_FLAG_RESTART);
-        /* invoking the signal handler directly is not a sane thing to do */
-        kill(getpid(), SIGINT);
         break;
     case HIP_MSG_TRIGGER_BEX:
         HIP_DEBUG("HIP_MSG_TRIGGER_BEX\n");
@@ -775,10 +557,9 @@ int hip_handle_user_msg(struct hip_common *msg,
             HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
                                              HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
         } else if (dst_hit) {         /* Assign a new LSI */
-            struct hip_common msg_tmp;
+            struct hip_common msg_tmp = { 0 };
             hip_lsi_t         lsi;
 
-            memset(&msg_tmp, 0, sizeof(msg_tmp));
             hip_generate_peer_lsi(&lsi);
             HIP_IFE(hip_build_param_contents(&msg_tmp, dst_hit,
                                              HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
@@ -826,12 +607,11 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_HIT_TO_IP_SET:
     {
         err = 0;
-        struct hip_hit_to_ip_set *name_info;
         HIP_IFEL(!(name_info = hip_get_param_readwrite(msg,
                                                        HIP_PARAM_HIT_TO_IP_SET)),
                  -1, "no name struct found\n");
         HIP_DEBUG("Name in name_info %s\n", name_info->name);
-        int name_len = strlen(name_info->name);
+        name_len = strlen(name_info->name);
         if (name_len >= 1) {
             if (name_info->name[name_len - 1] != '.') {
                 HIP_DEBUG("final dot is missing");
@@ -875,7 +655,6 @@ int hip_handle_user_msg(struct hip_common *msg,
             hit = id;
         }
 
-        memset(&addr, 0, sizeof(addr));
         HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
                  "Couldn't determine address\n");
         hip_msg_init(msg);
@@ -917,6 +696,19 @@ int hip_handle_user_msg(struct hip_common *msg,
                  -1, "Build param failed\n");
         break;
     }
+    case HIP_MSG_BROADCAST_ON:
+        HIP_DEBUG("Setting BROADCAST ON\n");
+        hip_broadcast_status = HIP_MSG_BROADCAST_ON;
+        HIP_DEBUG("hip_broadcast_status =  %d (should be %d)\n",
+                  hip_broadcast_status, HIP_MSG_BROADCAST_ON);
+        break;
+
+    case HIP_MSG_BROADCAST_OFF:
+        HIP_DEBUG("Setting BROADCAST OFF\n");
+        hip_broadcast_status = HIP_MSG_BROADCAST_OFF;
+        HIP_DEBUG("hip_broadcast_status =  %d (should be %d)\n",
+                  hip_broadcast_status, HIP_MSG_BROADCAST_OFF);
+        break;
     default:
         HIP_ERROR("Unknown socket option (%d)\n", msg_type);
         err = -ESOCKTNOSUPPORT;

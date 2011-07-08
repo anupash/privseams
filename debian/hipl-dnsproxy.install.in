@@ -1,0 +1,5 @@
+debian/tmp/usr/sbin/hipdnsproxy usr/sbin/
+debian/tmp/usr/sbin/hipdnskeyparse usr/sbin/
+debian/tmp/@pythondir@/DNS @pythondir@
+debian/tmp/@pythondir@/hipdnskeyparse @pythondir@
+debian/tmp/@pythondir@/hipdnsproxy @pythondir@

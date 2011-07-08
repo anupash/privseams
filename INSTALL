@@ -34,17 +34,19 @@ and dpkg-dev on ubuntu).
 
 On Ubuntu, the following command(s) should solve the dependencies:
 
-  aptitude install autoconf automake libtool make gcc libssl-dev \
-    iptables-dev libconfig8-dev libnet-ip-perl libnet-dns-perl
+  aptitude install autoconf automake libtool make gcc libssl-dev iptables-dev \
+                   libconfig8-dev libnet-ip-perl libnet-dns-perl
 
-  Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot dpkg-dev
+  Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot \
+                       dpkg-dev debhelper devscripts
 
 On Fedora, the following command(s) should solve the dependencies:
 
   yum install autoconf automake libtool make gcc openssl-devel \
               iptables-devel libconfig-devel perl-Net-IP perl-Net-DNS
 
-  Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build
+  Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build \
+                          redhat-lsb
 
 
 How to build HIPL
@@ -79,13 +81,3 @@ Please note that the HIP configuration files are located in
 /usr/local/etc/hip with the default configure flags. If you want to
 change the location to /etc/hip, you have to pass --sysconfdir=/etc to
 configure (or create a symbolic link).
-
-Broken Systems
-==============
-
-HIPL is known not to compile out-of-the-box on some platforms. In cases where
-the platform is clearly at fault we try not to clutter our sources with
-workarounds, but rely on the user to pass flags to configure. Below is
-a list of known-broken systems along with workarounds.
-
-CentOS 5.5: CPPFLAGS=-U__STRICT_ANSI__ ./configure

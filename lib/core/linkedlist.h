@@ -58,20 +58,22 @@ struct hip_ll {
     struct hip_ll_node *head;           /**< A pointer to the first node of the list. */
 };
 
+#define HIP_LL_INIT { 0, NULL }
+
 /** Linked list element memory deallocator function pointer. */
 typedef void (*free_elem_fn)(void *ptr);
 
-void hip_ll_init(struct hip_ll *linkedlist);
+void hip_ll_init(struct hip_ll *const linkedlist);
 void hip_ll_uninit(struct hip_ll *linkedlist, free_elem_fn free_element);
-unsigned int hip_ll_get_size(const struct hip_ll *linkedlist);
+unsigned int hip_ll_get_size(const struct hip_ll *const linkedlist);
 int hip_ll_add(struct hip_ll *linkedlist, const unsigned int index, void *ptr);
-int hip_ll_add_first(struct hip_ll *linkedlist, void *ptr);
-int hip_ll_add_last(struct hip_ll *linkedlist, void *ptr);
+int hip_ll_add_first(struct hip_ll *const linkedlist, void *const ptr);
+int hip_ll_add_last(struct hip_ll *const linkedlist, void *const ptr);
 void *hip_ll_del(struct hip_ll *linkedlist, const unsigned int index,
                  free_elem_fn free_element);
 void *hip_ll_del_first(struct hip_ll *linkedlist, free_elem_fn free_element);
-void *hip_ll_get(struct hip_ll *linkedlist, const unsigned int index);
-struct hip_ll_node *hip_ll_iterate(const struct hip_ll *linkedlist,
-                                   struct hip_ll_node *current);
+void *hip_ll_get(const struct hip_ll *const linkedlist, const unsigned int index);
+const struct hip_ll_node *hip_ll_iterate(const struct hip_ll *const linkedlist,
+                                         const struct hip_ll_node *const current);
 
 #endif /* HIP_LIB_CORE_LINKEDLIST_H */

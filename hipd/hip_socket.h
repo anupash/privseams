@@ -28,14 +28,16 @@
  * @author Tim Just
  */
 
-#ifndef HIP_HIPD_SOCKET_H
-#define HIP_HIPD_SOCKET_H
+#ifndef HIP_HIPD_HIP_SOCKET_H
+#define HIP_HIPD_HIP_SOCKET_H
 
 #include <stdint.h>
 #include <sys/select.h>
 #include "lib/core/protodefs.h"
 
-void hip_init_sockets(void);
+void hip_register_sockets(void);
+
+void hip_unregister_sockets(void);
 
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
@@ -47,4 +49,4 @@ void hip_prepare_fd_set(fd_set *read_fdset);
 
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx);
 
-#endif /* HIP_HIPD_SOCKET_H */
+#endif /* HIP_HIPD_HIP_SOCKET_H */

@@ -17,7 +17,9 @@
 #include <netinet/in.h>
 #include <openssl/bn.h>
 #include <openssl/dsa.h>
+#include <openssl/objects.h>
 #include <openssl/rsa.h>
+#include <openssl/ecdsa.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/crypto.h"
@@ -39,7 +41,7 @@
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_rsa_sign(void *priv_key, struct hip_common *msg)
+int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
 {
     RSA         *rsa = priv_key;
     uint8_t      sha1_digest[HIP_AH_SHA_LEN];
@@ -123,12 +125,12 @@ out_err:
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_dsa_sign(void *priv_key, struct hip_common *msg)
+int hip_dsa_sign(void *const priv_key, struct hip_common *const msg)
 {
-    DSA    *dsa = priv_key;
-    uint8_t sha1_digest[HIP_AH_SHA_LEN];
-    uint8_t signature[HIP_DSA_SIGNATURE_LEN];
-    int     err = 0, len;
+    DSA *const dsa = priv_key;
+    uint8_t    sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t    signature[HIP_DSA_SIGNATURE_LEN];
+    int        err = 0, len;
 
     len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
@@ -168,8 +170,8 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
     uint8_t            sha1_digest[HIP_AH_SHA_LEN];
     struct in6_addr    tmpaddr;
     struct hip_puzzle *pz = NULL;
-    uint8_t            opaque[3];
-    uint64_t           randi = 0;
+    uint8_t            opaque[HIP_PUZZLE_OPAQUE_LEN];
+    uint8_t            rand_i[PUZZLE_LENGTH];
 
     ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
 
@@ -183,11 +185,13 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
 
         HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)),
                  -ENOENT, "Illegal R1 packet (puzzle missing)\n");
-        memcpy(opaque, pz->opaque, sizeof(pz->opaque));
-        randi = pz->I;
 
-        memset(pz->opaque, 0, sizeof(pz->opaque));
-        pz->I = 0;
+        /* temporarily store original puzzle values */
+        memcpy(opaque, pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(rand_i, pz->I, PUZZLE_LENGTH);
+        /* R1 signature is computed over zero values */
+        memset(pz->opaque, 0, HIP_PUZZLE_OPAQUE_LEN);
+        memset(pz->I, 0, PUZZLE_LENGTH);
     } else {
         HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_HIP_SIGNATURE)),
                  -ENOENT, "Could not find signature\n");
@@ -221,8 +225,8 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
 #endif
 
     if (hip_get_msg_type(msg) == HIP_R1) {
-        memcpy(pz->opaque, opaque, sizeof(pz->opaque));
-        pz->I = randi;
+        memcpy(pz->opaque, opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(pz->I, rand_i, PUZZLE_LENGTH);
     }
 
     ipv6_addr_copy(&msg->hitr, &tmpaddr);
@@ -257,7 +261,7 @@ int hip_ecdsa_verify(void *const peer_pub, struct hip_common *const msg)
  *            be verified
  * @return zero on success and non-zero on failure
  */
-int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
+int hip_rsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
@@ -274,7 +278,7 @@ int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
  *            be verified
  * @return zero on success and non-zero on failure
  */
-int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
+int hip_dsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
@@ -290,7 +294,7 @@ int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
  *
  * @note This function is originally from OpenHIP
  */
-int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
+int bn2bin_safe(const BIGNUM *const a, unsigned char *const to, const int len)
 {
     int padlen = len - BN_num_bytes(a);
     /* add leading zeroes when needed */

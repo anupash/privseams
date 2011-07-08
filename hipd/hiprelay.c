@@ -153,19 +153,19 @@ static HIP_HASHTABLE *hiprelay_ht = NULL;
 static HIP_HASHTABLE *hiprelay_wl = NULL;
 
 /** Minimum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
+static uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
+static uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 /**
  * A boolean to indicating if the RVS / relay is enabled. User sets this value
  * using the hipconf tool.
  */
-enum hip_relay_status relay_enabled = HIP_RELAY_OFF;
+static enum hip_relay_status relay_enabled = HIP_RELAY_OFF;
 /**
  * A boolean to indicating if the RVS / relay whitelist is enabled. User sets
  * this value from the relay configuration file.
  */
-enum hip_relay_wl_status whitelist_enabled = HIP_RELAY_WL_ON;
+static enum hip_relay_wl_status whitelist_enabled = HIP_RELAY_WL_ON;
 
 /**
  * Returns a hash calculated over a HIT.
@@ -192,9 +192,9 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
     /* We calculate the hash by avalanching the bits. The avalanching
      * ensures that we make use of all bits when dealing with 64 bits
      * architectures. */
-    hash  =  (bits_1st ^ hit->s6_addr32[1]);
+    hash  = bits_1st ^ hit->s6_addr32[1];
     hash ^= hash << 3;
-    hash ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
+    hash ^= hit->s6_addr32[2] ^ hit->s6_addr32[3];
     hash += hash >> 5;
     hash ^= hash << 4;
     hash += hash >> 17;
@@ -375,12 +375,14 @@ struct hip_relrec *hip_relht_get(const struct hip_relrec *rec)
  */
 void hip_relht_rec_free_doall(struct hip_relrec *rec)
 {
+    struct hip_relrec *deleted_rec;
+
     if (hiprelay_ht == NULL || rec == NULL) {
         return;
     }
 
     /* Check if such element exist, and delete the pointer from the hashtable. */
-    struct hip_relrec *deleted_rec = list_del(rec, hiprelay_ht);
+    deleted_rec = list_del(rec, hiprelay_ht);
 
     /* Free the memory allocated for the element. */
     if (deleted_rec != NULL) {
@@ -447,11 +449,13 @@ unsigned long hip_relht_size(void)
  */
 int hip_relht_maintenance(void)
 {
+    unsigned int tmp;
+
     if (hiprelay_ht == NULL) {
         return 0;
     }
 
-    unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+    tmp                                          = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relht_rec_free_expired));
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
@@ -467,11 +471,13 @@ int hip_relht_maintenance(void)
  */
 void hip_relht_free_all_of_type(enum hip_relrec_type type)
 {
+    unsigned int tmp;
+
     if (hiprelay_ht == NULL) {
         return;
     }
 
-    unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+    tmp                                          = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(hip_relht_rec_free_type), &type);
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
@@ -515,13 +521,13 @@ struct hip_relrec *hip_relrec_alloc(const enum hip_relrec_type type,
                                     const in_port_t port,
                                     const struct hip_crypto_key *hmac)
 {
+    struct hip_relrec *rec;
+
     if (hit_r == NULL || ip_r == NULL || hmac == NULL) {
         return NULL;
     }
 
-    struct hip_relrec *rec = malloc(sizeof(struct hip_relrec));
-
-    if (rec == NULL) {
+    if (!(rec = malloc(sizeof(struct hip_relrec)))) {
         HIP_ERROR("Error allocating memory for HIP relay record.\n");
         return NULL;
     }
@@ -589,12 +595,14 @@ STATIC_IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
  */
 static void hip_relwl_hit_free_doall(hip_hit_t *hit)
 {
+    hip_hit_t *deleted_hit;
+
     if (hiprelay_wl == NULL || hit == NULL) {
         return;
     }
 
     /* Check if such element exist, and delete the pointer from the hashtable. */
-    hip_hit_t *deleted_hit = list_del(hit, hiprelay_wl);
+    deleted_hit = list_del(hit, hiprelay_wl);
 
     /* Free the memory allocated for the element. */
     if (deleted_hit != NULL) {
@@ -625,6 +633,8 @@ static void hip_relwl_hit_free_doall(hip_hit_t *hit)
  */
 static int hip_relwl_put(hip_hit_t *hit)
 {
+    hip_hit_t *dummy;
+
     if (hiprelay_wl == NULL || hit == NULL) {
         return -1;
     }
@@ -633,7 +643,7 @@ static int hip_relwl_put(hip_hit_t *hit)
      * delete the previous entry. If we do not do so, only the pointer in
      * the hashtable is replaced and the reference to the previous element
      * is lost resulting in a memory leak. */
-    hip_hit_t *dummy = hip_relwl_get(hit);
+    dummy = hip_relwl_get(hit);
     if (dummy != NULL) {
         hip_relwl_hit_free_doall(dummy);
         list_add(hit, hiprelay_wl);
@@ -1200,7 +1210,7 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
     if (relay_from == NULL) {
         from = hip_get_param(source_msg, HIP_PARAM_FROM);
         if (from == NULL) {
-            HIP_DEBUG("No FROM/RELAY_FROM parameters found in I.\n");
+            HIP_DEBUG("No FROM/RELAY_FROM parameters found in I1.\n");
             return 0;
         } else {
             HIP_DEBUG("Found FROM parameter in I1.\n");
@@ -1211,13 +1221,13 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
             HIP_DEBUG("FROM port in I1: %d \n", *dest_port);
         }
     } else {
-        HIP_DEBUG("Found RELAY_FROM parameter in I.\n");
+        HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
         // set the relay ip and port to the destination address and port.
         param_type = HIP_PARAM_RELAY_FROM;
 
         memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
         *dest_port = ntohs(relay_from->port);
-        HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
+        HIP_DEBUG("RELAY_FROM port in I1. %d \n", *dest_port);
     }
 
     /* The relayed I1 packet has the initiator's HIT as source HIT, and the

@@ -38,7 +38,7 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #include <openssl/rsa.h>
-#include <openssl/x509.h>
+#include <openssl/ossl_typ.h>
 #include <sys/types.h>
 
 #include "protodefs.h"
@@ -63,10 +63,6 @@ struct hip_cert_spki_info {
 
 /** SPKI cert related functions */
 int hip_cert_spki_lib_verify(struct hip_cert_spki_info *);
-int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *,
-                                   const char *, struct in6_addr *,
-                                   const char *, struct in6_addr *,
-                                   time_t *, time_t *, int);
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               const char *, struct in6_addr *,
                               const char *, struct in6_addr *,

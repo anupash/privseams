@@ -48,9 +48,17 @@ struct hip_ll *lmod_register_function(struct hip_ll *list, void *entry,
                                       const uint16_t priority);
 int lmod_unregister_function(struct hip_ll *list, const void *function);
 
-int lmod_register_state_init_function(void *func);
+int lmod_register_state_init_function(void *const func);
+
+int lmod_register_state_uninit_function(void *const func);
+
+void lmod_uninit_state_init_functions(void);
+
+void lmod_uninit_state_uninit_functions(void);
 
 void lmod_init_state_items(struct modular_state *state);
+
+void lmod_uninit_state_items(struct modular_state *const state);
 
 struct modular_state *lmod_init_state(void);
 
@@ -69,9 +77,22 @@ int lmod_module_disabled(const char *module_id);
 
 void lmod_uninit_disabled_modules(void);
 
-int lmod_register_packet_type(const uint16_t packet_type,
-                              const char *identifier);
+int lmod_packet_type_exists(const uint8_t packet_type);
+
+const char *lmod_get_packet_identifier(const uint8_t packet_type);
+
+int lmod_register_packet_type(const uint8_t packet_type,
+                              const char *const identifier);
 
 void lmod_uninit_packet_types(void);
+
+int lmod_parameter_type_exists(const uint16_t parameter_type);
+
+int lmod_register_parameter_type(const uint16_t packet_type,
+                                 const char *const identifier);
+
+const char *lmod_get_parameter_identifier(const uint16_t parameter_type);
+
+void lmod_uninit_parameter_types(void);
 
 #endif /* HIP_LIB_CORE_MODULARIZATION_H */

@@ -60,7 +60,6 @@
 #include "hidb.h"
 #include "hipd.h"
 #include "init.h"
-#include "oppdb.h"
 #include "output.h"
 #include "maintenance.h"
 
@@ -72,15 +71,11 @@ struct maint_function {
 };
 
 int hip_firewall_sock_lsi_fd = -1;
+int hip_firewall_status      = -1;
 
-float retrans_counter      = HIP_RETRANSMIT_INIT;
-float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
-float precreate_counter    = HIP_R1_PRECREATE_INIT;
-float queue_counter        = QUEUE_CHECK_INIT;
-int   force_exit_counter   = FORCE_EXIT_COUNTER_START;
-int   cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
-int   hip_firewall_status  = -1;
-int   fall, retr;
+static float retrans_counter    = HIP_RETRANSMIT_INIT;
+static float precreate_counter  = HIP_R1_PRECREATE_INIT;
+static int   force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 /**
  * List containing all maintenance functions.
@@ -152,27 +147,6 @@ out_err:
     return err;
 }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-/**
- * scan for opportunistic connections that should time out
- * and give up (fall back to normal TCP/IP)
- *
- * @return zero on success or negative on failure
- */
-static int hip_scan_opp_fallback(void)
-{
-    int    err = 0;
-    time_t current_time;
-    time(&current_time);
-
-    HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback, &current_time), 0,
-             "for_each_ha err.\n");
-out_err:
-    return err;
-}
-
-#endif
-
 /**
  * deliver pending retransmissions for all host associations
  *
@@ -180,20 +154,20 @@ out_err:
  */
 static int hip_scan_retransmissions(void)
 {
-    int    err = 0;
     time_t current_time;
     time(&current_time);
-    HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, &current_time), 0,
-             "for_each_ha err.\n");
-out_err:
-    return err;
+
+    if (hip_for_each_ha(hip_handle_retransmission, &current_time)) {
+        return -1;
+    }
+    return 0;
 }
 
 /**
  * Register a maintenance function. All maintenance functions are called during
  * the periodic maintenance cycle.
  *
- * @param *maint_function Pointer to the maintenance function.
+ * @param maint_function Pointer to the maintenance function.
  * @param priority Priority of the maintenance function.
  *
  * @return Success =  0
@@ -228,7 +202,7 @@ out_err:
 /**
  * Remove a maintenance function from the list.
  *
- * @param *maint_function Pointer to the function which should be unregistered.
+ * @param maint_function Pointer to the function which should be unregistered.
  *
  * @return Success =  0
  *         Error   = -1
@@ -247,8 +221,8 @@ int hip_unregister_maint_function(int (*maint_function)(void))
  */
 static int hip_run_maint_functions(void)
 {
-    int                 err  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
@@ -307,17 +281,6 @@ int hip_periodic_maintenance(void)
         retrans_counter--;
     }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
-    if (opp_fallback_counter < 0) {
-        HIP_IFEL(hip_scan_opp_fallback(), -1,
-                 "retransmission scan failed\n");
-        opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
-    } else {
-        opp_fallback_counter--;
-    }
-#endif
-
     if (precreate_counter < 0) {
         HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
                  "Failed to recreate puzzles\n");
@@ -367,7 +330,7 @@ int hip_firewall_is_alive(void)
 
 /**
  * Update firewall on host association state. Currently used by the
- * LSI and system-based opportunistic mode in the firewall.
+ * LSI mode in the firewall.
  *
  * @param action HIP_MSG_FW_UPDATE_DB or HIP_MSG_FW_BEX_DONE
  * @param hit_s optional source HIT
@@ -377,10 +340,8 @@ int hip_firewall_is_alive(void)
  */
 int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
-    struct hip_common  *msg = NULL;
-    struct sockaddr_in6 hip_fw_addr;
-    int                 err  = 0, n = 0, r_is_our;
-    socklen_t           alen = sizeof(hip_fw_addr);
+    struct hip_common *msg = NULL;
+    int                err = 0, n = 0, r_is_our;
 
     if (!hip_get_firewall_status()) {
         goto out_err;
@@ -401,17 +362,12 @@ int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_add
                                       r_is_our ? hit_r : hit_s, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
-    bzero(&hip_fw_addr, alen);
-    hip_fw_addr.sin6_family = AF_INET6;
-    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    hip_fw_addr.sin6_addr   = in6addr_loopback;
-
     n = sendto(hip_firewall_sock_lsi_fd,
                (char *) msg,
                hip_get_msg_total_len(msg),
                0,
                (struct sockaddr *) &hip_firewall_addr,
-               alen);
+               sizeof(struct sockaddr_in6));
 
     HIP_IFEL(n < 0, -1, "Send to firewall failed. str errno %s\n", strerror(errno));
 
@@ -436,7 +392,9 @@ int hip_firewall_set_esp_relay(int action)
     int                sent;
 
     HIP_DEBUG("Setting ESP relay to %d\n", action);
-    HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+    if (!(msg = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
     HIP_IFEL(hip_build_user_hdr(msg,
                                 action ? HIP_MSG_OFFER_FULLRELAY : HIP_MSG_CANCEL_FULLRELAY, 0),
              -1, "Build header failed\n");

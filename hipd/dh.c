@@ -49,13 +49,13 @@
  * This array is indexed by the Group ID value defined in the RFC.
  * Note that this means that the array element at index 0 is thus unused.
  */
-DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
+static DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
 
 /**
  * insert the current DH-key into the buffer
  *
  * If a DH-key does not exist, we will create one.
- * @return >0 if ok, -1 if errors
+ * @return the number of bytes written
  */
 int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
@@ -90,7 +90,7 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
     res = hip_encode_dh_publickey(tmp, buffer, bufsize);
     if (res < 0) {
         HIP_ERROR("Encoding error\n");
-        res = -3;
+        res = -1;
         goto err_free;
     }
 
@@ -111,7 +111,7 @@ err_free:
  * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(uint8_t *public_value,
+int hip_calculate_shared_secret(const uint8_t *public_value,
                                 uint8_t group_id,
                                 signed int len,
                                 unsigned char *buffer,
@@ -197,6 +197,7 @@ void hip_dh_uninit(void)
         DH_free(dh_table[i]);
         dh_table[i] = NULL;
     }
+    CRYPTO_cleanup_all_ex_data();
 }
 
 /**

@@ -35,6 +35,8 @@
  * @see     hiprelay.h
  */
 
+#define _BSD_SOURCE
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
@@ -46,8 +48,12 @@
 #include "lib/core/linkedlist.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
+#include "close.h"
 #include "hadb.h"
+#include "hidb.h"
 #include "hiprelay.h"
+#include "netdev.h"
+#include "output.h"
 #include "registration.h"
 
 /**
@@ -61,11 +67,11 @@
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
 /** An array for storing all existing services. */
-struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
+static struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
  *  @note This assumes a single threaded model. We are not using mutexes here.
  */
-struct hip_ll pending_requests;
+static struct hip_ll pending_requests;
 
 /**
  * initialize services
@@ -104,7 +110,7 @@ static int hip_del_pending_request_by_expiration(void)
 {
     int                         idx     = 0;
     time_t                      now     = time(NULL);
-    struct hip_ll_node         *iter    = NULL;
+    const struct hip_ll_node   *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
@@ -188,13 +194,11 @@ int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status)
 int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count)
 {
+    int i = 0, j = 0;
+
     if (active_services == NULL) {
         return -1;
     }
-
-    int i = 0, j = 0;
-
-    memset(active_services, 0, sizeof(hip_services));
 
     for (; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
         if (hip_services[i].status == HIP_SERVICE_ON) {
@@ -243,8 +247,8 @@ out_err:
  */
 int hip_del_pending_request(struct hip_hadb_state *entry)
 {
-    int                 idx  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       idx  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
      * for deleting nodes from the list. Therefore, we just get the index of
@@ -274,11 +278,11 @@ int hip_del_pending_request(struct hip_hadb_state *entry)
  * @return          zero if the pending request was succesfully deleted, -1
  *                  otherwise.
  */
-int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
-                                    uint8_t reg_type)
+static int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
+                                           uint8_t reg_type)
 {
     int                         idx     = 0;
-    struct hip_ll_node         *iter    = NULL;
+    const struct hip_ll_node   *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
@@ -310,7 +314,7 @@ int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
 int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
                                  struct hip_hadb_state *entry_new)
 {
-    struct hip_ll_node *iter = 0;
+    const struct hip_ll_node *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry == entry_old) {
@@ -340,12 +344,12 @@ int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
 static int hip_get_pending_requests(struct hip_hadb_state *entry,
                                     struct hip_pending_request *requests[])
 {
+    const struct hip_ll_node *iter          = 0;
+    int                       request_count = 0;
+
     if (requests == NULL) {
         return -1;
     }
-
-    struct hip_ll_node *iter          = 0;
-    int                 request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
@@ -370,8 +374,8 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
  */
 static int hip_get_pending_request_count(struct hip_hadb_state *entry)
 {
-    struct hip_ll_node *iter          = 0;
-    int                 request_count = 0;
+    const struct hip_ll_node *iter          = 0;
+    int                       request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
@@ -991,11 +995,11 @@ out_err:
 
 static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
 {
+    int i = 0, j = 0;
+
     if (reg_types == NULL || type_count <= 0) {
         return -1;
     }
-
-    int i = 0, j = 0;
 
     for (; i < type_count; i++) {
         for (j = i + 1; j < type_count; j++) {
@@ -1068,12 +1072,10 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
     /* Get the number of registration types. */
     type_count = hip_get_param_contents_len(reg_request) -
                  sizeof(reg_request->lifetime);
-    accepted_requests  = malloc(sizeof(uint8_t) * type_count);
-    accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
-    refused_requests   = malloc(sizeof(uint8_t) * type_count);
-    failure_types      = malloc(sizeof(uint8_t) * type_count);
-
-    /* Allocate memory for types */
+    accepted_requests  = calloc(type_count, sizeof(uint8_t));
+    accepted_lifetimes = calloc(type_count, sizeof(uint8_t));
+    refused_requests   = calloc(type_count, sizeof(uint8_t));
+    failure_types      = calloc(type_count, sizeof(uint8_t));
 
     /* Get a pointer to the actual registration types. */
     reg_types = (const uint8_t *) hip_get_param_contents_direct(reg_request) +
@@ -1096,11 +1098,6 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
         /* As above. */
         return err;
     }
-
-    memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
-    memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
-    memset(refused_requests,   0, sizeof(uint8_t) * type_count);
-    memset(failure_types,      0, sizeof(uint8_t) * type_count);
 
     if (reg_request->lifetime == 0) {
         hip_del_registration_server(entry, reg_types, type_count,
@@ -1407,5 +1404,227 @@ int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg)
         err = 1;
     }
 
+    return err;
+}
+
+/**
+ * Handle the HIP_MSG_ADD_DEL_SERVER user message
+ *
+ * @param msg the control message
+ * @return zero on success or negative value on failure
+ */
+int hip_handle_req_user_msg(const struct hip_common *const msg)
+{
+    /* RFC 5203 service registration. The requester, i.e. the client
+     * of the server handles this message. Message indicates that
+     * the hip daemon wants either to register to a server for
+     * additional services or it wants to cancel a registration.
+     * Cancellation is identified with a zero lifetime. */
+    const struct hip_reg_request *reg_req       = NULL;
+    struct hip_pending_request   *pending_req   = NULL;
+    const uint8_t                *reg_types     = NULL;
+    const struct in6_addr        *dst_ip        = NULL;
+    int                           i             = 0, type_count = 0;
+    int                           opp_mode      = 0;
+    int                           add_to_global = 0;
+    struct sockaddr_in6           sock_addr6    = { 0 };
+    struct sockaddr_in            sock_addr     = { 0 };
+    struct in6_addr               server_addr;
+    const hip_hit_t              *dst_hit   = NULL;
+    struct hip_hadb_state        *entry     = NULL;
+    struct in6_addr               opp_hit   = { { { 0 } } }, src_ip = { { { 0 } } };
+    struct in6_addr               hit_local = { { { 0 } } };
+    int                           err       = 0;
+
+    /* Get RVS IP address, HIT and requested lifetime given as
+     * commandline parameters to hipconf. */
+
+    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+    dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+    reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+
+    /* Register to an LSI, no IP address */
+    if (dst_ip && !dst_hit && !ipv6_addr_is_hit(dst_ip)) {
+        struct in_addr lsi;
+
+        IPV6_TO_IPV4_MAP(dst_ip, &lsi);
+        if (IS_LSI32(lsi.s_addr) &&
+            !hip_map_id_to_addr(NULL, &lsi, &server_addr)) {
+            dst_ip = &server_addr;
+            /* Note: next map_id below fills the HIT */
+        }
+    }
+
+    /* Register to a HIT without IP address */
+    if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
+        struct in_addr bcast = { INADDR_BROADCAST };
+        if (hip_map_id_to_addr(dst_ip, NULL, &server_addr)) {
+            IPV4_TO_IPV6_MAP(&bcast, &server_addr);
+        }
+        dst_hit = dst_ip;
+        dst_ip  = &server_addr;
+    }
+
+    if (dst_hit == NULL) {
+        HIP_DEBUG("No HIT parameter found from the user " \
+                  "message. Trying opportunistic mode \n");
+        opp_mode = 1;
+    } else if (dst_ip == NULL) {
+        HIP_ERROR("No IPV6 parameter found from the user " \
+                  "message.\n");
+        err = -1;
+        goto out_err;
+    } else if (reg_req == NULL) {
+        HIP_ERROR("No REG_REQUEST parameter found from the " \
+                  "user message.\n");
+        err = -1;
+        goto out_err;
+    }
+
+    if (!opp_mode) {
+        HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_ip,
+                                        NULL, NULL),
+                 -1, "Error on adding server "  \
+                     "HIT to IP address mapping to the hadb.\n");
+
+        /* Fetch the hadb entry just created. */
+        entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+
+        if (entry == NULL) {
+            HIP_ERROR("Error on fetching server HIT to IP address " \
+                      "mapping from the haDB.\n");
+            err = -1;
+            goto out_err;
+        }
+    } else {
+        HIP_IFEL(hip_get_default_hit(&hit_local), -1,
+                 "Error retrieving default HIT \n");
+
+        HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip,
+                                               &opp_hit,
+                                               HIP_HIT_TYPE_HASH100),
+                 -1,
+                 "Opportunistic HIT conversion failed\n");
+
+        HIP_ASSERT(hit_is_opportunistic_hit(&opp_hit));
+
+        HIP_DEBUG_HIT("Opportunistic HIT", &opp_hit);
+
+        HIP_IFEL(hip_select_source_address(&src_ip,
+                                           dst_ip),
+                 -1,
+                 "Cannot find source address\n");
+
+        HIP_IFEL(hip_hadb_add_peer_info_complete(&hit_local,
+                                                 &opp_hit,
+                                                 NULL,
+                                                 &src_ip,
+                                                 dst_ip,
+                                                 NULL),
+                 -1,
+                 "failed to add peer information to hadb\n");
+
+        HIP_IFEL(!(entry = hip_hadb_find_byhits(&hit_local, &opp_hit)),
+                 -1,
+                 "Did not find entry\n");
+    }
+
+    reg_types  = reg_req->reg_type;
+    type_count = hip_get_param_contents_len(reg_req) -
+                 sizeof(reg_req->lifetime);
+
+    for (; i < type_count; i++) {
+        pending_req = malloc(sizeof(struct hip_pending_request));
+        if (pending_req == NULL) {
+            HIP_ERROR("Error on allocating memory for a " \
+                      "pending registration request.\n");
+            err = -1;
+            goto out_err;
+        }
+
+        pending_req->entry    = entry;
+        pending_req->reg_type = reg_types[i];
+        pending_req->lifetime = reg_req->lifetime;
+        pending_req->created  = time(NULL);
+
+        HIP_DEBUG("Adding pending service request for service %u.\n",
+                  reg_types[i]);
+        hip_add_pending_request(pending_req);
+
+        /* Set the request flag. */
+        switch (reg_types[i]) {
+        case HIP_SERVICE_RENDEZVOUS:
+            hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+            add_to_global = 1;
+            break;
+        case HIP_SERVICE_RELAY:
+            hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+            /* Don't ask for ICE from relay */
+            entry->nat_mode = 1;
+            add_to_global   = 1;
+            break;
+        case HIP_SERVICE_FULLRELAY:
+            hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+            entry->nat_mode = 1;
+            add_to_global   = 1;
+            break;
+        default:
+            HIP_INFO("Undefined service type (%u) requested in the service request.\n",
+                     reg_types[i]);
+            /* For testing purposes we allow the user to
+             * request services that HIPL does not support.
+             */
+            hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
+            break;
+        }
+    }
+
+    if (add_to_global) {
+        if (IN6_IS_ADDR_V4MAPPED(dst_ip)) {
+            IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
+            sock_addr.sin_family = AF_INET;
+            /* The server address is added with 0 interface index */
+            hip_add_address_to_list((struct sockaddr *) &sock_addr,
+                                    0,
+                                    HIP_FLAG_CONTROL_TRAFFIC_ONLY);
+        } else {
+            sock_addr6.sin6_family = AF_INET6;
+            sock_addr6.sin6_addr   = *dst_ip;
+            /* The server address is added with 0 interface index */
+            hip_add_address_to_list((struct sockaddr *) &sock_addr6,
+                                    0,
+                                    HIP_FLAG_CONTROL_TRAFFIC_ONLY);
+        }
+    }
+
+    /* Workaround for registration when a mapping already pre-exists
+     * (inserted e.g. with "hipconf add map"). This can be removed
+     * after bug id 592135 is resolved. */
+    if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
+        struct hip_common *msg2 = calloc(HIP_MAX_PACKET, 1);
+        HIP_IFE(msg2 == 0, -1);
+        HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
+        HIP_IFE(hip_build_param_contents(msg2,
+                                         &entry->hit_peer,
+                                         HIP_PARAM_HIT,
+                                         sizeof(hip_hit_t)),
+                -1);
+        hip_send_close(msg2, 0);
+        free(msg2);
+    }
+
+    /* Send a I1 packet to the server (registrar). */
+
+    /** @todo When registering to a service or cancelling a service,
+     *  we should first check the state of the host association that
+     *  is registering. When it is ESTABLISHED or R2-SENT, we have
+     *  already successfully carried out a base exchange and we
+     *  must use an UPDATE packet to carry a REG_REQUEST parameter.
+     *  When the state is not ESTABLISHED or R2-SENT, we launch a
+     *  base exchange using an I1 packet. */
+    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
+             "Error on sending I1 packet to the server.\n");
+
+out_err:
     return err;
 }

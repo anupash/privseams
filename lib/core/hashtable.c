@@ -117,7 +117,7 @@ void hip_ht_uninit(void *head)
  */
 void *hip_ht_find(void *head, const void *data)
 {
-    return lh_retrieve((LHASH100_CAST *) head, data);
+    return lh_retrieve(LHASH_CAST head, data);
 }
 
 /**
@@ -133,7 +133,7 @@ void *hip_ht_find(void *head, const void *data)
  */
 int hip_ht_add(void *head, void *data)
 {
-    if (lh_insert((LHASH100_CAST *) head, data)) {
+    if (lh_insert(LHASH_CAST head, data)) {
         HIP_DEBUG("hash replace did not occur\n");
     }
     return 0;
@@ -149,7 +149,7 @@ int hip_ht_add(void *head, void *data)
  */
 void *hip_ht_delete(void *head, void *data)
 {
-    return lh_delete((LHASH100_CAST *) head, data);
+    return lh_delete(LHASH_CAST head, data);
 }
 
 /**
@@ -161,7 +161,7 @@ void *hip_ht_delete(void *head, void *data)
  */
 void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func)
 {
-    lh_doall((LHASH100_CAST *) head, func);
+    lh_doall(LHASH_CAST head, func);
 }
 
 /**
@@ -174,5 +174,5 @@ void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func)
  */
 void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func, void *arg)
 {
-    lh_doall_arg((LHASH100_CAST *) head, func, arg);
+    lh_doall_arg(LHASH_CAST head, func, arg);
 }

@@ -66,11 +66,9 @@ int hip_remove_lock_file(const char *filename)
  */
 int hip_create_lock_file(const char *filename, int killold)
 {
-    int  err = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
-    char old_pid_str[64], new_pid_str[64];
-    int  pid_set = 0;    /* the pid was read successfully */
-    memset(old_pid_str, 0, sizeof(old_pid_str));
-    memset(new_pid_str, 0, sizeof(new_pid_str));
+    int  err             = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
+    char old_pid_str[64] = { 0 }, new_pid_str[64];
+    int  pid_set         = 0; /* the pid was read successfully */
 
     /* New pid */
     snprintf(new_pid_str, sizeof(new_pid_str) - 1, "%d\n", getpid());

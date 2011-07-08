@@ -63,14 +63,20 @@ AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([Minimum required Python version not foun
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(OpenSSL not found.))
 # Check for ellyptic curve crypto in OpenSSL.
 AC_CHECK_FUNC(EC_KEY_new,
-              AC_DEFINE(HAVE_EC_CRYPTO)
-              AH_TEMPLATE(HAVE_EC_CRYPTO, [Defined to 1 if elliptic curve crypto is enabled.]))
+              AC_DEFINE(HAVE_EC_CRYPTO) AH_TEMPLATE(HAVE_EC_CRYPTO,
+              [Defined to 1 if elliptic curve crypto is enabled.]))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math library not found.))
 # The unit tests depend on 'check' (http://check.sourceforge.net/)
 AC_CHECK_LIB(check, suite_create,,
-             AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: unit tests not available))
+             AC_MSG_WARN(libcheck not found: unit tests not available))
 AM_CONDITIONAL(HIP_UNITTESTS, test x"$ac_cv_lib_check_suite_create" = xyes)
+if test x"$ac_cv_lib_check_suite_create" = x"yes"; then
+    AC_CHECK_DECL(tcase_add_exit_test,
+                  AC_DEFINE(HAVE_TCASE_ADD_EXIT_TEST) AH_TEMPLATE(HAVE_TCASE_ADD_EXIT_TEST,
+                  [Defined to 1 if the check library supports tcase_add_exit_test.]),,
+                  [#include <check.h>])
+fi
 
 
 
@@ -114,6 +120,7 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline -Wcast-qual")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-missing-field-initializers")
 
 
 #TODO fix the code and get rid of this one
@@ -121,6 +128,15 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -fno-strict-aliasing")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
+
+
+# platform-specific settings
+case "$(uname -n)" in
+    "centos55")
+        AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS -U__STRICT_ANSI__")
+        AC_SUBST(docdir, $(eval echo ${datadir}/doc/hipl))
+    ;;
+esac
 
 
 
@@ -155,21 +171,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_RVS)
     AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
 fi
-
-AC_ARG_ENABLE(opportunistic,
-               AS_HELP_STRING([--enable-opportunistic],
-                              [HIP opportunistic mode (default is YES)]),
-               [ac_cv_use_opportunistic=$enableval],
-               [ac_cv_use_opportunistic=yes])
-AC_CACHE_CHECK([whether to use opportunistic],
-               [ac_cv_use_opportunistic],
-               [ac_cv_use_opportunistic=yes])
-if test x"$ac_cv_use_opportunistic" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
-    AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC,
-                [Defined to 1 if opportunistic mode is enabled.])
-fi
-AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(profiling,
                AS_HELP_STRING([--enable-profiling],
@@ -250,7 +251,10 @@ echo ""
 
 
 
+# Do not forget to remove files added here in the dist-hook in Makefile.am.
 AC_CONFIG_FILES([Makefile
+                 debian/hipl-dnsproxy.dirs
+                 debian/hipl-dnsproxy.install
                  doc/Doxyfile
                  doc/HOWTO.xml])
 AC_CONFIG_FILES([tools/hipdnskeyparse/hipdnskeyparse],
