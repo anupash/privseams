@@ -234,7 +234,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *const ip,
     if (hit_type != HIP_HIT_TYPE_HASH100) {
         return -ENOSYS;
     }
-    if ((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest))) {
+    if ((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(*ip), digest))) {
         HIP_ERROR("Building of digest failed\n");
         return err;
     }
