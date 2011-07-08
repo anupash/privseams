@@ -96,7 +96,7 @@ struct hip_esp_tail {
 
 /* if we do IP version translation from IPv4 to IPv6 we get another IPV4_TO_IPV6
  * bytes. Consider this in the last block. */
-#define OPTIMAL_ESP_PADDING CIPHER_BLOCK_SIZE - (IPV4_TO_IPV6 % CIPHER_BLOCK_SIZE)
+#define OPTIMAL_ESP_PADDING     (CIPHER_BLOCK_SIZE - (IPV4_TO_IPV6 % CIPHER_BLOCK_SIZE))
 /* change this if you want to use another padding */
 #define ESP_PADDING             OPTIMAL_ESP_PADDING
 
@@ -108,15 +108,14 @@ struct hip_esp_tail {
  * @note additional space for possible IP4 -> IPv6 conversion, UDP encapsulation,
  *       ESP header, max. initialization vector for a cipher, max. allowed padding,
  *       ESP tail, ESP authentication part */
-#define BEET_OVERHEAD           IPV4_TO_IPV6 \
-    + sizeof(struct udphdr) + sizeof(struct hip_esp) \
-    + AES_BLOCK_SIZE + ESP_PADDING \
-    + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE
+#define BEET_OVERHEAD           (IPV4_TO_IPV6 + AES_BLOCK_SIZE + ESP_PADDING      \
+                                 + sizeof(struct udphdr) + sizeof(struct hip_esp) \
+                                 + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 /* maximum allowed packet size coming from the application */
 
-#define HIP_MTU                 MAX_PACKET_SIZE - (BEET_OVERHEAD)
+#define HIP_MTU                 (MAX_PACKET_SIZE - (BEET_OVERHEAD))
 
-#define HIP_HIT_DEV_MTU         HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU
+#define HIP_HIT_DEV_MTU         (HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU)
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
