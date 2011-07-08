@@ -1137,9 +1137,10 @@ int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
     FILE *fp  = NULL;
     int   err = 0;
 
-    *ecdsa = NULL;
-
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
+    HIP_IFEL(!ecdsa, -1, "NULL destination key\n");
+
+    *ecdsa = NULL;
 
     fp = fopen(filename, "rb");
     HIP_IFEL(!fp, -ENOMEM,

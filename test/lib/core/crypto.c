@@ -158,6 +158,29 @@ START_TEST(test_load_save_ecdsa_key)
 }
 END_TEST
 
+START_TEST(test_load_invalid_ecdsa_key)
+{
+    EC_KEY *eckey = NULL;
+    int     err;
+
+    HIP_DEBUG("Trying some invalid load operations.\n");
+
+    err = load_ecdsa_private_key("non_existing", &eckey);
+    fail_unless(err != 0 && eckey == NULL, NULL);
+
+    err = load_ecdsa_private_key(NULL, &eckey);
+    fail_unless(err != 0 && eckey == NULL, NULL);
+
+    err = load_ecdsa_private_key("tmp_key1", NULL);
+    fail_unless(err != 0, NULL);
+
+    err = load_ecdsa_private_key(NULL, NULL);
+    fail_unless(err != 0, NULL);
+
+    HIP_DEBUG("Successfully passed test for invalid load operations.\n");
+}
+END_TEST
+
 Suite *lib_core_crypto(void)
 {
     Suite *s = suite_create("lib/core/crypto");
@@ -168,6 +191,8 @@ Suite *lib_core_crypto(void)
     tcase_add_test(tc_core, test_create_different_ecdsa_keys);
     tcase_add_test(tc_core, test_load_save_ecdsa_key);
     tcase_add_test(tc_core, test_save_invalid_ecdsa_key);
+    tcase_add_test(tc_core, test_load_invalid_ecdsa_key);
+
     suite_add_tcase(s, tc_core);
 
     return s;
