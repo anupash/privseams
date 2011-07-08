@@ -33,6 +33,8 @@
 #include <openssl/rsa.h>
 #include <openssl/ec.h>
 #include <openssl/dh.h>
+#include <openssl/pem.h>
+
 
 #include "debug.h"
 #include "ife.h"
@@ -57,7 +59,7 @@
 
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
-#define ECDSA_DEFAULT_CURVE        NIST_ECDSA_384
+#define ECDSA_DEFAULT_CURVE        NID_X9_62_prime256v1
 
 
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_dsa_key"
