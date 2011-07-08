@@ -1041,6 +1041,12 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
     FILE *fp = NULL;
 
     HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
+    HIP_IFEL(!ecdsa, -1, "NULL key\n");
+
+    // Test necessary to catch keys that have only been initialized with EC_KEY_new()
+    // but not properly generated. Such keys cause segmentation faults when
+    // being passed into EC_KEY_get0_group()
+    HIP_IFEL(!EC_KEY_check_key(ecdsa), -1, "Invalid key. \n");
 
     pubfilename_len =
         strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;

@@ -97,6 +97,27 @@ START_TEST(test_create_different_ecdsa_keys)
 }
 END_TEST
 
+START_TEST(test_save_invalid_ecdsa_key)
+{
+    EC_KEY *eckey = NULL;
+    HIP_DEBUG("Trying some invalid save operations.\n");
+
+    fail_unless(save_ecdsa_private_key("tmp_file", NULL) != 0, NULL);
+
+    eckey = create_ecdsa_key(NID_X9_62_prime256v1);
+    fail_unless(save_ecdsa_private_key(NULL, eckey) != 0, NULL);
+    EC_KEY_free(eckey);
+
+    eckey = EC_KEY_new();
+    fail_unless(save_ecdsa_private_key("tmp_file", eckey) != 0, NULL);
+    EC_KEY_free(eckey);
+
+    fail_unless(save_ecdsa_private_key(NULL, NULL) != 0, NULL);
+
+    HIP_DEBUG("Successfully passed test for invalid save operations.\n");
+}
+END_TEST
+
 START_TEST(test_load_save_ecdsa_key)
 {
     unsigned int i;
@@ -146,6 +167,7 @@ Suite *lib_core_crypto(void)
     tcase_add_test(tc_core, test_create_ecdsa_key);
     tcase_add_test(tc_core, test_create_different_ecdsa_keys);
     tcase_add_test(tc_core, test_load_save_ecdsa_key);
+    tcase_add_test(tc_core, test_save_invalid_ecdsa_key);
     suite_add_tcase(s, tc_core);
 
     return s;
