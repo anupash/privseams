@@ -1140,6 +1140,11 @@ out_err:
 /**
  * Serialize a ECDSA public key
  *
+ * @param ecdsa the key to serialize
+ * @param ec_key_rr On success the output is written here. Caller is responsible for memory deallocation.
+ *                  On error, *ec_key_rr is set to NULL.
+ *
+ * @return the length of the output on success, negative on error
  * @note This functions assumes that the key is public.
  */
 int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
