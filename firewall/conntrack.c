@@ -1522,7 +1522,6 @@ static int handle_update(struct hip_common *const common,
     const struct hip_seq      *seq       = NULL;
     const struct hip_ack      *ack       = NULL;
     struct tuple              *other_dir = NULL;
-    int                        err       = 1;
 
     /* classify UPDATE message */
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -1580,11 +1579,12 @@ static int handle_update(struct hip_common *const common,
     }
 
     /* everything should be set now in order to process eventual anchor params */
-    HIP_IFEL(esp_prot_conntrack_update(common, *tuple), 0,
-             "failed to process anchor parameter\n");
+    if (esp_prot_conntrack_update(common, *tuple)) {
+        HIP_ERROR("failed to process anchor parameter\n");
+        return 0;
+    }
 
-out_err:
-    return err;
+    return 1;
 }
 
 /**
