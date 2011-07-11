@@ -875,10 +875,9 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
  * Initialize and insert connection based on the given parameters from UPDATE
  * packet.
  *
- * @param common UPDATE packet for which new connection should be inserted
+ * @param common   UPDATE packet for which new connection should be inserted
+ * @param ctx      context of the packet
  * @param esp_info a pointer to an ESP info message parameter.
- * @param locator a pointer to a locator message parameter.
- * @param seq a pointer to a sequence number of an UPDATE message.
  *
  * @return  0 on success
  *         -1 on error
@@ -1392,11 +1391,12 @@ out_err:
  * Process the first UPDATE packet. This function sets up a new connection if
  * no state for the association already exists.
  *
- * @param common the UPDATE packet
- * @param tuple the corresponding connection tuple
+ * @param common   the UPDATE packet
+ * @param ctx      the packet context
+ * @param tuple    the corresponding connection tuple
  * @param esp_info ESP_INFO parameter contained in the UPDATE packet
- * @param locator LOCATOR parameter contained in the UPDATE packet
- * @param seq SEQ parameter contained in the UPDATE packet
+ * @param locator  LOCATOR parameter contained in the UPDATE packet
+ * @param seq      SEQ parameter contained in the UPDATE packet
  *
  * @return zero if the packet was ok, negative value otherwise
  */
@@ -1664,7 +1664,7 @@ out_err:
  * @param tuple the tuple or NULL if a new connection
  * @param ctx context for the packet
  *
- * @return 1 if packet if passed the verifications or otherwise 0
+ * @return 1 if packet passed the verifications or otherwise 0
  */
 static int check_packet(struct hip_common *common,
                         struct tuple *tuple,
