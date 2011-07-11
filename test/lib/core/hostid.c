@@ -67,6 +67,34 @@ START_TEST(test_serialize_deserialize_keys)
 }
 END_TEST
 
+START_TEST(test_invalid_serialize_deserialize)
+{
+    EC_KEY        *key = NULL;
+    unsigned char *keyrr;
+
+    HIP_DEBUG("Trying to serialize and deserialize with invalid inputs.\n");
+
+    /* serialize NULL key */
+    fail_if(ecdsa_to_key_rr(NULL, &keyrr) > 0 || keyrr != NULL, NULL);
+
+    /* serialize empty key */
+    key = EC_KEY_new();
+    fail_if(ecdsa_to_key_rr(key, &keyrr) > 0 || keyrr != NULL, NULL);
+    EC_KEY_free(key);
+
+    /* serialize valid key to invalid output */
+    key = create_ecdsa_key(NID_secp160r1);
+    fail_if(ecdsa_to_key_rr(key, NULL) > 0 || keyrr != NULL, NULL);
+    EC_KEY_free(key);
+
+    /* deserialize without host id */
+    fail_unless(hip_key_rr_to_ecdsa(NULL, 0) == NULL, NULL);
+    fail_unless(hip_key_rr_to_ecdsa(NULL, 1) == NULL, NULL);
+
+    HIP_DEBUG("Successfully passed test for serialization and deserialization with invalid inputs.\n");
+}
+END_TEST
+
 
 Suite *lib_core_hostid(void)
 {
@@ -74,6 +102,7 @@ Suite *lib_core_hostid(void)
 
     TCase *tc_core = tcase_create("Core");
     tcase_add_test(tc_core, test_serialize_deserialize_keys);
+    tcase_add_test(tc_core, test_invalid_serialize_deserialize);
 
     suite_add_tcase(s, tc_core);
 

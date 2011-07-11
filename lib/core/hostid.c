@@ -628,6 +628,8 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
     struct hip_ecdsa_keylen key_lens;
     EC_KEY                 *ret;
 
+    HIP_IFEL(!host_id, -1, "NULL host id\n");
+
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
              -1, "Failed computing key sizes.\n");
@@ -1162,6 +1164,7 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     /* sanity check */
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
              -1, "Invalid public key.\n");
+    HIP_IFEL(!ec_key_rr, -1, "NULL output destination.\n");
 
     /* get sizes for public and private key, allocate memory for output */
     HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), NULL, 0, NULL)),
@@ -1200,7 +1203,9 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     return out_len;
 
 out_err:
-    *ec_key_rr = NULL;
+    if (ec_key_rr) {
+        *ec_key_rr = NULL;
+    }
     free(buffer);
     return err;
 }
