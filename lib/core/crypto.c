@@ -479,6 +479,8 @@ int impl_ecdsa_sign(const unsigned char *const digest, EC_KEY *const ecdsa, unsi
     int        err       = 0;
     int        sig_size;
 
+    HIP_IFEL(!digest, -1, "NULL digest \n");
+    HIP_IFEL(!signature, -1, "NULL signature output destination \n");
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
              -1, "Check of signing key failed. \n");
 
@@ -550,9 +552,13 @@ out_err:
  */
 int impl_ecdsa_verify(const unsigned char *const digest, EC_KEY *const ecdsa, const unsigned char *const signature)
 {
-    ECDSA_SIG *ecdsa_sig;
-    int        err = 0;
+    ECDSA_SIG *ecdsa_sig = NULL;
+    int        err       = 0;
     int        sig_size;
+
+    HIP_IFEL(!digest, -1, "NULL digest \n");
+    HIP_IFEL(!ecdsa, -1, "NULL key \n");
+    HIP_IFEL(!signature, -1, "NULL signature \n");
 
     sig_size = ECDSA_size(ecdsa);
 

@@ -181,6 +181,65 @@ START_TEST(test_load_invalid_ecdsa_key)
 }
 END_TEST
 
+START_TEST(test_impl_ecdsa_sign_verify)
+{
+    unsigned int         i;
+    const unsigned char *digest    = (const unsigned char *) "ABCD1ABCD2ABCD3ABCD4ABCD5";
+    unsigned char       *signature = NULL;
+    int                  nids[3]   = { NID_secp160r1, NID_X9_62_prime256v1, NID_secp384r1 };
+    EC_KEY              *key       = NULL;
+
+    HIP_DEBUG("Trying to some lowlevel sign, verify operations.\n");
+
+    /* Create keys */
+    for (i = 0; i < sizeof(nids) / sizeof(int); i++) {
+        key       = create_ecdsa_key(nids[i]);
+        signature = malloc(ECDSA_size(key));
+        fail_unless(impl_ecdsa_sign(digest, key, signature) == 0, NULL);
+        fail_unless(impl_ecdsa_verify(digest, key, signature) == 0, NULL);
+        free(signature);
+        EC_KEY_free(key);
+    }
+
+    HIP_DEBUG("Successfully passed test on lowlevel sign, verify operations.\n");
+}
+END_TEST
+
+START_TEST(test_invalid_impl_ecdsa_sign_verify)
+{
+    const unsigned char *digest     = (const unsigned char *) "ABCD1ABCD2ABCD3ABCD4ABCD5";
+    const unsigned char *mod_digest = (const unsigned char *) "BBCD1ABCD2ABCD3ABCD4ABCD5";
+    unsigned char       *signature  = NULL;
+    EC_KEY              *key        = NULL;
+
+    HIP_DEBUG("Trying to some lowlevel sign, verify operations with invalid inputs.\n");
+
+    key       = create_ecdsa_key(NID_secp160r1);
+    signature = malloc(ECDSA_size(key));
+
+    /* NULL inputs to sign */
+    fail_unless(impl_ecdsa_sign(NULL, key, signature) != 0, NULL);
+    fail_unless(impl_ecdsa_sign(digest, NULL, signature) != 0, NULL);
+    fail_unless(impl_ecdsa_sign(digest, key, NULL) != 0, NULL);
+
+    /* NULL inputs to verify */
+    impl_ecdsa_sign(digest, key, signature);
+    fail_unless(impl_ecdsa_verify(NULL, key, signature) != 0, NULL);
+    fail_unless(impl_ecdsa_verify(digest, NULL, signature) != 0, NULL);
+    fail_unless(impl_ecdsa_verify(digest, key, NULL) != 0, NULL);
+
+    /* Modified signature, digest */
+    fail_unless(impl_ecdsa_verify(mod_digest, key, signature) != 0, NULL);
+    signature[0] += 1;
+    fail_unless(impl_ecdsa_verify(digest, key, signature) != 0, NULL);
+
+    free(signature);
+    EC_KEY_free(key);
+
+    HIP_DEBUG("Successfully passed test on lowlevel sign, verify operations with invalid inputs.\n");
+}
+END_TEST
+
 Suite *lib_core_crypto(void)
 {
     Suite *s = suite_create("lib/core/crypto");
@@ -192,6 +251,8 @@ Suite *lib_core_crypto(void)
     tcase_add_test(tc_core, test_load_save_ecdsa_key);
     tcase_add_test(tc_core, test_save_invalid_ecdsa_key);
     tcase_add_test(tc_core, test_load_invalid_ecdsa_key);
+    tcase_add_test(tc_core, test_impl_ecdsa_sign_verify);
+    tcase_add_test(tc_core, test_invalid_impl_ecdsa_sign_verify);
 
     suite_add_tcase(s, tc_core);
 
