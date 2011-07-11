@@ -30,6 +30,7 @@
 
 Suite *lib_core_crypto(void);
 Suite *lib_core_hit(void);
+Suite *lib_core_hostid(void);
 Suite *lib_core_solve(void);
 Suite *lib_core_straddr(void);
 
