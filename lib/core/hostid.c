@@ -1142,13 +1142,10 @@ out_err:
  */
 int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
 {
-    int err = 0;
-    int public = 0;
-    unsigned char  *buffer       = NULL;
-    size_t          pub_key_len  = 0;
-    size_t          priv_key_len = 0;
-    int             out_len      = 0;
-    const BIGNUM   *priv_key     = NULL;
+    int             err         = 0, public = 0, out_len      = 0;
+    unsigned char  *buffer      = NULL;
+    size_t          pub_key_len = 0, priv_key_len = 0;
+    const BIGNUM   *priv_key    = NULL;
     uint16_t        curveid;
     const EC_GROUP *group = NULL;
 
