@@ -433,9 +433,7 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *const ret)
 {
-    int err = 0;
-    int nid;
-    int curve_size;
+    int err = 0, nid, curve_size;
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     switch (nid) {
