@@ -39,8 +39,8 @@
 #include <netinet/in.h>
 #include <openssl/bn.h>
 #include <openssl/dsa.h>
-#include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 
 #include "config.h"
 #include "lib/tool/pk.h"
