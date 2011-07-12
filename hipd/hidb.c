@@ -478,11 +478,15 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     list_add(id_entry, db);
 
-    if (hip_get_host_id_algo((const struct hip_host_id *) host_id) ==
-        HIP_HI_RSA) {
+    switch (hip_get_host_id_algo((const struct hip_host_id *) host_id)) {
+    case HIP_HI_RSA:
         id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
-    } else {
+        break;
+    case HIP_HI_DSA:
         id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
+        break;
+    default:
+        HIP_OUT_ERR(-1, "Cannot deserialize key because algorithm is unknown");
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
