@@ -465,7 +465,7 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
      *      Thus the size of the public key is twice the size of the curve.
      *      (Actually, there is one additional openssl-specific magic byte)
      */
-    ret->private = (curve_size + 7) / 8;
+    ret->private = (curve_size + 7) >> 3;
     ret->public  = ret->private * 2 + 1;
 
 out_err:
