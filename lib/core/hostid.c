@@ -577,7 +577,8 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int i
  * @return The OpenSSL formatted ECDSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const int is_priv)
+EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
+                            const int is_priv)
 {
     int                     err      = 0;
     int                     nid      = 0;

@@ -87,14 +87,20 @@ static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
              -1, "Failed computing key sizes.\n");
 
-    /* copy the header (header size is the whole struct without the key and the hostname)*/
+    /* copy the header
+     * (header size is the whole struct without the key and the hostname)*/
     memcpy(ret, host_id, sizeof(struct hip_host_id) - sizeof(ret->key) - sizeof(ret->hostname));
+
     /* copy the key rr
-     * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.) */
+     * the size of the key rr has the size of the public key + 2 bytes
+     * for the curve identifier (see RFC5201-bis 5.2.8.) */
     memcpy(ret->key, host_id->key, key_lens.public + HIP_CURVE_ID_LENGTH);
+
     /* set the hi length
      * the hi length is the length of the key rr data + the key rr header */
-    ret->hi_length = htons(key_lens.public + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
+    ret->hi_length = htons(key_lens.public
+                           + HIP_CURVE_ID_LENGTH
+                           + sizeof(struct hip_host_id_key_rdata));
 
     hip_set_param_contents_len((struct hip_tlv_common *) ret,
                                sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));

@@ -957,14 +957,23 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
      * Note, that hip_get_host_id() allocates a new buffer and this buffer
      * must be freed in out_err if an error occurs. */
 
-    if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA,
-                                      &entry->our_pub, &entry->our_priv_key)) {
+    if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                      hit_our,
+                                      HIP_HI_RSA,
+                                      &entry->our_pub,
+                                      &entry->our_priv_key)) {
         HIP_DEBUG("Found RSA host identity\n");
-    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
-                                             HIP_HI_DSA, &entry->our_pub, &entry->our_priv_key)) {
+    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                             hit_our,
+                                             HIP_HI_DSA,
+                                             &entry->our_pub,
+                                             &entry->our_priv_key)) {
         HIP_DEBUG("Found DSA host identity\n");
-    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
-                                             HIP_HI_ECDSA, &entry->our_pub, &entry->our_priv_key)) {
+    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                             hit_our,
+                                             HIP_HI_ECDSA,
+                                             &entry->our_pub,
+                                             &entry->our_priv_key)) {
         HIP_DEBUG("Found ECDSA host identity\n");
     } else {
         HIP_OUT_ERR(-1, "Local host identity not found\n");
