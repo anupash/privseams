@@ -808,7 +808,6 @@ EC_KEY *create_ecdsa_key(const int nid)
     HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
              -1, "Could not create curve. No curve with NID: %i.\n", nid);
 
-    // this is important, otherwise parameters will be saved explicitly
     EC_GROUP_set_asn1_flag(group, asn1_flag);
 
     HIP_IFEL(!EC_KEY_set_group(eckey, group),
@@ -1065,7 +1064,6 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
 
-    // this is important, otherwise parametes will be saved explicitely
     HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
              -1, "Could not save parameters of public key\n");
 
@@ -1082,7 +1080,6 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
              "Couldn't open private key file %s for writing\n", filename);
     files++;
 
-    // this is important, otherwise parametes will be saved explicitely
     HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
              -1, "Could not save parameters of private key\n");
 
