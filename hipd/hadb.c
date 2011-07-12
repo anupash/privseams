@@ -926,8 +926,7 @@ int hip_init_peer(struct hip_hadb_state *entry,
         break;
     case HIP_HI_ECDSA:
         entry->verify       = hip_ecdsa_verify;
-        entry->peer_pub_key = hip_key_rr_to_ecdsa(
-            (struct hip_host_id_priv *) entry->peer_pub, 0);
+        entry->peer_pub_key = hip_key_rr_to_ecdsa((struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
     default:
         HIP_OUT_ERR(-1, "Unkown algorithm");
