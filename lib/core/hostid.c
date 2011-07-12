@@ -148,25 +148,7 @@ out_err:
 }
 
 /**
- * @todo useless abstraction
- */
-static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                                         struct in6_addr *const hit, const int hit_type)
-{
-    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
-/**
- * @todo useless abstraction
- */
-static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                                           struct in6_addr *const hit, const int hit_type)
-{
-    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
-/**
- * convert DSA or RSA-based host id to a HIT
+ * Convert a DSA, RSA or ECDSA-based host id to a HIT.
  *
  * @param host_id a host id
  * @param hit output argument, the calculated HIT will stored here
@@ -179,23 +161,7 @@ int hip_host_id_to_hit(const struct hip_host_id *const host_id,
                        struct in6_addr *const hit,
                        const int hit_type)
 {
-    int err = 0;
-
-    switch (hip_get_host_id_algo(host_id)) {
-    case HIP_HI_DSA:
-        err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-        break;
-    case HIP_HI_RSA:
-        err = hip_rsa_host_id_to_hit(host_id, hit, hit_type);
-        break;
-    case HIP_HI_ECDSA:
-        err = hip_ecdsa_host_id_to_hit(host_id, hit, hit_type);
-        break;
-    default:
-        err = -ENOSYS;
-    }
-
-    return err;
+    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
 /**
@@ -230,7 +196,7 @@ static int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const h
     hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub,
                                contents_len - DSA_PRIV);
 
-    if ((err = hip_dsa_host_id_to_hit(&host_id_pub, hit, hit_type))) {
+    if ((err = hip_host_id_to_hit(&host_id_pub, hit, hit_type))) {
         HIP_ERROR("Failed to convert HI to HIT.\n");
         goto out_err;
     }
@@ -276,7 +242,7 @@ static int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const h
     host_id_pub.hi_length = htons(temp);
     memcpy(host_id_pub.key, host_id->key, rsa_pub_len);
 
-    if ((err = hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type))) {
+    if ((err = hip_host_id_to_hit(&host_id_pub, hit, hit_type))) {
         HIP_ERROR("Failed to convert HI to HIT.\n");
         goto out_err;
     }
@@ -318,7 +284,7 @@ static int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const
 
     hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
-    HIP_IFEL(hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type),
+    HIP_IFEL(hip_host_id_to_hit(&host_id_pub, hit, hit_type),
              -1, "Failed to convert HI to HIT.\n");
 
 out_err:
