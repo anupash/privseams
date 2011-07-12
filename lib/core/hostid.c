@@ -689,7 +689,6 @@ out_err:
  *
  * @return zero on success and negative on error
  */
-
 int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int action,
                                  const int anon,
