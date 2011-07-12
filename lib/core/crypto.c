@@ -1040,10 +1040,9 @@ out_err:
  */
 int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
 {
-    int   err         = 0, files = 0, ret;
+    int   err         = 0, files = 0, ret, pubfilename_len;
     char *pubfilename = NULL;
-    int   pubfilename_len;
-    FILE *fp = NULL;
+    FILE *fp          = NULL;
 
     HIP_IFEL(!filename, 1, "NULL filename\n");
     HIP_IFEL(!ecdsa, -1, "NULL key\n");
