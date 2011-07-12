@@ -236,7 +236,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
-        HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     case HIP_HI_DSA:
         /*

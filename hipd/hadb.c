@@ -968,7 +968,7 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
                                              HIP_HI_ECDSA, &entry->our_pub, &entry->our_priv_key)) {
         HIP_DEBUG("Found ECDSA host identity\n");
     } else {
-        HIP_IFEL(1, -1, "Local host identity not found\n");
+        HIP_OUT_ERR(-1, "Local host identity not found\n");
     }
 
     /* RFC 4034 obsoletes RFC 2535 and flags field differ */
