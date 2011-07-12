@@ -1025,16 +1025,15 @@ out_err:
 
 /**
  * Save the host's ECDSA keys to disk.
- * @param filenamebase the filename base where ECDSA key should be saved
- * @param ecdsa the ECDSA key structure
+ * @param filename  the filename base where the ECDSA key should be saved
+ * @param ecdsa     the ECDSA key structure to be saved
  *
- * The ECDSA keys from ecdsa are saved in PEM format, public key to file
- * filenamebase.pub, private key to file filenamebase and ECDSA
- * parameters to file filenamebase.params. If any of the files cannot
- * be saved, all files are deleted.
+ * The ECDSA key at *ecdsa is saved in PEM format: the public key is saved to file
+ * filename.pub, the private key to file filename. If any of the files cannot
+ * be written, all files are deleted.
  *
- * @return 0 if all files were saved successfully, or non-zero if an
- * error occurred.
+ * @return  0 if all files were saved successfully, or non-zero if an
+ *          error occurred.
  */
 int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
 {
@@ -1124,16 +1123,17 @@ out_err:
 
 /**
  * Load the host's private EC keys from disk.
- * @param filename the file name base of the host EC key
- * @param ec Pointer to the EC key structure.
+ *
+ * @param filename  the filename of the host EC key
+ * @param ecdsa     the openssl key structure is allocated at *ecdsa
  *
  * Loads EC private key from file filename. EC struct
  * will be allocated dynamically and it is the responsibility
  * of the caller to free it with EC_free.
  *
- * @return On success *ec contains the EC structure. On failure
- * *EC contins NULL if the key could not be loaded (not in PEM format
- * or file not found, etc).
+ * @return  On success *ecdsa contains the EC structure.
+ *          On failure *ecdsa contains NULL if the key could not be loaded
+ *          (not in PEM format or file not found, etc).
  */
 int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
 {

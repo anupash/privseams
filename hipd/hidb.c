@@ -72,7 +72,10 @@ static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4
 /**
  * Strips a ECDSA public key out of a host id with private key component
  *
- * @param host_id the host identifier with its private key component
+ * @param host_id   the host identifier with its private key component
+ * @param ret       the public host identifier with the private key removed
+ *                  is written here
+ *
  * @return An allocated hip_host_id structure. Caller must deallocate.
  */
 static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id, struct hip_host_id *const ret)
