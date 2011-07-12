@@ -874,7 +874,6 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     HIP_ERROR("Building of host id failed\n");
                     goto out_err;
                 }
-                HIP_DEBUG("done loading, key rring and endointing\n");
             } else { /*RSA*/
                 if ((err = load_rsa_private_key(hi_file, &rsa_key))) {
                     HIP_ERROR("Failed to load RSA key from file %s\n", hi_file);
