@@ -394,7 +394,7 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
  * @param host_id the host id
  * @param ret the ECDSA key component lengths will be stored here
  *
- * @return 0 on success, non-0 otherwise
+ * @return 0 on success, -1 otherwise
  */
 int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *const ret)

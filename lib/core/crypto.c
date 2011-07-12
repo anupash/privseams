@@ -471,7 +471,7 @@ out_err:
  * @param ecdsa the ECDSA key
  * @param signature write the signature here (we will need ECDSA_size(signing_key) of memory);
  *
- * @return 0 on success and non-zero on error
+ * @return 0 on success and negative on error
  */
 int impl_ecdsa_sign(const unsigned char *const digest,
                     EC_KEY *const ecdsa,
