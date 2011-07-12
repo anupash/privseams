@@ -81,11 +81,12 @@ static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4
 static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id,
                                     struct hip_host_id *const ret)
 {
-    int                     err = 0;
     struct hip_ecdsa_keylen key_lens;
 
-    HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
-             -1, "Failed computing key sizes.\n");
+    if (hip_get_ecdsa_keylen(host_id, &key_lens)) {
+        HIP_ERROR("Failed computing key sizes.\n");
+        return -1;
+    }
 
     /* copy the header
      * (header size is the whole struct without the key and the hostname)*/
@@ -105,8 +106,7 @@ static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id
     hip_set_param_contents_len((struct hip_tlv_common *) ret,
                                sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
