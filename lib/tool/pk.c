@@ -87,7 +87,7 @@ out_err:
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_ecdsa_sign(void *const priv_key, struct hip_common *msg)
+int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
 {
     EC_KEY *ecdsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
