@@ -1040,9 +1040,9 @@ out_err:
  */
 int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
 {
-    int   err         = 0, files = 0, ret, pubfilename_len;
-    char *pubfilename = NULL;
-    FILE *fp          = NULL;
+    int   err = 0, files = 0, ret;
+    char  pubfilename[strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX)];
+    FILE *fp = NULL;
 
     HIP_IFEL(!filename, 1, "NULL filename\n");
     HIP_IFEL(!ecdsa, -1, "NULL key\n");
@@ -1052,12 +1052,7 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     // being passed into EC_KEY_get0_group()
     HIP_IFEL(!EC_KEY_check_key(ecdsa), -1, "Invalid key. \n");
 
-    pubfilename_len =
-        strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
-    pubfilename = malloc(pubfilename_len);
-    HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
-
-    ret = snprintf(pubfilename, pubfilename_len, "%s%s",
+    ret = snprintf(pubfilename, sizeof(pubfilename), "%s%s",
                    filename,
                    DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
@@ -1119,7 +1114,6 @@ out_err:
         }
     }
 
-    free(pubfilename);
     return err;
 }
 
