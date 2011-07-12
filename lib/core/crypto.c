@@ -786,7 +786,7 @@ err_out:
 }
 
 /**
- * Generates ECDSA parameters and a new key pair.
+ * Generate ECDSA parameters and a new key pair.
  *
  * The caller is responsible for freeing the allocated ECDSA key.
  *
