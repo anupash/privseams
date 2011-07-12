@@ -220,7 +220,8 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
 /*------------tuple handling functions-------------*/
 
 /**
- * forms a data based on the HITs of the packet and returns a hip_data structure
+ * Form a data based on the HITs of the packet and return a hip_data structure
+ * Caller is responsible for deallocation of the returned data.
  *
  * @param common a HIP control packet
  * @return struct hip_data corresponding to the HITs of the packet
