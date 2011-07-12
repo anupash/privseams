@@ -277,20 +277,16 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                struct in6_addr *const hit,
                                const int hit_type)
 {
-    int algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
-    int err  = 0;
-
-    if (algo == HIP_HI_DSA) {
-        err = hip_private_dsa_host_id_to_hit(host_id, hit,
-                                             hit_type);
-    } else if (algo == HIP_HI_RSA) {
-        err = hip_private_rsa_host_id_to_hit(host_id, hit,
-                                             hit_type);
-    } else {
-        err = -ENOSYS;
+    switch (hip_get_host_id_algo((const struct hip_host_id *) host_id)) {
+    case HIP_HI_DSA:
+        return hip_private_dsa_host_id_to_hit(host_id, hit,
+                                              hit_type);
+    case HIP_HI_RSA:
+        return hip_private_rsa_host_id_to_hit(host_id, hit,
+                                              hit_type);
+    default:
+        return -ENOSYS;
     }
-
-    return err;
 }
 
 /**
