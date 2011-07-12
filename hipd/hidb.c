@@ -184,8 +184,7 @@ static int hip_get_rsa_public_key(const struct hip_host_id_priv *const hi, struc
  */
 static int hip_get_public_key(const struct hip_host_id_priv *hid, struct hip_host_id *const ret)
 {
-    int alg = hip_get_host_id_algo((const struct hip_host_id *) hid);
-    switch (alg) {
+    switch (hip_get_host_id_algo((const struct hip_host_id *) hid)) {
     case HIP_HI_RSA:
         return hip_get_rsa_public_key(hid, ret);
     case HIP_HI_DSA:
@@ -519,8 +518,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     list_add(id_entry, db);
 
-    algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
-    switch (algo) {
+    switch (hip_get_host_id_algo((const struct hip_host_id *) host_id)) {
     case HIP_HI_RSA:
         id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
         break;
