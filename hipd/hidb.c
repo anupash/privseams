@@ -70,7 +70,7 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4" };
 
 /**
- * Strips a ECDSA public key out of a host id with private key component
+ * Strips an ECDSA public key out of a host id with private key component.
  *
  * @param host_id   the host identifier with its private key component
  * @param ret       the public host identifier with the private key removed
@@ -89,7 +89,7 @@ static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id
     /* copy the header (header size is the whole struct without the key and the hostname)*/
     memcpy(ret, host_id, sizeof(struct hip_host_id) - sizeof(ret->key) - sizeof(ret->hostname));
     /* copy the key rr
-     * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.)*/
+     * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.) */
     memcpy(ret->key, host_id->key, key_lens.public + HIP_CURVE_ID_LENGTH);
     /* set the hi length
      * the hi length is the length of the key rr data + the key rr header */
