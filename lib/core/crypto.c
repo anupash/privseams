@@ -493,7 +493,7 @@ int impl_ecdsa_sign(const unsigned char *const digest,
 
     /* build signature from ECDSA_SIG struct */
     bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
-    bn2bin_safe(ecdsa_sig->s, signature + (sig_size / 2), sig_size / 2);
+    bn2bin_safe(ecdsa_sig->s, signature + sig_size / 2, sig_size / 2);
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);
