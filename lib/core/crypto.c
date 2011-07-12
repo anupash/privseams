@@ -1052,7 +1052,7 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     HIP_IFEL(!EC_KEY_check_key(ecdsa), -1, "Invalid key. \n");
 
     pubfilename_len =
-        strlen(filename) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+        strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
     pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
