@@ -1000,7 +1000,7 @@ out_err:
         if (fclose(fp)) {
             HIP_ERROR("Error closing file\n");
         }
-    } else if (fp && (err = fclose(fp))) {
+    } else if ((err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
     }
 
@@ -1092,7 +1092,7 @@ out_err:
         if (fclose(fp)) {
             HIP_ERROR("Error closing file\n");
         }
-    } else if (fp && (err = fclose(fp))) {
+    } else if ((err = fclose(fp))) {
         HIP_ERROR("Error closing file %s\n", filename);
     }
 
