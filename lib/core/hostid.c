@@ -395,9 +395,7 @@ static enum hip_cuve_id get_ecdsa_curve_hip_name(const int nid)
  */
 static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 {
-    int              err = 0;
     enum hip_cuve_id curve_id;
-    int              nid;
 
     /* Determine the curve
      * The first two bytes contain the hip curve identifier
@@ -407,29 +405,20 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
     switch (curve_id) {
     case NIST_ECDSA_160:
         HIP_DEBUG("Using curve secp160r1\n");
-        nid = NID_secp160r1;
-        break;
+        return NID_secp160r1;
     case NIST_ECDSA_256:
         HIP_DEBUG("Using curve secp256r1/prime256v1 \n");
-        nid = NID_X9_62_prime256v1;
-        break;
+        return NID_X9_62_prime256v1;
     case NIST_ECDSA_384:
         HIP_DEBUG("Using curve secp384r1 \n");
-        nid = NID_secp384r1;
-        break;
+        return NID_secp384r1;
     case brainpoolP160r1:
         HIP_DEBUG("Curve brainpoolP160r1 is not supported, use NIST_ECDSA_160 instead.\n");
+        return -1;
     default:
         HIP_DEBUG("Curve not supported.\n");
-        err = -1;
-        goto out_err;
-    }
-
-out_err:
-    if (err) {
         return -1;
     }
-    return nid;
 }
 
 /**
