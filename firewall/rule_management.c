@@ -387,7 +387,7 @@ static struct hit_option *parse_hit(char *token)
  *
  * @return      0 on success, negative on error
  */
-static int load_rsa_file(FILE *fp, struct hip_host_id *const hi)
+static int load_rsa_file(FILE *const fp, struct hip_host_id *const hi)
 {
     int            err        = 0;
     RSA           *rsa        = NULL;
@@ -421,7 +421,7 @@ out_err:
  *
  * @return      0 on success, negative on error
  */
-static int load_dsa_file(FILE *fp, struct hip_host_id *const hi)
+static int load_dsa_file(FILE *const fp, struct hip_host_id *const hi)
 {
     int            err        = 0;
     DSA           *dsa        = NULL;
@@ -456,7 +456,7 @@ out_err:
  *
  * @return      0 on success, negative on error
  */
-static int load_ecdsa_file(FILE *fp, struct hip_host_id *const hi)
+static int load_ecdsa_file(FILE *const fp, struct hip_host_id *const hi)
 {
     int            err          = 0;
     EC_KEY        *ecdsa        = NULL;
