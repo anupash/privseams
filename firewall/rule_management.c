@@ -401,7 +401,6 @@ static int load_rsa_file(FILE *const fp, struct hip_host_id *const hi)
     HIP_IFEL((rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr)) < 0,
              -1, "Serialization of DSA key failed \n");
 
-    // no error checking here, since both functions are void
     hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
     hip_build_param_host_id_only(hi, rsa_key_rr, NULL);
 
@@ -435,7 +434,6 @@ static int load_dsa_file(FILE *const fp, struct hip_host_id *const hi)
     HIP_IFEL((dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr)) < 0,
              -1, "Serialization of DSA key failed \n");
 
-    // no error checking here, since both functions are void
     hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
     hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
 
@@ -472,7 +470,6 @@ static int load_ecdsa_file(FILE *const fp, struct hip_host_id *const hi)
     HIP_IFEL((ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr)) < 0,
              -1, "Serialization of ECDSA key failed \n");
 
-    // no error checking here, since both functions are void
     hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
     hip_build_param_host_id_only(hi, ecdsa_key_rr, NULL);
 
