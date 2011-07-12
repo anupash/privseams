@@ -78,7 +78,8 @@ static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4
  *
  * @return An allocated hip_host_id structure. Caller must deallocate.
  */
-static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id, struct hip_host_id *const ret)
+static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id,
+                                    struct hip_host_id *const ret)
 {
     int                     err = 0;
     struct hip_ecdsa_keylen key_lens;
