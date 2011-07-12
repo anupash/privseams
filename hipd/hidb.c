@@ -192,7 +192,7 @@ static int hip_get_public_key(const struct hip_host_id_priv *hid, struct hip_hos
     case HIP_HI_ECDSA:
         return hip_get_ecdsa_public_key(hid, ret);
     default:
-        HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
+        HIP_ERROR("Unsupported HI algorithm\n");
         return -1;
     }
 }
@@ -488,7 +488,6 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     struct local_host_id *id_entry = NULL;
     struct local_host_id *old_entry;
     int                   (*signature_func)(void *key, struct hip_common *m);
-    int                   algo;
 
     HIP_WRITE_LOCK_DB(db);
 

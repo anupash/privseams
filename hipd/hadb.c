@@ -948,7 +948,7 @@ out_err:
  */
 int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
 {
-    int err = 0, algo = 0;
+    int err = 0;
 
     free(entry->our_pub);
     entry->our_pub = NULL;
