@@ -3680,7 +3680,7 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * @param ecdsa             the EC key to be converted
  * @param endpoint          An output argument. This function allocates and
  *                          stores the result of the conversion here. On success
- *                          the caller is responsible of deallocation. On error
+ *                          the caller is responsible for deallocation. On error
  *                          endpoint is set to NULL.
  * @param endpoint_flags    flags for the endpoint
  * @param hostname          host name for the EC key
