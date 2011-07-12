@@ -1150,6 +1150,7 @@ static int handle_i1(const struct hip_common *const common,
         return 0;
     }
 
+    free(data);
     return 1;
 }
 
