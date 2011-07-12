@@ -1027,12 +1027,13 @@ out_err:
 
 /**
  * Save the host's ECDSA keys to disk.
- * @param filename  the filename base where the ECDSA key should be saved
- * @param ecdsa     the ECDSA key structure to be saved
  *
  * The ECDSA key at *ecdsa is saved in PEM format: the public key is saved to file
  * filename.pub, the private key to file filename. If any of the files cannot
  * be written, all files are deleted.
+ *
+ * @param filename  the filename base where the ECDSA key should be saved
+ * @param ecdsa     the ECDSA key structure to be saved
  *
  * @return  0 if all files were saved successfully, or non-zero if an
  *          error occurred.
