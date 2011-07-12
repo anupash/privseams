@@ -1131,7 +1131,7 @@ out_err:
 }
 
 /**
- * Serialize a ECDSA public key
+ * Serialize an ECDSA public key.
  *
  * @param ecdsa the key to serialize
  * @param ec_key_rr On success the output is written here. Caller is responsible for memory deallocation.
