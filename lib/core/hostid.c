@@ -1155,7 +1155,12 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     HIP_IFEL(!ec_key_rr, -1, "NULL output destination.\n");
 
     /* get sizes for public and private key, allocate memory for output */
-    HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), NULL, 0, NULL)),
+    HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa),
+                                                EC_KEY_get0_public_key(ecdsa),
+                                                EC_KEY_get_conv_form(ecdsa),
+                                                NULL,
+                                                0,
+                                                NULL)),
              -1, "Failed to calculate out length of serialized key.\n");
     public = ((priv_key = EC_KEY_get0_private_key(ecdsa)) == NULL ? 1 : 0);
     if (!public) {
