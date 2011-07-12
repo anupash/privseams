@@ -1033,20 +1033,17 @@ out_err:
  * parameters to file filenamebase.params. If any of the files cannot
  * be saved, all files are deleted.
  *
- * @todo change filenamebase to filename! There is no need for a
- * filenamebase!!!
- *
  * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
-int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
+int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
 {
     int   err         = 0, files = 0, ret;
     char *pubfilename = NULL;
     int   pubfilename_len;
     FILE *fp = NULL;
 
-    HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
+    HIP_IFEL(!filename, 1, "NULL filename\n");
     HIP_IFEL(!ecdsa, -1, "NULL key\n");
 
     // Test necessary to catch keys that have only been initialized with EC_KEY_new()
@@ -1055,17 +1052,17 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
     HIP_IFEL(!EC_KEY_check_key(ecdsa), -1, "Invalid key. \n");
 
     pubfilename_len =
-        strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+        strlen(filename) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
     pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
     ret = snprintf(pubfilename, pubfilename_len, "%s%s",
-                   filenamebase,
+                   filename,
                    DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving ECDSA keys to: pub='%s' priv='%s'\n", pubfilename,
-             filenamebase);
+             filename);
 
     fp = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
@@ -1077,16 +1074,16 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
              -1, "Could not save parameters of public key\n");
 
     HIP_IFEL(!PEM_write_EC_PUBKEY(fp, ecdsa),
-             -1, "Could not write public EC Key to %s \n", filenamebase);
+             -1, "Could not write public EC Key to %s \n", filename);
 
     if ((err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
         goto out_err;
     }
 
-    fp = fopen(filenamebase, "wb" /* mode */);
+    fp = fopen(filename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
-             "Couldn't open private key file %s for writing\n", filenamebase);
+             "Couldn't open private key file %s for writing\n", filename);
     files++;
 
     // this is important, otherwise parametes will be saved explicitely
@@ -1094,7 +1091,7 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
              -1, "Could not save parameters of private key\n");
 
     HIP_IFEL(!PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL, 0, NULL, NULL),
-             -1, "Could not write private EC Key to %s \n", filenamebase);
+             -1, "Could not write private EC Key to %s \n", filename);
 
 out_err:
 
@@ -1103,14 +1100,14 @@ out_err:
             HIP_ERROR("Error closing file\n");
         }
     } else if (fp && (err = fclose(fp))) {
-        HIP_ERROR("Error closing file %s\n", filenamebase);
+        HIP_ERROR("Error closing file %s\n", filename);
     }
 
     if (err) {
         switch (files) {
         case 2:
-            if (unlink(filenamebase)) { /* add error check */
-                HIP_ERROR("Could not delete file %s\n", filenamebase);
+            if (unlink(filename)) { /* add error check */
+                HIP_ERROR("Could not delete file %s\n", filename);
             }
         case 1:
             if (unlink(pubfilename)) { /* add error check */
