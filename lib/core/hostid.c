@@ -399,7 +399,7 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *const ret)
 {
-    int err = 0, nid, curve_size;
+    int nid, curve_size;
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     switch (nid) {
@@ -414,8 +414,7 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
         break;
     default:
         HIP_DEBUG("Curve not supported.\n");
-        err = -1;
-        goto out_err;
+        return -1;
     }
 
     /* Size is always
@@ -434,8 +433,7 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
     ret->private = (curve_size + 7) >> 3;
     ret->public  = ret->private * 2 + 1;
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
