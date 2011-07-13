@@ -941,7 +941,7 @@ out_err:
  */
 int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
 {
-    int err = 0, algo = 0;
+    int err = 0;
 
     free(entry->our_pub);
     entry->our_pub = NULL;
@@ -959,13 +959,12 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
 
     /* RFC 4034 obsoletes RFC 2535 and flags field differ */
     /* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
-    algo = hip_get_host_id_algo(entry->our_pub);
 
     /* Calculate our HIT from our public Host Identifier (HI).
      * Note, that currently (06.08.2008) both of these functions use DSA
      *
      * Set the funciton pointer for signing our host identity. */
-    switch (algo) {
+    switch (hip_get_host_id_algo(entry->our_pub)) {
     case HIP_HI_DSA:
         entry->sign = hip_dsa_sign;
         break;

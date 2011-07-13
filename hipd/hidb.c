@@ -150,14 +150,13 @@ static int hip_get_rsa_public_key(const struct hip_host_id_priv *const hi, struc
  */
 static int hip_get_public_key(const struct hip_host_id_priv *hid, struct hip_host_id *const ret)
 {
-    int alg = hip_get_host_id_algo((const struct hip_host_id *) hid);
-    switch (alg) {
+    switch (hip_get_host_id_algo((const struct hip_host_id *) hid)) {
     case HIP_HI_RSA:
         return hip_get_rsa_public_key(hid, ret);
     case HIP_HI_DSA:
         return hip_get_dsa_public_key(hid, ret);
     default:
-        HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
+        HIP_ERROR("Unsupported HI algorithm\n");
         return -1;
     }
 }
