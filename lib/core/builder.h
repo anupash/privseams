@@ -253,13 +253,7 @@ int hip_build_param_reg_response(struct hip_common *msg,
                                  const int type_count);
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                              struct hip_crypto_key *);
-
-int hip_private_rsa_to_hit(RSA *rsa_key,
-                           struct in6_addr *hit);
-int hip_private_dsa_to_hit(DSA *dsa_key,
-                           struct in6_addr *hit);
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
-
 int hip_build_param_reg_failed(struct hip_common *msg,
                                uint8_t failure_type,
                                uint8_t *type_list,
