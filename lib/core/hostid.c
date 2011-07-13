@@ -150,9 +150,11 @@ out_err:
  * convert DSA or RSA-based host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_host_id_to_hit(const struct hip_host_id *const host_id,
                        struct in6_addr *const hit,
@@ -165,9 +167,11 @@ int hip_host_id_to_hit(const struct hip_host_id *const host_id,
  * convert DSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 static int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                           struct in6_addr *const hit,
@@ -205,9 +209,11 @@ out_err:
  * convert RSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 static int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                           struct in6_addr *const hit,
@@ -249,9 +255,11 @@ out_err:
  * convert RSA or DSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                struct in6_addr *const hit,
