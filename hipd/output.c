@@ -1496,12 +1496,11 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     struct in6_addr       *src_addr        = NULL;
     LHASH_NODE            *item            = NULL, *tmp = NULL;
     int                    i               = 0;
-    unsigned int           mtu_val         = HIP_HIT_DEV_MTU;
-
 
     /* Check packet size */
-    if (hip_get_msg_total_len(msg) > mtu_val) {
-        HIP_DEBUG("WARNING: Packet size exceeds MTU (%i), this may cause fragmentation.", mtu_val);
+    if (hip_get_msg_total_len(msg) > HIP_HIT_DEV_MTU) {
+        HIP_DEBUG("WARNING: Packet size exceeds MTU (%i), this may cause fragmentation.",
+                  HIP_HIT_DEV_MTU);
     }
 
     /* Notice that the shotgun logic requires us to check always the address family.

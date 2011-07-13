@@ -28,8 +28,6 @@
  * This file defines the main function of the command line tool 'hipconf'.
  *
  * @author  Miika Komu <miika_iki.fi>
- * @bug     makefile compiles prefix of debug messages wrong for hipconf in
- *          "make all"
  */
 
 #include "lib/core/conf.h"

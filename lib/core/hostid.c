@@ -151,7 +151,7 @@ out_err:
  * Convert a DSA, RSA or ECDSA-based host id to a HIT.
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  *
@@ -253,7 +253,7 @@ out_err:
 }
 
 /**
- * convert ECDSA-based private host id to a HIT
+ * Convert ECDSA-based private host id to a HIT.
  *
  * @param host_id a host id
  * @param hit output argument, the calculated HIT will be stored here
