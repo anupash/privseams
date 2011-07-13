@@ -958,7 +958,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
     ret = snprintf(pubfilename, pubfilename_len, "%s%s",
                    filenamebase,
                    DEFAULT_PUB_FILE_SUFFIX);
-    HIP_IFEL(ret < pubfilename_len - 1, 1, "Failed to create pubfilename\n");
+    HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving RSA keys to: pub='%s' priv='%s'\n", pubfilename,
              filenamebase);
