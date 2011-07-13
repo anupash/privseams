@@ -126,13 +126,16 @@ out_err:
  */
 static int verify(void *const peer_pub, struct hip_common *const msg, const int type)
 {
-    int                err = 0, len, origlen;
+    int                err = 0, len, origlen = 0;
     struct hip_sig    *sig;
     uint8_t            sha1_digest[HIP_AH_SHA_LEN];
     struct in6_addr    tmpaddr;
     struct hip_puzzle *pz = NULL;
     uint8_t            opaque[HIP_PUZZLE_OPAQUE_LEN];
     uint8_t            rand_i[PUZZLE_LENGTH];
+
+    HIP_IFEL(!peer_pub, -1, "NULL public key\n");
+    HIP_IFEL(!msg, -1, "NULL message\n");
 
     ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
 
@@ -195,7 +198,9 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
     }
 
 out_err:
-    hip_set_msg_total_len(msg, origlen);
+    if (msg) {
+        hip_set_msg_total_len(msg, origlen);
+    }
     return err;
 }
 
