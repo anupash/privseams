@@ -1265,6 +1265,26 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
+                                                "ecdsa", NULL, 0, 0, 0))) {
+            return err;
+        }
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
+
+        hip_msg_init(msg);
+        if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+                                                "ecdsa", NULL, 0, 0, 0))) {
+            return err;
+        }
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
+
+        hip_msg_init(msg);
+        if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
                                                 "rsa", NULL, 0, 0, 0))) {
             return err;
         }

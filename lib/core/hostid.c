@@ -696,7 +696,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
 
     HIP_INFO("Using hostname: %s\n", hostname);
 
-    HIP_IFEL(!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa"),
+    HIP_IFEL(!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa") && strcmp(hi_fmt, "ecdsa"),
              -ENOSYS, "Only RSA, DSA and EC keys are supported\n");
 
     HIP_DEBUG("Using format %s and file %s \n", hi_fmt, hi_file);
@@ -854,7 +854,6 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         }
 
         /* using default */
-
         HIP_IFEL(hi_fmt == NULL, -1, "Key type is null.\n");
 
         if (!strcmp(hi_fmt, "dsa")) {
