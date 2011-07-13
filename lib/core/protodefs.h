@@ -338,7 +338,6 @@
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
 
 #define HIP_ANY_ALGO                  -1
 
