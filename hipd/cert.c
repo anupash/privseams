@@ -90,8 +90,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
 
     /* RSA needed variables */
     RSA           *rsa   = NULL;
-    unsigned char *e_bin = NULL, *n_bin = NULL;
-    unsigned char *e_hex = NULL, *n_b64 = NULL;
+    unsigned char *e_bin = NULL, *n_bin = NULL, *n_b64 = NULL;
+    char          *e_hex = NULL;
 
     /* DSA needed variables */
     DSA           *dsa   = NULL;
@@ -224,7 +224,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        e_hex = (unsigned char *) BN_bn2hex(rsa->e);
+        e_hex = BN_bn2hex(rsa->e);
 
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))",
                 e_hex,
