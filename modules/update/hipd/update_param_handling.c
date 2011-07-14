@@ -270,7 +270,49 @@ int hip_add_echo_request_param(UNUSED const uint8_t packet_type,
 }
 
 /**
- * Handle ECHO_REQUEST parameter in second update packet.
+ * Handle ECHO_REQUEST_SIGNED parameter.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, or negative error value on error.
+ */
+int hip_handle_echo_request_sign_param(UNUSED const uint8_t packet_type,
+                                       UNUSED const uint32_t ha_state,
+                                       struct hip_packet_context *ctx)
+{
+    const struct hip_echo_request *echo_request = NULL;
+    int                            err          = 0;
+
+    if (!(echo_request = hip_get_param(ctx->input_msg,
+                                       HIP_PARAM_ECHO_REQUEST_SIGN))) {
+        HIP_DEBUG("no ECHO_REQUEST_SIGN parameter in UPDATE packet, skipping\n");
+
+        /* This condition is no error! There simply was no request by the peer
+         * to add a ECHO_RESPONSE_SIGN parameter to the outbound message. */
+        return 0;
+    }
+
+    HIP_DEBUG("echo opaque data len=%d\n",
+              hip_get_param_contents_len(echo_request));
+    HIP_HEXDUMP("ECHO_REQUEST_SIGN ",
+                (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
+                hip_get_param_contents_len(echo_request));
+    HIP_IFEL(hip_build_param_echo(ctx->output_msg,
+                                  (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
+                                  hip_get_param_contents_len(echo_request), 1, 0),
+             -1, "Building of ECHO_RESPONSE_SIGN failed\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * Handle ECHO_REQUEST_UNSIGNED parameter.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
@@ -289,8 +331,8 @@ int hip_handle_echo_request_param(UNUSED const uint8_t packet_type,
     int                            err          = 0;
 
     if (!(echo_request = hip_get_param(ctx->input_msg,
-                                       HIP_PARAM_ECHO_REQUEST_SIGN))) {
-        HIP_DEBUG("no ECHO_REQUEST parameter in UPDATE packet!\n");
+                                       HIP_PARAM_ECHO_REQUEST))) {
+        HIP_DEBUG("no ECHO_REQUEST parameter in UPDATE packet, skipping\n");
 
         /* This condition is no error! There simply was no request by the peer
          * to add a ECHO_RESPONSE parameter to the outbound message. */
@@ -304,7 +346,7 @@ int hip_handle_echo_request_param(UNUSED const uint8_t packet_type,
                 hip_get_param_contents_len(echo_request));
     HIP_IFEL(hip_build_param_echo(ctx->output_msg,
                                   (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_len(echo_request), 1, 0),
+                                  hip_get_param_contents_len(echo_request), 0, 0),
              -1, "Building of ECHO_RESPONSE failed\n");
 
 out_err:
