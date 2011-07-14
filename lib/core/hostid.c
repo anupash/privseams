@@ -750,7 +750,7 @@ out_err:
 /**
  * create DNS KEY RR record from host DSA key
  * @param dsa the DSA structure from where the KEY RR record is to be created
- * @param dsa_key_rr where the resultin KEY RR is stored
+ * @param dsa_key_rr where the resulting KEY RR is stored
  *
  * @note Caller must free dsa_key_rr when it is not used anymore.
  *
