@@ -288,9 +288,14 @@ int hip_handle_echo_request_param(UNUSED const uint8_t packet_type,
     const struct hip_echo_request *echo_request = NULL;
     int                            err          = 0;
 
-    HIP_IFEL(!(echo_request = hip_get_param(ctx->input_msg,
-                                            HIP_PARAM_ECHO_REQUEST_SIGN)),
-             -1, "ECHO_REQUEST parameter not found!\n");
+    if (!(echo_request = hip_get_param(ctx->input_msg,
+                                       HIP_PARAM_ECHO_REQUEST_SIGN))) {
+        HIP_DEBUG("no ECHO_REQUEST parameter in UPDATE packet!\n");
+
+        /* This condition is no error! There simply was no request by the peer
+         * to add a ECHO_RESPONSE parameter to the outbound message. */
+        return 0;
+    }
 
     HIP_DEBUG("echo opaque data len=%d\n",
               hip_get_param_contents_len(echo_request));
