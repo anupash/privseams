@@ -1036,6 +1036,14 @@ out_err:
     return err;
 }
 
+/** compose a user-message to add a new hit->ip<-lsi mapping
+ *
+ * @param msg    the target buffer where the message for the HIP daemon is
+ *               written to
+ * @param opt    the command line arguments after the action and type.
+ * @param optc   the number of elements in array @c opt.
+ * @return 0 on success, -1 otherwise
+ */
 static int hip_conf_add_id_to_ip_map(struct hip_common *const msg,
                                      const char *opt[],
                                      const int optc)
