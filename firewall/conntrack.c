@@ -755,14 +755,16 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
 static void remove_esp_tuples(struct tuple *const tuple)
 {
     struct slist *list = tuple->esp_tuples;
+    struct dlist *esp_link;
     while (list) {
         // remove esp_tuples from helper list
-        esp_list = remove_link_dlist(esp_list,
-                                     find_in_dlist(esp_list, list->data));
+        esp_link = find_in_dlist(esp_list, list->data);
+        esp_list = remove_link_dlist(esp_list, esp_link);
 
         tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
         free_esp_tuple(list->data);
         list->data = NULL;
+        free(esp_link);
         free(list);
         list = tuple->esp_tuples;
     }
