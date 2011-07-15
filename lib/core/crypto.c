@@ -567,8 +567,8 @@ int impl_ecdsa_verify(const unsigned char *const digest,
     /* build the signature structure */
     ecdsa_sig = ECDSA_SIG_new();
     HIP_IFEL(!ecdsa_sig, 1, "Failed to allocate ECDSA_SIG\n");
-    ecdsa_sig->r = BN_bin2bn(&signature[0], sig_size / 2, NULL);
-    ecdsa_sig->s = BN_bin2bn(&signature[sig_size / 2], sig_size / 2, NULL);
+    ecdsa_sig->r = BN_bin2bn(signature, sig_size / 2, NULL);
+    ecdsa_sig->s = BN_bin2bn(signature + sig_size / 2, sig_size / 2, NULL);
     err          = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
 
 out_err:
