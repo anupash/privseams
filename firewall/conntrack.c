@@ -777,10 +777,14 @@ static void remove_esp_tuples(struct tuple *const tuple)
 static void remove_tuple(struct tuple *const tuple)
 {
     if (tuple) {
+        struct dlist *tuple_link;
+
         // remove hip_tuple from helper list
-        hip_list = remove_link_dlist(hip_list,
-                                     find_in_dlist(hip_list, tuple->hip_tuple));
-        // now free hip_tuple and its members
+        tuple_link = find_in_dlist(hip_list, tuple->hip_tuple);
+        hip_list   = remove_link_dlist(hip_list,
+                                       find_in_dlist(hip_list, tuple->hip_tuple));
+        // now free hip_tuple list element, the hip_tuple itself and its members
+        free(tuple_link);
         free_hip_tuple(tuple->hip_tuple);
         tuple->hip_tuple = NULL;
 
