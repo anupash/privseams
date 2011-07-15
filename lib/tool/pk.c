@@ -93,29 +93,42 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     int     siglen = ECDSA_size(ecdsa);
     uint8_t signature[siglen];
-    int     err = 0, len;
+    int     len;
 
-    HIP_IFEL(!msg, -1, "NULL message\n");
-    HIP_IFEL(!priv_key, -1, "NULL signing key\n");
-
-    len = hip_get_msg_total_len(msg);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
-             -1, "Building of SHA1 digest failed\n");
-    HIP_IFEL(impl_ecdsa_sign(sha1_digest, ecdsa, signature),
-             -1, "Signing error\n");
-
-    if (hip_get_msg_type(msg) == HIP_R1) {
-        HIP_IFEL(hip_build_param_signature2_contents(
-                     msg, signature, siglen, HIP_SIG_ECDSA),
-                 -1, "Building of signature failed\n");
-    } else {
-        HIP_IFEL(hip_build_param_signature_contents(
-                     msg, signature, siglen, HIP_SIG_ECDSA),
-                 -1, "Building of signature failed\n");
+    if (!msg) {
+        HIP_ERROR("NULL message\n");
+        return -1;
+    }
+    if (!priv_key) {
+        HIP_ERROR("NULL signing key\n");
+        return -1;
     }
 
-out_err:
-    return err;
+    len = hip_get_msg_total_len(msg);
+    if (hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0) {
+        HIP_ERROR("Digest error.\n");
+        return -1;
+    }
+    if (impl_ecdsa_sign(sha1_digest, ecdsa, signature)) {
+        HIP_ERROR("Signing error\n");
+        return -1;
+    }
+
+    if (hip_get_msg_type(msg) == HIP_R1) {
+        if (hip_build_param_signature2_contents(
+                msg, signature, siglen, HIP_SIG_ECDSA)) {
+            HIP_ERROR("Building of signature failed\n");
+            return -1;
+        }
+    } else if (hip_build_param_signature_contents(msg,
+                                                  signature,
+                                                  siglen,
+                                                  HIP_SIG_ECDSA)) {
+        HIP_ERROR("Building of signature failed\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**

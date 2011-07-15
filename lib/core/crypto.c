@@ -1126,29 +1126,37 @@ out_err:
  */
 int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
 {
-    FILE *fp  = NULL;
-    int   err = 0;
+    FILE *fp = NULL;
 
-    HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
-    HIP_IFEL(!ecdsa, -1, "NULL destination key\n");
+    if (!filename) {
+        HIP_ERROR("NULL filename\n");
+        return -ENOENT;
+    }
+    if (!ecdsa) {
+        HIP_ERROR("NULL destination key\n");
+        return -1;
+    }
 
     *ecdsa = NULL;
 
     fp = fopen(filename, "rb");
-    HIP_IFEL(!fp, -ENOMEM,
-             "Could not open private key file %s for reading\n", filename);
-
-    *ecdsa = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
-    if ((err = fclose(fp))) {
-        HIP_ERROR("Error closing file\n");
-        goto out_err;
+    if (!fp) {
+        HIP_ERROR("Could not open private key file %s for reading\n", filename);
+        return -ENOMEM;
     }
 
-    HIP_IFEL(!EC_KEY_check_key(*ecdsa),
-             -1, "Error during loading of ecdsa key.\n");
+    *ecdsa = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
+    if (fclose(fp)) {
+        HIP_ERROR("Error closing file\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    if (!EC_KEY_check_key(*ecdsa)) {
+        HIP_ERROR("Error during loading of ecdsa key.\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**

@@ -266,12 +266,13 @@ static int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const
                                             struct in6_addr *const hit,
                                             const int hit_type)
 {
-    int                     err = 0;
     struct hip_ecdsa_keylen key_lens;
     struct hip_host_id      host_id_pub;
 
-    HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
-             -1, "Failed computing key sizes.\n");
+    if (hip_get_ecdsa_keylen(host_id, &key_lens)) {
+        HIP_ERROR("Failed computing key sizes.\n");
+        return -1;
+    }
 
     memcpy(&host_id_pub, host_id,
            sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
@@ -284,11 +285,12 @@ static int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const
 
     hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
-    HIP_IFEL(hip_host_id_to_hit(&host_id_pub, hit, hit_type),
-             -1, "Failed to convert HI to HIT.\n");
+    if (hip_host_id_to_hit(&host_id_pub, hit, hit_type)) {
+        HIP_ERROR("Failed to convert HI to HIT.\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -568,7 +570,6 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int i
 EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
                             const int is_priv)
 {
-    int                     err      = 0;
     int                     nid      = 0;
     EC_POINT               *pub_key  = NULL;
     EC_GROUP               *group    = NULL;
@@ -576,49 +577,63 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
     struct hip_ecdsa_keylen key_lens;
     EC_KEY                 *ret;
 
-    HIP_IFEL(!host_id, -1, "NULL host id\n");
+    if (!host_id) {
+        HIP_ERROR("NULL host id\n");
+        return NULL;
+    }
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
-    HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
-             -1, "Failed computing key sizes.\n");
+    if (hip_get_ecdsa_keylen(host_id, &key_lens)) {
+        HIP_ERROR("Failed computing key sizes.\n");
+        return NULL;
+    }
 
     /* Build public key structure from key rr */
-    HIP_IFEL(!(ret = EC_KEY_new()),
-             -1, "Failed to init new key. \n");
-
-    HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
-             -1, "Failed building the group.\n");
-
+    if (!(ret = EC_KEY_new())) {
+        HIP_ERROR("Failed to init new key. \n");
+        return NULL;
+    }
+    if (!(group = EC_GROUP_new_by_curve_name(nid))) {
+        HIP_ERROR("Failed building the group.\n");
+        return NULL;
+    }
     EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
 
-    HIP_IFEL(!(pub_key = EC_POINT_new(group)),
-             -1, "Failed to init public key (point).\n");
-
-    HIP_IFEL(!EC_KEY_set_group(ret, group),
-             -1, "Failed setting the group for key.\n");
-
-    HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key + HIP_CURVE_ID_LENGTH, key_lens.public, NULL),
-             -1, "Failed deserializing public key.\n");
-
-    HIP_IFEL(!EC_KEY_set_public_key(ret, pub_key),
-             -1, "Failed setting public key.\n");
+    if (!(pub_key = EC_POINT_new(group))) {
+        HIP_ERROR("Failed to init public key (point).\n");
+        return NULL;
+    }
+    if (!EC_KEY_set_group(ret, group)) {
+        HIP_ERROR("Failed setting the group for key.\n");
+        return NULL;
+    }
+    if (!EC_POINT_oct2point(group, pub_key, host_id->key + HIP_CURVE_ID_LENGTH, key_lens.public, NULL)) {
+        HIP_ERROR("Failed deserializing public key.\n");
+        return NULL;
+    }
+    if (!EC_KEY_set_public_key(ret, pub_key)) {
+        HIP_ERROR("Failed setting public key.\n");
+        return NULL;
+    }
 
     /* Build private key from key rr */
     if (is_priv) {
-        HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + HIP_CURVE_ID_LENGTH + key_lens.public, key_lens.private, priv_key)),
-                 -1, "Failed deserializing private key.\n");
-        HIP_IFEL(!EC_KEY_set_private_key(ret, priv_key),
-                 -1, "Failed setting private key.\n");
+        if (!(priv_key = BN_bin2bn(host_id->key + HIP_CURVE_ID_LENGTH + key_lens.public, key_lens.private, priv_key))) {
+            HIP_ERROR("Failed deserializing private key.\n");
+            return NULL;
+        }
+        if (!EC_KEY_set_private_key(ret, priv_key)) {
+            HIP_ERROR("Failed setting private key.\n");
+            return NULL;
+        }
     }
 
     /* Check the result before returning it */
-    HIP_IFEL(!EC_KEY_check_key(ret),
-             -1, "Key check failed. \n");
-
-out_err:
-    if (err) {
+    if (!EC_KEY_check_key(ret)) {
+        HIP_ERROR("Key check failed. \n");
         return NULL;
     }
+
     return ret;
 }
 
