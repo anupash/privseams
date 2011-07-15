@@ -371,9 +371,6 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
     case NIST_ECDSA_384:
         HIP_DEBUG("Using curve secp384r1 \n");
         return NID_secp384r1;
-    case brainpoolP160r1:
-        HIP_DEBUG("Curve brainpoolP160r1 is not supported, use NIST_ECDSA_160 instead.\n");
-        return -1;
     default:
         HIP_DEBUG("Curve not supported.\n");
         return -1;

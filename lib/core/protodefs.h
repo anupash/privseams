@@ -349,8 +349,7 @@ enum hip_cuve_id {
     UNSUPPORTED_CURVE,
     NIST_ECDSA_256,
     NIST_ECDSA_384,
-    brainpoolP160r1,
-    NIST_ECDSA_160   // substitute for brainpoolP160r1
+    NIST_ECDSA_160
 };
 
 #define HIP_DIGEST_MD5                1
