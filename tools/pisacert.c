@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
     int             err               = 0, days = 0;
     FILE           *f                 = NULL;
     char            certificate[1024] = "";
+    size_t          cert_len, cert_out;
 
     HIP_IFEL(argc != 3, -1, "Wrong number of arguments.\n");
 
@@ -134,7 +135,12 @@ int main(int argc, char *argv[])
                                 certificate, sizeof(certificate)) != 0,
              -1, "Could not create the certificate.\n");
 
-    fwrite(certificate, strlen(certificate), 1, f);
+    cert_len = strlen(certificate);
+    cert_out = fwrite(certificate, cert_len, 1, f);
+    if (cert_len != cert_out) {
+        HIP_ERROR("Failed to write certificate to file\n");
+        err = -1;
+    }
 
 out_err:
     if (err == -1) {
