@@ -681,7 +681,19 @@ static int insert_new_connection(const struct hip_data *const data,
     hip_list  = append_to_list(hip_list, connection->reply.hip_tuple);
     conn_list = append_to_slist(conn_list, connection);
 
+    return err;
+
 out_err:
+    if (connection) {
+        if (connection->original.hip_tuple) {
+            free(connection->original.hip_tuple->data);
+            free(connection->original.hip_tuple);
+        }
+        if (connection->reply.hip_tuple) {
+            free(connection->reply.hip_tuple);
+        }
+        free(connection);
+    }
     return err;
 }
 
