@@ -39,10 +39,10 @@
 #include "midauth_builder.h"
 
 void hip_set_param_challenge_request(struct hip_challenge_request *const request,
-                                        const uint8_t difficulty,
-                                        const uint8_t lifetime,
-                                        const uint8_t *const opaque,
-                                        const uint8_t opaque_len)
+                                     const uint8_t difficulty,
+                                     const uint8_t lifetime,
+                                     const uint8_t *const opaque,
+                                     const uint8_t opaque_len)
 {
     HIP_ASSERT(request);
     HIP_ASSERT(difficulty <= 8);
@@ -160,8 +160,24 @@ uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *req
 // TODO: Create new file for utility functions decoupled from hipd?
 //       Using a midauth_* namespace.
 //
-uint64_t hip_midauth_puzzle_seed(UNUSED const uint8_t opaque[],
-                                 UNUSED const uint8_t opaque_len)
+int hip_midauth_puzzle_seed(const uint8_t opaque[],
+                            const uint8_t opaque_len,
+                            uint8_t puzzle_value[PUZZLE_LENGTH])
 {
-    return 0xdeadc0deL; // TODO: compute RHASH of opaque
+    unsigned char sha_digest[SHA_DIGEST_LENGTH];
+
+    // the hashed opaque field is used as puzzle seed
+    if (hip_build_digest(HIP_DIGEST_SHA1,
+                         opaque,
+                         opaque_len,
+                         sha_digest)) {
+        HIP_ERROR("Building of SHA1 Random seed I failed\n");
+        return -1;
+    }
+
+    memcpy(puzzle_value,
+           &sha_digest[SHA_DIGEST_LENGTH - PUZZLE_LENGTH],
+           PUZZLE_LENGTH);
+
+    return 0;
 }

@@ -65,47 +65,34 @@ static int hip_handle_challenge_request_param(UNUSED const uint8_t packet_type,
                                               UNUSED const uint32_t ha_state,
                                               struct hip_packet_context *ctx)
 {
-    const struct hip_challenge_request *challenge_request = NULL;
-    unsigned char                       sha_digest[SHA_DIGEST_LENGTH];
-    struct puzzle_hash_input            tmp_puzzle;
-    int                                 opaque_length = 0;
-    int                                 err           = 0;
+    int                                 err     = 0;
+    const struct hip_challenge_request *request = NULL;
 
-    challenge_request = hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
+    request = hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
 
     // each on-path middlebox may add a challenge on its own
-    while (challenge_request) {
-        opaque_length = hip_get_param_contents_len(challenge_request) -
-                        2 * sizeof(uint8_t);
+    while (request) {
+        struct puzzle_hash_input tmp_puzzle;
+        const uint8_t            len = hip_challenge_request_opaque_len(request);
 
-        // the hashed opaque field is used as puzzle seed
-        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1,
-                                  challenge_request->opaque,
-                                  opaque_length,
-                                  sha_digest),
-                 -1, "Building of SHA1 Random seed I failed\n");
-
-        memcpy(tmp_puzzle.puzzle,
-               &sha_digest[SHA_DIGEST_LENGTH - PUZZLE_LENGTH],
-               PUZZLE_LENGTH);
+        HIP_IFEL(hip_midauth_puzzle_seed(request->opaque, len, tmp_puzzle.puzzle),
+                 -1, "failed to derive midauth puzzle\n");
         tmp_puzzle.initiator_hit = ctx->input_msg->hitr;
         tmp_puzzle.responder_hit = ctx->input_msg->hits;
 
-        HIP_IFEL(hip_solve_puzzle(&tmp_puzzle, challenge_request->K),
+        HIP_IFEL(hip_solve_puzzle(&tmp_puzzle, request->K),
                  -EINVAL, "Solving of middlebox challenge failed\n");
 
         HIP_IFEL(hip_build_param_challenge_response(ctx->output_msg,
-                                                    challenge_request,
-                                                    tmp_puzzle.solution) < 0,
+                                                    request, tmp_puzzle.solution) < 0,
                  -1,
                  "Error while creating solution_m reply parameter\n");
 
         // process next challenge parameter, if available
-        challenge_request = (const struct hip_challenge_request *)
-                            hip_get_next_param(ctx->input_msg,
-                                               (const struct hip_tlv_common *) challenge_request);
-
-        if (hip_get_param_type(challenge_request) != HIP_PARAM_CHALLENGE_REQUEST) {
+        request = (const struct hip_challenge_request *)
+                  hip_get_next_param(ctx->input_msg,
+                                     (const struct hip_tlv_common *) request);
+        if (hip_get_param_type(request) != HIP_PARAM_CHALLENGE_REQUEST) {
             break;
         }
     }

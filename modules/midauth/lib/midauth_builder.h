@@ -56,10 +56,10 @@ struct hip_challenge_request {
 
 struct hip_challenge_response {
     struct hip_tlv_common tlv;
-    uint8_t     K;
-    uint8_t     lifetime;
-    uint8_t     J[PUZZLE_LENGTH];
-    uint8_t     opaque[MAX_CHALLENGE_LENGTH];           /**< variable length */
+    uint8_t               K;
+    uint8_t               lifetime;
+    uint8_t               J[PUZZLE_LENGTH];
+    uint8_t               opaque[MAX_CHALLENGE_LENGTH]; /**< variable length */
 } __attribute__ ((packed));
 
 void hip_set_param_challenge_request(struct hip_challenge_request *request,
@@ -79,6 +79,8 @@ int hip_build_param_challenge_response(struct hip_common *msg,
 
 uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response);
 uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request);
-uint64_t hip_midauth_puzzle_seed(const uint8_t opaque[], uint8_t opaque_len);
+int hip_midauth_puzzle_seed(const uint8_t *const opaque,
+                            const uint8_t opaque_len,
+                            uint8_t *const puzzle_value);
 
 #endif /* MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H */
