@@ -61,11 +61,11 @@
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-static int hip_add_puzzle_solution_m(UNUSED const uint8_t packet_type,
-                                     UNUSED const uint32_t ha_state,
-                                     struct hip_packet_context *ctx)
+static int hip_handle_challenge_request_param(UNUSED const uint8_t packet_type,
+                                              UNUSED const uint32_t ha_state,
+                                              struct hip_packet_context *ctx)
 {
-    const struct hip_challenge_request *pz;
+    const struct hip_challenge_request *pz = NULL;
     struct puzzle_hash_input            tmp_puzzle;
     int                                 err = 0;
     uint8_t                             digest[HIP_AH_SHA_LEN];
@@ -103,39 +103,19 @@ out_err:
     return err;
 }
 
-static int hip_midauth_add_puzzle_solution_m_update(UNUSED const uint8_t packet_type,
-                                                    UNUSED const uint32_t ha_state,
-                                                    struct hip_packet_context *ctx)
+static int hip_add_host_id_param_update(UNUSED const uint8_t packet_type,
+                                        UNUSED const uint32_t ha_state,
+                                        struct hip_packet_context *ctx)
 {
-    enum update_types update_type = UNKNOWN_UPDATE_PACKET;
-    int               err         = 0;
+    const struct hip_challenge_request *challenge_request = NULL;
+    struct local_host_id               *host_id_entry     = NULL;
+    int                                 err               = 0;
 
-    update_type = hip_classify_update_type(ctx->input_msg);
+    challenge_request = hip_get_param(ctx->input_msg,
+                                      HIP_PARAM_CHALLENGE_REQUEST);
 
-    if (update_type == SECOND_UPDATE_PACKET ||
-        update_type == THIRD_UPDATE_PACKET) {
-        /* TODO: no caching is done for PUZZLE_M parameters. This may be
-         * a DOS attack vector. */
-        HIP_IFEL(hip_add_puzzle_solution_m(0, 0, ctx),
-                 -1, "Building of Challenge_Response failed\n");
-    }
-
-out_err:
-    return err;
-}
-
-static int hip_midauth_add_host_id_update(UNUSED const uint8_t packet_type,
-                                          UNUSED const uint32_t ha_state,
-                                          struct hip_packet_context *ctx)
-{
-    enum update_types     update_type   = UNKNOWN_UPDATE_PACKET;
-    struct local_host_id *host_id_entry = NULL;
-    int                   err           = 0;
-
-    update_type = hip_classify_update_type(ctx->input_msg);
-
-    if (update_type == SECOND_UPDATE_PACKET ||
-        update_type == THIRD_UPDATE_PACKET) {
+    // add HOST_ID to packets containing a CHALLENGE_RESPONSE
+    if (challenge_request) {
         HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
                                                                         &ctx->input_msg->hitr,
                                                                         HIP_ANY_ALGO,
