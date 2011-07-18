@@ -640,6 +640,7 @@ static void firewall_exit(void)
     hip_fw_uninit_esp_prot();
     hip_fw_uninit_esp_prot_conntrack();
     hip_fw_uninit_lsi_support();
+    hip_fw_uninit_conntrack();
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */

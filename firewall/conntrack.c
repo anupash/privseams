@@ -2250,3 +2250,21 @@ void hip_fw_conntrack_periodic_cleanup(void)
         last_check = now;
     }
 }
+
+/**
+ * Remove all connections with their associated HIP and ESP tuples that have been
+ * set up by connection tracking.
+ */
+void hip_fw_uninit_conntrack()
+{
+    struct slist      *iter_conn;
+    struct connection *conn;
+
+    iter_conn = conn_list;
+    while (iter_conn) {
+        conn      = iter_conn->data;
+        iter_conn = iter_conn->next;
+
+        remove_connection(conn);
+    }
+}

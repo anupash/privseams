@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -61,5 +61,6 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx);
 void hip_fw_manage_all_esp_tuples(const struct tuple *const tuple,
                                   const bool insert);
 void hip_fw_conntrack_periodic_cleanup(void);
+void hip_fw_uninit_conntrack(void);
 
 #endif /* HIP_FIREWALL_CONNTRACK_H */
