@@ -83,6 +83,7 @@ HIT or LSIs when corresponding entries are found in DNS or hosts files.
 rm -rf %{buildroot}
 
 make install-strip DESTDIR=%{buildroot}
+# Workaround for CentOS 5.6
 install -d %{buildroot}%{_datadir}/doc/hipl
 install -d %{buildroot}/etc/rc.d/init.d
 install -pm 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
