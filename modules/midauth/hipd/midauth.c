@@ -42,8 +42,8 @@
 #include "lib/core/modularization.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
+#include "modules/midauth/lib/midauth_builder.h"
 #include "modules/update/hipd/update.h"
-#include "midauth_builder.h"
 #include "midauth.h"
 
 

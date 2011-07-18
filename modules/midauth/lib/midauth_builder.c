@@ -29,14 +29,38 @@
  * authentication extension.
  *
  * @author Rene Hummen
+ * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 #include <string.h>
 
 #include "lib/core/ife.h"
-#include "midauth.h"
+#include "modules/midauth/hipd/midauth.h"
 #include "midauth_builder.h"
 
+void hip_set_param_challenge_request(struct hip_challenge_request *const request,
+                                        const uint8_t difficulty,
+                                        const uint8_t lifetime,
+                                        const uint8_t *const opaque,
+                                        const uint8_t opaque_len)
+{
+    HIP_ASSERT(request);
+    HIP_ASSERT(difficulty <= 8);
+    HIP_ASSERT(opaque);
+
+    static const size_t min_length = sizeof(*request)
+                                     - sizeof(request->tlv)
+                                     - sizeof(request->opaque);
+
+    /* note: the length cannot be calculated with calc_param_len() */
+    hip_set_param_contents_len(&request->tlv, min_length + opaque_len);
+    hip_set_param_type(&request->tlv, HIP_PARAM_CHALLENGE_REQUEST);
+
+    /* only the random_j_k is in host byte order */
+    request->K        = difficulty;
+    request->lifetime = lifetime;
+    memcpy(&request->opaque, opaque, opaque_len);
+}
 
 /**
  * Build and append a HIP challenge_request to the message.
@@ -61,23 +85,14 @@ int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t opaque_len)
 {
     struct hip_challenge_request request;
-    int                          err = 0;
 
-    /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &request,
-                               2 * sizeof(uint8_t) + opaque_len);
-    hip_set_param_type((struct hip_tlv_common *) &request,
-                       HIP_PARAM_CHALLENGE_REQUEST);
+    hip_set_param_challenge_request(&request, val_K, lifetime, opaque, opaque_len);
+    if (hip_build_param(msg, &request) != 0) {
+        HIP_ERROR("failed to build parameter\n");
+        return -1;
+    }
 
-    /* only the random_j_k is in host byte order */
-    request.K        = val_K;
-    request.lifetime = lifetime;
-    memcpy(&request.opaque, opaque, opaque_len);
-
-    HIP_IFEL(hip_build_param(msg, &request), -1, "failed to build parameter\n");
-
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -121,4 +136,32 @@ int hip_build_param_challenge_response(struct hip_common *msg,
 
 out_err:
     return err;
+}
+
+uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response)
+{
+    static const size_t min_len = sizeof(*response) -
+                                  sizeof(response->tlv) -
+                                  sizeof(response->opaque);
+
+    return hip_get_param_contents_len(&response->tlv) - min_len;
+}
+
+uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request)
+{
+    static const size_t min_len = sizeof(*request) -
+                                  sizeof(request->tlv) -
+                                  sizeof(request->opaque);
+
+    return hip_get_param_contents_len(&request->tlv) - min_len;
+}
+
+//
+// TODO: Create new file for utility functions decoupled from hipd?
+//       Using a midauth_* namespace.
+//
+uint64_t hip_midauth_puzzle_seed(UNUSED const uint8_t opaque[],
+                                 UNUSED const uint8_t opaque_len)
+{
+    return 0xdeadc0deL; // TODO: compute RHASH of opaque
 }

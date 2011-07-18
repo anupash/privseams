@@ -29,6 +29,7 @@
  * authentication extension.
  *
  * @author Rene Hummen
+ * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 #ifndef MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H
@@ -42,23 +43,30 @@
 
 #define MAX_CHALLENGE_LENGTH 256
 
+//
+// TODO: flexible arrays
+//
+
 struct hip_challenge_request {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint8_t     K;
-    uint8_t     lifetime;
-    uint8_t     opaque[MAX_CHALLENGE_LENGTH];           /**< variable length */
+    struct hip_tlv_common tlv;
+    uint8_t               K;
+    uint8_t               lifetime;
+    uint8_t               opaque[MAX_CHALLENGE_LENGTH];           /**< variable length */
 } __attribute__ ((packed));
 
 struct hip_challenge_response {
-    hip_tlv     type;
-    hip_tlv_len length;
+    struct hip_tlv_common tlv;
     uint8_t     K;
     uint8_t     lifetime;
     uint8_t     J[PUZZLE_LENGTH];
     uint8_t     opaque[MAX_CHALLENGE_LENGTH];           /**< variable length */
 } __attribute__ ((packed));
 
+void hip_set_param_challenge_request(struct hip_challenge_request *request,
+                                     uint8_t difficulty,
+                                     uint8_t lifetime,
+                                     const uint8_t *opaque,
+                                     uint8_t opaque_len);
 int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t val_K,
                                       uint8_t lifetime,
@@ -68,5 +76,9 @@ int hip_build_param_challenge_request(struct hip_common *msg,
 int hip_build_param_challenge_response(struct hip_common *msg,
                                        const struct hip_challenge_request *pz,
                                        uint8_t *const val_J);
+
+uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response);
+uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request);
+uint64_t hip_midauth_puzzle_seed(const uint8_t opaque[], uint8_t opaque_len);
 
 #endif /* MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H */
