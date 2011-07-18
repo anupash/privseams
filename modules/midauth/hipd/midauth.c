@@ -144,21 +144,30 @@ int hip_midauth_init(void)
                                           "HIP_PARAM_CHALLENGE_RESPONSE"),
              -1, "failed to register parameter type\n");
 
-    HIP_IFEL(hip_register_handle_function(HIP_R2,
-                                          HIP_STATE_R2_SENT,
-                                          &hip_add_puzzle_solution_m,
-                                          40000),
-             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1,
+                                          HIP_STATE_I1_SENT,
+                                          &hip_handle_challenge_request_param,
+                                          20550),
+             -1, "Error on registering MIDAUTH handle function.\n");
+
+    HIP_IFEL(hip_register_handle_function(HIP_I2,
+                                          HIP_STATE_I2_SENT,
+                                          &hip_handle_challenge_request_param,
+                                          20550),
+             -1, "Error on registering MIDAUTH handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_midauth_add_host_id_update,
-                                          40000),
-             -1, "Error on registering UPDATE handle function.\n");
+                                          &hip_handle_challenge_request_param,
+                                          20550),
+             -1, "Error on registering MIDAUTH handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_midauth_add_puzzle_solution_m_update,
-                                          40001),
-             -1, "Error on registering UPDATE handle function.\n");
+                                          &hip_add_host_id_param_update,
+                                          20750),
+             -1, "Error on registering MIDAUTH handle function.\n");
+
 
 out_err:
     return err;
