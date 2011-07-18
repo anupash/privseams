@@ -23,36 +23,25 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_LIB_CORE_SOLVE_H
-#define HIP_LIB_CORE_SOLVE_H
-
-#include <stdint.h>
-
-#include "protodefs.h"
-
-/* ensure that the max puzzle difficulty (here 28) is limited by sizeof(int),
- * as ffs() is working on int type.
+/**
+ * @file
+ * This file contains parameter handling functionality for the middlebox
+ * authentication extension.
  *
- * NOTE: ffsll() allowing for sizeof(long long int) is currently not available
- *       on OpenWRT. */
-static const uint8_t MAX_PUZZLE_DIFFICULTY = sizeof(int) * 8 >= 28 ? 28 : sizeof(int) * 8;
+ * @author Rene Hummen
+ */
 
-/** This data type represents the ordered input for the hash function used to
- *  solve a given puzzle challenge as defined in RFC 5201 - Appendix A
- *
- *  solution is correct iff:
- *  0 == V := Ltrunc( RHASH( I2.I | I2.hit_i | I2.hit_r | I2.J ), K ) */
-struct puzzle_hash_input {
-    uint8_t   puzzle[PUZZLE_LENGTH];
-    hip_hit_t initiator_hit;
-    hip_hit_t responder_hit;
-    uint8_t   solution[PUZZLE_LENGTH];
-} __attribute__((packed));
+#ifndef MIDAUTH_BUILDER_H_
+#define MIDAUTH_BUILDER_H_
 
-int hip_solve_puzzle(struct puzzle_hash_input *puzzle_input,
-                     const uint8_t difficulty);
+int hip_build_param_challenge_request(struct hip_common *msg,
+                                      uint8_t val_K,
+                                      uint8_t lifetime,
+                                      uint8_t *opaque,
+                                      uint8_t opaque_len);
 
-int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_input,
-                               const uint8_t difficulty);
+int hip_build_param_challenge_response(struct hip_common *msg,
+                                       const struct hip_challenge_request *pz,
+                                       uint64_t val_J);
 
-#endif /* HIP_LIB_CORE_SOLVE_H */
+#endif /* MIDAUTH_BUILDER_H_ */
