@@ -564,8 +564,8 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int i
  * @param host_id the host id
  * @param is_priv one if the host_id contains also the private key
  *                component or zero otherwise
- * @return The OpenSSL formatted ECDSA key corresponding to @c host_id.
- *         Caller is responsible of freeing.
+ * @return The OpenSSL formatted ECDSA key corresponding to @c host_id on success.
+ *         Caller is responsible of freeing. On failure, NULL is returned.
  */
 EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
                             const int is_priv)

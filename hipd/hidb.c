@@ -74,9 +74,9 @@ static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4
  *
  * @param host_id   the host identifier with its private key component
  * @param ret       the public host identifier with the private key removed
- *                  is written here
+ *                  is written here, the caller is responsible for deallocation
  *
- * @return An allocated hip_host_id structure. Caller must deallocate.
+ * @return          0 on success, -1 on error (if key-size computation failed)
  */
 static int hip_get_ecdsa_public_key(const struct hip_host_id_priv *const host_id,
                                     struct hip_host_id *const ret)

@@ -489,7 +489,7 @@ int impl_ecdsa_sign(const unsigned char *const digest,
     memset(signature, 0, sig_size);
 
     ecdsa_sig = ECDSA_do_sign(digest, HIP_AH_SHA_LEN, ecdsa);
-    HIP_IFEL(!ecdsa_sig, 1, "ECDSA_do_sign failed\n");
+    HIP_IFEL(!ecdsa_sig, -1, "ECDSA_do_sign failed\n");
 
     /* build signature from ECDSA_SIG struct */
     bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
@@ -792,7 +792,7 @@ err_out:
  *
  * @param nid openssl specific curve id, for the curve to be used with this key
  *
- * @return the created ECDSA structure, otherwise NULL.
+ * @return the created ECDSA structure on success, NULL otherwise
  *
  */
 EC_KEY *create_ecdsa_key(const int nid)
@@ -1030,7 +1030,7 @@ out_err:
  * @param filename  the filename base where the ECDSA key should be saved
  * @param ecdsa     the ECDSA key structure to be saved
  *
- * @return  0 if all files were saved successfully, or non-zero if an
+ * @return  0 if all files were saved successfully, or negative if an
  *          error occurred.
  */
 int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
@@ -1039,7 +1039,7 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     char  pubfilename[strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX)];
     FILE *fp = NULL;
 
-    HIP_IFEL(!filename, 1, "NULL filename\n");
+    HIP_IFEL(!filename, -1, "NULL filename\n");
     HIP_IFEL(!ecdsa, -1, "NULL key\n");
 
     // Test necessary to catch keys that have only been initialized with EC_KEY_new()
@@ -1050,13 +1050,13 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     ret = snprintf(pubfilename, sizeof(pubfilename), "%s%s",
                    filename,
                    DEFAULT_PUB_FILE_SUFFIX);
-    HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
+    HIP_IFEL(ret <= 0, -1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving ECDSA keys to: pub='%s' priv='%s'\n", pubfilename,
              filename);
 
     fp = fopen(pubfilename, "wb" /* mode */);
-    HIP_IFEL(!fp, 1,
+    HIP_IFEL(!fp, -1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
 
@@ -1072,7 +1072,7 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     }
 
     fp = fopen(filename, "wb" /* mode */);
-    HIP_IFEL(!fp, 1,
+    HIP_IFEL(!fp, -1,
              "Couldn't open private key file %s for writing\n", filename);
     files++;
 
