@@ -130,9 +130,9 @@ static void print_esp_addresses(const struct hip_ll *const addresses)
     HIP_DEBUG("ESP dst addr list:\n");
     while (node) {
         const struct esp_address *const addr = node->ptr;
-        HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
+        HIP_DEBUG_IN6ADDR("dst address: ", &addr->dst_addr);
         if (addr && addr->update_id != NULL) {
-            HIP_DEBUG("upd id: %d\n", *addr->update_id);
+            HIP_DEBUG("update id: %d\n", *addr->update_id);
         }
         node = node->next;
     }
@@ -159,7 +159,7 @@ static void print_tuple(const struct hip_tuple *hiptuple)
  */
 static void print_esp_tuple(const struct esp_tuple *esp_tuple)
 {
-    HIP_DEBUG("esp_tuple: spi:0x%lx new_spi:0x%lx spi_update_id:%0xlx tuple dir:%d\n",
+    HIP_DEBUG("esp_tuple: spi:0x%lx new_spi:0x%lx spi_update_id: %u tuple dir:%d\n",
               esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,
               esp_tuple->tuple->direction);
 
@@ -320,17 +320,14 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
 {
     const struct hip_ll_node *node = addresses->head;
 
-    HIP_DEBUG("get_esp_address\n");
+    HIP_DEBUG_IN6ADDR("Looking for entry with addr: ", addr);
 
     while (node) {
         const struct esp_address *const esp_addr = node->ptr;
-        HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
-
-        HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
-        HIP_DEBUG_HIT("222", addr);
+        HIP_DEBUG_IN6ADDR("dst addr: ", &esp_addr->dst_addr);
 
         if (IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr)) {
-            HIP_DEBUG("addr found\n");
+            HIP_DEBUG("matching entry found\n");
             /* cannot return esp_addr because
              * a) it is const but this function's return type is not
              * b) it is const for good reason: we do not intend to modify it
@@ -341,7 +338,7 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
         }
         node = node->next;
     }
-    HIP_DEBUG("get_esp_address: addr %s not found\n", addr_to_numeric(addr));
+    HIP_DEBUG("no matching entry found\n");
     return NULL;
 }
 
@@ -633,8 +630,6 @@ static void insert_new_connection(const struct hip_data *const data,
 {
     struct connection *connection = NULL;
 
-    HIP_DEBUG("insert_new_connection\n");
-
     connection = calloc(1, sizeof(struct connection));
 
     connection->state     = STATE_ESTABLISHED;
@@ -842,8 +837,6 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
     HIP_ASSERT(tuple);
     HIP_ASSERT(esp_info->new_spi == esp_info->old_spi);
 
-    HIP_DEBUG("new spi 0x%lx\n", esp_info->new_spi);
-
     const unsigned addresses_in_locator =
         (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
         sizeof(struct hip_locator_info_addr_item);
@@ -973,13 +966,10 @@ static int insert_connection_from_update(const struct hip_data *const data,
     connection->reply.hip_tuple->data->src_hi  = NULL;
     connection->reply.hip_tuple->data->verify  = NULL;
 
-
-
     //add tuples to list
     insert_esp_tuple(esp_tuple);
     hip_list = append_to_list(hip_list, connection->original.hip_tuple);
     hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
-    HIP_DEBUG("insert_connection_from_update \n");
 
     return err;
 
