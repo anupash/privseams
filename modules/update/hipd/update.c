@@ -389,15 +389,15 @@ static int hip_set_active_addresses(UNUSED const uint8_t packet_type,
 {
     const enum update_types update_type = hip_classify_update_type(ctx->input_msg);
 
-    // don't update IPsec SAs and SPs for 1st UPDATE packet
+    /* set local UDP port just in case the original communications
+     * changed from raw to UDP or vice versa */
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
+    /* always set UDP port of peer as his NAT IP/port mapping might have
+     * changed after moving behind another NAT. */
+    ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
+
     if (update_type == SECOND_UPDATE_PACKET ||
         update_type == THIRD_UPDATE_PACKET) {
-        /* set local UDP port just in case the original communications
-         * changed from raw to UDP or vice versa */
-        ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
-        /* @todo: a workaround for bug id 592200 */
-        ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
-
         ctx->hadb_entry->our_addr  = ctx->dst_addr;
         ctx->hadb_entry->peer_addr = ctx->src_addr;
     }
@@ -798,6 +798,11 @@ int hip_update_init(void)
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
+                                          &hip_set_active_addresses,
+                                          29999),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_R2_SENT,
                                           &hip_send_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
@@ -805,11 +810,6 @@ int hip_update_init(void)
                                           HIP_STATE_R2_SENT,
                                           &hip_update_ipsec_sa,
                                           30500),
-             -1, "Error on registering UPDATE handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_R2_SENT,
-                                          &hip_set_active_addresses,
-                                          31000),
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
@@ -879,6 +879,11 @@ int hip_update_init(void)
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
+                                          &hip_set_active_addresses,
+                                          29999),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
                                           &hip_send_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
@@ -886,11 +891,6 @@ int hip_update_init(void)
                                           HIP_STATE_ESTABLISHED,
                                           &hip_update_ipsec_sa,
                                           30500),
-             -1, "Error on registering UPDATE handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_ESTABLISHED,
-                                          &hip_set_active_addresses,
-                                          31000),
              -1, "Error on registering UPDATE handle function.\n");
 
     HIP_IFEL(hip_user_register_handle(HIP_MSG_MANUAL_UPDATE_PACKET,
