@@ -370,7 +370,6 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
                                  struct hip_packet_context *ctx)
 {
     int                                locator_addr_count   = 0;
-    int                                src_addr_included    = 0;
     union hip_locator_info_addr       *locator_info_addr    = NULL;
     struct hip_locator_info_addr_item *locator_address_item = NULL;
     struct update_state               *localstate           = NULL;
@@ -398,29 +397,24 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
 
         locator_address_item =  (struct hip_locator_info_addr_item *) (locator + 1);
 
+        HIP_DEBUG_IN6ADDR("Adding IP source address to locator set",
+                          &ctx->src_addr);
+
+        if (!hip_add_address_to_send_echo_request(localstate, ctx->src_addr)) {
+            HIP_ERROR("Adding source address to the container for update locators failed!\n");
+            return -1;
+        }
+
         for (int i = 0; i < locator_addr_count; i++) {
             locator_info_addr = hip_get_locator_item(locator_address_item, i);
             const struct in6_addr *const peer_addr = hip_get_locator_item_address(locator_info_addr);
 
-            if (!hip_add_address_to_send_echo_request(localstate, *peer_addr)) {
-                HIP_ERROR("Adding an address to the container for update locators failed!\n");
-                return -1;
-            }
-
-            HIP_DEBUG_IN6ADDR("Comparing", &ctx->src_addr);
-            HIP_DEBUG_IN6ADDR("to ", peer_addr);
-
-            if (ipv6_addr_cmp(&ctx->src_addr, peer_addr) == 0) {
-                src_addr_included = 1;
-            }
-        }
-
-        if (!src_addr_included) {
-            HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
-
-            if (!hip_add_address_to_send_echo_request(localstate, ctx->src_addr)) {
-                HIP_ERROR("Adding an address to the container for update locators failed!\n");
-                return -1;
+            if (ipv6_addr_cmp(&ctx->src_addr, peer_addr) != 0) {
+                HIP_DEBUG_IN6ADDR("adding locator", peer_addr);
+                if (!hip_add_address_to_send_echo_request(localstate, *peer_addr)) {
+                    HIP_ERROR("Adding an address to the container for update locators failed!\n");
+                    return -1;
+                }
             }
         }
 
