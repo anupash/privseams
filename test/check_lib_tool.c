@@ -27,7 +27,6 @@
  * @file
  * @brief Unit tests of lib/tool (see doc/HACKING on unit tests).
  * @author Christof Mroz <christof.mroz@rwth-aachen.de>
- * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
  */
 
 #include <stdlib.h>

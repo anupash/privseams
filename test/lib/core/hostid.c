@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
- */
-
 #include <check.h>
 #include <stdlib.h>
 #include <string.h>
