@@ -220,6 +220,10 @@ test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
                               test/lib/tool/checksum.c       \
                               test/lib/tool/pk.c
 
+
+include modules/midauth/Makefile.am
+
+
 ### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la

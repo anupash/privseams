@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mandatory: name, version -->
+<module
+    name="midauth"
+    version="0.0.1"
+    description="Middlebox authentication functionality for the hip daemon."
+    developer=""
+    bugaddress="hipl-users@freelists.org"
+    webpage="http://infrahip.hiit.fi/">
+
+    <requires>
+        <module name="update" minversion="0.0.1" />
+    </requires>
+
+    <!-- Mandatory: name, header_file, init_function -->
+    <application
+        name="hipd"
+        header_file="modules/midauth/hipd/midauth.h"
+        init_function="hip_midauth_init" />
+</module>
+
