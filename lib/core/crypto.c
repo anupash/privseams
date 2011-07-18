@@ -1035,18 +1035,32 @@ out_err:
  */
 int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
 {
-    int   err = 0, files = 0, ret;
-    char  pubfilename[strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX)];
-    FILE *fp = NULL;
+    int   err         = 0, files = 0, ret, pubfilename_len;
+    char *pubfilename = NULL;
+    FILE *fp          = NULL;
 
-    HIP_IFEL(!filename, -1, "NULL filename\n");
-    HIP_IFEL(!ecdsa, -1, "NULL key\n");
-
+    if (!filename) {
+        HIP_ERROR("NULL filename\n");
+        return -1;
+    }
+    if (!ecdsa) {
+        HIP_ERROR("NULL key\n");
+        return -1;
+    }
     // Test necessary to catch keys that have only been initialized with EC_KEY_new()
     // but not properly generated. Such keys cause segmentation faults when
     // being passed into EC_KEY_get0_group()
-    HIP_IFEL(!EC_KEY_check_key(ecdsa), -1, "Invalid key. \n");
+    if (!EC_KEY_check_key(ecdsa)) {
+        HIP_ERROR("Invalid key. \n");
+        return -1;
+    }
 
+    pubfilename_len = strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
+    pubfilename     = malloc(pubfilename_len);
+    if (!pubfilename) {
+        HIP_ERROR("malloc for pubfilename failed\n");
+        return -1;
+    }
     ret = snprintf(pubfilename, sizeof(pubfilename), "%s%s",
                    filename,
                    DEFAULT_PUB_FILE_SUFFIX);
@@ -1106,6 +1120,8 @@ out_err:
             break;
         }
     }
+
+    free(pubfilename);
 
     return err;
 }
