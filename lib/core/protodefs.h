@@ -779,25 +779,6 @@ struct hip_solution {
     uint8_t     J[PUZZLE_LENGTH];
 } __attribute__((packed));
 
-
-
-struct hip_challenge_request {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint8_t     K;
-    uint8_t     lifetime;
-    uint8_t     opaque[24];           /**< variable length */
-} __attribute__((packed));
-
-struct hip_challenge_response {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint8_t     K;
-    uint8_t     lifetime;
-    uint8_t     J[PUZZLE_LENGTH];
-    uint8_t     opaque[24];           /**< variable length */
-} __attribute__((packed));
-
 struct hip_dh_public_value {
     uint8_t  group_id;
     uint16_t pub_len;

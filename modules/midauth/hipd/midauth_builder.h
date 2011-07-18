@@ -40,6 +40,23 @@
 #include "lib/core/protodefs.h"
 
 
+struct hip_challenge_request {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     lifetime;
+    uint8_t     opaque[24];           /**< variable length */
+} __attribute__ ((packed));
+
+struct hip_challenge_response {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     lifetime;
+    uint8_t     J[PUZZLE_LENGTH];
+    uint8_t     opaque[24];           /**< variable length */
+} __attribute__ ((packed));
+
 int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t val_K,
                                       uint8_t lifetime,
