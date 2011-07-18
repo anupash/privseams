@@ -137,12 +137,6 @@ int hip_midauth_init(void)
 {
     int err = 0;
 
-    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_ECHO_REQUEST_M,
-                                          "HIP_PARAM_ECHO_REQUEST_M"),
-             -1, "failed to register parameter type\n");
-    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_ECHO_RESPONSE_M,
-                                          "HIP_PARAM_ECHO_RESPONSE_M"),
-             -1, "failed to register parameter type\n");
     HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_CHALLENGE_REQUEST,
                                           "HIP_PARAM_CHALLENGE_REQUEST"),
              -1, "failed to register parameter type\n");
