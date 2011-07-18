@@ -833,6 +833,9 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
         case HIP_HI_RSA:
             RSA_free(ha->peer_pub_key);
             break;
+        case HIP_HI_ECDSA:
+            EC_KEY_free(ha->peer_pub_key);
+            break;
         case HIP_HI_DSA:
             DSA_free(ha->peer_pub_key);
             break;
@@ -921,6 +924,10 @@ int hip_init_peer(struct hip_hadb_state *entry,
         entry->verify       = hip_dsa_verify;
         entry->peer_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
+    case HIP_HI_ECDSA:
+        entry->verify       = hip_ecdsa_verify;
+        entry->peer_pub_key = hip_key_rr_to_ecdsa((struct hip_host_id_priv *) entry->peer_pub, 0);
+        break;
     default:
         HIP_OUT_ERR(-1, "Unkown algorithm");
     }
@@ -950,11 +957,26 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
      * Note, that hip_get_host_id() allocates a new buffer and this buffer
      * must be freed in out_err if an error occurs. */
 
-    if (hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA,
-                                     &entry->our_pub, &entry->our_priv_key)) {
-        HIP_IFEL(hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
-                                              HIP_HI_DSA, &entry->our_pub, &entry->our_priv_key),
-                 -1, "Local host identity not found\n");
+    if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                      hit_our,
+                                      HIP_HI_RSA,
+                                      &entry->our_pub,
+                                      &entry->our_priv_key)) {
+        HIP_DEBUG("Found RSA host identity\n");
+    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                             hit_our,
+                                             HIP_HI_DSA,
+                                             &entry->our_pub,
+                                             &entry->our_priv_key)) {
+        HIP_DEBUG("Found DSA host identity\n");
+    } else if (!hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID,
+                                             hit_our,
+                                             HIP_HI_ECDSA,
+                                             &entry->our_pub,
+                                             &entry->our_priv_key)) {
+        HIP_DEBUG("Found ECDSA host identity\n");
+    } else {
+        HIP_OUT_ERR(-1, "Local host identity not found\n");
     }
 
     /* RFC 4034 obsoletes RFC 2535 and flags field differ */
@@ -970,6 +992,9 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
         break;
     case HIP_HI_RSA:
         entry->sign = hip_rsa_sign;
+        break;
+    case HIP_HI_ECDSA:
+        entry->sign = hip_ecdsa_sign;
         break;
     default:
         err = -1;

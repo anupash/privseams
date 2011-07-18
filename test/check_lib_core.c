@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -40,6 +40,8 @@ int main(void)
     SRunner *sr = srunner_create(lib_core_hit());
     srunner_add_suite(sr, lib_core_solve());
     srunner_add_suite(sr, lib_core_straddr());
+    srunner_add_suite(sr, lib_core_crypto());
+    srunner_add_suite(sr, lib_core_hostid());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);

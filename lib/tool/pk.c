@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <openssl/bn.h>
 #include <openssl/dsa.h>
+#include <openssl/ecdsa.h>
 #include <openssl/objects.h>
 #include <openssl/rsa.h>
 
@@ -77,6 +78,60 @@ out_err:
 }
 
 /**
+ * Sign a HIP control message with a private ECDSA key.
+ *
+ * @param priv_key the ECDSA private key of the local host
+ * @param msg The HIP control message to sign. The signature
+ *            is appended as a parameter to the message.
+ * @return zero on success and negative on error
+ * @note the order of parameters is significant so this function
+ *       must be called at the right time of building of the parameters
+ */
+int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
+{
+    EC_KEY *ecdsa = priv_key;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+    int     siglen = ECDSA_size(ecdsa);
+    uint8_t signature[siglen];
+    int     len;
+
+    if (!msg) {
+        HIP_ERROR("NULL message\n");
+        return -1;
+    }
+    if (!priv_key) {
+        HIP_ERROR("NULL signing key\n");
+        return -1;
+    }
+
+    len = hip_get_msg_total_len(msg);
+    if (hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0) {
+        HIP_ERROR("Digest error.\n");
+        return -1;
+    }
+    if (impl_ecdsa_sign(sha1_digest, ecdsa, signature)) {
+        HIP_ERROR("Signing error\n");
+        return -1;
+    }
+
+    if (hip_get_msg_type(msg) == HIP_R1) {
+        if (hip_build_param_signature2_contents(
+                msg, signature, siglen, HIP_SIG_ECDSA)) {
+            HIP_ERROR("Building of signature failed\n");
+            return -1;
+        }
+    } else if (hip_build_param_signature_contents(msg,
+                                                  signature,
+                                                  siglen,
+                                                  HIP_SIG_ECDSA)) {
+        HIP_ERROR("Building of signature failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
  * sign a HIP control message with a private DSA key
  *
  * @param priv_key the DSA private key of the local host
@@ -121,7 +176,7 @@ out_err:
  * @param peer_pub public key of the peer
  * @param msg a HIP control message containing a signature parameter to
  *            be verified
- * @param type HIP_HI_RSA or HIP_HI_DSA
+ * @param type HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
  * @return zero on success and non-zero on failure
  */
 static int verify(void *const peer_pub, struct hip_common *const msg, const int type)
@@ -172,6 +227,8 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
         /* RSA_verify returns 0 on failure */
         err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
                           sig->signature, RSA_size(peer_pub), peer_pub);
+    } else if (type == HIP_HI_ECDSA) {
+        err = impl_ecdsa_verify(sha1_digest, peer_pub, sig->signature);
     } else {
         err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
     }
@@ -202,6 +259,19 @@ out_err:
         hip_set_msg_total_len(msg, origlen);
     }
     return err;
+}
+
+/**
+ * Verify the ECDSA signature from a message.
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
+int hip_ecdsa_verify(void *const peer_pub, struct hip_common *const msg)
+{
+    return verify(peer_pub, msg, HIP_HI_ECDSA);
 }
 
 /**

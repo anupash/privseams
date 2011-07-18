@@ -696,6 +696,9 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
                 case HIP_HI_RSA:
                     RSA_free(hip_tuple->data->src_pub_key);
                     break;
+                case HIP_HI_ECDSA:
+                    EC_KEY_free(hip_tuple->data->src_pub_key);
+                    break;
                 case HIP_HI_DSA:
                     DSA_free(hip_tuple->data->src_pub_key);
                     break;
@@ -1137,6 +1140,10 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_rsa_verify;
         break;
+    case HIP_HI_ECDSA:
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
+        break;
     case HIP_HI_DSA:
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_dsa_verify;
@@ -1213,6 +1220,10 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         case HIP_HI_RSA:
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_rsa_verify;
+            break;
+        case HIP_HI_ECDSA:
+            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
+            tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
             break;
         case HIP_HI_DSA:
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);

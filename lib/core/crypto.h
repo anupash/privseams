@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,7 +31,10 @@
 #include <sys/types.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
+#include <openssl/ec.h>
 #include <openssl/dh.h>
+#include <openssl/pem.h>
+
 
 #include "debug.h"
 #include "ife.h"
@@ -56,10 +59,13 @@
 
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
+#define ECDSA_DEFAULT_CURVE        NID_X9_62_prime256v1
 
-#define DEFAULT_HOST_DSA_KEY_FILE_BASE HIPL_SYSCONFDIR "/hip_host_dsa_key"
-#define DEFAULT_HOST_RSA_KEY_FILE_BASE HIPL_SYSCONFDIR "/hip_host_rsa_key"
-#define DEFAULT_PUB_FILE_SUFFIX        ".pub"
+
+#define DEFAULT_HOST_DSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_dsa_key"
+#define DEFAULT_HOST_RSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_rsa_key"
+#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE    HIPL_SYSCONFDIR "/hip_host_ecdsa_key"
+#define DEFAULT_PUB_FILE_SUFFIX             ".pub"
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
@@ -86,12 +92,25 @@ DH *hip_generate_dh_key(const int group_id);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 DSA *create_dsa_key(const int bits);
 RSA *create_rsa_key(const int bits);
+EC_KEY *create_ecdsa_key(const int nid);
 int save_dsa_private_key(const char *const filenamebase, DSA *const dsa);
 int save_rsa_private_key(const char *const filenamebase, RSA *const rsa);
+int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa);
 int load_dsa_private_key(const char *const filenamebase, DSA **const dsa);
 int load_rsa_private_key(const char *const filename, RSA **const rsa);
-int impl_dsa_sign(const unsigned char *const digest, DSA *const dsa, unsigned char *const signature);
-int impl_dsa_verify(const unsigned char *const digest, DSA *const dsa, const unsigned char *const signature);
+int load_ecdsa_private_key(const char *const filename, EC_KEY **const ec);
+int impl_dsa_sign(const unsigned char *const digest,
+                  DSA *const dsa,
+                  unsigned char *const signature);
+int impl_dsa_verify(const unsigned char *const digest,
+                    DSA *const dsa,
+                    const unsigned char *const signature);
+int impl_ecdsa_sign(const unsigned char *const digest,
+                    EC_KEY *const ecdsa,
+                    unsigned char *const signature);
+int impl_ecdsa_verify(const unsigned char *const digest,
+                      EC_KEY *const ecdsa,
+                      const unsigned char *const signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          uint8_t *enc_key, int direction);

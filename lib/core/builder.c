@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -1362,7 +1362,7 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
     {
         uint8_t algo =
             hip_get_host_id_algo((const struct hip_host_id *) param);
-        if (algo != HIP_HI_DSA && algo != HIP_HI_RSA) {
+        if (algo != HIP_HI_DSA && algo != HIP_HI_RSA && algo != HIP_HI_ECDSA) {
             err = -EPROTONOSUPPORT;
             HIP_ERROR("Host id algo %d not supported\n", algo);
         }
@@ -3674,6 +3674,57 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
 }
 
 /**
+ * Convert an EC structure from OpenSSL into an endpoint_hip structure
+ * used internally by the implementation.
+ *
+ * @param ecdsa             the EC key to be converted
+ * @param endpoint          An output argument. This function allocates and
+ *                          stores the result of the conversion here. On success
+ *                          the caller is responsible for deallocation. On error
+ *                          endpoint is set to NULL.
+ * @param endpoint_flags    flags for the endpoint
+ * @param hostname          host name for the EC key
+ * @return                  zero on success and negative on failure
+ */
+int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
+                          struct endpoint_hip **const endpoint,
+                          const se_hip_flags endpoint_flags,
+                          const char *const hostname)
+{
+    int                 err          = 0;
+    unsigned char      *ecdsa_key_rr = NULL;
+    int                 ecdsa_key_rr_len;
+    struct endpoint_hip endpoint_hdr;
+
+    ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
+    HIP_IFEL(ecdsa_key_rr_len <= 0,
+             -ENOMEM, "ecdsa_key_rr_len <= 0\n");
+
+    hip_build_endpoint_hdr(&endpoint_hdr,
+                           hostname,
+                           endpoint_flags,
+                           HIP_HI_ECDSA,
+                           ecdsa_key_rr_len);
+
+    HIP_IFEL(!(*endpoint = calloc(1, endpoint_hdr.length)),
+             -ENOMEM, "Could not allocate memory for hip endpoint \n");
+
+    hip_build_endpoint(*endpoint,
+                       &endpoint_hdr,
+                       hostname,
+                       ecdsa_key_rr);
+
+    free(ecdsa_key_rr);
+    return 0;
+
+out_err:
+    free(ecdsa_key_rr);
+    free(*endpoint);
+    *endpoint = NULL;
+    return err;
+}
+
+/**
  * Convert a DSA structure from OpenSSL into an endpoint_hip structure
  * used internally by the implementation.
  *
@@ -3767,11 +3818,11 @@ out_err:
 /**
  * Translate a host id into a HIT
  *
- * @param any_key a pointer to DSA or RSA key in OpenSSL format
+ * @param any_key a pointer to DSA, RSA or ECDSA key in OpenSSL format
  * @param hit the resulting HIT will be stored here
  * @param is_public 0 if the host id constains the private key
  *                  or 1 otherwise
- * @param type HIP_HI_RSA or HIP_HI_DSA
+ * @param type the type of the host identity, HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
  * @return zero on success and negative on failure
  */
 int hip_any_key_to_hit(const void *const any_key,
@@ -3786,6 +3837,7 @@ int hip_any_key_to_hit(const void *const any_key,
     struct hip_host_id      *host_id_pub = NULL;
     const RSA *const         rsa_key     = any_key;
     const DSA *const         dsa_key     = any_key;
+    const EC_KEY *const      ecdsa_key   = any_key;
 
     HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
              "gethostname failed\n");
@@ -3793,6 +3845,10 @@ int hip_any_key_to_hit(const void *const any_key,
     switch (type) {
     case HIP_HI_DSA:
         HIP_IFEL((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0, -1,
+                 "key_rr_len\n");
+        break;
+    case HIP_HI_ECDSA:
+        HIP_IFEL(((key_rr_len = ecdsa_to_key_rr(ecdsa_key, &key_rr)) <= 0), -1,
                  "key_rr_len\n");
         break;
     case HIP_HI_RSA:
@@ -3825,7 +3881,7 @@ int hip_any_key_to_hit(const void *const any_key,
 
     HIP_DEBUG_HIT("hit", hit);
     HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
-              (type == HIP_HI_DSA ? "dsa" : "rsa"));
+              (type == HIP_HI_ECDSA ? "ecdsa" : "rsa/dsa"));
 
 out_err:
     free(key_rr);

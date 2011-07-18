@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -38,6 +38,7 @@
 #include <netinet/in.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/ec.h>
 
 #include "config.h"
 #include "certtools.h"
@@ -236,6 +237,10 @@ int dsa_to_hip_endpoint(const DSA *const dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags endpoint_flags,
                         const char *const hostname);
+int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
+                          struct endpoint_hip **const endpoint,
+                          const se_hip_flags endpoint_flags,
+                          const char *const hostname);
 int hip_any_key_to_hit(const void *const any_key,
                        hip_hit_t *const hit,
                        const int is_public,

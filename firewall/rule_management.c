@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -80,9 +80,10 @@
 #define FORWARD_STR "FORWARD"
 #define NEW_STR "NEW"
 #define ESTABLISHED_STR "ESTABLISHED"
-/* filename needs to contain either to be valid HI file */
+/* filename needs to contain one of these to be valid HI file */
 #define RSA_FILE "_rsa_"
 #define DSA_FILE "_dsa_"
+#define ECDSA_FILE "_ecdsa_"
 
 #define MAX_LINE_LENGTH 512
 
@@ -446,6 +447,41 @@ out_err:
 }
 
 /**
+ * Load an ECDSA public key from a file and convert it into a hip_host_id.
+ *
+ * @param fp    FILE object from where to load a PEM formatted ECDSA public key
+ * @param hi    the key is returned inside this host identity struct
+ *
+ * @return      0 on success, negative on error
+ */
+static int load_ecdsa_file(FILE *const fp, struct hip_host_id *const hi)
+{
+    int            err          = 0;
+    EC_KEY        *ecdsa        = NULL;
+    unsigned char *ecdsa_key_rr = NULL;
+    int            ecdsa_key_rr_len;
+
+    HIP_IFEL(!hi, -1, "Cannot write return value, because passed hi is NULL\n");
+
+    HIP_IFEL(!(ecdsa = PEM_read_EC_PUBKEY(fp, NULL, NULL, NULL)),
+             -1, "Reading ECDSA key failed (maybe key is not in PEM format?)\n");
+    HIP_IFEL(!(ecdsa_key_rr = malloc(sizeof(struct hip_host_id))),
+             -ENOMEM, "Could not allocate memory for ecdsa_key_rr\n");
+    HIP_IFEL((ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr)) < 0,
+             -1, "Serialization of ECDSA key failed \n");
+
+    hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
+    hip_build_param_host_id_only(hi, ecdsa_key_rr, NULL);
+
+    return 0;
+
+out_err:
+    EC_KEY_free(ecdsa);
+    free(ecdsa_key_rr);
+    return err;
+}
+
+/**
  * load a public key from a file and convert it to a hip_host_id structure
  *
  * @param token the file where the DSA or RSA public key is located in PEM format
@@ -472,6 +508,8 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
         algo = HIP_HI_RSA;
     } else if (strstr(token, DSA_FILE)) {
         algo = HIP_HI_DSA;
+    } else if (strstr(token, ECDSA_FILE)) {
+        algo = HIP_HI_ECDSA;
     } else {
         HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n");
         return NULL;
@@ -482,6 +520,9 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
     switch (algo) {
     case HIP_HI_RSA:
         HIP_IFEL(load_rsa_file(fp, hi),     -1, "Failed to load RSA key\n");
+        break;
+    case HIP_HI_ECDSA:
+        HIP_IFEL(load_ecdsa_file(fp, hi),   -1, "Failed to load ECDSA key\n")
         break;
     case HIP_HI_DSA:
         HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -465,11 +465,47 @@ out_err:
 }
 
 /**
- * Sign using DSA.
+ * Sign using ECDSA
  *
- * @param digest a digest of the message to sign
+ * @param digest the sha1-160 digest of the message to sign
+ * @param ecdsa the ECDSA key
+ * @param signature write the signature here (we will need ECDSA_size(signing_key) of memory);
+ *
+ * @return 0 on success and negative on error
+ */
+int impl_ecdsa_sign(const unsigned char *const digest,
+                    EC_KEY *const ecdsa,
+                    unsigned char *const signature)
+{
+    ECDSA_SIG *ecdsa_sig = NULL;
+    int        err       = 0, sig_size;
+
+    HIP_IFEL(!digest, -1, "NULL digest \n");
+    HIP_IFEL(!signature, -1, "NULL signature output destination \n");
+    HIP_IFEL(!EC_KEY_check_key(ecdsa),
+             -1, "Check of signing key failed. \n");
+
+    sig_size = ECDSA_size(ecdsa);
+    memset(signature, 0, sig_size);
+
+    ecdsa_sig = ECDSA_do_sign(digest, HIP_AH_SHA_LEN, ecdsa);
+    HIP_IFEL(!ecdsa_sig, -1, "ECDSA_do_sign failed\n");
+
+    /* build signature from ECDSA_SIG struct */
+    bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
+    bn2bin_safe(ecdsa_sig->s, signature + sig_size / 2, sig_size / 2);
+
+out_err:
+    ECDSA_SIG_free(ecdsa_sig);
+    return err;
+}
+
+/**
+ * Sign using DSA
+ *
+ * @param digest the sha1-160 digest of the message to sign
  * @param dsa the DSA key
- * @param signature write the signature here
+ * @param signature write the signature here (we need memory of size HIP_DSA_SIGNATURE_LEN)
  *
  * @return 0 on success and non-zero on error
  */
@@ -506,7 +542,42 @@ out_err:
 }
 
 /**
- * Verify a DSA signature.
+ * Verify an ECDSA signature
+ *
+ * @param digest a digest which was used to create the signature
+ * @param ecdsa the ECDSA key
+ * @param signature the signature to verify
+ *
+ * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
+ *         error (see ERR_get_error(3) for the actual error)
+ */
+int impl_ecdsa_verify(const unsigned char *const digest,
+                      EC_KEY *const ecdsa,
+                      const unsigned char *const signature)
+{
+    ECDSA_SIG *ecdsa_sig = NULL;
+    int        err       = 0, sig_size;
+
+    HIP_IFEL(!digest, -1, "NULL digest \n");
+    HIP_IFEL(!ecdsa, -1, "NULL key \n");
+    HIP_IFEL(!signature, -1, "NULL signature \n");
+
+    sig_size = ECDSA_size(ecdsa);
+
+    /* build the signature structure */
+    ecdsa_sig = ECDSA_SIG_new();
+    HIP_IFEL(!ecdsa_sig, 1, "Failed to allocate ECDSA_SIG\n");
+    ecdsa_sig->r = BN_bin2bn(signature, sig_size / 2, NULL);
+    ecdsa_sig->s = BN_bin2bn(signature + sig_size / 2, sig_size / 2, NULL);
+    err          = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
+
+out_err:
+    ECDSA_SIG_free(ecdsa_sig);
+    return err;
+}
+
+/**
+ * Verify a DSA signature
  *
  * @param digest a digest which was used to create the signature
  * @param dsa the DSA key
@@ -715,6 +786,45 @@ err_out:
 }
 
 /**
+ * Generate ECDSA parameters and a new key pair.
+ *
+ * The caller is responsible for freeing the allocated ECDSA key.
+ *
+ * @param nid openssl specific curve id, for the curve to be used with this key
+ *
+ * @return the created ECDSA structure on success, NULL otherwise
+ *
+ */
+EC_KEY *create_ecdsa_key(const int nid)
+{
+    int       err       = 0;
+    EC_KEY   *eckey     = NULL;
+    EC_GROUP *group     = NULL;
+    int       asn1_flag = OPENSSL_EC_NAMED_CURVE;
+
+    HIP_IFEL(!(eckey = EC_KEY_new()),
+             -1, "Could not init new key.\n");
+
+    HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
+             -1, "Could not create curve. No curve with NID: %i.\n", nid);
+
+    EC_GROUP_set_asn1_flag(group, asn1_flag);
+
+    HIP_IFEL(!EC_KEY_set_group(eckey, group),
+             -1, "Could not set group.\n");
+
+    HIP_IFEL(!EC_KEY_generate_key(eckey),
+             -1, "Could not generate EC key\n");
+
+    return eckey;
+
+out_err:
+    EC_KEY_free(eckey);
+    EC_GROUP_free(group);
+    return NULL;
+}
+
+/**
  * Save host DSA keys to disk.
  * @param filenamebase the filename base where DSA key should be saved
  * @param dsa the DSA key structure
@@ -856,7 +966,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 
     /* rewrite using PEM_write_PKCS8PrivateKey */
 
-    fp = fopen(pubfilename, "wb" /* mode */);
+    fp = fopen(pubfilename, "wb");
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
@@ -908,6 +1018,161 @@ out_err:
     free(pubfilename);
 
     return err;
+}
+
+/**
+ * Save the host's ECDSA keys to disk.
+ *
+ * The ECDSA key at *ecdsa is saved in PEM format: the public key is saved to file
+ * filename.pub, the private key to file filename. If any of the files cannot
+ * be written, all files are deleted.
+ *
+ * @param filename  the filename base where the ECDSA key should be saved
+ * @param ecdsa     the ECDSA key structure to be saved
+ *
+ * @return  0 if all files were saved successfully, or negative if an
+ *          error occurred.
+ */
+int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
+{
+    int   err         = 0, files = 0, ret, pubfilename_len;
+    char *pubfilename = NULL;
+    FILE *fp          = NULL;
+
+    if (!filename) {
+        HIP_ERROR("NULL filename\n");
+        return -1;
+    }
+    if (!ecdsa) {
+        HIP_ERROR("NULL key\n");
+        return -1;
+    }
+    // Test necessary to catch keys that have only been initialized with EC_KEY_new()
+    // but not properly generated. Such keys cause segmentation faults when
+    // being passed into EC_KEY_get0_group()
+    if (!EC_KEY_check_key(ecdsa)) {
+        HIP_ERROR("Invalid key. \n");
+        return -1;
+    }
+
+    pubfilename_len = strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
+    pubfilename     = malloc(pubfilename_len);
+    if (!pubfilename) {
+        HIP_ERROR("malloc for pubfilename failed\n");
+        return -1;
+    }
+    ret = snprintf(pubfilename, sizeof(pubfilename), "%s%s",
+                   filename,
+                   DEFAULT_PUB_FILE_SUFFIX);
+    HIP_IFEL(ret <= 0, -1, "Failed to create pubfilename\n");
+
+    HIP_INFO("Saving ECDSA keys to: pub='%s' priv='%s'\n", pubfilename,
+             filename);
+
+    fp = fopen(pubfilename, "wb" /* mode */);
+    HIP_IFEL(!fp, -1,
+             "Couldn't open public key file %s for writing\n", pubfilename);
+    files++;
+
+    HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
+             -1, "Could not save parameters of public key\n");
+
+    HIP_IFEL(!PEM_write_EC_PUBKEY(fp, ecdsa),
+             -1, "Could not write public EC Key to %s \n", filename);
+
+    if ((err = fclose(fp))) {
+        HIP_ERROR("Error closing file\n");
+        goto out_err;
+    }
+
+    fp = fopen(filename, "wb" /* mode */);
+    HIP_IFEL(!fp, -1,
+             "Couldn't open private key file %s for writing\n", filename);
+    files++;
+
+    HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
+             -1, "Could not save parameters of private key\n");
+
+    HIP_IFEL(!PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL, 0, NULL, NULL),
+             -1, "Could not write private EC Key to %s \n", filename);
+
+out_err:
+
+    if (err && fp) {
+        if (fclose(fp)) {
+            HIP_ERROR("Error closing file\n");
+        }
+    } else if ((err = fclose(fp))) {
+        HIP_ERROR("Error closing file %s\n", filename);
+    }
+
+    if (err) {
+        switch (files) {
+        case 2:
+            if (unlink(filename)) { /* add error check */
+                HIP_ERROR("Could not delete file %s\n", filename);
+            }
+        case 1:
+            if (unlink(pubfilename)) { /* add error check */
+                HIP_ERROR("Could not delete file %s\n", pubfilename);
+            }
+        default:
+            break;
+        }
+    }
+
+    free(pubfilename);
+
+    return err;
+}
+
+/**
+ * Load the host's private EC keys from disk.
+ *
+ * @param filename  the filename of the host EC key
+ * @param ecdsa     the openssl key structure is allocated at *ecdsa
+ *
+ * Loads EC private key from file filename. EC struct
+ * will be allocated dynamically and it is the responsibility
+ * of the caller to free it with EC_free.
+ *
+ * @return  On success *ecdsa contains the EC structure.
+ *          On failure *ecdsa contains NULL if the key could not be loaded
+ *          (not in PEM format or file not found, etc).
+ */
+int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
+{
+    FILE *fp = NULL;
+
+    if (!filename) {
+        HIP_ERROR("NULL filename\n");
+        return -ENOENT;
+    }
+    if (!ecdsa) {
+        HIP_ERROR("NULL destination key\n");
+        return -1;
+    }
+
+    *ecdsa = NULL;
+
+    fp = fopen(filename, "rb");
+    if (!fp) {
+        HIP_ERROR("Could not open private key file %s for reading\n", filename);
+        return -ENOMEM;
+    }
+
+    *ecdsa = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
+    if (fclose(fp)) {
+        HIP_ERROR("Error closing file\n");
+        return -1;
+    }
+
+    if (!EC_KEY_check_key(*ecdsa)) {
+        HIP_ERROR("Error during loading of ecdsa key.\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**

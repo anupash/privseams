@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -338,8 +338,19 @@
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
+#define HIP_HI_ECDSA                  7  // according to RFC5201-bis
+#define HIP_SIG_ECDSA                 7
 
 #define HIP_ANY_ALGO                  -1
+
+/* Elliptic curves */
+#define HIP_CURVE_ID_LENGTH           2
+enum hip_cuve_id {
+    UNSUPPORTED_CURVE,
+    NIST_ECDSA_256,
+    NIST_ECDSA_384,
+    NIST_ECDSA_160
+};
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2
@@ -591,7 +602,7 @@ struct hip_host_id_priv {
 struct hip_host_id_local {
     struct in6_addr hit;
     uint16_t        anonymous;        /**< Is this an anonymous HI */
-    uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA */
+    uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA or HIP_ECDSA*/
 } __attribute__ ((packed));
 
 

@@ -355,6 +355,9 @@ static int hip_recreate_r1s_for_entry_move(struct local_host_id *entry,
     case HIP_HI_DSA:
         signature_func = hip_dsa_sign;
         break;
+    case HIP_HI_ECDSA:
+        signature_func = hip_ecdsa_sign;
+        break;
     default:
         HIP_ERROR("Unkown algorithm");
         return -1;

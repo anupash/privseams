@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -283,6 +283,8 @@ static int hip_get_hits(struct hip_common *msg, const char *opt,
                     HIP_INFO(" RSA ");
                 } else if (data->lhi.algo == HIP_HI_DSA) {
                     HIP_INFO(" DSA ");
+                } else if (data->lhi.algo == HIP_HI_ECDSA) {
+                    HIP_INFO(" ECDSA ");
                 } else {
                     HIP_INFO(" Unknown algorithm (%d) ",
                              data->lhi.algo);
@@ -1204,7 +1206,7 @@ static int hip_conf_get_id_to_ip_map(struct hip_common *msg,
 static int hip_conf_handle_hi(struct hip_common *msg, int action,
                               const char *opt[], int optc, int send_only)
 {
-    int         err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
+    int         err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0, ecdsa_nid = ECDSA_DEFAULT_CURVE;
     int         dsa_key_bits = 0;
     const char *fmt          = NULL, *file = NULL;
 
@@ -1251,7 +1253,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
          * to fit in the message. */
 
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "dsa", NULL, 0, 0))) {
+                                                "dsa", NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1261,7 +1263,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                                "dsa", NULL, 0, 0))) {
+                                                "dsa", NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1271,7 +1273,27 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "rsa", NULL, 0, 0))) {
+                                                "ecdsa", NULL, 0, 0, 0))) {
+            return err;
+        }
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
+
+        hip_msg_init(msg);
+        if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+                                                "ecdsa", NULL, 0, 0, 0))) {
+            return err;
+        }
+        if (hip_send_recv_daemon_info(msg, send_only, 0)) {
+            HIP_ERROR("Sending msg failed.\n");
+            return -1;
+        }
+
+        hip_msg_init(msg);
+        if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
+                                                "rsa", NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1281,7 +1303,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                           "rsa", NULL, 0, 0);
+                                           "rsa", NULL, 0, 0, 0);
         return err;
     }
 
@@ -1314,10 +1336,8 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
         dsa_key_bits = DSA_KEY_DEFAULT_BITS;
     }
 
-    err = hip_serialize_host_id_action(msg, action, anon, use_default,
-                                       fmt, file, rsa_key_bits, dsa_key_bits);
-
-    return err;
+    return hip_serialize_host_id_action(msg, action, anon, use_default,
+                                        fmt, file, rsa_key_bits, dsa_key_bits, ecdsa_nid);
 }
 
 /**

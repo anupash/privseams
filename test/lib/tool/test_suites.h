@@ -29,5 +29,6 @@
 #include <check.h>
 
 Suite *lib_tool_checksum(void);
+Suite *lib_tool_pk(void);
 
 #endif /* HIP_TEST_LIB_TOOL_TEST_SUITES_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -150,6 +150,10 @@ int hip_cert_spki_sign(struct hip_common *msg)
                        (unsigned int *) &sig_len, rsa);
         HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
         break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
+        break;
     case HIP_HI_DSA:
         p_bin = malloc(BN_num_bytes(dsa->p) + 1);
         HIP_IFEL(!p_bin, -1, "Malloc for p_bin failed\n");
@@ -229,6 +233,10 @@ int hip_cert_spki_sign(struct hip_common *msg)
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))",
                 e_hex,
                 n_b64);
+        break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     case HIP_HI_DSA:
         /*
@@ -437,7 +445,6 @@ int hip_cert_spki_verify(struct hip_common *msg)
         algo = HIP_HI_RSA;
         goto algo_check_done;
     }
-    HIP_DEBUG((1 != 1), -1, "Unknown algorithm\n");
 
 algo_check_done:
     switch (algo) {
@@ -537,6 +544,10 @@ algo_check_done:
                  &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
         break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
+        break;
     default:
         HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
@@ -604,6 +615,10 @@ algo_check_done:
         /* DSA_do_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
+        break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     default:
         HIP_OUT_ERR(-1, "Unknown algorithm\n");
@@ -811,6 +826,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         HIP_IFEL(X509_set_pubkey(cert, pkey) != 1, -1,
                  "Failed to set public key of the certificate\n");
         break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
+        break;
     default:
         HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
@@ -896,6 +915,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         break;
     case HIP_HI_DSA:
         digest = EVP_dss1();
+        break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
         break;
     default:
         HIP_OUT_ERR(-1, "Unknown algorithm\n");
