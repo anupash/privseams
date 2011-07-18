@@ -1386,14 +1386,20 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
      * association will not, however, have the I2 destination HIT as
      * source, but one that is calculated using the Host Identity
      * that we have dug out. */
-    if (!ctx->hadb_entry) {
-        HIP_DEBUG("No HIP association found. Creating a new one.\n");
+    if (ctx->hadb_entry) {
+        HIP_DEBUG("Removing existing state and creating new one.\n");
 
-        HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state()),
-                 -ENOMEM,
-                 "Out of memory when allocating memory for a new HIP " \
-                 "association. Dropping the I2 packet.\n");
+        HIP_IFEL(hip_del_peer_info_entry(ctx->hadb_entry),
+                 -1, "Deleting peer info failed\n");
+    } else {
+        HIP_DEBUG("No HIP association found. Creating a new one.\n");
     }
+
+    HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state()),
+             -ENOMEM,
+             "Out of memory when allocating memory for a new HIP " \
+             "association. Dropping the I2 packet.\n");
+
     ipv6_addr_copy(&ctx->hadb_entry->hit_peer, &ctx->input_msg->hits);
     ipv6_addr_copy(&ctx->hadb_entry->our_addr, &ctx->dst_addr);
     HIP_DEBUG("Initializing the HIP association.\n");
