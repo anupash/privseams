@@ -31,9 +31,9 @@
  * @author Rene Hummen
  */
 
-#ifndef MIDAUTH_H_
-#define MIDAUTH_H_
+#ifndef MODULES_MIDAUTH_HIPD_MIDAUTH_H
+#define MODULES_MIDAUTH_HIPD_MIDAUTH_H
 
 int hip_midauth_init(void);
 
-#endif /* MIDAUTH_H_ */
+#endif /* MODULES_MIDAUTH_HIPD_MIDAUTH_H */

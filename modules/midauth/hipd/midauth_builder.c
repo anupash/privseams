@@ -31,6 +31,9 @@
  * @author Rene Hummen
  */
 
+#include <string.h>
+
+#include "lib/core/ife.h"
 #include "midauth_builder.h"
 
 
@@ -72,10 +75,9 @@ int hip_build_param_challenge_request(struct hip_common *msg,
     puzzle.lifetime = lifetime;
     memcpy(&puzzle.opaque, opaque, opaque_len);
 
-    err = hip_build_generic_param(msg,
-                                  &puzzle,
-                                  sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_direct(&puzzle));
+    HIP_IFEL(hip_build_param(msg, &puzzle), -1, "failed to build parameter\n");
+
+out_err:
     return err;
 }
 
@@ -95,7 +97,7 @@ int hip_build_param_challenge_request(struct hip_common *msg,
  */
 int hip_build_param_challenge_response(struct hip_common *msg,
                                        const struct hip_challenge_request *pz,
-                                       uint64_t val_J)
+                                       uint8_t val_J[PUZZLE_LENGTH])
 {
     struct hip_challenge_response cookie;
     int                           err = 0, opaque_len = 0;
@@ -107,15 +109,14 @@ int hip_build_param_challenge_response(struct hip_common *msg,
     /* Type 2 (in R1) or 3 (in I2) */
     hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
 
-    cookie.J        = hton64(val_J);
+    memcpy(cookie.J, val_J, PUZZLE_LENGTH);
     cookie.K        = pz->K;
-    cookie.lifetime = pz->K;
+    cookie.lifetime = pz->lifetime;
     opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
     memcpy(&cookie.opaque, pz->opaque, opaque_len);
 
-    err = hip_build_generic_param(msg,
-                                  &cookie,
-                                  sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_direct(&cookie));
+    HIP_IFEL(hip_build_param(msg, &cookie), -1, "failed to build parameter\n");
+
+out_err:
     return err;
 }

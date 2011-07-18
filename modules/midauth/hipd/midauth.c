@@ -31,7 +31,18 @@
  * @author Rene Hummen
  */
 
+#include <errno.h>
+#include <string.h>
+
+#include "hipd/hidb.h"
+#include "hipd/pkt_handling.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/solve.h"
+#include "modules/update/hipd/update.h"
+#include "midauth_builder.h"
 #include "midauth.h"
 
 
@@ -49,38 +60,42 @@
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-static int hip_add_puzzle_solution_m(struct hip_common *out, struct hip_common *in)
+static int hip_add_puzzle_solution_m(UNUSED const uint8_t packet_type,
+                                     UNUSED const uint32_t ha_state,
+                                     struct hip_packet_context *ctx)
 {
     const struct hip_challenge_request *pz;
-    struct hip_puzzle                   tmp;
-    uint64_t                            solution;
+    struct puzzle_hash_input            tmp_puzzle;
     int                                 err = 0;
-    uint8_t                             digist[HIP_AH_SHA_LEN];
+    uint8_t                             digest[HIP_AH_SHA_LEN];
 
-    pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
+    pz = hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
     while (pz) {
         if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST) {
             break;
         }
 
-        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0,
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digest) < 0,
                  -1, "Building of SHA1 Random seed I failed\n");
-        tmp.type      = pz->type;
-        tmp.length    = pz->length;
-        tmp.K         = pz->K;
-        tmp.lifetime  = pz->lifetime;
-        tmp.opaque[0] = tmp.opaque[1] = 0;
-        tmp.I         = *digist & 0x40; //truncate I to 8 byte length
 
-        HIP_IFEL((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0,
+        memcpy(tmp_puzzle.puzzle,
+               &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
+               PUZZLE_LENGTH);
+        tmp_puzzle.initiator_hit = ctx->hadb_entry->hit_our;
+        tmp_puzzle.responder_hit = ctx->hadb_entry->hit_peer;
+
+        HIP_IFEL(hip_solve_puzzle(&tmp_puzzle, pz->K),
                  -EINVAL,
                  "Solving of puzzle failed\n");
 
-        HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0,
+        HIP_IFEL(hip_build_param_challenge_response(ctx->output_msg,
+                                                    pz, tmp_puzzle.solution) < 0,
                  -1,
                  "Error while creating solution_m reply parameter\n");
+
         pz = (const struct hip_challenge_request *)
-             hip_get_next_param(in, (const struct hip_tlv_common *) pz);
+             hip_get_next_param(ctx->input_msg,
+                                (const struct hip_tlv_common *) pz);
     }
 
 out_err:
@@ -91,16 +106,17 @@ static int hip_midauth_add_puzzle_solution_m_update(UNUSED const uint8_t packet_
                                                     UNUSED const uint32_t ha_state,
                                                     struct hip_packet_context *ctx)
 {
-    enum update_types update_type = UNKNOWN_PACKET;
+    enum update_types update_type = UNKNOWN_UPDATE_PACKET;
     int               err         = 0;
 
     update_type = hip_classify_update_type(ctx->input_msg);
 
-    if (update_type == SECOND_PACKET || update_type == THIRD_PACKET) {
+    if (update_type == SECOND_UPDATE_PACKET ||
+        update_type == THIRD_UPDATE_PACKET) {
         /* TODO: no caching is done for PUZZLE_M parameters. This may be
          * a DOS attack vector. */
-        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
-                 "Building of Challenge_Response failed\n");
+        HIP_IFEL(hip_add_puzzle_solution_m(0, 0, ctx),
+                 -1, "Building of Challenge_Response failed\n");
     }
 
 out_err:
@@ -111,13 +127,14 @@ static int hip_midauth_add_host_id_update(UNUSED const uint8_t packet_type,
                                           UNUSED const uint32_t ha_state,
                                           struct hip_packet_context *ctx)
 {
-    enum update_types         update_type   = UNKNOWN_PACKET;
-    struct hip_host_id_entry *host_id_entry = NULL;
-    int                       err           = 0;
+    enum update_types     update_type   = UNKNOWN_UPDATE_PACKET;
+    struct local_host_id *host_id_entry = NULL;
+    int                   err           = 0;
 
     update_type = hip_classify_update_type(ctx->input_msg);
 
-    if (update_type == FIRST_PACKET || update_type == SECOND_PACKET) {
+    if (update_type == SECOND_UPDATE_PACKET ||
+        update_type == THIRD_UPDATE_PACKET) {
         HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
                                                                         &ctx->input_msg->hitr,
                                                                         HIP_ANY_ALGO,
@@ -125,7 +142,8 @@ static int hip_midauth_add_host_id_update(UNUSED const uint8_t packet_type,
                  -1,
                  "Unknown HIT\n");
 
-        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, host_id_entry->host_id),
+        HIP_IFEL(hip_build_param_host_id(ctx->output_msg,
+                                         &host_id_entry->host_id),
                  -1,
                  "Building of host id failed\n");
     }
@@ -145,11 +163,22 @@ int hip_midauth_init(void)
      *  HIP_PARAM_CHALLENGE_RESPONSE
      */
 
+    HIP_IFEL(hip_register_handle_function(HIP_R2,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_add_puzzle_solution_m,
+                                          40000),
+             -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
                                           &hip_midauth_add_host_id_update,
                                           40000),
              -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_midauth_add_puzzle_solution_m_update,
+                                          40001),
+             -1, "Error on registering UPDATE handle function.\n");
 
+out_err:
     return err;
 }

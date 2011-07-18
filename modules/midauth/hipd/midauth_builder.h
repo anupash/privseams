@@ -31,8 +31,14 @@
  * @author Rene Hummen
  */
 
-#ifndef MIDAUTH_BUILDER_H_
-#define MIDAUTH_BUILDER_H_
+#ifndef MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H
+#define MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H
+
+#include <inttypes.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/protodefs.h"
+
 
 int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t val_K,
@@ -42,6 +48,6 @@ int hip_build_param_challenge_request(struct hip_common *msg,
 
 int hip_build_param_challenge_response(struct hip_common *msg,
                                        const struct hip_challenge_request *pz,
-                                       uint64_t val_J);
+                                       uint8_t *const val_J);
 
-#endif /* MIDAUTH_BUILDER_H_ */
+#endif /* MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H */
