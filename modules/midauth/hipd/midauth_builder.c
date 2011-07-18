@@ -60,23 +60,21 @@ int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t *opaque,
                                       uint8_t opaque_len)
 {
-    struct hip_challenge_request puzzle;
+    struct hip_challenge_request request;
     int                          err = 0;
 
     /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &puzzle,
-                               sizeof(struct hip_challenge_request) -
-                               sizeof(struct hip_tlv_common));
-    /* Type 2 (in R1) or 3 (in I2) */
-    hip_set_param_type((struct hip_tlv_common *) &puzzle,
+    hip_set_param_contents_len((struct hip_tlv_common *) &request,
+                               2 * sizeof(uint8_t) + opaque_len);
+    hip_set_param_type((struct hip_tlv_common *) &request,
                        HIP_PARAM_CHALLENGE_REQUEST);
 
     /* only the random_j_k is in host byte order */
-    puzzle.K        = val_K;
-    puzzle.lifetime = lifetime;
-    memcpy(&puzzle.opaque, opaque, opaque_len);
+    request.K        = val_K;
+    request.lifetime = lifetime;
+    memcpy(&request.opaque, opaque, opaque_len);
 
-    HIP_IFEL(hip_build_param(msg, &puzzle), -1, "failed to build parameter\n");
+    HIP_IFEL(hip_build_param(msg, &request), -1, "failed to build parameter\n");
 
 out_err:
     return err;
@@ -92,31 +90,34 @@ out_err:
  *
  * @param msg the message where the solution is to be appended
  * @param pz values from the corresponding hip_challenge_request copied to the solution
- * @param val_J J value for the solution (in host byte order)
+ * @param solution value for the solution (in host byte order)
  *
  * @return zero for success, or non-zero on error
  */
 int hip_build_param_challenge_response(struct hip_common *msg,
-                                       const struct hip_challenge_request *pz,
+                                       const struct hip_challenge_request *request,
                                        uint8_t val_J[PUZZLE_LENGTH])
 {
-    struct hip_challenge_response cookie;
-    int                           err = 0, opaque_len = 0;
+    struct hip_challenge_response response;
+    int                           opaque_length = 0;
+    int                           err           = 0;
+
+    opaque_length = hip_get_param_contents_len(request) -
+                    2 * sizeof(uint8_t);
 
     /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &cookie,
-                               sizeof(struct hip_challenge_response) -
-                               sizeof(struct hip_tlv_common));
-    /* Type 2 (in R1) or 3 (in I2) */
-    hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
+    hip_set_param_contents_len((struct hip_tlv_common *) &response,
+                               3 * sizeof(uint8_t) + sizeof(uint64_t) +
+                               opaque_length);
+    hip_set_param_type((struct hip_tlv_common *) &response,
+                       HIP_PARAM_CHALLENGE_RESPONSE);
 
-    memcpy(cookie.J, val_J, PUZZLE_LENGTH);
-    cookie.K        = pz->K;
-    cookie.lifetime = pz->lifetime;
-    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
-    memcpy(&cookie.opaque, pz->opaque, opaque_len);
+    memcpy(response.J, val_J, PUZZLE_LENGTH);
+    response.K        = request->K;
+    response.lifetime = request->lifetime;
+    memcpy(&response.opaque, request->opaque, opaque_length);
 
-    HIP_IFEL(hip_build_param(msg, &cookie), -1, "failed to build parameter\n");
+    HIP_IFEL(hip_build_param(msg, &response), -1, "failed to build parameter\n");
 
 out_err:
     return err;
