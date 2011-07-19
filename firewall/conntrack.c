@@ -2268,14 +2268,12 @@ void hip_fw_conntrack_periodic_cleanup(void)
  */
 void hip_fw_uninit_conntrack()
 {
-    struct slist      *iter_conn;
-    struct connection *conn;
+    struct slist *iter_conn;
 
     iter_conn = conn_list;
     while (iter_conn) {
-        conn      = iter_conn->data;
         iter_conn = iter_conn->next;
 
-        remove_connection(conn);
+        remove_connection(iter_conn->data);
     }
 }
