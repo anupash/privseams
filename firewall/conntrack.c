@@ -795,8 +795,7 @@ static void remove_tuple(struct tuple *const tuple)
 
         // remove hip_tuple from helper list
         tuple_link = find_in_dlist(hip_list, tuple->hip_tuple);
-        hip_list   = remove_link_dlist(hip_list,
-                                       find_in_dlist(hip_list, tuple->hip_tuple));
+        hip_list   = remove_link_dlist(hip_list, tuple_link);
         // now free hip_tuple list element, the hip_tuple itself and its members
         free(tuple_link);
         free_hip_tuple(tuple->hip_tuple);
