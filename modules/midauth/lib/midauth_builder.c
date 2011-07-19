@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -38,6 +38,16 @@
 #include "modules/midauth/hipd/midauth.h"
 #include "midauth_builder.h"
 
+
+/**
+ * Set up CHALLENGE_REQUEST parameter from internal data structures
+ *
+ * @param request       CHALLENGE_REQUEST parameter to be filled
+ * @param difficulty    challenge difficultiy
+ * @param lifetime      lifetime of the challenge
+ * @param opaque        nonce of the challenge
+ * @param opaque_len    length of the nonce
+ */
 void hip_set_param_challenge_request(struct hip_challenge_request *const request,
                                      const uint8_t difficulty,
                                      const uint8_t lifetime,
@@ -63,18 +73,13 @@ void hip_set_param_challenge_request(struct hip_challenge_request *const request
 }
 
 /**
- * Build and append a HIP challenge_request to the message.
+ * Build and append a HIP CHALLENGE_REQUEST to the message.
  *
- * The puzzle mechanism assumes that every value is in network byte order
- * except for the hip_birthday_cookie.cv union, where the value is in
- * host byte order. This is an exception to the normal builder rules, where
- * input arguments are normally always in host byte order.
- *
- * @param msg the message where the puzzle_m is to be appended
- * @param val_K the K value for the puzzle_m
- * @param lifetime lifetime field of the puzzle_m
- * @param opaque the opaque data filed of the puzzle_m
- * @param opaque_len the length uf the opaque data field
+ * @param msg           the message where the CHALLENGE_REQUEST is appended
+ * @param val_K         the difficulty for the CHALLENGE_REQUEST
+ * @param lifetime      lifetime of the CHALLENGE_REQUEST
+ * @param opaque        the opaque data of the CHALLENGE_REQUEST
+ * @param opaque_len    the length of the opaque data
  *
  * @return zero for success, or non-zero on error
  */
@@ -96,16 +101,11 @@ int hip_build_param_challenge_request(struct hip_common *msg,
 }
 
 /**
- * Build and append a HIP solution into the message.
+ * Build and append a HIP CHALLENGE_RESPONSE into the message.
  *
- * The puzzle mechanism assumes that every value is in network byte order
- * except for the hip_birthday_cookie.cv union, where the value is in
- * host byte order. This is an exception to the normal builder rules, where
- * input arguments are normally always in host byte order.
- *
- * @param msg the message where the solution is to be appended
- * @param pz values from the corresponding hip_challenge_request copied to the solution
- * @param solution value for the solution (in host byte order)
+ * @param msg       the message where the CHALLENGE_RESPONSE is appended
+ * @param request   the corresponding CHALLENGE_REQUEST parameter
+ * @param val_J     value for the solution (in host byte order)
  *
  * @return zero for success, or non-zero on error
  */
@@ -138,6 +138,12 @@ out_err:
     return err;
 }
 
+/**
+ * Compute length of opaque field in CHALLENGE_RESPONSE parameter
+ *
+ * @param response  the CHALLENGE_RESPONSE parameter
+ * @return length of the opaque field
+ */
 uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response)
 {
     static const size_t min_len = sizeof(*response) -
@@ -147,6 +153,12 @@ uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *r
     return hip_get_param_contents_len(&response->tlv) - min_len;
 }
 
+/**
+ * Compute length of opaque field in CHALLENGE_REQUEST parameter
+ *
+ * @param request  the CHALLENGE_REQUEST parameter
+ * @return length of the opaque field
+ */
 uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request)
 {
     static const size_t min_len = sizeof(*request) -
@@ -156,10 +168,14 @@ uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *req
     return hip_get_param_contents_len(&request->tlv) - min_len;
 }
 
-//
-// TODO: Create new file for utility functions decoupled from hipd?
-//       Using a midauth_* namespace.
-//
+/**
+ * Convert opaque value in the CHALLENGE_REQUEST to seed value I of a HIP puzzle
+ *
+ * @param opaque            the opaque value in the CHALLENGE_REQUEST
+ * @param opaque_len        length of the opaque value
+ * @param[out] puzzle_value the generated puzzle value
+ * @return zero on success, -1 in case of an error
+ */
 int hip_midauth_puzzle_seed(const uint8_t opaque[],
                             const uint8_t opaque_len,
                             uint8_t puzzle_value[PUZZLE_LENGTH])
