@@ -60,9 +60,9 @@
  * @return zero challenge was processed correctly or no challenge was attached
  *         to the packet, negative value otherwise
  */
-static int hip_handle_challenge_request_param(UNUSED const uint8_t packet_type,
-                                              UNUSED const uint32_t ha_state,
-                                              struct hip_packet_context *ctx)
+static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
+                                          UNUSED const uint32_t ha_state,
+                                          struct hip_packet_context *ctx)
 {
     int                                 err     = 0;
     const struct hip_challenge_request *request = NULL;
@@ -112,9 +112,9 @@ out_err:
  *
  * @return zero on success, negative value otherwise
  */
-static int hip_add_host_id_param_update(UNUSED const uint8_t packet_type,
-                                        UNUSED const uint32_t ha_state,
-                                        struct hip_packet_context *ctx)
+static int add_host_id_param_update(UNUSED const uint8_t packet_type,
+                                    UNUSED const uint32_t ha_state,
+                                    struct hip_packet_context *ctx)
 {
     const struct hip_challenge_request *challenge_request = NULL;
     struct local_host_id               *host_id_entry     = NULL;
@@ -160,22 +160,22 @@ int hip_midauth_init(void)
 
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_I1_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           32500),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_I2_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           32500),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_CLOSING,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           32500),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1,
                                           HIP_STATE_CLOSED,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           32500),
              -1, "Error on registering MIDAUTH handle function.\n");
 
@@ -186,42 +186,42 @@ int hip_midauth_init(void)
     //
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_UNASSOCIATED,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_I1_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_I2_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_R2_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_CLOSING,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_CLOSED,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2,
                                           HIP_STATE_NONE,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           40322),
              -1, "Error on registering MIDAUTH handle function.\n");
 
@@ -232,23 +232,23 @@ int hip_midauth_init(void)
     //
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           20322),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_handle_challenge_request_param,
+                                          &handle_challenge_request_param,
                                           20322),
              -1, "Error on registering MIDAUTH handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
-                                          &hip_add_host_id_param_update,
+                                          &add_host_id_param_update,
                                           20750),
              -1, "Error on registering MIDAUTH handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_add_host_id_param_update,
+                                          &add_host_id_param_update,
                                           20750),
              -1, "Error on registering MIDAUTH handle function.\n");
 
