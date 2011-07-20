@@ -1,7 +1,4 @@
 *.ho
-*.la
-*.lo
-./compile
 .cproject
 .deps
 .dirstamp
@@ -16,13 +13,7 @@ aclocal.m4
 autom4te.cache/
 build-stamp
 compile
-config.cache
-config.guess
-config.h
-config.h.in
-config.log
-config.status
-config.sub
+config.*
 configure
 debian/changelog
 debian/files
@@ -47,10 +38,14 @@ firewall/hipfw
 hipd/hipd
 hipl-*.tar.gz
 install-sh
+lib/core/*.lo
+lib/core/libhipcore.la
+lib/tool/*.lo
 libtool
 ltmain.sh
 m4/*.m4
 missing
+modules/hipd_modules.h
 py-compile
 rpmbuild/
 stamp-h1
@@ -59,6 +54,7 @@ test/auth_performance
 test/certteststub
 test/check_firewall
 test/check_lib_core
+test/check_lib_tool
 test/dh_performance
 test/fw_port_bindings_performance
 test/hc_performance
@@ -67,6 +63,4 @@ tools/hipdnskeyparse/hipdnskeyparse
 tools/hipdnsproxy/hipdnsproxy
 tools/nsupdate.pl
 tools/pisacert
-modules/hipd_modules.h
 version.h
-test/check_lib_tool
