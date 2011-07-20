@@ -64,7 +64,6 @@ static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
                                           UNUSED const uint32_t ha_state,
                                           struct hip_packet_context *ctx)
 {
-    int                                 err     = 0;
     const struct hip_challenge_request *request = NULL;
 
     request = hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
@@ -77,26 +76,32 @@ static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
         struct puzzle_hash_input tmp_puzzle;
         const uint8_t            len = hip_challenge_request_opaque_len(request);
 
-        HIP_IFEL(hip_midauth_puzzle_seed(request->opaque, len, tmp_puzzle.puzzle),
-                 -1, "failed to derive midauth puzzle\n");
+        if (hip_midauth_puzzle_seed(request->opaque, len, tmp_puzzle.puzzle)) {
+            HIP_ERROR("failed to derive midauth puzzle\n");
+            return -1;
+        }
+
         tmp_puzzle.initiator_hit = ctx->input_msg->hitr;
         tmp_puzzle.responder_hit = ctx->input_msg->hits;
 
-        HIP_IFEL(hip_solve_puzzle(&tmp_puzzle, request->K),
-                 -EINVAL, "Solving of middlebox challenge failed\n");
+        if (hip_solve_puzzle(&tmp_puzzle, request->K)) {
+            HIP_ERROR("Solving of middlebox challenge failed\n");
+            return -EINVAL;
+        }
 
-        HIP_IFEL(hip_build_param_challenge_response(ctx->output_msg,
-                                                    request, tmp_puzzle.solution) < 0,
-                 -1,
-                 "Error while creating CHALLENGE_RESPONSE parameter\n");
+        if (hip_build_param_challenge_response(ctx->output_msg,
+                                               request,
+                                               tmp_puzzle.solution) < 0) {
+            HIP_ERROR("Error while creating CHALLENGE_RESPONSE parameter\n");
+            return -1;
+        }
 
         // process next challenge parameter, if available
         request = (const struct hip_challenge_request *)
                   hip_get_next_param(ctx->input_msg, &request->tlv);
     } while (request && hip_get_param_type(request) == HIP_PARAM_CHALLENGE_REQUEST);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -118,28 +123,27 @@ static int add_host_id_param_update(UNUSED const uint8_t packet_type,
 {
     const struct hip_challenge_request *challenge_request = NULL;
     struct local_host_id               *host_id_entry     = NULL;
-    int                                 err               = 0;
 
     challenge_request = hip_get_param(ctx->input_msg,
                                       HIP_PARAM_CHALLENGE_REQUEST);
 
     // add HOST_ID to packets containing a CHALLENGE_RESPONSE
     if (challenge_request) {
-        HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
-                                                                        &ctx->input_msg->hitr,
-                                                                        HIP_ANY_ALGO,
-                                                                        -1)),
-                 -1,
-                 "Unknown HIT\n");
+        if (!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                                   &ctx->input_msg->hitr,
+                                                                   HIP_ANY_ALGO,
+                                                                   -1))) {
+            HIP_ERROR("Unknown HIT\n");
+            return -1;
+        }
 
-        HIP_IFEL(hip_build_param_host_id(ctx->output_msg,
-                                         &host_id_entry->host_id),
-                 -1,
-                 "Building of host id failed\n");
+        if (hip_build_param_host_id(ctx->output_msg, &host_id_entry->host_id)) {
+            HIP_ERROR("Building of host id failed\n");
+            return -1;
+        }
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
