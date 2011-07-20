@@ -1193,7 +1193,7 @@ int hipd_init(const uint64_t flags)
         } else {
             HIP_DEBUG("state:  ENABLED\n");
             /* Check dependencies */
-            for (j = 0; j < hipd_modules[i].num_required_moduels; j++) {
+            for (j = 0; j < hipd_modules[i].num_required_modules; j++) {
                 HIP_IFEL(lmod_module_disabled(hipd_modules[i].required_modules_hipd[j]),
                          -1,
                          "The module <%s> is required by <%s>, but was disabled.\n",

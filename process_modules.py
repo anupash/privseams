@@ -220,7 +220,7 @@ def create_header_files(applications, module_info):
                 info_struct += str(max_required_modules)
                 info_struct += '\n\nstruct module_info {\n'
                 info_struct += '    const char *name;\n'
-                info_struct += '    const int   num_required_moduels;\n'
+                info_struct += '    const int   num_required_modules;\n'
                 info_struct += '    const char *required_modules_hipd['
                 info_struct += 'MAX_REQUIRED_MODULES];\n'
                 info_struct += '    int       (*init_function)(void);\n'
