@@ -57,8 +57,8 @@
  *             address, the ports and the corresponding entry from the host
  *             association database).
  *
- * @return zero challenge was processed correctly or no challenge was attached
- *         to the packet, negative value otherwise
+ * @return zero if the challenge was processed correctly or no challenge was
+ * attached to the packet, negative value otherwise
  */
 static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
                                           UNUSED const uint32_t ha_state,

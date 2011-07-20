@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -21,14 +21,6 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- */
-
-/**
- * @file
- * This file contains the implementation for the middlebox authentication
- * extension.
- *
- * @author Rene Hummen
  */
 
 #ifndef MODULES_MIDAUTH_HIPD_MIDAUTH_H
