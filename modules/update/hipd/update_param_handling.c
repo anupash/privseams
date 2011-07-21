@@ -286,7 +286,6 @@ int hip_handle_echo_request_sign_param(UNUSED const uint8_t packet_type,
                                        struct hip_packet_context *ctx)
 {
     const struct hip_echo_request *echo_request = NULL;
-    int                            err          = 0;
 
     if (!(echo_request = hip_get_param(ctx->input_msg,
                                        HIP_PARAM_ECHO_REQUEST_SIGN))) {
@@ -302,13 +301,14 @@ int hip_handle_echo_request_sign_param(UNUSED const uint8_t packet_type,
     HIP_HEXDUMP("ECHO_REQUEST_SIGN ",
                 (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
                 hip_get_param_contents_len(echo_request));
-    HIP_IFEL(hip_build_param_echo(ctx->output_msg,
-                                  (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_len(echo_request), 1, 0),
-             -1, "Building of ECHO_RESPONSE_SIGN failed\n");
+    if (hip_build_param_echo(ctx->output_msg,
+                             (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
+                             hip_get_param_contents_len(echo_request), 1, 0)) {
+        HIP_ERROR("Building of ECHO_RESPONSE_SIGN failed\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
