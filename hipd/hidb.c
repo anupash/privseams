@@ -274,7 +274,6 @@ static int hip_del_host_id(HIP_HASHTABLE *db, hip_hit_t hit)
 
     id = hip_get_hostid_entry_by_lhi_and_algo(db, &hit, HIP_ANY_ALGO, -1);
     if (id == NULL) {
-        HIP_WRITE_UNLOCK_DB(db);
         HIP_ERROR("hit not found\n");
         err = -ENOENT;
         return err;
@@ -321,8 +320,6 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
     struct local_host_id *tmp;
     int                   count;
 
-    HIP_WRITE_LOCK_DB(db);
-
     list_for_each_safe(curr, iter, db, count) {
         hip_hit_t hit;
 
@@ -333,8 +330,6 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
     }
 
     hip_ht_uninit(db);
-
-    HIP_WRITE_UNLOCK_DB(db);
 }
 
 /**
@@ -495,8 +490,6 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     struct local_host_id *old_entry;
     int                   (*signature_func)(void *key, struct hip_common *m);
 
-    HIP_WRITE_LOCK_DB(db);
-
     HIP_IFEL(!(id_entry = calloc(1, sizeof(struct local_host_id))),
              -ENOMEM, "No memory available for host id\n");
 
@@ -507,7 +500,6 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &hit,
                                                      HIP_ANY_ALGO, -1);
     if (old_entry != NULL) {
-        HIP_WRITE_UNLOCK_DB(db);
         HIP_ERROR("Trying to add duplicate local host ID\n");
         err = -EEXIST;
         goto out_err;
@@ -587,7 +579,6 @@ out_err:
         free(id_entry);
     }
 
-    HIP_WRITE_UNLOCK_DB(db);
     return err;
 }
 
@@ -712,8 +703,6 @@ static int hip_get_any_localhost_hit(struct in6_addr *target, int algo,
     struct local_host_id *entry;
     int                   err = 0;
 
-    HIP_READ_LOCK_DB(hip_local_hostid_db);
-
     entry = hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
                                                  NULL, algo, anon);
     if (!entry) {
@@ -725,7 +714,6 @@ static int hip_get_any_localhost_hit(struct in6_addr *target, int algo,
     err = 0;
 
 out:
-    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
     return err;
 }
 
@@ -765,8 +753,6 @@ int hip_for_each_hi(int (*func)(struct local_host_id *entry, void *opaq), void *
     struct local_host_id *tmp;
     int                   err = 0, c;
 
-    HIP_READ_LOCK_DB(hip_local_hostid_db);
-
     list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
         tmp = list_entry(curr);
@@ -779,8 +765,6 @@ int hip_for_each_hi(int (*func)(struct local_host_id *entry, void *opaq), void *
     }
 
 out_err:
-    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
-
     return err;
 }
 
@@ -859,8 +843,6 @@ int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
     int                   err   = 0, host_id_len;
     struct local_host_id *entry = NULL;
 
-    HIP_READ_LOCK_DB(db);
-
     entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
     HIP_IFE(!entry, -1);
 
@@ -875,7 +857,6 @@ int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
     HIP_IFE(!*key, -1);
 
 out_err:
-    HIP_READ_UNLOCK_DB(db);
     return err;
 }
 
