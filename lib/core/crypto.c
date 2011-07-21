@@ -797,31 +797,31 @@ err_out:
  */
 EC_KEY *create_ecdsa_key(const int nid)
 {
-    int       err       = 0;
+    EC_KEY   *err       = NULL;
     EC_KEY   *eckey     = NULL;
     EC_GROUP *group     = NULL;
     int       asn1_flag = OPENSSL_EC_NAMED_CURVE;
 
     HIP_IFEL(!(eckey = EC_KEY_new()),
-             -1, "Could not init new key.\n");
+             NULL, "Could not init new key.\n");
 
     HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
-             -1, "Could not create curve. No curve with NID: %i.\n", nid);
+             NULL, "Could not create curve. No curve with NID: %i.\n", nid);
 
     EC_GROUP_set_asn1_flag(group, asn1_flag);
 
     HIP_IFEL(!EC_KEY_set_group(eckey, group),
-             -1, "Could not set group.\n");
+             NULL, "Could not set group.\n");
 
     HIP_IFEL(!EC_KEY_generate_key(eckey),
-             -1, "Could not generate EC key\n");
+             NULL, "Could not generate EC key\n");
 
     return eckey;
 
 out_err:
     EC_KEY_free(eckey);
     EC_GROUP_free(group);
-    return NULL;
+    return err;
 }
 
 /**
