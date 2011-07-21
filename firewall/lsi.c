@@ -223,15 +223,15 @@ static int hip_reinject_packet(const struct in6_addr *src_hit,
         ip_hdr_size = iphdr->ip_hl * 4;
         protocol    = iphdr->ip_p;
         ttl         = iphdr->ip_ttl;
-        HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
-        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
+        HIP_DEBUG_LSI("Ipv4 address src ", &iphdr->ip_src);
+        HIP_DEBUG_LSI("Ipv4 address dst ", &iphdr->ip_dst);
     } else {
         const struct ip6_hdr *ip6_hdr = (const struct ip6_hdr *) m->payload;
         ip_hdr_size = sizeof(struct ip6_hdr);         //Fixed size
         protocol    = ip6_hdr->ip6_nxt;
         ttl         = ip6_hdr->ip6_hlim;
-        HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
-        HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
+        HIP_DEBUG_IN6ADDR("Orig packet src address: ", &ip6_hdr->ip6_src);
+        HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &ip6_hdr->ip6_dst);
         HIP_DEBUG_IN6ADDR("New packet src address:", src_hit);
         HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
     }

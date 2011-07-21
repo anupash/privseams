@@ -230,7 +230,7 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
              " HIP_LUPDATE. Dropping.\n");
 
     HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
-                                    &(ctx->hadb_entry)->hip_hmac_in),
+                                    &ctx->hadb_entry->hip_hmac_in),
              -1,
              "HMAC validation on UPDATE failed.\n");
 
@@ -283,12 +283,12 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
         // notify sadb about next anchor
         HIP_IFEL(hip_add_sa(&ctx->dst_addr,
                             &ctx->src_addr,
-                            &(ctx->hadb_entry)->hit_our,
-                            &(ctx->hadb_entry)->hit_peer,
+                            &ctx->hadb_entry->hit_our,
+                            &ctx->hadb_entry->hit_peer,
                             ctx->hadb_entry->spi_outbound_new,
                             ctx->hadb_entry->esp_transform,
-                            &(ctx->hadb_entry)->esp_out,
-                            &(ctx->hadb_entry)->auth_out,
+                            &ctx->hadb_entry->esp_out,
+                            &ctx->hadb_entry->auth_out,
                             HIP_SPI_DIRECTION_OUT,
                             ctx->hadb_entry),
                  -1,

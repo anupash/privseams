@@ -263,11 +263,11 @@ void hip_relay_set_status(enum hip_relay_status status)
  */
 static unsigned long hip_relht_hash(const struct hip_relrec *rec)
 {
-    if (rec == NULL || &(rec->hit_r) == NULL) {
+    if (rec == NULL || &rec->hit_r == NULL) {
         return 0;
     }
 
-    return hip_hash_func(&(rec->hit_r));
+    return hip_hash_func(&rec->hit_r);
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -331,7 +331,7 @@ int hip_relht_put(struct hip_relrec *rec)
      * delete the previous entry. If we do not do so, only the pointer in
      * the hashtable is replaced and the reference to the previous element
      * is lost resulting in a memory leak. */
-    memcpy(&(key.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
+    memcpy(&key.hit_r, &rec->hit_r, sizeof(rec->hit_r));
     match = hip_relht_get(rec);
 
     if (match != NULL) {
@@ -532,10 +532,10 @@ struct hip_relrec *hip_relrec_alloc(const enum hip_relrec_type type,
         return NULL;
     }
     rec->type = type;
-    memcpy(&(rec->hit_r), hit_r, sizeof(*hit_r));
-    memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
+    memcpy(&rec->hit_r, hit_r, sizeof(*hit_r));
+    memcpy(&rec->ip_r, ip_r, sizeof(*ip_r));
     rec->udp_port_r = port;
-    memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
+    memcpy(&rec->hmac_relay, hmac, sizeof(*hmac));
     hip_relrec_set_lifetime(rec, lifetime);
     rec->created = time(NULL);
 
@@ -997,7 +997,7 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
      * are no parameters whose type value is greater than RVS_HMAC or
      * RELAY_HMAC in the incoming I1/I2 packet. */
     HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
-                                  &(rec->hmac_relay),
+                                  &rec->hmac_relay,
                                   param_type),
              -1, "Building of RVS_HMAC or RELAY_HMAC failed.\n");
 
@@ -1047,7 +1047,7 @@ static int hip_relay_forward_response(const struct hip_common *r,
              "No memory to copy original I1\n");
 
     hip_build_network_hdr(r_to_be_relayed, type_hdr, 0,
-                          &(r->hits), &(r->hitr));
+                          &r->hits, &r->hitr);
 
     while ((current_param = hip_get_next_param(r, current_param)) != NULL) {
         HIP_DEBUG("Found parameter in R.\n");
@@ -1103,7 +1103,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
     HIP_DEBUG_HIT("Searching relay record on HIT:",
                   &ctx->input_msg->hits);
 
-    memcpy(&(dummy.hit_r), &ctx->input_msg->hits, sizeof(ctx->input_msg->hits));
+    memcpy(&dummy.hit_r, &ctx->input_msg->hits, sizeof(ctx->input_msg->hits));
     rec = hip_relht_get(&dummy);
 
     if (rec == NULL) {

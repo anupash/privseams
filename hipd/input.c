@@ -1135,8 +1135,8 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  &(ctx->hadb_entry)->hit_our,
-                                  &(ctx->hadb_entry)->hit_peer);
+                                  &ctx->hadb_entry->hit_our,
+                                  &ctx->hadb_entry->hit_peer);
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1191,7 +1191,7 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
 
     /* I1 may be opportunistic with zero dst HIT */
     if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr) &&
-        !ipv6_addr_any(&(ctx->input_msg)->hitr)) {
+        !ipv6_addr_any(&ctx->input_msg->hitr)) {
         HIP_DEBUG_HIT("Dst HIT does not belong to this host",
                       &ctx->input_msg->hitr);
         return -1;
@@ -1657,7 +1657,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     addr            = (struct sockaddr *) &ss_addr;
     addr->sa_family = AF_INET6;
 
-    memcpy(hip_cast_sa_addr(addr), &(ctx->hadb_entry)->our_addr,
+    memcpy(hip_cast_sa_addr(addr), &ctx->hadb_entry->our_addr,
            hip_sa_addr_len(addr));
     hip_add_address_to_list(addr, if_index, 0);
 
@@ -1879,10 +1879,8 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                 ipv6_addr_copy(&responder_hit, (const struct in6_addr *)
                                notification->data);
                 ipv6_addr_copy(&responder_ip, (const struct in6_addr *)
-                               &(notification->
-                                 data[sizeof(struct in6_addr)]));
-                memcpy(&port, &(notification->
-                                data[2 * sizeof(struct in6_addr)]),
+                               &notification->data[sizeof(struct in6_addr)]);
+                memcpy(&port, &notification->data[2 * sizeof(struct in6_addr)],
                        sizeof(in_port_t));
 
                 /* If port is zero (the responder is not behind

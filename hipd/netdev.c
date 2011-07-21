@@ -426,7 +426,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     if (addr->sa_family == AF_INET) {
         struct sockaddr_in6 temp = { 0 };
         temp.sin6_family = AF_INET6;
-        IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *) addr)->sin_addr),
+        IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) addr)->sin_addr,
                          &temp.sin6_addr);
         memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
     } else {
@@ -544,12 +544,12 @@ static int hip_netdev_find_if(struct sockaddr *addr)
         if (addr->sa_family == AF_INET6) {
             strncpy(fam_str, "AF_INET6", FAM_STR_MAX);
             inet_ntop(AF_INET6,
-                      &(((struct sockaddr_in6 *) addr)->sin6_addr),
+                      &((struct sockaddr_in6 *) addr)->sin6_addr,
                       ipv6_str, INET6_ADDRSTRLEN);
         } else if (addr->sa_family == AF_INET) {
             strncpy(fam_str, "AF_INET", FAM_STR_MAX);
             inet_ntop(AF_INET,
-                      &(((struct sockaddr_in *) addr)->sin_addr),
+                      &((struct sockaddr_in *) addr)->sin_addr,
                       ipv6_str, INET6_ADDRSTRLEN);
         } else {
             strncpy(fam_str, "not AF_INET or AF_INET6", FAM_STR_MAX);
@@ -571,10 +571,8 @@ static int hip_netdev_find_if(struct sockaddr *addr)
              ((memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                       hip_cast_sa_addr(addr),
                       hip_sa_addr_len(addr)) == 0))) ||
-            IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
-                            &(n->addr))->sin6_addr),
-                         &((struct sockaddr_in *)
-                           addr)->sin_addr)) {
+            IPV6_EQ_IPV4(&((struct sockaddr_in6 *) &n->addr)->sin6_addr,
+                         &((struct sockaddr_in *) addr)->sin_addr)) {
             HIP_DEBUG("Matching network device index is " \
                       "%d.\n", n->if_index);
             return n->if_index;
@@ -999,8 +997,8 @@ static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
         HIP_IFEL(entry->state == HIP_STATE_ESTABLISHED, 0,
                  "State established, not triggering bex\n");
 
-        src_lsi = &(entry->lsi_our);
-        dst_lsi = &(entry->lsi_peer);
+        src_lsi = &entry->lsi_our;
+        dst_lsi = &entry->lsi_peer;
     }
 
     err = hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
@@ -1350,7 +1348,7 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
 static int hip_remove_iface_hit_by_host_id(struct local_host_id *entry,
                                            UNUSED void *opaque)
 {
-    return hip_manage_iface_local_hit(&(entry->hit), false);
+    return hip_manage_iface_local_hit(&entry->hit, false);
 }
 
 /**

@@ -240,7 +240,7 @@ int hip_close_check_packet(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
              "Received NULL receiver HIT in CLOSE. Dropping\n");
 
     HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), 0), -1,
@@ -253,10 +253,10 @@ int hip_close_check_packet(UNUSED const uint8_t packet_type,
 
     /* verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_out),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &ctx->hadb_entry->hip_hmac_out),
                  -ENOENT, "HMAC validation on close failed.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_in),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &ctx->hadb_entry->hip_hmac_in),
                  -ENOENT, "HMAC validation on close failed.\n");
     }
 
@@ -300,8 +300,8 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
     hip_build_network_hdr(ctx->output_msg,
                           HIP_CLOSE_ACK,
                           HIP_PACKET_CTRL_NON,
-                          &(ctx->hadb_entry)->hit_our,
-                          &(ctx->hadb_entry)->hit_peer);
+                          &ctx->hadb_entry->hit_our,
+                          &ctx->hadb_entry->hit_peer);
 
     HIP_IFEL(hip_build_param_echo(ctx->output_msg, request + 1,
                                   echo_len, 1, 0), -1,
@@ -309,7 +309,7 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
 
     /************* HMAC ************/
     HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
-                                           &(ctx->hadb_entry)->hip_hmac_out),
+                                           &ctx->hadb_entry->hip_hmac_out),
              -1, "Building of HMAC failed.\n");
 
     /********** Signature **********/
@@ -344,7 +344,7 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
     int err = 0;
 
     HIP_IFEL(hip_send_pkt(NULL,
-                          &(ctx->hadb_entry)->peer_addr,
+                          &ctx->hadb_entry->peer_addr,
                           hip_get_local_nat_udp_port(),
                           ctx->hadb_entry->peer_udp_port,
                           ctx->output_msg,
@@ -361,13 +361,13 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
         struct hip_relrec dummy;
-        memcpy(&(dummy.hit_r), &(ctx->input_msg->hits),
+        memcpy(&dummy.hit_r, &ctx->input_msg->hits,
                sizeof(ctx->input_msg->hits));
         hip_relht_rec_free_doall(&dummy);
         /* Check that the element really got deleted. */
         if (hip_relht_get(&dummy) == NULL) {
             HIP_DEBUG_HIT("Deleted relay record for HIT",
-                          &(ctx->input_msg->hits));
+                          &ctx->input_msg->hits);
         }
     }
 #endif

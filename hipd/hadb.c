@@ -120,15 +120,15 @@ static unsigned long hip_ha_hash(const struct hip_hadb_state *ha)
     hip_hit_t hitpair[2];
     uint8_t   hash[HIP_AH_SHA_LEN];
 
-    if (ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL) {
+    if (ha == NULL || &ha->hit_our == NULL || &ha->hit_peer == NULL) {
         return 0;
     }
 
     /* The HIT fields of an host association struct cannot be assumed to be
      * alligned consecutively. Therefore, we must copy them to a temporary
      * array. */
-    memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-    memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+    memcpy(&hitpair[0], &ha->hit_our, sizeof(ha->hit_our));
+    memcpy(&hitpair[1], &ha->hit_peer, sizeof(ha->hit_peer));
 
     hip_build_digest(HIP_DIGEST_SHA1, hitpair, sizeof(hitpair),
                      hash);
@@ -511,7 +511,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         /* Check if exists an entry in the hadb with the
          * peer_hit given */
         aux = hip_hadb_try_to_find_by_peer_hit(peer_hit);
-        if (aux && &(aux->lsi_peer).s_addr != 0) {
+        if (aux && &aux->lsi_peer.s_addr != 0) {
             /* Exists: Assign its lsi to the new entry created */
             ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
         } else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {

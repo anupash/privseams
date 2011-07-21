@@ -272,9 +272,9 @@ void *hip_cast_sa_addr(struct sockaddr *const sa)
 
     switch (sa->sa_family) {
     case AF_INET:
-        return &(((struct sockaddr_in *) sa)->sin_addr);
+        return &((struct sockaddr_in *) sa)->sin_addr;
     case AF_INET6:
-        return &(((struct sockaddr_in6 *) sa)->sin6_addr);
+        return &((struct sockaddr_in6 *) sa)->sin6_addr;
     default:
         HIP_ERROR("unhandled type: %i, skipping cast\n", sa->sa_family);
         return NULL;
@@ -295,7 +295,7 @@ int hip_sockaddr_is_v6_mapped(const struct sockaddr *const sa)
     if (sa->sa_family != AF_INET6) {
         return 0;
     } else {
-        return IN6_IS_ADDR_V4MAPPED(&(((const struct sockaddr_in6 *const) sa)->sin6_addr));
+        return IN6_IS_ADDR_V4MAPPED(&((const struct sockaddr_in6 *const) sa)->sin6_addr);
     }
 }
 

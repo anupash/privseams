@@ -158,7 +158,7 @@ static void sig_chld(UNUSED int signo)
 
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
-    struct sockaddr     *tmp_sockaddr_ptr     = (struct sockaddr *) &(src->addr);
+    struct sockaddr     *tmp_sockaddr_ptr     = (struct sockaddr *) &src->addr;
     struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *)  tmp_sockaddr_ptr;
     struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) tmp_sockaddr_ptr;
 
@@ -170,11 +170,11 @@ static const char *netdev_address_to_str(struct netdev_address *src, char *dst, 
 
     switch (af) {
     case AF_INET:
-        inet_ntop_src = &(tmp_sockaddr_in_ptr->sin_addr);
+        inet_ntop_src = &tmp_sockaddr_in_ptr->sin_addr;
         break;
 
     case AF_INET6:
-        tmp_in6_addr_ptr = &(tmp_sockaddr_in6_ptr->sin6_addr);
+        tmp_in6_addr_ptr = &tmp_sockaddr_in6_ptr->sin6_addr;
         if (IN6_IS_ADDR_V4MAPPED(tmp_in6_addr_ptr)) {
             IPV6_TO_IPV4_MAP(tmp_in6_addr_ptr, &tmp_in_addr)
             af            = AF_INET;

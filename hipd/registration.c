@@ -436,7 +436,7 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
     struct hip_relrec dummy, *fetch_record = NULL, *new_record = NULL;
     uint8_t           granted_lifetime = 0;
 
-    memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+    memcpy(&dummy.hit_r, &entry->hit_peer, sizeof(entry->hit_peer));
 
     /* Loop through all registrations types in reg_types. This loop calls
      * the actual registration functions. */
@@ -496,10 +496,10 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
 
                 /* Allocate a new relay record. */
                 new_record = hip_relrec_alloc(type, granted_lifetime,
-                                              &(entry->hit_peer),
-                                              &(entry->peer_addr),
+                                              &entry->hit_peer,
+                                              &entry->peer_addr,
                                               entry->peer_udp_port,
-                                              &(entry->hip_hmac_in));
+                                              &entry->hip_hmac_in);
 
                 hip_relht_put(new_record);
 
@@ -591,7 +591,7 @@ static int hip_del_registration_server(struct hip_hadb_state *entry,
     int               err = 0, i = 0;
     struct hip_relrec dummy, *fetch_record = NULL;
 
-    memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+    memcpy(&dummy.hit_r, &entry->hit_peer, sizeof(entry->hit_peer));
 
     /* Loop through all registrations types in reg_types. This loop calls
      * the actual registration functions. */
