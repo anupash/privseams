@@ -40,39 +40,6 @@
 
 
 /**
- * Set up CHALLENGE_REQUEST parameter from internal data structures
- *
- * @param request       CHALLENGE_REQUEST parameter to be filled
- * @param difficulty    challenge difficultiy
- * @param lifetime      lifetime of the challenge
- * @param opaque        nonce of the challenge
- * @param opaque_len    length of the nonce
- */
-void hip_set_param_challenge_request(struct hip_challenge_request *const request,
-                                     const uint8_t difficulty,
-                                     const uint8_t lifetime,
-                                     const uint8_t *const opaque,
-                                     const uint8_t opaque_len)
-{
-    HIP_ASSERT(request);
-    HIP_ASSERT(difficulty <= 8);
-    HIP_ASSERT(opaque);
-
-    static const size_t min_length = sizeof(*request)
-                                     - sizeof(request->tlv)
-                                     - sizeof(request->opaque);
-
-    /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len(&request->tlv, min_length + opaque_len);
-    hip_set_param_type(&request->tlv, HIP_PARAM_CHALLENGE_REQUEST);
-
-    /* only the random_j_k is in host byte order */
-    request->K        = difficulty;
-    request->lifetime = lifetime;
-    memcpy(&request->opaque, opaque, opaque_len);
-}
-
-/**
  * Build and append a HIP CHALLENGE_REQUEST to the message.
  *
  * @param msg           the message where the CHALLENGE_REQUEST is appended
@@ -91,7 +58,22 @@ int hip_build_param_challenge_request(struct hip_common *msg,
 {
     struct hip_challenge_request request;
 
-    hip_set_param_challenge_request(&request, val_K, lifetime, opaque, opaque_len);
+    HIP_ASSERT(val_K <= 8);
+    HIP_ASSERT(opaque);
+
+    static const size_t min_length = sizeof(request)
+                                     - sizeof(request.tlv)
+                                     - sizeof(request.opaque);
+
+    /* note: the length cannot be calculated with calc_param_len() */
+    hip_set_param_contents_len(&request.tlv, min_length + opaque_len);
+    hip_set_param_type(&request.tlv, HIP_PARAM_CHALLENGE_REQUEST);
+
+    /* only the random_j_k is in host byte order */
+    request.K        = val_K;
+    request.lifetime = lifetime;
+    memcpy(&request.opaque, opaque, opaque_len);
+
     if (hip_build_param(msg, &request) != 0) {
         HIP_ERROR("failed to build parameter\n");
         return -1;
