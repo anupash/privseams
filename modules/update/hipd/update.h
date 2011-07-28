@@ -91,7 +91,7 @@ struct hip_locator {
     hip_tlv     type;
     hip_tlv_len length;
     /* fixed part ends */
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 struct hip_locator_info_addr_item {
     uint8_t         traffic_type;
@@ -100,7 +100,7 @@ struct hip_locator_info_addr_item {
     uint8_t         reserved; /**< last bit is P (preferred) */
     uint32_t        lifetime;
     struct in6_addr address;
-}  __attribute__ ((packed));
+}  __attribute__((packed));
 
 /**
  * it is the type 2 locater for UDP or other transport protocol later.
@@ -117,7 +117,7 @@ struct hip_locator_info_addr_item2 {
     uint32_t        priority;
     uint32_t        spi;
     struct in6_addr address;
-}  __attribute__ ((packed));
+}  __attribute__((packed));
 
 /**
  * it is a union of both type1 and type2 locator.
@@ -125,7 +125,7 @@ struct hip_locator_info_addr_item2 {
 union hip_locator_info_addr {
     struct hip_locator_info_addr_item  type1;
     struct hip_locator_info_addr_item2 type2;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 uint32_t hip_update_get_out_id(const struct update_state *const state);
 

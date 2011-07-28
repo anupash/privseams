@@ -47,7 +47,7 @@ struct puzzle_hash_input {
     hip_hit_t initiator_hit;
     hip_hit_t responder_hit;
     uint8_t   solution[PUZZLE_LENGTH];
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 int hip_solve_puzzle(struct puzzle_hash_input *puzzle_input,
                      const uint8_t difficulty);

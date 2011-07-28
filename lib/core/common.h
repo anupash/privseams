@@ -71,12 +71,12 @@
 struct hip_esp {
     uint32_t esp_spi;
     uint32_t esp_seq;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 struct hip_esp_tail {
     uint8_t esp_padlen;
     uint8_t esp_next;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /* maximum packet size of a packet to be sent on the wire */
 #define MAX_PACKET_SIZE         1500

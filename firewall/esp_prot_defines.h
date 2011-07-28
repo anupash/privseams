@@ -50,6 +50,6 @@
 struct esp_cumulative_item {
     uint32_t      seq; /* current sequence of the IPsec SA */
     unsigned char packet_hash[MAX_HASH_LENGTH];
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 #endif /* HIP_FIREWALL_ESP_PROT_DEFINES_H */
