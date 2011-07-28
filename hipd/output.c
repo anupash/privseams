@@ -1131,7 +1131,7 @@ int are_addresses_compatible(const struct in6_addr *src_addr,
     }
 
     return 1;
-};
+}
 
 /**
  * Cache a HIP packet for possible retransmission

@@ -1469,7 +1469,7 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha)
                   ha);
 
     return;
-};
+}
 
 /**
  * recreate the security policies and associations related to a HA
@@ -1534,4 +1534,4 @@ out_err:
     }
 
     return err;
-};
+}

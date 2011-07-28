@@ -2406,8 +2406,7 @@ static int (*action_handler[])(struct hip_common *,
                                int action,
                                const char *opt[],
                                int optc,
-                               int send_only) =
-{
+                               int send_only) = {
     NULL,                               /* reserved */
     hip_conf_handle_hi,                 /* 1: TYPE_HI */
     hip_conf_handle_map,                /* 2: TYPE_MAP */

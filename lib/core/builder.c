@@ -1786,7 +1786,7 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
                                   const struct hip_crypto_key *key)
 {
     return hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
-};
+}
 
 /**
  * calculate and create a HMAC2 parameter that includes also a host id

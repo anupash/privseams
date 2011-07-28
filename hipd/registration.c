@@ -146,7 +146,6 @@ static int hip_del_pending_request_by_expiration(void)
 int hip_registration_maintenance(void)
 {
     while (hip_del_pending_request_by_expiration() == 0) {
-        ;
     }
 
     return 0;

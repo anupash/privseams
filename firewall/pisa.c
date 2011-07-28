@@ -111,7 +111,6 @@ static int pisa_read_communit_operator_hit(char *hit)
     }
 
     if (fgets(hit, INET6_ADDRSTRLEN, f) != NULL) {
-        ;
         eofline = strchr(hit, '\n');
         if (eofline) {
             *eofline = '\0';
