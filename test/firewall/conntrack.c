@@ -162,13 +162,20 @@ START_TEST(test_parse_iptables_esp_rule)
         const char  *ip;
         uint32_t     spi;
     } test_cases[] = {
-        { "Chain HIPFW-FORWARD (1 references)",                                                                        .valid = false },
-        { " pkts bytes target     prot opt in     out     source               destination         ",                  .valid = false },
-        { "    2   312 ACCEPT     esp      *      *       ::/0                 3ffe:2::1/128       esp spi:469913213", .valid = true, .pkts = 2, .ip = "3ffe:2::1", .spi = 0x1c024e7d },
-        { "    0     0 QUEUE      udp      *      *       ::/0                 ::/0                udp spt:10500",     .valid = false },
-        { "    0     0 QUEUE      esp      *      *       ::/0                 ::/0                ",                  .valid = false },
-        { "    4  2264 QUEUE      139      *      *       ::/0                 ::/0                ",                  .valid = false },
-        { "    3   336 ACCEPT     udp  --  *      *       0.0.0.0/0            192.168.2.1         udp spt:10500 dpt:10500 u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0xab772758", .valid = true, .pkts = 3, .ip = "::ffff:192.168.2.1", .spi = 0xab772758 }
+        { "Chain HIPFW-FORWARD (1 references)",
+          .valid = false },
+        { " pkts bytes target     prot opt in     out     source               destination         ",
+          .valid = false },
+        { "    2   312 ACCEPT     esp      *      *       ::/0                 3ffe:2::1/128       esp spi:469913213",
+          .valid = true, .pkts = 2, .ip = "3ffe:2::1", .spi = 0x1c024e7d },
+        { "    0     0 QUEUE      udp      *      *       ::/0                 ::/0                udp spt:10500",
+          .valid = false },
+        { "    0     0 QUEUE      esp      *      *       ::/0                 ::/0                ",
+          .valid = false },
+        { "    4  2264 QUEUE      139      *      *       ::/0                 ::/0                ",
+          .valid = false },
+        { "    3   336 ACCEPT     udp  --  *      *       0.0.0.0/0            192.168.2.1         udp spt:10500 dpt:10500 u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0xab772758",
+          .valid = true, .pkts = 3, .ip = "::ffff:192.168.2.1", .spi = 0xab772758 }
     };
 
     const int num_tests = sizeof(test_cases) / sizeof(*test_cases);
