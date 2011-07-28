@@ -124,10 +124,10 @@ class Beautifier(object):
 
     """
     def __init__(self):
-        """Creates and initializes an Beautifier object and its attributes.
+        """Creates and initializes a Beautifier object and its attributes.
 
-        If the initialization fails, e.g., because a tool is not available, an
-        Exception is raised.
+        If the initialization fails, e.g., because a tool is not available,
+        an exception is raised.
 
         """
         self.cfg = None
@@ -167,8 +167,8 @@ class Uncrustify(Beautifier):
         tree -- a bzrlib Tree instance representing the future repository
         contents after the commit.
 
-        If the initialization fails, e.g., because the uncrustify binary or
-        other required resources are not a available, a RuntimeError or
+        If the initialization fails, e.g. because the uncrustify binary or
+        other required resources are not available, a RuntimeError or
         CalledProcessError is raised.
 
         """
