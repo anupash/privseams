@@ -628,11 +628,9 @@ You are strongly recommended to use this hook based on the code beautifier
 uncrustify because it gets things right almost all the time. So you can and
 should throw all code at uncrustify (via the commit hook) to have it checked.
 
-At the time of this writing, the only two problems are the syntactically
-confusing macros in the unit test code and the alignment of consecutive variable
-declarations and initializations (where uncrustify might accidentally align
-unrelated code or not align related code). Obviously, it never hurts to check
-the uncrustify output.
+Currently the only problem is alignment of consecutive variable declarations and
+initializations (where uncrustify might accidentally align unrelated code or not
+align related code). Obviously, it never hurts to check the uncrustify output.
 
 If the above style recommendations are unclear about a topic, you should trust
 the style decisions that uncrustify takes.
