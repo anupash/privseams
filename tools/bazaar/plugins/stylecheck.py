@@ -53,8 +53,8 @@ Installation
 Copy this file into the bazaar plugin directory (usually .bazaar/plugins/ in
 your home directory) or add the directory this file resides in to the
 environment variable BZR_PLUGIN_PATH (export BZR_PLUGIN_PATH="<dir>") before
-running 'bzr commit'. Make sure that the programs uncrustify and GNU diff are
-available - this hook depends on them. If this hook cannot find a necessary
+running 'bzr commit'. Make sure that the programs uncrustify, diff and patch
+are available - this hook depends on them. If this hook cannot find a necessary
 prerequisite for the style checks, it prints an error message and aborts the
 commit. To disable the hook in such a case, remove this file from the bazaar
 plugin directory (see Installation above).
@@ -432,12 +432,12 @@ for code-style checking, remove the plugin file %s.py" % (str(e), plugin_name)
             beautification.apply_to_branch()
             print "Style changes successfully applied.\n"
         diff_file.close()
-        
+
         # Store the commit message in a file so it can be retrieved later
         msg_file = tempfile.NamedTemporaryFile(prefix = "bzr-commit-revno-%d-" % (future_revno), delete = False)
         msg_file.write(get_commit_message(local, master, future_revid))
         msg_file.close()
-        
+
         raise bzrlib.errors.BzrError("This commit has been aborted. Your original commit message (see %s) was:\n--\n%s\n--" % (msg_file.name, get_commit_message(local, master, future_revid)))
 
 
