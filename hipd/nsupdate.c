@@ -159,7 +159,7 @@ static void sig_chld(UNUSED int signo)
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
     struct sockaddr     *tmp_sockaddr_ptr     = (struct sockaddr *) &src->addr;
-    struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *)  tmp_sockaddr_ptr;
+    struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *) tmp_sockaddr_ptr;
     struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) tmp_sockaddr_ptr;
 
     struct in_addr   tmp_in_addr;
