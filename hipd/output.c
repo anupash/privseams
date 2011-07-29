@@ -130,7 +130,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, struct in6_addr *local_addr,
 
     /* If hitr is hashed null hit, send it as null on the wire.
      * This case is an opportunistic BEX. */
-    if  (hit_is_opportunistic_hit(&i1->hitr)) {
+    if (hit_is_opportunistic_hit(&i1->hitr)) {
         ipv6_addr_copy(&i1->hitr, &in6addr_any);
     }
 
@@ -825,13 +825,13 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
         } else if (relay_para_type == HIP_PARAM_FROM) {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
-            r1_dst_addr =  &dst_ip;
+            r1_dst_addr = &dst_ip;
             if (ctx->msg_ports.src_port) {
                 // R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_peer_nat_udp_port()
-                r1_dst_port =  hip_get_peer_nat_udp_port();
+                r1_dst_port = hip_get_peer_nat_udp_port();
             } else {
                 // connection between R & RVS is in hip raw mode
-                r1_dst_port =  0;
+                r1_dst_port = 0;
             }
         }
     } else {
@@ -1346,7 +1346,7 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
 
         /* Insert 32 bits of zero bytes between UDP and HIP */
         memmove((char *) msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
-        memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
+        memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
         len += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
         uh->source = htons(src_port);

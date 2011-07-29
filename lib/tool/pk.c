@@ -65,7 +65,7 @@ int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
     if (hip_get_msg_type(msg) == HIP_R1) {
         HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
                                                      len, HIP_SIG_RSA),
-                 -1,  "Building of signature failed\n");
+                 -1, "Building of signature failed\n");
     } else {
         HIP_IFEL(hip_build_param_signature_contents(msg, signature,
                                                     len, HIP_SIG_RSA),

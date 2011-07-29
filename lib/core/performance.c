@@ -89,9 +89,9 @@ struct perf_set *hip_perf_create(int num)
 int hip_perf_set_name(struct perf_set *set, int slot, const char *name)
 {
     int err = 0, len = 0;
-    HIP_IFEL(set == NULL,       -1, "Performance set is empty\n");
-    HIP_IFEL(set->files_open,   -1, "Files have already been opened\n");
-    HIP_IFEL(set->names[slot],  -1, "Slot is already named\n");
+    HIP_IFEL(set == NULL,            -1, "Performance set is empty\n");
+    HIP_IFEL(set->files_open,        -1, "Files have already been opened\n");
+    HIP_IFEL(set->names[slot],       -1, "Slot is already named\n");
     HIP_IFEL(slot >= set->num_files, -1, "Slot %d does not exist\n", slot);
 
     len              = strlen(name);
@@ -114,12 +114,12 @@ out_err:
 int hip_perf_open(struct perf_set *set)
 {
     int err = 0, i = 0;
-    HIP_IFEL(!set,              -1, "Performance set is empty\n");
-    HIP_IFEL(set->files_open,   -1, "Files already open\n");
+    HIP_IFEL(!set,            -1, "Performance set is empty\n");
+    HIP_IFEL(set->files_open, -1, "Files already open\n");
 
     for (i = 0; i < set->num_files; i++) {
         if (set->names[i]) {
-            set->files[i] =  fopen(set->names[i], "a");
+            set->files[i] = fopen(set->names[i], "a");
             if (!set->files[i]) {
                 HIP_ERROR("Error opening file for slot %d\n", i);
             }

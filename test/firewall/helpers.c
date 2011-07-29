@@ -43,8 +43,8 @@ START_TEST(test_system_printf)
     memset(str, '.', sizeof(str));
     str[MAX_COMMAND_LINE] = '\0';
 
-    fail_unless(system_printf("_%s",  str) == -1, "Truncated command line executed");
-    fail_unless(system_printf("%s", str)   ==  0, "Fitting command line not executed");
+    fail_unless(system_printf("_%s", str) == -1, "Truncated command line executed");
+    fail_unless(system_printf("%s",  str) ==  0, "Fitting command line not executed");
 }
 END_TEST
 

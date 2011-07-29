@@ -79,7 +79,7 @@ int hip_register_handle_function(const uint8_t packet_type,
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
              "Maximum packet type exceeded.\n");
-    HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
+    HIP_IFEL(ha_state > HIP_MAX_HA_STATE,
              -1,
              "Maximum host association state exceeded.\n");
 
@@ -145,7 +145,7 @@ int hip_run_handle_functions(const uint8_t packet_type,
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
              "Maximum packet type exceeded.\n");
-    HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
+    HIP_IFEL(ha_state > HIP_MAX_HA_STATE,
              -1,
              "Maximum host association state exceeded.\n");
 

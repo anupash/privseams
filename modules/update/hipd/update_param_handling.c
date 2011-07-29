@@ -395,7 +395,7 @@ int hip_handle_locator_parameter(UNUSED const uint8_t packet_type,
         HIP_DEBUG("hip_get_state_item returned localstate: %p\n", localstate);
         hip_remove_addresses_to_send_echo_request(localstate);
 
-        locator_address_item =  (struct hip_locator_info_addr_item *) (locator + 1);
+        locator_address_item = (struct hip_locator_info_addr_item *) (locator + 1);
 
         HIP_DEBUG_IN6ADDR("Adding IP source address to locator set",
                           &ctx->src_addr);

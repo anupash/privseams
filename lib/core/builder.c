@@ -1757,7 +1757,7 @@ int hip_build_param_hmac(struct hip_common *msg,
     int             err = 0;
     struct hip_hmac hmac;
 
-    hip_set_param_type((struct hip_tlv_common *)  &hmac, param_type);
+    hip_set_param_type((struct hip_tlv_common *) &hmac, param_type);
     hip_calc_generic_param_len((struct hip_tlv_common *) &hmac,
                                sizeof(struct hip_hmac),
                                0);
@@ -1857,7 +1857,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
     HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
              "pseudo hmac pkt failed\n");
 
-    hip_set_param_type((struct hip_tlv_common *)  &hmac2, HIP_PARAM_HMAC2);
+    hip_set_param_type((struct hip_tlv_common *) &hmac2, HIP_PARAM_HMAC2);
     hip_calc_generic_param_len((struct hip_tlv_common *) &hmac2,
                                sizeof(struct hip_hmac),
                                0);
@@ -3175,8 +3175,8 @@ int hip_build_param_host_id(struct hip_common *const msg,
     uint16_t           par_len;
 
     // sanity checks
-    HIP_IFEL(!msg,      -1, "Cannot build host id parameter into given message (msg is NULL) \n");
-    HIP_IFEL(!host_id,  -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
+    HIP_IFEL(!msg,     -1, "Cannot build host id parameter into given message (msg is NULL) \n");
+    HIP_IFEL(!host_id, -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
 
     // eliminate unused space by copying fqdn directly behind the keyrr
     header_len = sizeof(struct hip_host_id) -

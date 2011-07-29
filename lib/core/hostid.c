@@ -1111,7 +1111,7 @@ out_err:
  */
 int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
 {
-    int             err         = 0, public = 0, out_len      = 0;
+    int             err         = 0, public = 0, out_len = 0;
     unsigned char  *buffer      = NULL;
     size_t          pub_key_len = 0, priv_key_len = 0;
     const BIGNUM   *priv_key    = NULL;
@@ -1286,7 +1286,7 @@ int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr)
     key_len = RSA_size(rsa);
 
     /* RFC 3110 limits e to 4096 bits */
-    HIP_IFEL(e_len > 512, -EINVAL,  "Invalid rsa->e length %d bytes\n", e_len);
+    HIP_IFEL(e_len > 512, -EINVAL, "Invalid rsa->e length %d bytes\n", e_len);
     if (e_len > 255) {
         e_len_bytes = 3;
     }

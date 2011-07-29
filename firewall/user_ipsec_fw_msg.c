@@ -175,15 +175,15 @@ int handle_sa_add_request(const struct hip_common *msg)
     ealg  = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("ealg value is %d \n", ealg);
 
-    param          =  hip_get_next_param(msg, param);
+    param          = hip_get_next_param(msg, param);
     retransmission = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("already_acquired value is %d \n", retransmission);
 
-    param     =  hip_get_next_param(msg, param);
+    param     = hip_get_next_param(msg, param);
     direction = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the direction value is %d \n", direction);
 
-    param  =  hip_get_next_param(msg, param);
+    param  = hip_get_next_param(msg, param);
     update = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the update value is %d \n", update);
 

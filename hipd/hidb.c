@@ -611,7 +611,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
     while ((param = hip_get_next_param(input, param)) != NULL) {
         /* NOTE: changed to use hip_eid_endpoint structs instead of
          *  hip_host_id:s when passing IDs from user space to kernel */
-        if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT) {
+        if (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT) {
             continue;
         }
         HIP_DEBUG("host id found in the msg\n");

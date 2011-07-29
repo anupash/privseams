@@ -150,7 +150,7 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
         HIP_DEBUG("Sending message (type=%d) response to port %d \n",
                   hip_get_msg_type(ctx->input_msg), ntohs(app_src.sin6_port));
         HIP_DEBUG_HIT("To address", &app_src.sin6_addr);
-        n = hip_sendto_user(ctx->input_msg, (struct sockaddr *)  &app_src);
+        n = hip_sendto_user(ctx->input_msg, (struct sockaddr *) &app_src);
         if (n != len) {
             err = -1;
         } else {

@@ -519,13 +519,13 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
              -1, "Could not allocate memory for host identity\n");
     switch (algo) {
     case HIP_HI_RSA:
-        HIP_IFEL(load_rsa_file(fp, hi),     -1, "Failed to load RSA key\n");
+        HIP_IFEL(load_rsa_file(fp, hi), -1, "Failed to load RSA key\n");
         break;
     case HIP_HI_ECDSA:
-        HIP_IFEL(load_ecdsa_file(fp, hi),   -1, "Failed to load ECDSA key\n")
+        HIP_IFEL(load_ecdsa_file(fp, hi), -1, "Failed to load ECDSA key\n")
         break;
     case HIP_HI_DSA:
-        HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")
+        HIP_IFEL(load_dsa_file(fp, hi), -1, "Failed to load DSA key\n")
         break;
     default:
         HIP_OUT_ERR(-1, "Could not load host identity, because algorithm is unknown.\n");
@@ -537,7 +537,7 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
         err = -1;
         HIP_DEBUG("HI in file %s does not match hit from rule: \n", token);
         HIP_DEBUG_HIT("expected hit:\t", hit);
-        HIP_DEBUG_HIT("got hit:\t\t",    hit);
+        HIP_DEBUG_HIT("got hit:\t\t", hit);
         goto out_err;
     }
 

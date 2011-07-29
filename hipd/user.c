@@ -683,7 +683,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         struct hip_hadb_state *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
-        HIP_IFE(!(lsi =  hip_get_param_contents_direct(param)), -1);
+        HIP_IFE(!(lsi = hip_get_param_contents_direct(param)), -1);
         if (!(ha = hip_hadb_try_to_find_by_peer_lsi(lsi))) {
             HIP_DEBUG("No HA found\n");
             goto out_err;

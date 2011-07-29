@@ -62,14 +62,14 @@ void lmod_uninit_state_items(struct modular_state *const state);
 
 struct modular_state *lmod_init_state(void);
 
-int   lmod_add_state_item(struct modular_state *state,
-                          void *state_item,
-                          const char *item_name);
+int lmod_add_state_item(struct modular_state *state,
+                        void *state_item,
+                        const char *item_name);
 
 void *lmod_get_state_item(struct modular_state *state,
                           const char *item_name);
 
-void  lmod_uninit_state(struct modular_state *state);
+void lmod_uninit_state(struct modular_state *state);
 
 int lmod_disable_module(const char *module_id);
 

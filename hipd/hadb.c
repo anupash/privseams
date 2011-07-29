@@ -415,9 +415,9 @@ int hip_hadb_insert_state(struct hip_hadb_state *ha)
  */
 static void hip_print_debug_info(const struct in6_addr *local_addr,
                                  const struct in6_addr *peer_addr,
-                                 const hip_hit_t  *local_hit,
-                                 const hip_hit_t  *peer_hit,
-                                 const hip_lsi_t  *peer_lsi,
+                                 const hip_hit_t *local_hit,
+                                 const hip_hit_t *peer_hit,
+                                 const hip_lsi_t *peer_lsi,
                                  const char *peer_hostname,
                                  const in_port_t *local_nat_udp_port,
                                  const in_port_t *peer_nat_udp_port)
@@ -476,8 +476,8 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     HIP_DEBUG_IN6ADDR("Local IP address ", local_addr);
 
     hip_print_debug_info(local_addr, peer_addr,
-                         local_hit,  peer_hit,
-                         peer_lsi,   peer_hostname,
+                         local_hit, peer_hit,
+                         peer_lsi, peer_hostname,
                          &nat_udp_port_local,
                          &nat_udp_port_peer);
 
@@ -1248,8 +1248,8 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
     hid.peer_controls = entry->peer_controls;
 
     /* does not print heartbeat info, but I do not think it even should -Samu*/
-    hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
-                         &hid.hit_our,  &hid.hit_peer,
+    hip_print_debug_info(&hid.ip_our, &hid.ip_peer,
+                         &hid.hit_our, &hid.hit_peer,
                          &hid.lsi_peer, (char *) &hid.peer_hostname,
                          &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
 

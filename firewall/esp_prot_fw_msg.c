@@ -134,9 +134,9 @@ static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcsto
                    && transform->hash_length_id < NUM_HASH_LENGTHS);
 
         // add anchor with this transform
-        for (j = 0; j <  hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
-                                         [transform->hash_length_id].
-                                         hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++) {
+        for (j = 0; j < hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
+                                        [transform->hash_length_id].
+                                        hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++) {
             if (use_hash_trees) {
                 HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
                                               [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1],

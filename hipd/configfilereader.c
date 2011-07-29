@@ -67,7 +67,7 @@ static int hip_cf_is_comment(const char *const line)
     int i = 0;
 
     /* Clean leading white space. */
-    while (isspace(line[i]) && i <  HIP_RELAY_MAX_LINE_LEN) {
+    while (isspace(line[i]) && i < HIP_RELAY_MAX_LINE_LEN) {
         i++;
     }
 

@@ -60,7 +60,6 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
                                          struct in6_addr *bigger_hit,
                                          const uint8_t I[PUZZLE_LENGTH],
                                          const uint8_t J[PUZZLE_LENGTH])
-
 {
     uint8_t *buffer = NULL, *cur = NULL;
     size_t   requiredmem;
@@ -158,7 +157,7 @@ void hip_make_keymat(char *kij,
 
     hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
 
-    bigger_hit  =  hit1_is_bigger ? hit1 : hit2;
+    bigger_hit  = hit1_is_bigger ? hit1 : hit2;
     smaller_hit = hit1_is_bigger ? hit2 : hit1;
 
     shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,

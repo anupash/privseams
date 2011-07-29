@@ -152,7 +152,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
     FILE       *fp;
     size_t      items;
 
-    if (stat(path, &status)  == 0) {
+    if (stat(path, &status) == 0) {
         return;
     }
 

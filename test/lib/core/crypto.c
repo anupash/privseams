@@ -37,10 +37,10 @@ START_TEST(test_create_ecdsa_key_invalid_id)
 {
     HIP_DEBUG("Trying to create some invalid ECDSA keys.\n");
 
-    fail_unless(create_ecdsa_key(-1)     == NULL, NULL);
-    fail_unless(create_ecdsa_key(0)      == NULL, NULL);
-    fail_unless(create_ecdsa_key(1)      == NULL, NULL);
-    fail_unless(create_ecdsa_key(11111)  == NULL, NULL);
+    fail_unless(create_ecdsa_key(-1)    == NULL, NULL);
+    fail_unless(create_ecdsa_key(0)     == NULL, NULL);
+    fail_unless(create_ecdsa_key(1)     == NULL, NULL);
+    fail_unless(create_ecdsa_key(11111) == NULL, NULL);
 
     HIP_DEBUG("Successfully passed create test for invalid ECDSA keys.\n");
 }

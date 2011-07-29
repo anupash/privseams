@@ -351,7 +351,7 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
     }
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
             requests[request_count] = iter->ptr;
             request_count++;
         }
@@ -463,7 +463,7 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
                 failure_types[*refused_count]    =
                     HIP_REG_TYPE_UNAVAILABLE;
                 (*refused_count)++;
-            } else if (hip_relwl_get_status() ==  HIP_RELAY_WL_ON &&
+            } else if (hip_relwl_get_status() == HIP_RELAY_WL_ON &&
                        hip_relwl_get(&dummy.hit_r) == NULL) {
                 HIP_DEBUG("Client is not whitelisted.\n");
                 refused_requests[*refused_count] = reg_types[i];

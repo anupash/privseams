@@ -212,7 +212,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
              "Packet contained no HMAC parameter\n");
     HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 
-    memcpy(&tmpkey,  key, sizeof(tmpkey));
+    memcpy(&tmpkey, key, sizeof(tmpkey));
 
     HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
                              hmac->hmac_data, tmpkey.key,
@@ -325,7 +325,7 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg,
                                              HIP_PARAM_DIFFIE_HELLMAN)),
-             -ENOENT,  "No Diffie-Hellman parameter found.\n");
+             -ENOENT, "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
     const struct hip_dh_public_value *dhpv = hip_dh_select_key(dhf);
@@ -470,9 +470,9 @@ static int hip_packet_to_drop(struct hip_hadb_state *entry,
         }
         if (hip_shotgun_status == HIP_MSG_SHOTGUN_ON
             && type == HIP_R1
-            && entry->peer_addr_list_to_be_added  &&
-            (((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items > 1 ||
-             ((struct lhash_st *) addresses)->num_items > 1)) {
+            && entry->peer_addr_list_to_be_added
+            && (((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items > 1
+                || ((struct lhash_st *) addresses)->num_items > 1)) {
             return 1;
         }
         break;
@@ -807,7 +807,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
      * of R2 packet. Don't know if the entry is already locked... */
-    if (ctx->msg_ports.dst_port   != 0 &&
+    if (ctx->msg_ports.dst_port != 0 &&
         ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
         ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
     }

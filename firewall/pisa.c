@@ -217,7 +217,7 @@ static struct hip_challenge_response *pisa_check_challenge_response(struct hip_f
     pisa_append_hmac(&hip->hits, &hip->hitr, 0, &hash[0], 4);
     pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
 
-    response =  hip_get_param_readwrite(hip, HIP_PARAM_CHALLENGE_RESPONSE);
+    response = hip_get_param_readwrite(hip, HIP_PARAM_CHALLENGE_RESPONSE);
 
     while (response) {
         /* loop over all HIP_PARAM_CHALLENGE_RESPONSE */
