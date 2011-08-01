@@ -81,3 +81,10 @@ Please note that the HIP configuration files are located in
 /usr/local/etc/hip with the default configure flags. If you want to
 change the location to /etc/hip, you have to pass --sysconfdir=/etc to
 configure (or create a symbolic link).
+
+
+How to contribute to HIPL
+=========================
+
+Grab the code from Bazaar and start hacking, external contributions are always
+welcome. Read doc/HACKING for detailed coding guidelines.
