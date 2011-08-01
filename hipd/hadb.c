@@ -1467,8 +1467,6 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha)
                   &ha->our_addr,
                   HIP_SPI_DIRECTION_IN,
                   ha);
-
-    return;
 }
 
 /**

@@ -109,8 +109,6 @@ static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold
 
     memcpy(keybuf + Kij_len, Kold, Kold_len);
     *(keybuf + Kij_len + Kold_len) = cnt;
-
-    return;
 }
 
 /**
@@ -207,8 +205,6 @@ void hip_make_keymat(char *kij,
     }
 
     free(shabuffer);
-
-    return;
 }
 
 /**

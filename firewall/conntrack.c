@@ -269,7 +269,6 @@ static void update_peer_opp_info(const struct hip_data *data,
         }
         list = list->next;
     }
-    return;
 }
 
 /** Fetch a hip_tuple from the connection table.

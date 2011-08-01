@@ -264,6 +264,4 @@ void hip_perf_destroy(struct perf_set *set)
 
     free(set);
     set = NULL;
-
-    return;
 }

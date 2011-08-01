@@ -977,8 +977,6 @@ void hip_exit(void)
     hip_dh_uninit();
 
     lmod_uninit_disabled_modules();
-
-    return;
 }
 
 /**

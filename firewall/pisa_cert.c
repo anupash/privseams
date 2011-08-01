@@ -168,7 +168,6 @@ static void pisa_cert_get_content(char *cert, const char *name, char *r)
 
 out_err:
     r[len] = '\0';
-    return;
 }
 
 /**

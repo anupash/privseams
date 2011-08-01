@@ -189,5 +189,4 @@ void change_key_file_perms(const char *filenamebase)
 
 out_err:
     free(pubfilename);
-    return;
 }
