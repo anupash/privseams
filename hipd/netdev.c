@@ -346,7 +346,7 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
         int family_match = 0;
         n = list_entry(tmp);
 
-        mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
+        mapped = hip_sockaddr_is_v6_mapped((struct sockaddr *) (&n->addr));
         HIP_DEBUG("mapped=%d\n", mapped);
 
         if (mapped) {
