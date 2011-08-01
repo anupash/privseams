@@ -300,7 +300,6 @@ static int hip_reinject_packet(const struct in6_addr *src_hit,
  * @return            1 if translation not done
  *                    0 if packet reinjected with lsis as addresses
  */
-
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,
                                const struct in6_addr *ip_dst,

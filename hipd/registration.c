@@ -189,7 +189,6 @@ int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status)
  *                             the function finishes.
  * @return -1 if active_services is NULL, zero otherwise.
  */
-
 int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count)
 {
@@ -221,7 +220,6 @@ int hip_get_active_services(struct hip_srv *active_services,
  * @return         zero if the pending request was added succesfully, -1
  *                 otherwise.
  */
-
 int hip_add_pending_request(struct hip_pending_request *request)
 {
     int err = 0;
@@ -309,7 +307,6 @@ static int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
  * @return       zero if the pending request was succesfully moved, -1
  *               otherwise.
  */
-
 int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
                                  struct hip_hadb_state *entry_new)
 {
@@ -421,7 +418,6 @@ static int hip_get_pending_request_count(struct hip_hadb_state *entry)
  * @return                    zero on success, -1 otherwise.
  * @see                       hip_add_registration_client().
  */
-
 static int hip_add_registration_server(struct hip_hadb_state *entry,
                                        uint8_t lifetime,
                                        const uint8_t *reg_types,
@@ -991,7 +987,6 @@ out_err:
  * @param  type_count number of values in the value list.
  * @return            zero if there are no duplicate values, -1 otherwise.
  */
-
 static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
 {
     int i = 0, j = 0;
@@ -1044,7 +1039,6 @@ static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
  * @see              hip_add_registration_server().
  * @see              hip_del_registration_server().
  */
-
 int hip_handle_param_reg_request(struct hip_hadb_state *entry,
                                  struct hip_common *source_msg,
                                  struct hip_common *target_msg)

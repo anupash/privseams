@@ -1596,7 +1596,6 @@ static int hip_conf_handle_manual_update(struct hip_common *msg,
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-
 static int hip_conf_handle_nat_port(struct hip_common *msg, int action,
                                     const char *opt[],
                                     UNUSED int optc,
