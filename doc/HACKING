@@ -1156,6 +1156,11 @@ and
 
 commenting style.
 
+Please don't forget to update the Copyright dates when you modify
+files with Copyright headers. Scatterbrains may want to try out the
+experimental pre-commit hook that automatically checks for that:
+
+https://code.launchpad.net/~stefan.goetz/hipl/commitguard
 
 
 SUBMITTING PATCHES
