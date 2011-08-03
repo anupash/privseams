@@ -147,7 +147,7 @@ unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request
  * @return zero on success, -1 in case of an error
  */
 int hip_midauth_puzzle_seed(const uint8_t opaque[],
-                            const uint8_t opaque_len,
+                            const unsigned int opaque_len,
                             uint8_t puzzle_value[PUZZLE_LENGTH])
 {
     unsigned char sha_digest[SHA_DIGEST_LENGTH];

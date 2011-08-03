@@ -73,7 +73,7 @@ int hip_build_param_challenge_response(struct hip_common *const msg,
 unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request *const request);
 
 int hip_midauth_puzzle_seed(const uint8_t *const opaque,
-                            const uint8_t opaque_len,
+                            const unsigned int opaque_len,
                             uint8_t *const puzzle_value);
 
 #endif /* MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H */

@@ -73,7 +73,7 @@ static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
     while (request &&
            hip_get_param_type(request) == HIP_PARAM_CHALLENGE_REQUEST) {
         struct puzzle_hash_input tmp_puzzle;
-        const uint8_t            len = hip_challenge_request_opaque_len(request);
+        const unsigned int       len = hip_challenge_request_opaque_len(request);
 
         if (hip_midauth_puzzle_seed(request->opaque, len, tmp_puzzle.puzzle)) {
             HIP_ERROR("failed to derive midauth puzzle\n");
