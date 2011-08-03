@@ -3757,6 +3757,14 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
     SHA_CTX sha;
     MD5_CTX md5;
 
+    HIP_ASSERT(in != NULL);
+    HIP_ASSERT(out != NULL);
+
+    if (in_len <= 0) {
+        HIP_ERROR("invalid input length: %i\n", in_len);
+        return -1;
+    }
+
     switch (type) {
     case HIP_DIGEST_SHA1:
         SHA1_Init(&sha);
