@@ -70,10 +70,12 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 if HIP_UNITTESTS
 TESTS           = test/check_firewall \
                   test/check_lib_core \
-                  test/check_lib_tool
+                  test/check_lib_tool \
+                  test/check_modules_midauth
 check_PROGRAMS  = test/check_firewall \
                   test/check_lib_core \
-                  test/check_lib_tool
+                  test/check_lib_tool \
+                  test/check_modules_midauth
 endif
 
 
@@ -220,6 +222,10 @@ test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
                               test/lib/tool/checksum.c       \
                               test/lib/tool/pk.c
 
+test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               \
+                                     test/modules/midauth/lib/midauth_builder.c \
+                                     modules/midauth/lib/midauth_builder.c
+
 
 include modules/midauth/Makefile.am
 
@@ -232,6 +238,7 @@ test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
 test_check_lib_tool_LDADD                = lib/core/libhipcore.la
+test_check_modules_midauth_LDADD         = lib/core/libhipcore.la
 test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
