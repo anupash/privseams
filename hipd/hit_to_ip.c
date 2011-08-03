@@ -65,7 +65,6 @@ void hip_set_hit_to_ip_status(const int status)
  *
  * @return 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
  */
-
 int hip_get_hit_to_ip_status(void)
 {
     return hip_hit_to_ip_status;
@@ -136,7 +135,6 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, cons
  * @param retval        buffer for the result
  * @return              0 on success, -1 otherwise
  */
-
 int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
 {
     struct addrinfo *rp = NULL;     // no C99 :(

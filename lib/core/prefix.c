@@ -261,7 +261,6 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *const ip,
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
  */
-
 void *hip_cast_sa_addr(struct sockaddr *const sa)
 {
     if (sa == NULL) {

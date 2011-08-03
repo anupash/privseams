@@ -1242,8 +1242,8 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
      * an union as well) */
     src6 = (struct sockaddr_in6 *) &src;
     dst6 = (struct sockaddr_in6 *) &dst;
-    src4 = (struct sockaddr_in *)  &src;
-    dst4 = (struct sockaddr_in *)  &dst;
+    src4 = (struct sockaddr_in *) &src;
+    dst4 = (struct sockaddr_in *) &dst;
 
     if (dst_port && dst_is_ipv4) {
         HIP_DEBUG("Using IPv4 UDP socket\n");

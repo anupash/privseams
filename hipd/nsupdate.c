@@ -81,7 +81,6 @@ static int hip_nsupdate_status = 0;
  *
  * @param status    0 unless DNS updates wanted, 1 otherwise
  */
-
 void hip_set_nsupdate_status(int status)
 {
     hip_nsupdate_status = status;
@@ -92,7 +91,6 @@ void hip_set_nsupdate_status(int status)
  *
  * @return  0 unless DNS updates wanted, 1 otherwise
  */
-
 int hip_get_nsupdate_status(void)
 {
     return hip_nsupdate_status;
@@ -108,7 +106,6 @@ int hip_get_nsupdate_status(void)
  * @param value     string to put after '='
  * @return          newly allocated string with result or NULL in case of error
  */
-
 static char *make_env(const char *const name, const char *const value)
 {
     char *result = NULL;
@@ -155,11 +152,10 @@ static void sig_chld(UNUSED int signo)
  * @return          On success, a non-null pointer to dst. NULL is returned
  *                  if there was an error, with errno set to indicate the error
  */
-
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
     struct sockaddr     *tmp_sockaddr_ptr     = (struct sockaddr *) &src->addr;
-    struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *)  tmp_sockaddr_ptr;
+    struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *) tmp_sockaddr_ptr;
     struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) tmp_sockaddr_ptr;
 
     struct in_addr   tmp_in_addr;
@@ -198,7 +194,6 @@ static const char *netdev_address_to_str(struct netdev_address *src, char *dst, 
  * @param start pass 1 if executed on start, then the update script will check first if update is needed
  * @return  0 on success, -1 otherwise
  */
-
 static int run_nsupdate(char *ips, char *hit, int start)
 {
     struct sigaction act;
@@ -268,7 +263,6 @@ static int run_nsupdate(char *ips, char *hit, int start)
  * @param opaq      value of start to pass to run_nsupdate
  * @return          0
  */
-
 static int run_nsupdate_for_hit(struct local_host_id *entry, void *opaq)
 {
     int         start = 0;

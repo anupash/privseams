@@ -1381,7 +1381,6 @@ static void hip_relht_uninit(void)
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */
-
 static int hip_relwl_init(void)
 {
     /* Check that the relay whitelist is not already initialized. */
