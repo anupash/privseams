@@ -44,34 +44,32 @@
  * Build and append a HIP CHALLENGE_REQUEST to the message.
  *
  * @param msg           the message where the CHALLENGE_REQUEST is appended
- * @param val_K         the difficulty for the CHALLENGE_REQUEST
- * @param lifetime      lifetime of the CHALLENGE_REQUEST
- * @param opaque        the opaque data of the CHALLENGE_REQUEST
- * @param opaque_len    the length of the opaque data
+ * @param difficulty    the puzzle difficulty for the CHALLENGE_REQUEST
+ * @param lifetime      lifetime the puzzle nonce
+ * @param opaque        the nonce (challenge) of the CHALLENGE_REQUEST
+ * @param opaque_len    the length of the nonce
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_challenge_request(struct hip_common *msg,
-                                      uint8_t val_K,
-                                      uint8_t lifetime,
-                                      uint8_t *opaque,
-                                      uint8_t opaque_len)
+int hip_build_param_challenge_request(struct hip_common *const msg,
+                                      const uint8_t difficulty,
+                                      const uint8_t lifetime,
+                                      const uint8_t *opaque,
+                                      const uint8_t opaque_len)
 {
     struct hip_challenge_request request;
+    static const size_t          min_length = sizeof(request) -
+                                              sizeof(request.tlv) -
+                                              sizeof(request.opaque);
 
-    HIP_ASSERT(val_K <= 8);
     HIP_ASSERT(opaque);
-
-    static const size_t min_length = sizeof(request) -
-                                     sizeof(request.tlv) -
-                                     sizeof(request.opaque);
 
     /* note: the length cannot be calculated with calc_param_len() */
     hip_set_param_contents_len(&request.tlv, min_length + opaque_len);
     hip_set_param_type(&request.tlv, HIP_PARAM_CHALLENGE_REQUEST);
 
     /* only the random_j_k is in host byte order */
-    request.K        = val_K;
+    request.K        = difficulty;
     request.lifetime = lifetime;
     memcpy(&request.opaque, opaque, opaque_len);
 
