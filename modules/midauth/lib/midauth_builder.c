@@ -133,11 +133,17 @@ unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request
 }
 
 /**
- * Convert opaque value in the CHALLENGE_REQUEST to seed value I of a HIP puzzle.
+ * Convert the opaque value in the CHALLENGE_REQUEST to the seed value I of a
+ * HIP puzzle.
  *
- * @param opaque            the opaque value in the CHALLENGE_REQUEST
- * @param opaque_len        length of the opaque value
- * @param[out] puzzle_value the generated puzzle value
+ * The opaque value plays a dual role in a CHALLENGE_REQUEST:
+ * i)  it is a challenge that needs to be echoed back by the responder and
+ * ii) it is used to derive the seed value for a cryptographic puzzle. The
+ *     puzzle is defined in RFC5201.
+ *
+ * @param opaque            the nonce (challenge) in the CHALLENGE_REQUEST
+ * @param opaque_len        the length of the nonce
+ * @param puzzle_value      the puzzle value generated from the nonce
  * @return zero on success, -1 in case of an error
  */
 int hip_midauth_puzzle_seed(const uint8_t opaque[],
@@ -151,7 +157,7 @@ int hip_midauth_puzzle_seed(const uint8_t opaque[],
                          opaque,
                          opaque_len,
                          sha_digest)) {
-        HIP_ERROR("Building of SHA1 Random seed I failed\n");
+        HIP_ERROR("Building of SHA1 random seed I failed\n");
         return -1;
     }
 
