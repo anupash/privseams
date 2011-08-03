@@ -98,7 +98,6 @@ int hip_build_param_challenge_response(struct hip_common *msg,
 {
     struct hip_challenge_response response;
     int                           opaque_len = 0;
-    int                           err        = 0;
 
     opaque_len = hip_challenge_request_opaque_len(request);
 
@@ -115,14 +114,16 @@ int hip_build_param_challenge_response(struct hip_common *msg,
     response.lifetime = request->lifetime;
     memcpy(response.opaque, request->opaque, opaque_len);
 
-    HIP_IFEL(hip_build_param(msg, &response), -1, "failed to build parameter\n");
+    if (hip_build_param(msg, &response)) {
+        HIP_ERROR("failed to build parameter\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
- * Compute length of opaque field in CHALLENGE_RESPONSE parameter
+ * Compute length of opaque field in CHALLENGE_RESPONSE parameter.
  *
  * @param response  the CHALLENGE_RESPONSE parameter
  * @return length of the opaque field
@@ -137,7 +138,7 @@ uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *r
 }
 
 /**
- * Compute length of opaque field in CHALLENGE_REQUEST parameter
+ * Compute length of opaque field in CHALLENGE_REQUEST parameter.
  *
  * @param request  the CHALLENGE_REQUEST parameter
  * @return length of the opaque field
@@ -152,7 +153,7 @@ uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *req
 }
 
 /**
- * Convert opaque value in the CHALLENGE_REQUEST to seed value I of a HIP puzzle
+ * Convert opaque value in the CHALLENGE_REQUEST to seed value I of a HIP puzzle.
  *
  * @param opaque            the opaque value in the CHALLENGE_REQUEST
  * @param opaque_len        length of the opaque value
