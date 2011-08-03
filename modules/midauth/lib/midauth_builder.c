@@ -32,6 +32,7 @@
  * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
+#include <stdint.h>
 #include <string.h>
 
 #include "lib/core/ife.h"
