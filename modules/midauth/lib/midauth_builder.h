@@ -59,23 +59,19 @@ struct hip_challenge_response {
     uint8_t               opaque[MAX_CHALLENGE_LENGTH]; /**< variable length */
 } __attribute__ ((packed));
 
-void hip_set_param_challenge_request(struct hip_challenge_request *request,
-                                     uint8_t difficulty,
-                                     uint8_t lifetime,
-                                     const uint8_t *opaque,
-                                     uint8_t opaque_len);
-int hip_build_param_challenge_request(struct hip_common *msg,
-                                      uint8_t val_K,
-                                      uint8_t lifetime,
-                                      uint8_t *opaque,
-                                      uint8_t opaque_len);
 
-int hip_build_param_challenge_response(struct hip_common *msg,
-                                       const struct hip_challenge_request *pz,
-                                       uint8_t *const val_J);
+int hip_build_param_challenge_request(struct hip_common *const msg,
+                                      const uint8_t difficulty,
+                                      const uint8_t lifetime,
+                                      const uint8_t *opaque,
+                                      const uint8_t opaque_len);
 
-uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response);
-uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request);
+int hip_build_param_challenge_response(struct hip_common *const msg,
+                                       const struct hip_challenge_request *const request,
+                                       const uint8_t *const solution);
+
+unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request *const request);
+
 int hip_midauth_puzzle_seed(const uint8_t *const opaque,
                             const uint8_t opaque_len,
                             uint8_t *const puzzle_value);
