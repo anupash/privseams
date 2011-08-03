@@ -118,27 +118,12 @@ int hip_build_param_challenge_response(struct hip_common *const msg,
 }
 
 /**
- * Compute length of opaque field in CHALLENGE_RESPONSE parameter.
- *
- * @param response  the CHALLENGE_RESPONSE parameter
- * @return length of the opaque field
- */
-uint8_t hip_challenge_response_opaque_len(const struct hip_challenge_response *response)
-{
-    static const size_t min_len = sizeof(*response) -
-                                  sizeof(response->tlv) -
-                                  sizeof(response->opaque);
-
-    return hip_get_param_contents_len(&response->tlv) - min_len;
-}
-
-/**
  * Compute length of opaque field in CHALLENGE_REQUEST parameter.
  *
  * @param request  the CHALLENGE_REQUEST parameter
- * @return length of the opaque field
+ * @return length of the opaque field; 0 in case of error or if length equals 0
  */
-uint8_t hip_challenge_request_opaque_len(const struct hip_challenge_request *request)
+unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request *const request)
 {
     static const size_t min_len = sizeof(*request) -
                                   sizeof(request->tlv) -
