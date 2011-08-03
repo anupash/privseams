@@ -62,9 +62,9 @@ int hip_build_param_challenge_request(struct hip_common *msg,
     HIP_ASSERT(val_K <= 8);
     HIP_ASSERT(opaque);
 
-    static const size_t min_length = sizeof(request)
-                                     - sizeof(request.tlv)
-                                     - sizeof(request.opaque);
+    static const size_t min_length = sizeof(request) -
+                                     sizeof(request.tlv) -
+                                     sizeof(request.opaque);
 
     /* note: the length cannot be calculated with calc_param_len() */
     hip_set_param_contents_len(&request.tlv, min_length + opaque_len);
@@ -102,9 +102,9 @@ int hip_build_param_challenge_response(struct hip_common *msg,
 
     opaque_len = hip_challenge_request_opaque_len(request);
 
-    static const size_t min_length = sizeof(response)
-                                     - sizeof(response.tlv)
-                                     - sizeof(response.opaque);
+    static const size_t min_length = sizeof(response) -
+                                     sizeof(response.tlv) -
+                                     sizeof(response.opaque);
 
     /* note: the length cannot be calculated with calc_param_len() */
     hip_set_param_contents_len(&response.tlv, min_length + opaque_len);
