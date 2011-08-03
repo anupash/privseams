@@ -82,32 +82,29 @@ int hip_build_param_challenge_request(struct hip_common *const msg,
 }
 
 /**
- * Build and append a HIP CHALLENGE_RESPONSE into the message.
+ * Build and append a HIP CHALLENGE_RESPONSE to the message.
  *
  * @param msg       the message where the CHALLENGE_RESPONSE is appended
- * @param request   the corresponding CHALLENGE_REQUEST parameter
- * @param val_J     value for the solution (in host byte order)
+ * @param request   the received CHALLENGE_REQUEST parameter for this response
+ * @param solution  the solution for the puzzle in the CHALLENGE_REQUEST
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_challenge_response(struct hip_common *msg,
-                                       const struct hip_challenge_request *request,
-                                       uint8_t val_J[PUZZLE_LENGTH])
+int hip_build_param_challenge_response(struct hip_common *const msg,
+                                       const struct hip_challenge_request *const request,
+                                       const uint8_t solution[PUZZLE_LENGTH])
 {
     struct hip_challenge_response response;
-    int                           opaque_len = 0;
-
-    opaque_len = hip_challenge_request_opaque_len(request);
-
-    static const size_t min_length = sizeof(response) -
-                                     sizeof(response.tlv) -
-                                     sizeof(response.opaque);
+    const int                     opaque_len = hip_challenge_request_opaque_len(request);
+    static const size_t           min_length = sizeof(response) -
+                                               sizeof(response.tlv) -
+                                               sizeof(response.opaque);
 
     /* note: the length cannot be calculated with calc_param_len() */
     hip_set_param_contents_len(&response.tlv, min_length + opaque_len);
     hip_set_param_type(&response.tlv, HIP_PARAM_CHALLENGE_RESPONSE);
 
-    memcpy(response.J, val_J, PUZZLE_LENGTH);
+    memcpy(response.J, solution, PUZZLE_LENGTH);
     response.K        = request->K;
     response.lifetime = request->lifetime;
     memcpy(response.opaque, request->opaque, opaque_len);
