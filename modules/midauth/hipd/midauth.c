@@ -68,12 +68,10 @@ static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
     const struct hip_challenge_request *request = NULL;
 
     request = hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
-    if (!request) {
-        return 0;
-    }
 
     // each on-path middlebox may add a challenge on its own
-    do {
+    while (request &&
+           hip_get_param_type(request) == HIP_PARAM_CHALLENGE_REQUEST) {
         struct puzzle_hash_input tmp_puzzle;
         const uint8_t            len = hip_challenge_request_opaque_len(request);
 
@@ -100,7 +98,7 @@ static int handle_challenge_request_param(UNUSED const uint8_t packet_type,
         // process next challenge parameter, if available
         request = (const struct hip_challenge_request *)
                   hip_get_next_param(ctx->input_msg, &request->tlv);
-    } while (request && hip_get_param_type(request) == HIP_PARAM_CHALLENGE_REQUEST);
+    }
 
     return 0;
 }
