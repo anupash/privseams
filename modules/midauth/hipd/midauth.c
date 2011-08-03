@@ -120,18 +120,17 @@ static int add_host_id_param_update(UNUSED const uint8_t packet_type,
                                     UNUSED const uint32_t ha_state,
                                     struct hip_packet_context *ctx)
 {
-    const struct hip_challenge_request *challenge_request = NULL;
-    struct local_host_id               *host_id_entry     = NULL;
-
-    challenge_request = hip_get_param(ctx->input_msg,
-                                      HIP_PARAM_CHALLENGE_REQUEST);
+    const struct hip_challenge_request *const challenge_request =
+        hip_get_param(ctx->input_msg, HIP_PARAM_CHALLENGE_REQUEST);
 
     // add HOST_ID to packets containing a CHALLENGE_RESPONSE
     if (challenge_request) {
-        if (!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
-                                                                   &ctx->input_msg->hitr,
-                                                                   HIP_ANY_ALGO,
-                                                                   -1))) {
+        const struct local_host_id *const host_id_entry =
+            hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                 &ctx->input_msg->hitr,
+                                                 HIP_ANY_ALGO,
+                                                 -1);
+        if (!host_id_entry) {
             HIP_ERROR("Unknown HIT\n");
             return -1;
         }
