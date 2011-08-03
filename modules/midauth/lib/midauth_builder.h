@@ -43,9 +43,6 @@
 
 #define MAX_CHALLENGE_LENGTH 256
 
-//
-// TODO: flexible arrays
-//
 
 struct hip_challenge_request {
     struct hip_tlv_common tlv;
