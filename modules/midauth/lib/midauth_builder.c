@@ -49,7 +49,7 @@
  * @param opaque        the nonce (challenge) of the CHALLENGE_REQUEST
  * @param opaque_len    the length of the nonce
  *
- * @return zero for success, or non-zero on error
+ * @return zero for success, or negative value on error
  */
 int hip_build_param_challenge_request(struct hip_common *const msg,
                                       const uint8_t difficulty,
@@ -88,17 +88,23 @@ int hip_build_param_challenge_request(struct hip_common *const msg,
  * @param request   the received CHALLENGE_REQUEST parameter for this response
  * @param solution  the solution for the puzzle in the CHALLENGE_REQUEST
  *
- * @return zero for success, or non-zero on error
+ * @return zero for success, or negative value on error
  */
 int hip_build_param_challenge_response(struct hip_common *const msg,
                                        const struct hip_challenge_request *const request,
                                        const uint8_t solution[PUZZLE_LENGTH])
 {
     struct hip_challenge_response response;
-    const int                     opaque_len = hip_challenge_request_opaque_len(request);
     static const size_t           min_length = sizeof(response) -
                                                sizeof(response.tlv) -
                                                sizeof(response.opaque);
+
+    if (!request || !solution) {
+        HIP_ERROR("Unexpected input parameter values (NULL).\n");
+        return -1;
+    }
+
+    const int opaque_len = hip_challenge_request_opaque_len(request);
 
     /* note: the length cannot be calculated with calc_param_len() */
     hip_set_param_contents_len(&response.tlv, min_length + opaque_len);
@@ -125,6 +131,10 @@ int hip_build_param_challenge_response(struct hip_common *const msg,
  */
 unsigned int hip_challenge_request_opaque_len(const struct hip_challenge_request *const request)
 {
+    if (!request) {
+        return 0;
+    }
+
     static const size_t min_len = sizeof(*request) -
                                   sizeof(request->tlv) -
                                   sizeof(request->opaque);
@@ -151,6 +161,11 @@ int hip_midauth_puzzle_seed(const uint8_t opaque[],
                             uint8_t puzzle_value[PUZZLE_LENGTH])
 {
     unsigned char sha_digest[SHA_DIGEST_LENGTH];
+
+    if (!puzzle_value) {
+        HIP_ERROR("Parameter puzzle_value is not allocated\n");
+        return -1;
+    }
 
     // the hashed opaque field is used as puzzle seed
     if (hip_build_digest(HIP_DIGEST_SHA1,
