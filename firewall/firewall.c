@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -42,6 +42,7 @@
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  *
  * @note: HIPU: requires libipq, might need pcap libraries
  */
@@ -78,7 +79,6 @@
 #include "lib/core/performance.h"
 #include "lib/core/prefix.h"
 #include "lib/core/util.h"
-#include "lib/tool/lutil.h"
 #include "hipd/hipd.h"
 #include "config.h"
 #include "cache.h"
@@ -1898,7 +1898,8 @@ int hipfw_main(const char *const rule_file,
         HIP_IFEL(hip_set_lowcapability(), -1, "Failed to reduce privileges\n");
     }
 
-    highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
+    highest_descriptor = hip_fw_async_sock > h4->fd ? hip_fw_async_sock : h4->fd;
+    highest_descriptor = h6->fd > highest_descriptor ? h6->fd : highest_descriptor;
 
     /* Allocate message. */
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Insufficient memory\n");

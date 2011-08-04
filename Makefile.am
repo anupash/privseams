@@ -185,7 +185,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
                                  lib/tool/checksum.c        \
-                                 lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
                                  lib/tool/pk.c              \
                                  lib/tool/xfrmapi.c

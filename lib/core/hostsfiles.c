@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,6 +33,7 @@
  * @brief parser for /etc/hosts and HIPL_SYSCONFDIR/hosts
  *
  * @author Miika Komu <miika@iki.fi>
+ * @author Stefan Götz <stefan.goetz@web.de>
  *
  * @todo is there a standard API for accessing hosts files?
  */
@@ -47,7 +48,6 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "lib/tool/lutil.h"
 #include "ife.h"
 #include "prefix.h"
 #include "protodefs.h"
@@ -79,14 +79,11 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
                                         void *result)
 {
     FILE                  *hip_hosts = NULL;
-    struct list            mylist;
     char                   line[500];
     int                    err = 0, lineno = 0;
     struct in_addr         in_addr;
     struct hosts_file_line entry;
     char                  *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
-
-    initlist(&mylist);
 
     /* check whether  given hit_str is actually a HIT */
 
@@ -132,34 +129,19 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
             continue;
         }
 
-        /* Split line into list */
-        extractsubstrings(c, &mylist);
-
-        len = length(&mylist);
-        if (len < 2 || len > 4) {
-            HIP_ERROR("Bad number of items on line %d in %s, skipping\n",
-                      lineno, hosts_file);
-            continue;
-        }
-
-        /* The list contains hosts line in reverse order. Let's sort it. */
-        switch (len) {
-        case (2):
-            alias    = NULL;
-            hostname = getitem(&mylist, 0);
-            addr_ptr = getitem(&mylist, 1);
-            break;
-        case (3):
-            alias    = getitem(&mylist, 0);
-            hostname = getitem(&mylist, 1);
-            addr_ptr = getitem(&mylist, 2);
-            break;
-        case (4):
-            alias2   = getitem(&mylist, 0);
-            alias    = getitem(&mylist, 1);
-            hostname = getitem(&mylist, 2);
-            addr_ptr = getitem(&mylist, 3);
-            break;
+        addr_ptr = strtok(c, " \t");
+        if (addr_ptr) {
+            hostname = strtok(NULL, " \t");
+            if (hostname) {
+                alias = strtok(NULL, " \t");
+                if (alias) {
+                    alias2 = strtok(NULL, " \t");
+                }
+            } else {
+                HIP_OUT_ERR(-1, "Unable to find host name on line %d\n", lineno)
+            }
+        } else {
+            HIP_OUT_ERR(-1, "Unable to find host address on the line %d\n", lineno);
         }
 
         HIP_ASSERT(addr_ptr);
@@ -187,13 +169,9 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
             err = 0;
             break;
         }
-
-        destroy(&mylist);
     }
 
 out_err:
-
-    destroy(&mylist);
 
     if (hip_hosts) {
         fclose(hip_hosts);

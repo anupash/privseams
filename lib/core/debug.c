@@ -80,7 +80,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/tool/lutil.h"
 #include "modules/update/hipd/update.h"
 #include "builder.h"
 #include "common.h"
