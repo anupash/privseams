@@ -28,3 +28,5 @@ hipd_hipd_SOURCES += modules/midauth/hipd/midauth.c          \
 firewall_hipfw_SOURCES += modules/midauth/lib/midauth_builder.c
 
 test_check_firewall_SOURCES += modules/midauth/lib/midauth_builder.c
+
+test_check_modules_midauth_SOURCES += modules/midauth/lib/midauth_builder.c

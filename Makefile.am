@@ -93,7 +93,7 @@ test_hc_performance_SOURCES                 = test/hc_performance.c
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
-hipd_hipd_SOURCES = hipd/accessor.c              \
+hipd_hipd_sources = hipd/accessor.c              \
                     hipd/cert.c                  \
                     hipd/close.c                 \
                     hipd/configfilereader.c      \
@@ -130,8 +130,11 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     modules/update/hipd/update_param_handling.c
 
 if HIP_MIDAUTH
-hipd_hipd_SOURCES +=  hipd/pisa.c
+hipd_hipd_sources += hipd/pisa.c
 endif
+
+hipd_hipd_SOURCES = $(hipd_hipd_sources)        \
+                    hipd/main.c
 
 firewall_hipfw_sources = firewall/cache.c               \
                          firewall/dlist.c               \
@@ -224,7 +227,8 @@ test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
 
 test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               \
                                      test/modules/midauth/lib/midauth_builder.c \
-                                     modules/midauth/lib/midauth_builder.c
+                                     test/modules/midauth/hipd/midauth.c        \
+                                     $(hipd_hipd_sources)
 
 
 include modules/midauth/Makefile.am
