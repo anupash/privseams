@@ -29,5 +29,6 @@
 #include <check.h>
 
 Suite *modules_midauth_lib_builder(void);
+Suite *modules_midauth_hipd_midauth(void);
 
 #endif /* HIP_TEST_MODULES_MIDAUTH_TEST_SUITES_H */

@@ -37,6 +37,7 @@ int main(void)
 {
     int      number_failed;
     SRunner *sr = srunner_create(modules_midauth_lib_builder());
+    srunner_add_suite(sr, modules_midauth_hipd_midauth());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
