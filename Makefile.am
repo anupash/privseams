@@ -119,7 +119,13 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/registration.c          \
                     hipd/user.c                  \
                     hipd/user_ipsec_hipd_msg.c   \
-                    hipd/user_ipsec_sadb_api.c
+                    hipd/user_ipsec_sadb_api.c   \
+                    modules/heartbeat/hipd/heartbeat.c          \
+                    modules/heartbeat_update/hipd/hb_update.c   \
+                    modules/update/hipd/update.c                \
+                    modules/update/hipd/update_builder.c        \
+                    modules/update/hipd/update_locator.c        \
+                    modules/update/hipd/update_param_handling.c
 
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
@@ -213,12 +219,6 @@ test_check_lib_core_SOURCES = test/check_lib_core.c          \
 test_check_lib_tool_SOURCES = test/check_lib_tool.c          \
                               test/lib/tool/checksum.c       \
                               test/lib/tool/pk.c
-
-# Include module Makefile.am's.
-# TODO: Make this inclusion dynamic
-include modules/heartbeat/Makefile.am
-include modules/heartbeat_update/Makefile.am
-include modules/update/Makefile.am
 
 ### static library dependencies ###
 
