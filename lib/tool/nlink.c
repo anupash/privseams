@@ -119,9 +119,9 @@ int hip_netlink_receive(struct rtnl_handle *nl, hip_filter handler, void *arg)
     struct sockaddr_nl nladdr = { 0 };
     struct iovec       iov;
     struct msghdr      msg = {
-        (void *) &nladdr, sizeof(nladdr),
-        &iov,             1,
-        NULL,             0,
+        &nladdr, sizeof(nladdr),
+        &iov,    1,
+        NULL,    0,
         0
     };
     unsigned           msg_len = 0;
@@ -233,7 +233,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
     struct sockaddr_nl nladdr     = { 0 };
     char               buf[16384] = { 0 };
     struct iovec       iov        = {
-        .iov_base = (void *) n,
+        .iov_base = n,
         .iov_len  = n->nlmsg_len
     };
     struct msghdr      msg = {
@@ -962,7 +962,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
     struct nlmsghdr   *h;
     struct sockaddr_nl nladdr = { 0 };
     struct iovec       iov    = {
-        .iov_base = (void *) n,
+        .iov_base = n,
         .iov_len  = n->nlmsg_len
     };
     struct msghdr      msg = {
