@@ -1061,7 +1061,7 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
         HIP_ERROR("malloc for pubfilename failed\n");
         return -1;
     }
-    ret = snprintf(pubfilename, sizeof(pubfilename), "%s%s",
+    ret = snprintf(pubfilename, pubfilename_len, "%s%s",
                    filename,
                    DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, -1, "Failed to create pubfilename\n");
