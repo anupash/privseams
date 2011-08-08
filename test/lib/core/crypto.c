@@ -98,14 +98,14 @@ START_TEST(test_save_invalid_ecdsa_key)
     EC_KEY *eckey = NULL;
     HIP_DEBUG("Trying some invalid save operations.\n");
 
-    fail_unless(save_ecdsa_private_key("/tmp/tmp_file", NULL) != 0, NULL);
+    fail_unless(save_ecdsa_private_key("tmp_file", NULL) != 0, NULL);
 
     eckey = create_ecdsa_key(NID_X9_62_prime256v1);
     fail_unless(save_ecdsa_private_key(NULL, eckey) != 0, NULL);
     EC_KEY_free(eckey);
 
     eckey = EC_KEY_new();
-    fail_unless(save_ecdsa_private_key("/tmp/tmp_file", eckey) != 0, NULL);
+    fail_unless(save_ecdsa_private_key("tmp_file", eckey) != 0, NULL);
     EC_KEY_free(eckey);
 
     fail_unless(save_ecdsa_private_key(NULL, NULL) != 0, NULL);
@@ -134,12 +134,12 @@ START_TEST(test_load_save_ecdsa_key)
     }
 
     /* Save and reload keys */
-    save_ecdsa_private_key("/tmp/tmp_key1", EVP_PKEY_get1_EC_KEY(keys[0]));
-    save_ecdsa_private_key("/tmp/tmp_key2", EVP_PKEY_get1_EC_KEY(keys[1]));
-    save_ecdsa_private_key("/tmp/tmp_key3", EVP_PKEY_get1_EC_KEY(keys[2]));
-    load_ecdsa_private_key("/tmp/tmp_key1", &eckeys_loaded[0]);
-    load_ecdsa_private_key("/tmp/tmp_key2", &eckeys_loaded[1]);
-    load_ecdsa_private_key("/tmp/tmp_key3", &eckeys_loaded[2]);
+    save_ecdsa_private_key("tmp_key1", EVP_PKEY_get1_EC_KEY(keys[0]));
+    save_ecdsa_private_key("tmp_key2", EVP_PKEY_get1_EC_KEY(keys[1]));
+    save_ecdsa_private_key("tmp_key3", EVP_PKEY_get1_EC_KEY(keys[2]));
+    load_ecdsa_private_key("tmp_key1", &eckeys_loaded[0]);
+    load_ecdsa_private_key("tmp_key2", &eckeys_loaded[1]);
+    load_ecdsa_private_key("tmp_key3", &eckeys_loaded[2]);
 
     /* Now compare keys */
     for (i = 0; i < sizeof(nids) / sizeof(int); i++) {
@@ -149,6 +149,11 @@ START_TEST(test_load_save_ecdsa_key)
         EVP_PKEY_free(keys[i]);
         EVP_PKEY_free(keys_loaded[i]);
     }
+
+    unlink("tmp_key2");
+    unlink("tmp_key3");
+    unlink("tmp_key2.pub");
+    unlink("tmp_key3.pub");
 
     HIP_DEBUG("Successfully passed load/save test for ECDSA keys.\n");
 }
@@ -168,6 +173,8 @@ START_TEST(test_load_invalid_ecdsa_key)
     fail_unless(err != 0 && eckey == NULL, NULL);
 
     err = load_ecdsa_private_key("/tmp/tmp_key1", NULL);
+    unlink("tmp_key1");
+    unlink("tmp_key1.pub");
     fail_unless(err != 0, NULL);
 
     err = load_ecdsa_private_key(NULL, NULL);
