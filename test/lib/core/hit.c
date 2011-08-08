@@ -72,7 +72,7 @@ START_TEST(test_hip_convert_hit_to_str_bounds)
     const char         suffix[]   = "SFX";
     const unsigned int BEFORE_LEN = 30;
     const unsigned int HIT_LEN    = 39; // 16 bytes -> 32 hex chars + 7 ':'s
-    const unsigned int SUFFIX_LEN = sizeof(suffix); // includes null char
+    const unsigned int SUFFIX_LEN = sizeof(suffix); // includes NULL character
     const unsigned int AFTER_LEN  = 30;
     struct {
         char before[BEFORE_LEN];
@@ -95,7 +95,7 @@ START_TEST(test_hip_convert_hit_to_str_bounds)
     fail_unless(buf.hit[0] == '2', NULL);
     // is the last part of the HIT correct?
     fail_unless(buf.hit[HIT_LEN - 1] == '2', NULL);
-    // is the suffix correct including the terminating null character?
+    // is the suffix correct including the terminating NULL character?
     fail_unless(memcmp(&buf.suffix, suffix, SUFFIX_LEN) == 0, NULL);
     // is the buffer after the suffix untouched?
     fail_unless(memcmp(&buf.after, ones, AFTER_LEN) == 0, NULL);

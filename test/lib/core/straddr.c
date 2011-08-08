@@ -41,7 +41,7 @@ START_TEST(test_hip_in6_ntop_valid)
     struct buf_test {
         char before[GUARD_SIZE];
         char addr[39];              // 16 IPv6 bytes -> 32 hex chars + 7 ':'s
-        char null[1];               // terminating null character
+        char null[1];               // terminating NULL character
         char after[GUARD_SIZE];
     } buf;
     char            ones[GUARD_SIZE];
@@ -58,7 +58,7 @@ START_TEST(test_hip_in6_ntop_valid)
     fail_unless(buf.addr[0] == '2', NULL);
     // is the last part of the address correct?
     fail_unless(buf.addr[sizeof(buf.addr) - 1] == '2', NULL);
-    // is there a terminating null character?
+    // is there a terminating NULL character?
     fail_unless(buf.null[0] == '\0', NULL);
     // is the buffer after the address untouched?
     fail_unless(memcmp(buf.after, ones, GUARD_SIZE) == 0, NULL);

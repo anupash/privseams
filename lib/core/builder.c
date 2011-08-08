@@ -63,9 +63,9 @@
  * <li>receive the message from kernel.</li>
  * <li>if (msg->err) goto_error_handler;</li>
  * <li>hit = hip_get_param_contents(msg, HIP_PARAM_HIT);</li>
- * <li>note: hit can be null, if the param was not found.</li>
+ * <li>note: hit can be NULL, if the param was not found.</li>
  * </li>
- * <li>note: hit can be null.</li>
+ * <li>note: hit can be NULL.</li>
  * </ul>
  * </ul>
  *
@@ -762,7 +762,7 @@ const struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
     const uint8_t               *pos        = (const uint8_t *) current_param;
 
     if (!msg) {
-        HIP_ERROR("msg null\n");
+        HIP_ERROR("msg NULL\n");
         goto out;
     }
 
@@ -809,7 +809,7 @@ struct hip_tlv_common *hip_get_next_param_readwrite(struct hip_common *msg,
     uint8_t               *pos        = (uint8_t *) current_param;
 
     if (!msg) {
-        HIP_ERROR("msg null\n");
+        HIP_ERROR("msg NULL\n");
         goto out;
     }
 
@@ -1596,7 +1596,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 
     if (tlv_common == NULL) {
         err = -EFAULT;
-        HIP_ERROR("param null\n");
+        HIP_ERROR("param NULL\n");
         goto out;
     }
 
@@ -1663,7 +1663,7 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr base_type,
                        hip_hdr_err err_val)
 {
     if (!msg) {
-        HIP_ERROR("null msg\n");
+        HIP_ERROR("NULL msg\n");
         return -EINVAL;
     }
 

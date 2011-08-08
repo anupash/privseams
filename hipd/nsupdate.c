@@ -116,7 +116,7 @@ static char *make_env(const char *const name, const char *const value)
         return NULL;
     }
 
-    /* strcpy first part of result as strcat relies on null-termination to append
+    /* strcpy first part of result as strcat relies on NULL-termination to append
      * a string and this is not guaranteed on memory provided by malloc */
     strcpy(result, name);
     strcat(result, "=");
@@ -149,7 +149,7 @@ static void sig_chld(UNUSED int signo)
  * @param src       address in netdev_address structure
  * @param dst       buffer to store the address as string
  * @param cnt       length of the buffer dst
- * @return          On success, a non-null pointer to dst. NULL is returned
+ * @return          On success, a non-NULL pointer to dst. NULL is returned
  *                  if there was an error, with errno set to indicate the error
  */
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)

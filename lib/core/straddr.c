@@ -41,7 +41,7 @@
 
 /**
  * Convert a binary IPv6 address to a hexadecimal string representation of the
- * form 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a null character.
+ * form 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a NULL character.
  *
  * @param in6 a pointer to a binary IPv6 address.
  * @param buf a pointer to a buffer to write the string representation to. The

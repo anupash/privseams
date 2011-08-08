@@ -78,10 +78,10 @@ struct hip_fw_context {
 
 struct esp_address {
     struct in6_addr dst_addr;
-    uint32_t       *update_id;  // null or pointer to the update id from the packet
+    uint32_t       *update_id;  // NULL or pointer to the update id from the packet
     // that announced this address.
     // when ack with the update id is seen all esp_addresses with
-    // null update_id can be removed.
+    // NULL update_id can be removed.
 };
 
 struct esp_tuple {

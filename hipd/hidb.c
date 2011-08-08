@@ -335,7 +335,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
 /**
  * Finds the host id corresponding to the given @c hit.
  *
- * If @c hit is null, finds the first used host id.
+ * If @c hit is NULL, finds the first used host id.
  * If algo is HIP_ANY_ALGO, ignore algore comparison.
  *
  * @param db   database to be searched. Usually either HIP_DB_PEER_HID or

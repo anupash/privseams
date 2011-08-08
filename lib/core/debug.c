@@ -539,7 +539,7 @@ static int hip_mem2pretty_hex_line(const char *in, const size_t in_len, char *ou
 /**
  * Write a pretty-printed hexadecimal string representation of a memory area in the format of the hexdump -C UNIX command to a buffer.
  * At most @a in_len bytes of the memory are read and at most @a out_len bytes are are written, whichever comes first.
- * If at least one byte was converted, the hexadecimal representation is terminated by a null character.
+ * If at least one byte was converted, the hexadecimal representation is terminated by a NULL character.
  * If the memory regions of @a in and @a out overlap, the result of the operation is undefined.
  *
  * Example of the output:
@@ -565,7 +565,7 @@ static size_t hip_mem2pretty_hex(const void *in, const size_t in_len, char *out,
     // Points to the final output byte + 1, i.e., the first output byte not to write to.
     const char *out_end = out_cur + out_len;
 
-    // Iterate while there is still input to read and enough room for another full line including the terminating null character.
+    // Iterate while there is still input to read and enough room for another full line including the terminating NULL character.
     while (in_cur < in_end && out_cur <= (out_end - (HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH + 1))) {
         const size_t in_remaining  = in_len - (in_cur - (const char *) in);
         const size_t out_remaining = out_len - (out_cur - (const char *) out);

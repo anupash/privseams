@@ -39,7 +39,7 @@
  * A line parser object is used to linearly iterate over the lines in a memory
  * area that holds text.
  * The memory area contents are not modified and the returned line pointers are
- * terminated by newline characters, not null characters.
+ * terminated by newline characters, not NULL characters.
  *
  * When this function returns successfully, hip_lp_first() can be called
  * immediately to start parsing.

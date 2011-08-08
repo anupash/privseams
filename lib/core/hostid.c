@@ -866,7 +866,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         }
 
         /* using default */
-        HIP_IFEL(hi_fmt == NULL, -1, "Key type is null.\n");
+        HIP_IFEL(hi_fmt == NULL, -1, "Key type is NULL.\n");
 
         if (!strcmp(hi_fmt, "dsa")) {
             if (anon) {

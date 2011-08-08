@@ -128,7 +128,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, struct in6_addr *local_addr,
 {
     int err = 0;
 
-    /* If hitr is hashed null hit, send it as null on the wire.
+    /* If hitr is hashed NULL hit, send it as NULL on the wire.
      * This case is an opportunistic BEX. */
     if (hit_is_opportunistic_hit(&i1->hitr)) {
         ipv6_addr_copy(&i1->hitr, &in6addr_any);
@@ -841,7 +841,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
         r1_dst_port = ctx->msg_ports.src_port;
     }
 
-    /* It should not be null hit, null hit has been replaced by real local
+    /* It should not be NULL hit, NULL hit has been replaced by real local
      * hit. */
     HIP_ASSERT(!hit_is_opportunistic_hit(&ctx->input_msg->hitr));
 

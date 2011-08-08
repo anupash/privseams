@@ -62,7 +62,7 @@ struct hip_line_parser {
  * Start a new parsing pass with a line parser and return the first line in the
  * buffer.
  * The buffer is not modified and the line is terminated by a newline
- * character (not a null character).
+ * character (not a NULL character).
  *
  * A parsing pass consists of starting it via hip_lp_first() and iterating over
  * the lines in the file via hip_lp_next() until it returns NULL.

@@ -1359,7 +1359,7 @@ out_err:
 
 /**
  * Update an existing ESP tuple according to the given parameters Argument
- * esp_info or locator may be null. SPI or ip_addr will not be updated in that case.
+ * esp_info or locator may be NULL. SPI or ip_addr will not be updated in that case.
  *
  * @param esp_info a pointer to the ESP info parameter in the control message
  * @param locator a pointer to the locator

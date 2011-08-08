@@ -39,12 +39,12 @@
 
 /**
  * Convert a binary HIT to a hexadecimal string representation of the form
- * 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a null character.
+ * 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a NULL character.
  *
  * @param hit a pointer to a binary HIT.
- * @param suffix an optional null-terminated string suffix to be appended to
+ * @param suffix an optional NULL-terminated string suffix to be appended to
  *  the HIT. If suffix is NULL or the empty string, no suffix is appended. If
- *  suffix is not null-terminated, the result is undefined.
+ *  suffix is not NULL-terminated, the result is undefined.
  * @param hit_str a pointer to a buffer to write the HIT and the suffix to. The
  *  result of passing a buffer that is too short to hold the string
  *  representation plus the suffix is undefined.
