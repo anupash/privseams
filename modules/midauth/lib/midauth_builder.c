@@ -162,10 +162,7 @@ int hip_midauth_puzzle_seed(const uint8_t opaque[],
 {
     unsigned char sha_digest[SHA_DIGEST_LENGTH];
 
-    if (!puzzle_value) {
-        HIP_ERROR("Parameter puzzle_value is not allocated\n");
-        return -1;
-    }
+    HIP_ASSERT(puzzle_value != NULL);
 
     // the hashed opaque field is used as puzzle seed
     if (hip_build_digest(HIP_DIGEST_SHA1,

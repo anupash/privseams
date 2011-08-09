@@ -74,7 +74,7 @@ START_TEST(test_midauth_builder_build_param_challenge_request_CORRECT)
                                          "\x14\x05\x00\x48\x49\x0b\x02\x42\x02"
                                          "\x15\x06\x08\x49\x50\x0C";
     const struct hip_challenge_request *request = NULL;
-    struct hip_common *const msg = hip_msg_alloc();
+    struct hip_common *const            msg     = hip_msg_alloc();
 
     fail_unless(hip_build_param_challenge_request(msg, 0, 0, opaque,
                                                   MIDAUTH_DEFAULT_NONCE_LENGTH) ==
@@ -91,9 +91,9 @@ START_TEST(test_midauth_builder_build_param_challenge_response_NULL_msg)
     const char challenge_request[] = "\xff\x36\x00\x14\x00\x00\x01\x41\x01"
                                      "\x14\x05\x00\x48\x49\x0b\x02\x42\x02"
                                      "\x15\x06\x08\x49\x50\x0C";
-    const uint8_t solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
-    const struct hip_challenge_request *request =
-            (const struct hip_challenge_request *) challenge_request;
+    const uint8_t                       solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
+    const struct hip_challenge_request *request    =
+        (const struct hip_challenge_request *) challenge_request;
 
     fail_unless(hip_build_param_challenge_response(NULL, request, solution) == -1,
                 NULL);
@@ -102,9 +102,9 @@ END_TEST
 
 START_TEST(test_midauth_builder_build_param_challenge_response_NULL_request)
 {
-    const uint8_t solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
-    const struct hip_challenge_request *request = NULL;
-    struct hip_common *const msg = hip_msg_alloc();
+    const uint8_t                       solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
+    const struct hip_challenge_request *request    = NULL;
+    struct hip_common *const            msg        = hip_msg_alloc();
 
     fail_unless(hip_build_param_challenge_response(msg, request, solution) == -1,
                 NULL);
@@ -117,7 +117,7 @@ START_TEST(test_midauth_builder_build_param_challenge_response_NULL_solution)
                                      "\x14\x05\x00\x48\x49\x0b\x02\x42\x02"
                                      "\x15\x06\x08\x49\x50\x0C";
     const struct hip_challenge_request *request =
-            (const struct hip_challenge_request *) challenge_request;
+        (const struct hip_challenge_request *) challenge_request;
     struct hip_common *const msg = hip_msg_alloc();
 
     fail_unless(hip_build_param_challenge_response(msg, request, NULL) == -1,
@@ -134,11 +134,11 @@ START_TEST(test_midauth_builder_build_param_challenge_response_CORRECT)
                                           "\x14\x05\x00\x48\x49\x01\x41\x01\x14"
                                           "\x05\x00\x48\x49\x0b\x02\x42\x02\x15"
                                           "\x06\x08\x49\x50\x0c";
-    const uint8_t solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
-    const struct hip_challenge_request *request =
-            (const struct hip_challenge_request *) challenge_request;
+    const uint8_t                       solution[] = "\x01\x41\x01\x14\x05\x00\x48\x49";
+    const struct hip_challenge_request *request    =
+        (const struct hip_challenge_request *) challenge_request;
     const struct hip_challenge_response *response = NULL;
-    struct hip_common *const msg = hip_msg_alloc();
+    struct hip_common *const             msg      = hip_msg_alloc();
 
     fail_unless(hip_build_param_challenge_response(msg, request, solution) == 0,
                 NULL);
@@ -160,7 +160,7 @@ START_TEST(test_midauth_builder_challenge_request_opaque_len_CORRECT)
     const uint8_t opaque[] = "\x01\x41\x01\x14\x05\x00\x48\x49\x0b"
                              "\x02\x42\x02\x15\x06\x08\x49\x50\x0c";
     const struct hip_challenge_request *request = NULL;
-    struct hip_common *const msg = hip_msg_alloc();
+    struct hip_common *const            msg     = hip_msg_alloc();
 
     fail_unless(hip_build_param_challenge_request(msg, 0, 0, opaque,
                                                   MIDAUTH_DEFAULT_NONCE_LENGTH) ==
@@ -176,21 +176,9 @@ END_TEST
 START_TEST(test_midauth_builder_puzzle_seed_NULL_opaque)
 {
     const uint8_t *const opaque = NULL;
-    uint8_t puzzle_value[PUZZLE_LENGTH];
+    uint8_t              puzzle_value[PUZZLE_LENGTH];
 
     hip_midauth_puzzle_seed(opaque, MIDAUTH_DEFAULT_NONCE_LENGTH, puzzle_value);
-}
-END_TEST
-#endif /* HAVE_TCASE_ADD_EXIT_TEST */
-
-START_TEST(test_midauth_builder_puzzle_seed_0_opaque_len)
-{
-    const uint8_t opaque[] = "\x01\x41\x00\x14\x05\x00\x48\x49\x0b";
-    uint8_t puzzle_value[PUZZLE_LENGTH];
-
-    fail_unless(hip_midauth_puzzle_seed(opaque,
-                                        0,
-                                        puzzle_value) == -1, NULL);
 }
 END_TEST
 
@@ -198,9 +186,21 @@ START_TEST(test_midauth_builder_puzzle_seed_NULL_puzzle_value)
 {
     const uint8_t opaque[] = "\x01\x41\x00\x14\x05\x00\x48\x49\x0b";
 
+    hip_midauth_puzzle_seed(opaque,
+                            MIDAUTH_DEFAULT_NONCE_LENGTH,
+                            NULL);
+}
+END_TEST
+#endif /* HAVE_TCASE_ADD_EXIT_TEST */
+
+START_TEST(test_midauth_builder_puzzle_seed_0_opaque_len)
+{
+    const uint8_t opaque[] = "\x01\x41\x00\x14\x05\x00\x48\x49\x0b";
+    uint8_t       puzzle_value[PUZZLE_LENGTH];
+
     fail_unless(hip_midauth_puzzle_seed(opaque,
-                                        MIDAUTH_DEFAULT_NONCE_LENGTH,
-                                        NULL) == -1, NULL);
+                                        0,
+                                        puzzle_value) == -1, NULL);
 }
 END_TEST
 
@@ -221,7 +221,7 @@ END_TEST
 
 Suite *modules_midauth_lib_builder(void)
 {
-    Suite *s = suite_create("modules/midauth/lib/midauth_builder");
+    Suite *s                  = suite_create("modules/midauth/lib/midauth_builder");
     TCase *tc_midauth_builder = tcase_create("Midauth_builder");
 
     tcase_add_test(tc_midauth_builder,
@@ -253,10 +253,10 @@ Suite *modules_midauth_lib_builder(void)
 #ifdef HAVE_TCASE_ADD_EXIT_TEST
     tcase_add_exit_test(tc_midauth_builder,
                         test_midauth_builder_puzzle_seed_NULL_opaque, 1);
+    tcase_add_exit_test(tc_midauth_builder,
+                        test_midauth_builder_puzzle_seed_NULL_puzzle_value, 1);
 #endif
     tcase_add_test(tc_midauth_builder, test_midauth_builder_puzzle_seed_0_opaque_len);
-    tcase_add_test(tc_midauth_builder,
-                   test_midauth_builder_puzzle_seed_NULL_puzzle_value);
     tcase_add_test(tc_midauth_builder, test_midauth_builder_puzzle_seed_CORRECT);
 
     suite_add_tcase(s, tc_midauth_builder);
