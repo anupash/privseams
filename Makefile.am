@@ -124,6 +124,7 @@ hipd_hipd_sources = hipd/accessor.c              \
                     hipd/user_ipsec_sadb_api.c   \
                     modules/heartbeat/hipd/heartbeat.c          \
                     modules/heartbeat_update/hipd/hb_update.c   \
+                    modules/midauth/lib/midauth_builder.c       \
                     modules/update/hipd/update.c                \
                     modules/update/hipd/update_builder.c        \
                     modules/update/hipd/update_locator.c        \
@@ -133,7 +134,8 @@ if HIP_MIDAUTH
 hipd_hipd_sources += hipd/pisa.c
 endif
 
-hipd_hipd_SOURCES = $(hipd_hipd_sources)        \
+hipd_hipd_SOURCES = $(hipd_hipd_sources)                \
+                    modules/midauth/hipd/midauth.c      \
                     hipd/main.c
 
 firewall_hipfw_sources = firewall/cache.c               \
@@ -155,7 +157,8 @@ firewall_hipfw_sources = firewall/cache.c               \
                          firewall/user_ipsec_api.c      \
                          firewall/user_ipsec_esp.c      \
                          firewall/user_ipsec_fw_msg.c   \
-                         firewall/user_ipsec_sadb.c
+                         firewall/user_ipsec_sadb.c     \
+                         modules/midauth/lib/midauth_builder.c
 
 if HIP_MIDAUTH
 firewall_hipfw_sources += firewall/midauth.c   \
@@ -229,9 +232,6 @@ test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               
                                      test/modules/midauth/lib/midauth_builder.c \
                                      test/modules/midauth/hipd/midauth.c        \
                                      $(hipd_hipd_sources)
-
-
-include modules/midauth/Makefile.am
 
 
 ### static library dependencies ###
