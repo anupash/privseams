@@ -1050,16 +1050,6 @@ int hip_create_r2(UNUSED const uint8_t packet_type,
 
     /********** CHALLENGE_RESPONSE **********/
 #ifdef CONFIG_HIP_MIDAUTH
-    /** @todo no caching is done for PUZZLE_M parameters. This may be
-     *        a DOS attack vector.
-     */
-    HIP_IFEL(hip_solve_puzzle_m(ctx->output_msg, ctx->input_msg),
-             -1, "Building of Challenge_Response failed\n");
-    midauth_cert = hip_pisa_get_certificate();
-
-    HIP_IFEL(hip_build_param(ctx->output_msg, ctx->hadb_entry->our_pub), -1,
-             "Building of host id failed\n");
-
     /* For now we just add some random data to see if it works */
     HIP_IFEL(hip_build_param_cert(ctx->output_msg, 1, 1, 1, 1, midauth_cert,
                                   strlen(midauth_cert)),

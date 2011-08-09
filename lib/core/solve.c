@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -174,59 +174,3 @@ int hip_verify_puzzle_solution(const struct puzzle_hash_input *const puzzle_inpu
 
     return 0;
 }
-
-#ifdef CONFIG_HIP_MIDAUTH
-/**
- * solve a midauth puzzle which is essentially a normal HIP cookie
- * with some extra whipped cream on the top
- *
- * @param out the received R1 message
- * @param in an I2 message where the solution will be written
- * @return zero on success and negative on error
- * @see <a
- * href="http://tools.ietf.org/id/draft-heer-hip-middle-auth">Heer et
- * al, End-Host Authentication for HIP Middleboxes, Internet draft,
- * work in progress, February 2009</a>
- */
-int hip_solve_puzzle_m(struct hip_common *const out,
-                       const struct hip_common *const in)
-{
-    struct puzzle_hash_input            puzzle_input;
-    const struct hip_challenge_request *pz;
-    uint8_t                             digest[HIP_AH_SHA_LEN];
-
-    pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
-    while (pz) {
-        if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST) {
-            break;
-        }
-
-        if (hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digest) < 0) {
-            HIP_ERROR("Building of SHA1 Random seed I failed\n");
-            return -1;
-        }
-
-        memcpy(puzzle_input.puzzle,
-               &digest[HIP_AH_SHA_LEN - PUZZLE_LENGTH],
-               PUZZLE_LENGTH);
-        puzzle_input.initiator_hit = out->hits;
-        puzzle_input.responder_hit = out->hitr;
-        RAND_bytes(puzzle_input.solution, PUZZLE_LENGTH);
-
-        if ((hip_solve_puzzle(&puzzle_input, pz->K))) {
-            HIP_ERROR("Solving of puzzle failed\n");
-            return -EINVAL;
-        }
-
-        if (hip_build_param_challenge_response(out, pz, puzzle_input.solution) < 0) {
-            HIP_ERROR("Error while creating solution_m reply parameter\n");
-            return -1;
-        }
-        pz = (const struct hip_challenge_request *)
-             hip_get_next_param(in, (const struct hip_tlv_common *) pz);
-    }
-
-    return 0;
-}
-
-#endif /* CONFIG_HIP_MIDAUTH */

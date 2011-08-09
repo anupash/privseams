@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,7 @@
 #include <stdint.h>
 
 #include "lib/core/protodefs.h"
+#include "modules/midauth/lib/midauth_builder.h"
 #include "firewall_defines.h"
 
 typedef int (*midauth_handler)(struct hip_fw_context *ctx);

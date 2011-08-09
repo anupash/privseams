@@ -133,12 +133,6 @@ int hip_build_param_puzzle(struct hip_common *const msg,
                            const uint32_t opaque,
                            const uint8_t *const random_i);
 
-int hip_build_param_challenge_request(struct hip_common *,
-                                      uint8_t,
-                                      uint8_t,
-                                      uint8_t *,
-                                      uint8_t);
-
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
 int hip_build_param_signature2_contents(struct hip_common *,
@@ -152,10 +146,6 @@ int hip_build_param_signature_contents(struct hip_common *,
 int hip_build_param_solution(struct hip_common *,
                              const struct hip_puzzle *,
                              uint8_t *const);
-
-int hip_build_param_challenge_response(struct hip_common *const msg,
-                                       const struct hip_challenge_request *const pz,
-                                       const uint8_t *const solution);
 
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);

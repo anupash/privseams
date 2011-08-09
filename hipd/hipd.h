@@ -112,4 +112,7 @@ int hip_sock_recv_firewall(void);
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
+int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t * flags);
+int hipd_main(uint64_t flags);
+
 #endif /* HIP_HIPD_HIPD_H */
