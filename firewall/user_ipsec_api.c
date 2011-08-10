@@ -36,8 +36,6 @@
 /* required for IFNAMSIZ in libipq headers */
 #define _BSD_SOURCE
 
-#include "esp_prot_api.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,6 +50,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
+#include "esp_prot_api.h"
 #include "firewall_defines.h"
 #include "lsi.h"
 #include "user_ipsec_esp.h"
