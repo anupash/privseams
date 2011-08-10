@@ -253,8 +253,8 @@ static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
                   ack_peer_update_id);
 
         if (!check_and_update_ack_id_bounds(localstate, ack_peer_update_id)) {
-            HIP_DEBUG("Update ID (%u) in the ACK parameter is not one of the "
-                      "yet to be acknowledged Update IDs (%u-%u). "
+            HIP_DEBUG("Update ID (%u) in the ACK parameter is not in the "
+                      "current Update ID window (%u-%u). "
                       "Dropping the packet.\n",
                       ack_peer_update_id,
                       localstate->update_id_out_lower_bound,
