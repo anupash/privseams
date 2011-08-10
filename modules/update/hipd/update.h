@@ -81,13 +81,15 @@ struct update_state {
      */
     unsigned valid_locators;
 
-    /** Stored outgoing UPDATE ID counter. */
+    /** UPDATE ID of the latest outgoing UPDATE packet. */
     uint32_t update_id_out;
 
-    /** Stored oldest not yet acknowledged outgoing UPDATE ID counter. */
+    /** UPDATE ID of the oldest not yet acknowledged outgoing UPDATE packet.
+     *  Usually this value is equal to @c update_id_out. The only exception is
+     *  when more than one UPDATE packet is yet to be acknowledged by the peer. */
     uint32_t update_id_out_lower_bound;
 
-    /** Stored incoming UPDATE ID counter. */
+    /** UPDATE ID of the latest incoming UPDATE packet. */
     uint32_t update_id_in;
 };
 
