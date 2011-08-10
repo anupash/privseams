@@ -57,10 +57,7 @@ endef
 CONFIGURE_VARS += LIBS="-lz"
 
 define Build/Configure
-	$(call Build/Configure/Default, \
-            --sysconfdir=/etc \
-            --disable-debug \
-    );
+	$(call Build/Configure/Default,--sysconfdir=/etc --disable-debug);
 endef
 
 define Build/Compile
