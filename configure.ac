@@ -256,7 +256,8 @@ AC_CONFIG_FILES([Makefile
                  debian/hipl-dnsproxy.dirs
                  debian/hipl-dnsproxy.install
                  doc/Doxyfile
-                 doc/HOWTO.xml])
+                 doc/HOWTO.xml
+                 packaging/openwrt/hipl/Makefile])
 AC_CONFIG_FILES([tools/hipdnskeyparse/hipdnskeyparse],
                 [chmod +x tools/hipdnskeyparse/hipdnskeyparse])
 AC_CONFIG_FILES([tools/hipdnsproxy/hipdnsproxy],

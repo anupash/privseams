@@ -331,5 +331,6 @@ dist-hook:
 	rm -f $(addprefix $(distdir)/doc/,Doxyfile HOWTO.xml)
 	rm -f $(addprefix $(distdir)/tools/,nsupdate.pl hipdnsproxy/hipdnsproxy hipdnskeyparse/hipdnskeyparse)
 	rm -f $(addprefix $(distdir)/debian/,hipl-dnsproxy.dirs hipl-dnsproxy.install)
+	rm -f $(distdir)/packaging/openwrt/hipl/Makefile
 
 .PHONY: alltests bin checkheaders deb doxygen rpm syncrepo*
