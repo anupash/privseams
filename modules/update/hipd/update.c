@@ -168,7 +168,7 @@ out_err:
  *         false else
  */
 static bool check_and_update_ack_id_bounds(struct update_state *const state,
-                                           uint32_t ack_peer_update_id)
+                                           const uint32_t ack_peer_update_id)
 {
     HIP_ASSERT(state);
 
