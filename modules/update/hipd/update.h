@@ -83,6 +83,10 @@ struct update_state {
 
     /** Stored outgoing UPDATE ID counter. */
     uint32_t update_id_out;
+
+    /** Stored oldest not yet acknowledged outgoing UPDATE ID counter. */
+    uint32_t update_id_out_lower_bound;
+
     /** Stored incoming UPDATE ID counter. */
     uint32_t update_id_in;
 };
