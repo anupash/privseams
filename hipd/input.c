@@ -104,22 +104,21 @@
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
                            const uint8_t *hmac, void *hmac_key, int hmac_type)
 {
-    int     err = 0;
     uint8_t hmac_res[HIP_AH_SHA_LEN];
 
     HIP_HEXDUMP("HMAC data", buffer, buf_len);
 
-    HIP_IFEL(hip_write_hmac(hmac_type, hmac_key, buffer,
-                            buf_len, hmac_res),
-             -EINVAL, "Could not build hmac\n");
+    if (hip_write_hmac(hmac_type, hmac_key, buffer, buf_len, hmac_res)) {
+        HIP_ERROR("Could not build hmac\n");
+        return -EINVAL;
+    }
 
     HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
-    HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
+    if (memcmp(hmac_res, hmac, HIP_AH_SHA_LEN)) {
+        return -EINVAL;
+    }
 
-
-out_err:
-
-    return err;
+    return 0;
 }
 
 /**
@@ -135,15 +134,17 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
                                    const hip_tlv parameter_type)
 {
-    int                    err = 0, len = 0, orig_len = 0;
+    int                    len = 0, orig_len = 0;
     struct hip_crypto_key  tmpkey;
     const struct hip_hmac *hmac          = NULL;
     uint8_t                orig_checksum = 0;
 
     HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
-    HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
-             -ENOMSG, "No HMAC parameter\n");
+    if (!(hmac = hip_get_param(msg, parameter_type))) {
+        HIP_ERROR("No HMAC parameter\n");
+        return -ENOMSG;
+    }
 
     /* hmac verification modifies the msg length temporarily, so we have
      * to restore the length */
@@ -157,17 +158,17 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     hip_set_msg_total_len(msg, len);
 
     memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
-    HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
-                             hmac->hmac_data, tmpkey.key,
-                             HIP_DIGEST_SHA1_HMAC),
-             -1, "HMAC validation failed\n");
+    if (hip_verify_hmac(msg, hip_get_msg_total_len(msg), hmac->hmac_data,
+                        tmpkey.key, HIP_DIGEST_SHA1_HMAC)) {
+        HIP_ERROR("HMAC validation failed\n");
+        return -1;
+    }
 
     /* revert the changes to the packet */
     hip_set_msg_total_len(msg, orig_len);
     hip_set_msg_checksum(msg, orig_checksum);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -203,7 +204,9 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
     struct hip_common     *msg_copy = NULL;
     int                    err      = 0;
 
-    HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
+    if (!(msg_copy = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
 
     HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
              "Pseudo hmac2 pkt failed\n");
@@ -500,13 +503,13 @@ static int hip_packet_to_drop(struct hip_hadb_state *entry,
  */
 int hip_receive_control_packet(struct hip_packet_context *ctx)
 {
-    int             err           = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
     uint32_t        type, state;
 
-    HIP_IFEL(hip_check_network_msg(ctx->input_msg),
-             -1,
-             "Checking control message failed.\n");
+    if (hip_check_network_msg(ctx->input_msg)) {
+        HIP_ERROR("Checking control message failed.\n");
+        return -1;
+    }
 
     /* check for invalid loopback message */
     if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
@@ -518,13 +521,14 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         !hip_addr_is_loopback(&ctx->src_addr) &&
         !IN6_ARE_ADDR_EQUAL(&ctx->src_addr, &ctx->dst_addr)) {
         HIP_DEBUG("Invalid loopback packet. Dropping.\n");
-        err = -1;
-        goto out_err;
+        return -1;
     }
 
     /* Check packet destination */
-    HIP_IFEL(!hip_hidb_hit_is_our(&ctx->input_msg->hitr),
-             -1, "Packet is not destined for this host. Dropping.\n");
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        HIP_ERROR("Packet is not destined for this host. Dropping.\n");
+        return -1;
+    }
 
     /* Debug printing of received packet information. All received HIP
      * control packets are first passed to this function. Therefore
@@ -548,8 +552,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
                            type,
                            &ctx->input_msg->hitr) == 1) {
         HIP_DEBUG("Ignoring the packet sent.\n");
-        err = -1;
-        goto out_err;
+        return -1;
     }
 
     /* Check if state can be found for opportunistic BEX */
@@ -571,8 +574,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
 #ifdef CONFIG_HIP_RVS
     /* check if it a relaying msg */
     if (hip_relay_handle_relay_to(type, state, ctx)) {
-        err = -ECANCELED;
-        goto out_err;
+        return -ECANCELED;
     } else {
         HIP_DEBUG("handle relay to failed, continue the bex handler\n");
     }
@@ -592,10 +594,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
 #endif
-    HIP_DEBUG("Done with control packet, err is %d.\n", err);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -622,8 +622,6 @@ out_err:
  */
 int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
 {
-    int err = 0;
-
 #ifndef CONFIG_HIP_RVS
     int                    type  = hip_get_msg_type(ctx->input_msg);
     struct hip_hadb_state *entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
@@ -644,10 +642,12 @@ int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
         ipv6_addr_copy(&ctx->src_addr, &entry->peer_addr);
     }
 #endif
-    HIP_IFEL(hip_receive_control_packet(ctx), -1,
-             "receiving of control packet failed\n");
-out_err:
-    return err;
+    if (hip_receive_control_packet(ctx)) {
+        HIP_ERROR("receiving of control packet failed\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -792,8 +792,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                          err    = 0, retransmission = 0;
-    const struct hip_r1_counter *r1cntr = NULL;
+    int                          retransmission = 0;
+    const struct hip_r1_counter *r1cntr         = NULL;
     struct puzzle_hash_input     puzzle_input;
 
     if (ha_state == HIP_STATE_I2_SENT) {
@@ -831,16 +831,20 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     if (!retransmission) {
         const struct hip_puzzle *pz = NULL;
 
-        HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
-                 "Malformed R1 packet. PUZZLE parameter missing\n");
+        if (!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE))) {
+            HIP_ERROR("Malformed R1 packet. PUZZLE parameter missing\n");
+            return -EINVAL;
+        }
 
         memcpy(puzzle_input.puzzle, pz->I, PUZZLE_LENGTH);
         puzzle_input.initiator_hit = ctx->input_msg->hitr;
         puzzle_input.responder_hit = ctx->input_msg->hits;
         RAND_bytes(puzzle_input.solution, PUZZLE_LENGTH);
 
-        HIP_IFEL(hip_solve_puzzle(&puzzle_input, pz->K),
-                 -EINVAL, "Solving of puzzle failed\n");
+        if (hip_solve_puzzle(&puzzle_input, pz->K)) {
+            HIP_ERROR("Solving of puzzle failed\n");
+            return -EINVAL;
+        }
 
         memcpy(ctx->hadb_entry->puzzle_i, pz->I, PUZZLE_LENGTH);
         memcpy(ctx->hadb_entry->puzzle_solution,
@@ -859,95 +863,85 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
     /* note: we could skip keying material generation in the case
      * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(ctx,
-                                         ctx->hadb_entry->puzzle_i,
-                                         ctx->hadb_entry->puzzle_solution),
-             -EINVAL,
-             "Could not produce keying material\n");
+    if (hip_produce_keying_material(ctx, ctx->hadb_entry->puzzle_i,
+                                    ctx->hadb_entry->puzzle_solution)) {
+        HIP_ERROR("Could not produce keying material\n");
+        return -EINVAL;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 int hip_build_esp_info(UNUSED const uint8_t packet_type,
                        UNUSED const uint32_t ha_state,
                        struct hip_packet_context *ctx)
 {
-    int err = 0;
-
     /* SPI is set in another handler */
-    HIP_IFEL(hip_build_param_esp_info(ctx->output_msg,
-                                      ctx->hadb_entry->esp_keymat_index,
-                                      0,
-                                      0),
-             -1,
-             "building of ESP_INFO failed.\n");
+    if (hip_build_param_esp_info(ctx->output_msg, ctx->hadb_entry->esp_keymat_index, 0, 0)) {
+        HIP_ERROR("building of ESP_INFO failed.\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 int hip_build_solution(UNUSED const uint8_t packet_type,
                        UNUSED const uint32_t ha_state,
                        struct hip_packet_context *ctx)
 {
-    int                      err = 0;
-    const struct hip_puzzle *pz  = NULL;
+    const struct hip_puzzle *pz = NULL;
 
     /* solution already computed and stored in hadb during packet check */
-    HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)),
-             -ENOENT,
-             "Internal error: PUZZLE parameter mysteriously gone\n");
-    HIP_IFEL(hip_build_param_solution(ctx->output_msg, pz,
-                                      ctx->hadb_entry->puzzle_solution),
-             -1,
-             "Building of solution failed\n");
-out_err:
-    return err;
+    if (!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE))) {
+        HIP_ERROR("Internal error: PUZZLE parameter mysteriously gone\n");
+        return -ENOENT;
+    }
+    if (hip_build_param_solution(ctx->output_msg, pz, ctx->hadb_entry->puzzle_solution)) {
+        HIP_ERROR("Building of solution failed\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
                               UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
-    int                               err = 0;
     const struct hip_diffie_hellman  *dh_req;
     const struct hip_dh_public_value *dhpv;
     int                               pub_len;
     uint8_t                          *public_value;
 
     /* calculate shared secret and create keying material */
-    HIP_IFEL(!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
-             -ENOENT,
-             "Internal error\n");
+    if (!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN))) {
+        HIP_ERROR("Internal error\n");
+        return -ENOENT;
+    }
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
     dhpv = hip_dh_select_key(dh_req);
 
     pub_len = ntohs(dhpv->pub_len);
-    HIP_IFEL(!(public_value = malloc(pub_len)),
-             -ENOMEM,
-             "Failed to allocate memory for public value\n");
-    HIP_IFEL((pub_len = hip_insert_dh(public_value,
-                                      pub_len,
-                                      dhpv->group_id)) < 0,
-             -1,
-             "Could not extract the DH public key\n");
+    if (!(public_value = malloc(pub_len))) {
+        HIP_ERROR("Failed to allocate memory for public value\n");
+        return -ENOMEM;
+    }
+    if ((pub_len = hip_insert_dh(public_value, pub_len, dhpv->group_id)) < 0) {
+        HIP_ERROR("Could not extract the DH public key\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_build_param_diffie_hellman_contents(ctx->output_msg,
-                                                     dhpv->group_id,
-                                                     public_value,
-                                                     pub_len,
-                                                     HIP_MAX_DH_GROUP_ID,
-                                                     NULL,
-                                                     0),
-             -1,
-             "Building of DH failed.\n");
+    if (hip_build_param_diffie_hellman_contents(ctx->output_msg, dhpv->group_id,
+                                                public_value, pub_len,
+                                                HIP_MAX_DH_GROUP_ID, NULL, 0)) {
+        HIP_ERROR("Building of DH failed.\n");
+        return -1;
+    }
 
     free(public_value);
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -1069,7 +1063,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                        err      = 0;
     const struct hip_locator  *locator  = NULL;
     const struct hip_esp_info *esp_info = NULL;
 
@@ -1085,18 +1078,20 @@ int hip_handle_r2(RVS const uint8_t packet_type,
         ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.src_port;
     }
 
-    HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
-             -EINVAL, "Parameter SPI not found.\n");
+    if (!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO))) {
+        HIP_ERROR("Parameter SPI not found.\n");
+        return -EINVAL;
+    }
 
     ctx->hadb_entry->spi_outbound_current = ntohl(esp_info->new_spi);
     /* Copy SPI out value here or otherwise ICE code has zero SPI */
     ctx->hadb_entry->spi_outbound_new = ntohl(esp_info->new_spi);
 
     /********** ESP-PROT anchor [OPTIONAL] **********/
-    HIP_IFEL(esp_prot_r2_handle_anchor(ctx->hadb_entry,
-                                       ctx->input_msg),
-             -1,
-             "failed to handle esp prot anchor\n");
+    if (esp_prot_r2_handle_anchor(ctx->hadb_entry, ctx->input_msg)) {
+        HIP_ERROR("failed to handle esp prot anchor\n");
+        return -1;
+    }
 
     /***** LOCATOR PARAMETER *****/
     locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
@@ -1145,23 +1140,21 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     hip_perf_write_benchmark(perf_set, PERF_R2);
 #endif
 
-out_err:
-    return err;
+    return 0;
 }
 
 int hip_setup_ipsec_sa(UNUSED const uint8_t packet_type,
                        UNUSED const uint32_t ha_state,
                        struct hip_packet_context *ctx)
 {
-    int err = 0;
+    if (hip_create_or_update_security_associations_and_sp(ctx->hadb_entry,
+                                                          &ctx->src_addr,
+                                                          &ctx->dst_addr)) {
+        HIP_ERROR("failed to set up IPsec SAs and SPs\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_create_or_update_security_associations_and_sp(ctx->hadb_entry,
-                                                               &ctx->src_addr,
-                                                               &ctx->dst_addr),
-             -1, "failed to set up IPsec SAs and SPs\n");
-
-out_err:
-    return err;
+    return 0;
 }
 
 /**
