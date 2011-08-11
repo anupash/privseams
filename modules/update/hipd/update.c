@@ -172,19 +172,24 @@ static bool check_and_update_ack_id_bounds(struct update_state *const state,
 {
     HIP_ASSERT(state);
 
-    /* two cases:
-     * oldest not yet acknowledged SEQ <= latest sent Update SEQ
-     *   => received ACK must be in those bounds to be valid
-     * oldest not yet acknowledged SEQ > latest sent Update SEQ (counter overflow)
-     *   => received ACK must be greater than oldest SEQ or smaller than latest
-     *      sent Update ID to be valid
+    /* Of the three UPDATE packets the first and second must be acknowledged.
+     * hip_update_get_out_id() gets the latest outgoing UPDATE ID whereas
+     * update_id_out_lower_bound stores the oldest sent UPDATE ID with an
+     * outstanding acknowledgement. Together they form the window in which
+     * incoming ACKs are valid. Multiple ACKs may be outstanding for example
+     * when both host and peer initiate an update. In this case both
+     * U1 (update initiated by the host) and U2 (response to update initiated
+     * by the peer) are to be acknowledged and their IDs stored in
+     * update_id_out_lower_bound and hip_update_get_out_id() respectively.
      */
-    if ((state->update_id_out_lower_bound <= hip_update_get_out_id(state) &&
-         ack_peer_update_id >= state->update_id_out_lower_bound &&
-         ack_peer_update_id <= hip_update_get_out_id(state)) ||
-        (state->update_id_out_lower_bound > hip_update_get_out_id(state) &&
-         (ack_peer_update_id >= state->update_id_out_lower_bound ||
-          ack_peer_update_id <= hip_update_get_out_id(state)))) {
+    if (state->update_id_out_lower_bound <= hip_update_get_out_id(state) &&
+        ack_peer_update_id >= state->update_id_out_lower_bound &&
+        ack_peer_update_id <= hip_update_get_out_id(state)) {
+        state->update_id_out_lower_bound = ack_peer_update_id;
+        return true;
+    } else if (state->update_id_out_lower_bound > hip_update_get_out_id(state) &&
+               (ack_peer_update_id >= state->update_id_out_lower_bound ||
+                ack_peer_update_id <= hip_update_get_out_id(state))) {
         state->update_id_out_lower_bound = ack_peer_update_id;
         return true;
     } else {
