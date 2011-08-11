@@ -182,19 +182,20 @@ static bool check_and_update_ack_id_bounds(struct update_state *const state,
      * by the peer) are to be acknowledged and their IDs stored in
      * update_id_out_lower_bound and hip_update_get_out_id() respectively.
      */
-    if (state->update_id_out_lower_bound <= hip_update_get_out_id(state) &&
-        ack_peer_update_id >= state->update_id_out_lower_bound &&
-        ack_peer_update_id <= hip_update_get_out_id(state)) {
-        state->update_id_out_lower_bound = ack_peer_update_id;
-        return true;
-    } else if (state->update_id_out_lower_bound > hip_update_get_out_id(state) &&
-               (ack_peer_update_id >= state->update_id_out_lower_bound ||
-                ack_peer_update_id <= hip_update_get_out_id(state))) {
-        state->update_id_out_lower_bound = ack_peer_update_id;
-        return true;
+    if (state->update_id_out_lower_bound <= hip_update_get_out_id(state)) {
+        if (ack_peer_update_id >= state->update_id_out_lower_bound &&
+            ack_peer_update_id <= hip_update_get_out_id(state)) {
+            state->update_id_out_lower_bound = ack_peer_update_id;
+            return true;
+        }
     } else {
-        return false;
+        if (ack_peer_update_id >= state->update_id_out_lower_bound ||
+            ack_peer_update_id <= hip_update_get_out_id(state)) {
+            state->update_id_out_lower_bound = ack_peer_update_id;
+            return true;
+        }
     }
+    return false;
 }
 
 /**
