@@ -481,9 +481,10 @@ static int hip_update_maintenance(void)
 static int hip_update_init_state(struct modular_state *state)
 {
     struct update_state *update_state = NULL;
+    int                  res          = -1;
 
     if (!(update_state = malloc(sizeof(struct update_state)))) {
-        HIP_ERROR("Error on allocating memory for a update state instance.\n");
+        HIP_ERROR("Error on allocating memory for an update state instance.\n");
         return -1;
     }
 
@@ -492,7 +493,11 @@ static int hip_update_init_state(struct modular_state *state)
     update_state->update_id_out  = 0;
     update_state->update_id_in   = 0;
 
-    return lmod_add_state_item(state, update_state, "update");
+    res = lmod_add_state_item(state, update_state, "update");
+    if (res == -1) {
+        free(update_state);
+    }
+    return res;
 }
 
 /**
