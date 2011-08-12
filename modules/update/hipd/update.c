@@ -183,19 +183,18 @@ static bool check_and_update_ack_id_bounds(struct update_state *const state,
      * update_id_out_lower_bound and hip_update_get_out_id() respectively.
      */
     if (state->update_id_out_lower_bound <= hip_update_get_out_id(state)) {
-        if (ack_peer_update_id >= state->update_id_out_lower_bound &&
-            ack_peer_update_id <= hip_update_get_out_id(state)) {
-            state->update_id_out_lower_bound = ack_peer_update_id;
-            return true;
+        if (ack_peer_update_id < state->update_id_out_lower_bound ||
+            ack_peer_update_id > hip_update_get_out_id(state)) {
+            return false;
         }
     } else {
-        if (ack_peer_update_id >= state->update_id_out_lower_bound ||
-            ack_peer_update_id <= hip_update_get_out_id(state)) {
-            state->update_id_out_lower_bound = ack_peer_update_id;
-            return true;
+        if (ack_peer_update_id < state->update_id_out_lower_bound &&
+            ack_peer_update_id > hip_update_get_out_id(state)) {
+            return false;
         }
     }
-    return false;
+    state->update_id_out_lower_bound = ack_peer_update_id;
+    return true;
 }
 
 /**
