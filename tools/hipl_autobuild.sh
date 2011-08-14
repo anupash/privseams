@@ -194,8 +194,8 @@ run_program "make -j bin"
 
 # Compile HIPL within an OpenWrt checkout
 CONFIGURATION="OpenWrt ARM crosscompile"
-run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
 cd $OPENWRT_DIR || cleanup 1
+run_program "cp $CHECKOUT_DIR/hipl*tar.gz dl/"
 run_program "rm -rf package/hipl"
 run_program "cp -r $CHECKOUT_DIR/packaging/openwrt/hipl package/"
 run_program "make -j package/hipl/clean V=99"
