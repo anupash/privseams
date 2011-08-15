@@ -1097,11 +1097,6 @@ simple HTML.
 /**
  * @file
  * This file defines various functions for handling HIP messages.
- *
- * @author  John Doe
- * @version 1.0
- * @date    11.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 
 Sometimes you can find yourself in a situation where you have a large number of
