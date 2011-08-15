@@ -220,11 +220,11 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
 /*------------tuple handling functions-------------*/
 
 /**
- * Form a data based on the HITs of the packet and return a hip_data structure
- * Caller is responsible for deallocation of the returned data.
+ * Form an HI-related data structure based on the HITs of the packet
+ * The caller is responsible for deallocation of the returned data structure.
  *
  * @param common a HIP control packet
- * @return struct hip_data corresponding to the HITs of the packet
+ * @return struct hip_data corresponding to the HITs of the packet,
  *         NULL if memory allocation fails
  */
 static struct hip_data *get_hip_data(const struct hip_common *common)
@@ -1432,7 +1432,7 @@ static int handle_first_update(const struct hip_common *const common,
 
         /** FIXME the firewall should not care about locator for esp tracking
          *
-         * NOTE: modify this regardingly! */
+         * NOTE: modify this accordingly! */
         if (insert_connection_from_update(common, ctx, esp_info)) {
             HIP_ERROR("connection insertion failed\n");
 
