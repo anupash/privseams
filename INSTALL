@@ -38,7 +38,7 @@ On Ubuntu, the following command(s) should solve the dependencies:
                    libconfig8-dev libnet-ip-perl libnet-dns-perl
 
   Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot \
-                       dpkg-dev debhelper devscripts check
+                       dpkg-dev debhelper devscripts
 
 On Fedora, the following command(s) should solve the dependencies:
 
@@ -46,7 +46,7 @@ On Fedora, the following command(s) should solve the dependencies:
               iptables-devel libconfig-devel perl-Net-IP perl-Net-DNS
 
   Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build \
-                          redhat-lsb check
+                          redhat-lsb
 
 
 How to build HIPL
