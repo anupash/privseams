@@ -1031,7 +1031,6 @@ static int hip_fw_verify_packet(struct hip_common *const common,
      * 1.) HI -> HIT matching must be ensured when saving HI in this tuple
      * 2.) tuple is looked up corresponding to HITs */
 
-    HIP_DEBUG("verifying signature...\n");
     if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
                                        common)) {
         HIP_INFO("Signature verification failed\n");
