@@ -863,31 +863,31 @@ static int esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
     }
 
     struct esp_tuple *const esp_tuple = calloc(1, sizeof(struct esp_tuple));
-    if (esp_tuple) {
-        struct tuple *other_dir = NULL;
-        if (tuple->direction == ORIGINAL_DIR) {
-            other_dir = &tuple->connection->reply;
-        } else {
-            other_dir = &tuple->connection->original;
-        }
-
-        esp_tuple->spi   = ntohl(esp_info->new_spi);
-        esp_tuple->tuple = other_dir;
-        hip_ll_init(&esp_tuple->dst_addresses);
-        if (update_esp_address(esp_tuple, &ctx->src, NULL)) {
-            HIP_ERROR("adding or updating ESP destination address failed");
-            free(esp_tuple);
-            return -1;
-        }
-        other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
-                                                esp_tuple);
-        esp_list = append_to_list(esp_list, esp_tuple);
-
-        return 0;
-    } else {
+    if (!esp_tuple) {
         HIP_ERROR("Allocating esp_tuple object failed");
         return -1;
     }
+
+    struct tuple *other_dir = NULL;
+    if (tuple->direction == ORIGINAL_DIR) {
+        other_dir = &tuple->connection->reply;
+    } else {
+        other_dir = &tuple->connection->original;
+    }
+
+    esp_tuple->spi   = ntohl(esp_info->new_spi);
+    esp_tuple->tuple = other_dir;
+    hip_ll_init(&esp_tuple->dst_addresses);
+    if (update_esp_address(esp_tuple, &ctx->src, NULL)) {
+        HIP_ERROR("adding or updating ESP destination address failed");
+        free(esp_tuple);
+        return -1;
+    }
+    other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
+                                            esp_tuple);
+    esp_list = append_to_list(esp_list, esp_tuple);
+
+    return 0;
 }
 
 /**
