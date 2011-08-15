@@ -1147,7 +1147,7 @@ static int handle_i1(const struct hip_common *const common,
 
     // create a new tuple
     const struct in6_addr all_zero_addr = { { { 0 } } };
-    hip_hit_t             phit;
+    struct in6_addr       phit;
     struct hip_data      *data = get_hip_data(common);
 
     if (data == NULL) {
@@ -1159,7 +1159,7 @@ static int handle_i1(const struct hip_common *const common,
     if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
         hip_opportunistic_ipv6_to_hit(&ctx->dst, &phit,
                                       HIP_HIT_TYPE_HASH100);
-        data->dst_hit = (struct in6_addr) phit;
+        data->dst_hit = phit;
     }
 
     if (insert_new_connection(data, ctx) == -1) {
