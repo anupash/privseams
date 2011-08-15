@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Tim Just <tim.just@rwth-aachen.de>
- */
-
 #ifndef HIP_HIPD_PKT_HANDLING_H
 #define HIP_HIPD_PKT_HANDLING_H
 

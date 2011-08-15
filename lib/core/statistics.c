@@ -26,8 +26,6 @@
 /**
  * @file
  * This file defines helper function for statistical computations
- *
- * @author Rene Hummen
  */
 
 #include <math.h>

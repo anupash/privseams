@@ -6,8 +6,6 @@
  * HIPL wrappers for OpenSSL public key operations.
  *
  * @brief HIPL wrappers for OpenSSL public key operations.
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <errno.h>

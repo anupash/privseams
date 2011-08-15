@@ -28,7 +28,6 @@
  * This file defines a registration mechanism for the Host Identity Protocol
  * (HIP) that allows hosts to register with services.
  *
- * @author  Lauri Silvennoinen
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
  * @see     registration.h

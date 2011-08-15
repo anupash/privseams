@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
- */
-
 #include <stdlib.h>
 
 #include "file_buffer.h"

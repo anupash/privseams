@@ -27,9 +27,6 @@
  * @file
  * This file contains parameter handling functionality for the middlebox
  * authentication extension.
- *
- * @author Rene Hummen
- * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 #ifndef MODULES_MIDAUTH_HIPD_MIDAUTH_BUILDER_H

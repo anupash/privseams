@@ -54,9 +54,6 @@
  * arguments.
  *
  * @brief Host Association Database (HADB) for HIP
- *
- * @author Miika Komu <miika@iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <errno.h>

@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Christof Mroz <christof.mroz@rwth-aachen.de>
- */
-
 #define _BSD_SOURCE
 
 #include <check.h>

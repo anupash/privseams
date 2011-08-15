@@ -29,9 +29,6 @@
  * @brief usually invoked by hip_map_id_to_addr
  *
  * @brief i.e. 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
- *
- * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

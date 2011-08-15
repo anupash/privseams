@@ -26,8 +26,6 @@
 /**
  * @file
  * This file defines the main function of the command line tool 'hipconf'.
- *
- * @author  Miika Komu <miika_iki.fi>
  */
 
 #include "lib/core/conf.h"

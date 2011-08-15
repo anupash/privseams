@@ -29,8 +29,6 @@
  * manipulate LSI/HIT prefixes
  *
  * @brief Address-related utility functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

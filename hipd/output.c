@@ -27,13 +27,6 @@
  * @file
  * This file defines processing of outgoing packets for the Host
  * Identity Protocol (HIP).
- *
- * @author  Janne Lundberg
- * @author  Miika Komu
- * @author  Mika Kousa
- * @author  Kristian Slavov
- * @author  Samu Varjonen
- * @author  Rene Hummen
  */
 
 #define _BSD_SOURCE

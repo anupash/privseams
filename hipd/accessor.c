@@ -27,7 +27,6 @@
  * @file
  * @brief An assortment of access for functions for hipd
  *
- * @author Miika Komu <miika@iki.fi>
  * @todo move the functions elsewhere and delete this file?
  */
 

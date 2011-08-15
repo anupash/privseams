@@ -27,7 +27,6 @@
  * @file
  * The HIPL main file containing the daemon main loop.
  *
- * @date 28.01.2008
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */

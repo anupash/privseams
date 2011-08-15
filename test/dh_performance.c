@@ -27,7 +27,6 @@
  * @file
  *
  * @brief Performance testfile that can be used for benchmarking a system.
- * @author Tobias Heer
  *
  * This is file provides an executable that can be run to benchmark a HIP system.
  * It provides detailed information about the runtime of certain cryptographic

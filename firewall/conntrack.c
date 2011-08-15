@@ -32,9 +32,6 @@
  * - Rene Hummen. Secure Identity-based Middlebox Functions using the Host Identity Protocol. Master's thesis, RWTH Aachen, 2009.
  *
  * @brief Connection tracker for HIP and ESP.
- *
- * @author Essi Vehmersalo
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #define _BSD_SOURCE

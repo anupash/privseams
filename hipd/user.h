@@ -23,15 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Miika Komu <miika_iki.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Tao Wan <taow_cc.hut.fi>
- * @author  Rene Hummen
- */
-
 #ifndef HIP_HIPD_USER_H
 #define HIP_HIPD_USER_H
 

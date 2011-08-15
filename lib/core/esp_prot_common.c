@@ -30,8 +30,6 @@
  * hipfw and hipd.
  *
  * @brief Provides common functionality for the ESP protection in hipd and hipfw
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include "esp_prot_common.h"

@@ -26,7 +26,6 @@
 /**
  * @file
  * @brief Processing for CLOSE control packets
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

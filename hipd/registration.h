@@ -25,14 +25,10 @@
 
 /**
  * @file
- * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    20.05.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
  * @see     registration.c
  * @see     hiprelay.h
- * @see     escrow.h
  */
 
 #ifndef HIP_HIPD_REGISTRATION_H

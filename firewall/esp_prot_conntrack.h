@@ -28,8 +28,6 @@
  * API for the connection tracking for the ESP protection extension.
  *
  * @brief Connection tracking extension needed for the ESP protection extension
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_ESP_PROT_CONNTRACK_H

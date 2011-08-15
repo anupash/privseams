@@ -28,9 +28,6 @@
  * API for Hash trees
  *
  * @brief API for Hash trees
- *
- * @author Tobias Heer <heer@tobobox.de>
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_LIB_CORE_HASHTREE_H

@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Allow modularized features that can be enabled as required.
- *
- * @author Tim Just <tim.just@rwth-aachen.de>
  */
 
 #include <stdio.h>

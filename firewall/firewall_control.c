@@ -30,9 +30,6 @@
  * other messages may intervene).
  *
  * @brief Firewall communication interface with hipd
- *
- * @author Miika Komu <miika@iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

@@ -28,8 +28,6 @@
  *
  * This file facilitates buiding of mobility and multi-homing-specific
  * parameters.
- *
- * @author Rene Hummen
  */
 
 #ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_BUILDER_H

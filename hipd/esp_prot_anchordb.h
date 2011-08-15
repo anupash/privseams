@@ -31,8 +31,6 @@
 /**
  * @file
  * @brief Stores anchor elements to be used for the esp protection
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_HIPD_ESP_PROT_ANCHORDB_H

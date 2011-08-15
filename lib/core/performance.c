@@ -27,8 +27,6 @@
  * @file
  *
  * @brief Primitive performance measurement library.
- * @author Tobias Heer
- * @author Dongsu Park
  *
  * This file provides a set of functions to measure execution time.
  * The measurement unit is second.

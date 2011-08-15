@@ -37,8 +37,6 @@
  * located behind (different) NATs. The use rendezvous server is mandatory
  * when the responder is behind a NAT.
  *
- * @author  (version 1.0) Abhinav Pathak
- * @author  (version 1.1) Lauri Silvennoinen
  * @note    Related drafts:
  *          <ul>
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">

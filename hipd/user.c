@@ -38,12 +38,6 @@
  * root privileges and has full access. Ports above 1024 have limited access
  * to functionality.
  *
- * @author  Miika Komu <miika_iki.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Tao Wan  <twan_cc.hut.fi>
- * @author  Rene Hummen
- * @author  Tim Just
  * @todo split the gigantic hip_handle_user_msg() into an array of handler functions
  */
 

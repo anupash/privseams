@@ -29,8 +29,6 @@
  * protection extension.
  *
  * @brief Connection tracking extension needed for the ESP protection extension
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #define _BSD_SOURCE

@@ -28,8 +28,6 @@
  *
  * This file facilitates buiding of mobility and multi-homing-specific
  * parameters.
- *
- * @author Rene Hummen
  */
 
 #include <arpa/inet.h>

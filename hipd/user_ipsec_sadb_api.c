@@ -29,8 +29,6 @@
  * userspace IPsec state in the hipfw.
  *
  * @brief API used by the hipd to set up and maintain userspace IPsec state
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <stdint.h>

@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Host identifier manipulation functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <errno.h>

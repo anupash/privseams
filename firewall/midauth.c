@@ -31,9 +31,6 @@
  *
  * @brief Framework for the midauth extensions
  *
- * @author Thomas Jansen
- * @author Dominic Gatzen
- *
  * @note: According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level
  * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
  * Currently we do neither.

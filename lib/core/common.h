@@ -23,12 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author: Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author  Mircea Gherzan <mircea.gherzan@rwth-aachen.de>
- */
-
 #ifndef HIP_LIB_CORE_COMMON_H
 #define HIP_LIB_CORE_COMMON_H
 

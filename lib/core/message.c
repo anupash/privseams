@@ -69,8 +69,6 @@
  *        to communicate with each other. Includes also functions to read messages
  *        from the network.
  *
- * @author  Miika Komu <miika_iki.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @see     The building and parsing functions are located in @c builder.c.
  */
 

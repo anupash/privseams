@@ -29,8 +29,6 @@
  * certificate loading.
  *
  * @brief Functions declarations for certificate loading
- *
- * @author Thomas Jansen
  */
 
 #ifndef HIP_HIPD_PISA_H

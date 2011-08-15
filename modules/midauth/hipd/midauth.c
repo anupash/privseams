@@ -27,8 +27,6 @@
  * @file
  * This file contains the implementation for the middlebox authentication
  * extension.
- *
- * @author Rene Hummen
  */
 
 #include <errno.h>

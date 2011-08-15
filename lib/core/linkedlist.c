@@ -27,7 +27,6 @@
  * @file
  * This file defines a linked list for storing pointers.
  *
- * @author  Lauri Silvennoinen
  * @see     linkedlist.h for usage instructions.
  */
 

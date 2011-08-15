@@ -26,12 +26,6 @@
 /**
  * @file
  * @brief A database to local Host Identifiers and the related accessor functions.
- *
- * @author Janne Lundberg <jlu#tcs.hut.fi>
- * @author Miika Komu <miika#iki.fi>
- * @author Mika Kousa <mkousa#iki.fi>
- * @author Kristian Slavov <kslavov#hiit.fi>
- * @author Teresa Finez <tfinezmo#hut.tkk.fi>
  */
 
 #define _BSD_SOURCE

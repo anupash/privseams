@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief file manipulation tools
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <sys/types.h>

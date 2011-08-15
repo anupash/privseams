@@ -26,9 +26,6 @@
 /**
  * @file
  * @brief HIP computation puzzle solving algorithms
- *
- * @author Miika Komu <miika@iki.fi>
- * @author Rene Hummen
  */
 
 #include <errno.h>

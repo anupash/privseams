@@ -27,18 +27,6 @@
  * @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
- *
- * @author  Janne Lundberg
- * @author  Miika Komu
- * @author  Mika Kousa
- * @author  Kristian Slavov
- * @author  Anthony D. Joseph
- * @author  Bing Zhou
- * @author  Tobias Heer
- * @author  Laura Takkinen
- * @author  Rene Hummen
- * @author  Samu Varjonen
- * @author  Tim Just
  */
 
 #define _BSD_SOURCE

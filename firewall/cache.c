@@ -29,8 +29,6 @@
  * independently of the firewall connection tracking feature.
  *
  * @brief Cache implementation for local and peer HITs, LSIs and locators
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

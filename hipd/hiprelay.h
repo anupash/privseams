@@ -25,7 +25,6 @@
 
 /**
  * @file
- * @author  Lauri Silvennoinen
  * @note    Related draft:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
  *          draft-ietf-hip-nat-traversal-03</a>

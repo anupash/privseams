@@ -30,8 +30,6 @@
  * here from the removed oppdb.c.
  *
  * @brief Implementation of the HIP opportunistic mode
- *
- * @author Rene Hummen
  */
 
 #include <netinet/in.h>

@@ -26,10 +26,6 @@
 /**
  * @file
  * This file contains KEYMAT handling functions for HIPL
- *
- * @author Mika Kousa <mkousa#iki.fi>
- * @author Kristian Slavov <ksl#iki.fi>
- * @author Tobias Heer <heer#tobibox.de>
  */
 
 #include <errno.h>

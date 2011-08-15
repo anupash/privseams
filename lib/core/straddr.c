@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Conversion functions from string to address and vice versa
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

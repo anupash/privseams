@@ -23,14 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Baris Boyvat <baris#boyvat.com>
- * @author  Stefan Götz <stefan.goetz@web.de>
- * @version 0.1
- * @date    3.5.2009
- */
-
 #ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
 #define HIP_MODULES_UPDATE_HIPD_UPDATE_H
 

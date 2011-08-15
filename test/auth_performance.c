@@ -25,11 +25,7 @@
 
 /**
  * @file
- * This file contains a benchmark for the cryptographic authentication functions.
- *
- * @brief Authentication function benchmark
- *
- * @author Tobias Heer
+ * benchmark for the cryptographic authentication functions
  */
 
 #include "config.h"

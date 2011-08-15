@@ -34,8 +34,6 @@
  * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
  * Backwards Compatibility Experimentation with Host Identity Protocol
  * and Legacy Software and Networks , final project, December 2008</a>.
- *
- * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_PORT_BINDINGS_H

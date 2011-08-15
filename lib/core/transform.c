@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Transform related functions for HIP
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <arpa/inet.h>

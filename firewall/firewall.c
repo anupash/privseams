@@ -40,10 +40,6 @@
  *
  * @brief HIP multipurpose firewall toolkit
  *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author Miika Komu <miika@iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
- *
  * @note: HIPU: requires libipq, might need pcap libraries
  */
 

@@ -23,15 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Janne Lundberg
- * @author Miika Komu
- * @author Mika Kousa
- * @author Kristian Slavov
- * @author Rene Hummen
- */
-
 #ifndef HIP_HIPD_OUTPUT_H
 #define HIP_HIPD_OUTPUT_H
 

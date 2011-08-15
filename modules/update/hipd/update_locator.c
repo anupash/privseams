@@ -28,8 +28,6 @@
  * This file contains legacy functions for mobility that should be rewritten for modularity.
  * They are still included in the code base due to locator dependencies with
  * base exchange code. See bugzilla ids 592195 and 592196.
- *
- * @author Baris Boyvat
  */
 
 #include <stdlib.h>

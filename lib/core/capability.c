@@ -27,8 +27,6 @@
  * @file
  * @brief Functionality to lower the privileges of a daemon
  *
- * @author Miika Komu <miika@iki.fi>
- *
  * This file contains functionality to lower the privileges (or
  * capabilities) of hipd and hipfw. It is important to restrict
  * the damage of a exploit to the software. The code is Linux

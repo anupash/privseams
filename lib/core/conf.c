@@ -38,18 +38,6 @@
  * @brief This file defines functions for configuring the the Host Identity
  * Protocol daemon (hipd).
  *
- * @author  Janne Lundberg <jlu_tcs.hut.fi>
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_cc.hut.fi>
- * @author  Anthony D. Joseph <adj_hiit.fi>
- * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Anu Markkola
- * @author  Lauri Silvennoinen
- * @author  Tao Wan  <twan@cc.hut.fi>
- * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
- * @author  Samu Varjonen
- * @author  Stefan Götz <stefan.goetz@web.de>
  * @todo    del map
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?

@@ -40,8 +40,6 @@
  * and Legacy Software and Networks , final project, December 2008</a>
  *
  * @brief Local-Scope Identifier (LSI) input and output processing
- *
- * @author Teresa Finez
  */
 
 #define _BSD_SOURCE

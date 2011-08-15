@@ -31,8 +31,6 @@
  * during HIP BEX.
  *
  * @brief Stores anchor elements to be used for the esp protection
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <stdint.h>

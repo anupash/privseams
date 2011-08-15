@@ -29,9 +29,6 @@
  * accessible through HITs and {dst IP, SPI}.
  *
  * @brief Security association database for IPsec connections
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #include <stdint.h>

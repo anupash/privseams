@@ -112,8 +112,6 @@
  *     } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));</pre>
  *     </li>
  *     </ul>
- *
- * @date   12.08.2008
  */
 
 /**

@@ -27,8 +27,6 @@
  * @file
  * This file implements parameter handling functionality specific to
  * UPDATE packets for the Host Identity Protocol (HIP)
- *
- * @author  Rene Hummen
  */
 
 #include <stdbool.h>

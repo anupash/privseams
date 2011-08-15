@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Tim Just <tim.just@rwth-aachen.de>
- */
-
 #ifndef HIP_LIB_CORE_MODULARIZATION_H
 #define HIP_LIB_CORE_MODULARIZATION_H
 

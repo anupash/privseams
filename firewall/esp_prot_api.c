@@ -31,8 +31,6 @@
  * packets.
  *
  * @brief Provides API to token-based ESP protection for middleboxes
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <math.h>

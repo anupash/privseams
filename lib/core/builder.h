@@ -23,14 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_iki.fi>
- * @author  Tobias Heer <heer_tobibox.de>
- * @version 1.0
- */
-
 #ifndef HIP_LIB_CORE_BUILDER_H
 #define HIP_LIB_CORE_BUILDER_H
 

@@ -15,9 +15,6 @@
 
 /**
  * @file
- * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
- *
  * @brief user-mode HIP BEET mode implementation
  */
 

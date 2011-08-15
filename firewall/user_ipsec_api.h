@@ -28,8 +28,6 @@
  * This implementation provides the API for userspace IPsec.
  *
  * @brief API for the userspace IPsec functionality
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_API_H

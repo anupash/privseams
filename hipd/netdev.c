@@ -37,8 +37,6 @@
  * - triggering of base exchange
  *
  * @brief Localhost address cache and related management functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

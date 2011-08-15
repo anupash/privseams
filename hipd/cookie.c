@@ -26,10 +26,6 @@
 /**
  * @file
  * HIP cookie handling
- *
- * @author Kristian Slavov <ksl#iki.fi>
- * @author Miika Komu <miika#iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

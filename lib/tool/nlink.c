@@ -22,8 +22,6 @@
  *
  * @brief NETLINK interface to the IPsec and routing modules in the kernel
  *
- * @author iproute2 authors
- *
  * @todo change this file into a command line interface to "ip" or "pfkey"
  */
 

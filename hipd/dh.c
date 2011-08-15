@@ -26,10 +26,6 @@
 /**
  * @file
  * @brief Diffie-Hellman wrappers for HIP
- *
- * @author Mika Kousa <mkousa@iki.fi>
- * @author Kristian Slavov <ksl@iki.fi>
- * @author Tobias Heer <heer@tobibox.de>
  */
 
 #include <stdint.h>

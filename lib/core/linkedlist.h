@@ -38,9 +38,6 @@
  *                         | element |          | element |
  *                         +---------+          +---------+
  * </pre>where element contains the payload data.
- * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    21.04.2008
  */
 
 #ifndef HIP_LIB_CORE_LINKEDLIST_H

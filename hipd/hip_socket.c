@@ -27,8 +27,6 @@
  * @file
  * This file defines handling functions for network sockets for the Host
  * Identity Protocol (HIP).
- *
- * @author  Tim Just
  */
 
 #include <stdint.h>

@@ -28,8 +28,6 @@
  * API for the communication with the hipd.
  *
  * @brief TPA and HHL-specific inter-process communication with the hipd
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_ESP_PROT_FW_MSG_H

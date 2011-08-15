@@ -28,8 +28,6 @@
  * This implements the communication with the hipd.
  *
  * @brief TPA and HHL-specific inter-process communication with the hipd
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <stdint.h>

@@ -28,8 +28,6 @@
  * Messaging required for the userspace IPsec implementation of the hipfw
  *
  * @brief userspace IPsec hipd <-> hipfw communication
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <stdint.h>

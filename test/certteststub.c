@@ -31,8 +31,6 @@
  * First this test takes the default HIT and the corresponding key.
  * Secondly it creates a certificate where itself is the issuer and the subject.
  * Then it tries to verify it. If it succeeds everything should be OK :)
- *
- * @author Samu Varjonen
  */
 
 #include <stdio.h>

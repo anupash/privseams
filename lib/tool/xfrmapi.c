@@ -10,8 +10,6 @@
  * introduction to XFRM.
  *
  * @brief Management of IPsec security policies and associations with the XFRM interface
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

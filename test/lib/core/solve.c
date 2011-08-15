@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Rene Hummen
- */
-
 #include <check.h>
 #include <stdint.h>
 #include <stdio.h>

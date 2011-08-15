@@ -29,8 +29,6 @@
  * the configuration from disk to memory.
  *
  * @brief HIP firewall ACL rules management
- *
- * @author Essi Vehmersalo
  */
 
 #define _BSD_SOURCE

@@ -32,9 +32,6 @@
  *
  * @brief parser for /etc/hosts and HIPL_SYSCONFDIR/hosts
  *
- * @author Miika Komu <miika@iki.fi>
- * @author Stefan Götz <stefan.goetz@web.de>
- *
  * @todo is there a standard API for accessing hosts files?
  */
 

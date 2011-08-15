@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
- */
-
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>

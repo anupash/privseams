@@ -29,8 +29,6 @@
  * certificate loading.
  *
  * @brief Functions for certificate loading
- *
- * @author Thomas Jansen
  */
 
 #include <stdio.h>

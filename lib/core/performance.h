@@ -27,9 +27,8 @@
 #define HIP_LIB_CORE_PERFORMANCE_H
 
 /**
+ * @file
  * Primitive performance measurement
- *
- * @author Tobias Heer <heer@tobibox.de>
  */
 
 #include <stdio.h>

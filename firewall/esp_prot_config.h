@@ -30,8 +30,6 @@
  * checks on the passed values.
  *
  * @brief Reads the config file for the ESP protection extension
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_ESP_PROT_CONFIG_H

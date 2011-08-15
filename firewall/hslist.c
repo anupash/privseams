@@ -31,8 +31,6 @@
  * easily changed into a hashtable if needed.
  *
  * @brief a simple linked list implementation
- *
- * @author Essi Vehmersalo
  */
 
 #include <stdlib.h>

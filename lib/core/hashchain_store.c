@@ -29,9 +29,6 @@
  * linking of hash structures in different hierarchy levels.
  *
  * @brief Store for pre-created hash structures
- *
- * @author Tobias Heer <heer@tobobox.de>
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <string.h>

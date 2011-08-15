@@ -39,8 +39,6 @@
  * when you need the performance boost.
  *
  * @brief Hashtable wrappers for OpenSSL lhash implementation
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <limits.h>

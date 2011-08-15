@@ -29,8 +29,6 @@
  * certificate is parsed and split into small chunks.
  *
  * @brief PISA handling for SPKI certificates
- *
- * @author Thomas Jansen
  */
 
 #define _BSD_SOURCE

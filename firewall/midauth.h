@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Thomas Jansen
- */
-
 #ifndef HIP_FIREWALL_MIDAUTH_H
 #define HIP_FIREWALL_MIDAUTH_H
 

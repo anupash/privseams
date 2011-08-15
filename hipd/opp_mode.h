@@ -29,8 +29,6 @@
  * Identity Protocol (HIP).
  *
  * @brief Interface of the HIP opportunistic mode
- *
- * @author Rene Hummen
  */
 
 #ifndef HIP_HIPD_OPP_MODE_H

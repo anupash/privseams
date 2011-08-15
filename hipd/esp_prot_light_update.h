@@ -29,8 +29,6 @@
  * element updates.
  *
  * @brief Messaging required for HHL-based anchor element updates
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_HIPD_ESP_PROT_LIGHT_UPDATE_H

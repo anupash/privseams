@@ -72,9 +72,6 @@
  * @brief Serialization of HIP-related data structures to HIP control
  *        messages. The functionality is overloaded to support also
  *        interprocess communications between hipd, hipfw and hipconf.
- * @author Miika Komu
- * @author Mika Kousa
- * @author Tobias Heer
  *
  * @see @c message.c contains functions to read and write HIP-related messages
  * @note   In network packets @c hip_build_network_hdr() should be used instead

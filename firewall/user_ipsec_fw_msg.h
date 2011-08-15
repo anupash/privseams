@@ -28,9 +28,6 @@
  * Inter-process communication with the hipd for userspace IPsec
  *
  * @brief Inter-process communication with the hipd for userspace IPsec
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_FW_MSG_H

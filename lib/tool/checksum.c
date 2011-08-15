@@ -5,7 +5,6 @@
  *
  * @brief Checksum functions
  *
- * @author Miika Komu <miika@iki.fi>
  * @note check if some of the checksum algos are redundant
  */
 

@@ -27,7 +27,6 @@
  * @file
  * This file defines an all-round configurationfilereader.
  *
- * @author  Lauri Silvennoinen
  * @see     configfilereader.h for usage instructions.
  */
 

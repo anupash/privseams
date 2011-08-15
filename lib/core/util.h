@@ -26,7 +26,6 @@
 /**
  * @file
  * utility functions
- * @author Diego Biurrun <diego@biurrun.de>
  */
 
 #ifndef HIP_LIB_CORE_UTIL_H

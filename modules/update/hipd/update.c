@@ -27,10 +27,6 @@
  * @file
  * This file defines various functions for sending, handling and receiving
  * UPDATE packets for the Host Identity Protocol (HIP)
- *
- * @author Baris Boyvat <baris#boyvat.com>
- * @author Rene Hummen
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #define _BSD_SOURCE

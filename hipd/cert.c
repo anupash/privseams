@@ -28,8 +28,6 @@
  *
  * This file defines the certificate signing and verification
  * functions to use with HIP
- *
- * @author Samu Varjonen
  */
 
 #include <errno.h>

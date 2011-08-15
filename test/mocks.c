@@ -65,8 +65,6 @@
  *
  * @note The documentation implies that arguments of disabled mock functions are
  *       passed to the original implementation.
- *
- * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 /*

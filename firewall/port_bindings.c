@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Look up whether a port corresponds to a local bound socket, which influences LSI handling.
- *
- * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
 #include <arpa/inet.h>

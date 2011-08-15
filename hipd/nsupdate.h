@@ -31,8 +31,6 @@
  *
  * @brief hip_set_nsupdate_status and hip_get_nsupdate_status are usually invoked by hipconf
  * @brief and nsupdate by hip_send_locators_to_all_peers and hipd_init
- *
- * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  */
 
 #ifndef HIP_HIPD_NSUPDATE_H

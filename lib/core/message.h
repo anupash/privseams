@@ -23,13 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Miika Komu <miika_iki.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @version 1.0
- */
-
 #ifndef HIP_LIB_CORE_MESSAGE_H
 #define HIP_LIB_CORE_MESSAGE_H
 

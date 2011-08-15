@@ -30,8 +30,6 @@
  * verify the validity of ESP packets.
  *
  * @brief Provides API to token-based ESP protection for middleboxes
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_FIREWALL_ESP_PROT_API_H

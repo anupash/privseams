@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief HIT-related utility functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <string.h>

@@ -83,7 +83,6 @@
  * </li>
  * </ul>
  *
- * @author  Lauri Silvennoinen
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
  *          Host Identity Protocol (HIP) Rendezvous Extension</a>
  * @note    Related draft:

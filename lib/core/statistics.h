@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Rene Hummen
- */
-
 #ifndef HIP_LIB_CORE_STATISTICS_H
 #define HIP_LIB_CORE_STATISTICS_H
 

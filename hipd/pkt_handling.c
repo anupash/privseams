@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Functionality for dynamic packet handling.
- *
- * @author Tim Just <tim.just@rwth-aachen.de>
  */
 
 #include <stdint.h>

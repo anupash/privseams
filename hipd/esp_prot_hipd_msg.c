@@ -29,8 +29,6 @@
  * UPDATE messages.
  *
  * @brief Messaging with hipfw and other HIP instances
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <errno.h>

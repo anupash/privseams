@@ -30,9 +30,6 @@
  * allow or reject associated ESP traffic.
  *
  * @brief PISA functions for the firewall
- *
- * @author Thomas Jansen
- * @author Dominic Gatzen
  */
 
 #define _BSD_SOURCE

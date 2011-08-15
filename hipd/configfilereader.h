@@ -73,10 +73,6 @@
  * </li>
  * <li>Close the configfile using <code>close()</code></li>
  * </ol>
- *
- * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    14.02.2008
  */
 
 #ifndef HIP_HIPD_CONFIGFILEREADER_H

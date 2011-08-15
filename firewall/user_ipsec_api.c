@@ -28,9 +28,6 @@
  * This implementation provides the API for userspace IPsec.
  *
  * @brief API for the userspace IPsec functionality
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 /* required for IFNAMSIZ in libipq headers */

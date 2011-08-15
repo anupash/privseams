@@ -50,11 +50,6 @@
  *       - Increment the heartbeat counter in hadb.
  *       - When a HEARTBEAT response is received, calculate roundtrip time and
  *         maintain statistics. Reset heartbeat counter to 0.
- *
- * @author Samu Varjonen
- * @author Miika Komu
- * @author Rene Hummen
- * @author Tim Just
  */
 
 #define _BSD_SOURCE

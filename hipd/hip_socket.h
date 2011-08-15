@@ -23,11 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author Tim Just
- */
-
 #ifndef HIP_HIPD_HIP_SOCKET_H
 #define HIP_HIPD_HIP_SOCKET_H
 

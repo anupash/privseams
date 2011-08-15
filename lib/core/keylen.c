@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief Various key length calculation functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include "keylen.h"

@@ -28,9 +28,6 @@
  * API for a hash chain API
  *
  * @brief API for a hash chain API
- *
- * @author Tobias Heer <heer@tobobox.de>
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #include <stdlib.h>

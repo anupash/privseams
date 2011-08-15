@@ -147,8 +147,7 @@ struct hip_hadb_state {
     hip_hit_t hit_peer;
     /** Information about the usage of the host association related to
      *  locking stuff which is currently unimplemented because the daemon
-     *  is single threaded. When zero, the host association can be freed.
-     *  @date 24.01.2008 */
+     *  is single threaded. When zero, the host association can be freed. */
     enum hip_hastate hastate;
     /** Counter to tear down a HA in CLOSING or CLOSED state */
     int purge_timeout;

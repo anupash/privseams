@@ -31,11 +31,6 @@
  *
  * @brief HIP crypto management functions using OpenSSL
  *
- * @author Mika Kousa <mkousa@iki.fi>
- * @author Miika Komu <miika@iki.fi>
- * @author Teemu Koponen <tkoponen@iki.fi>
- * @author Abhinav Pathak <abpathak@iitk.ac.in>
- *
  * @todo Intergrate ERR_print_errors_fp somehow into HIP_INFO().
  * @todo No printfs! Daemon has no stderr.
  * @todo Return values should be from <errno.h>.

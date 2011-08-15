@@ -27,8 +27,6 @@
  * @file
  * @brief look for locators in hit-to-ip domain
  * @brief usually invoked by hip_map_id_to_addr
- *
- * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  */
 
 #ifndef HIP_HIPD_HIT_TO_IP_H

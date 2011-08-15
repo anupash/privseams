@@ -27,9 +27,6 @@
  * @file
  * This file contains parameter handling functionality for the middlebox
  * authentication extension.
- *
- * @author Rene Hummen
- * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 #include <stdint.h>

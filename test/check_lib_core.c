@@ -26,7 +26,6 @@
 /**
  * @file
  * @brief Unit tests of lib/core (see doc/HACKING on unit tests).
- * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
 #include <stdlib.h>

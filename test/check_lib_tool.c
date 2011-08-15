@@ -26,7 +26,6 @@
 /**
  * @file
  * @brief Unit tests of lib/tool (see doc/HACKING on unit tests).
- * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
 #include <stdlib.h>

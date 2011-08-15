@@ -26,8 +26,6 @@
 /**
  * @file
  * @brief UDP-related functions
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #include <netinet/in.h>

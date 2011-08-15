@@ -26,8 +26,6 @@
 /**
  * @file
  * Generate a SPKI certificate for use with PISA.
- *
- * @author Thomas Jansen <mithi@mithi.net>
  */
 
 #include <errno.h>

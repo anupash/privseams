@@ -23,19 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @author  Janne Lundberg <jlu_tcs.hut.fi>
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_cc.hut.fi>
- * @author  Anthony D. Joseph <adj_hiit.fi>
- * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Anu Markkola
- * @author  Lauri Silvennoinen
- * @author  Tao Wan <twan@cc.hut.fi>
- */
-
 #ifndef HIP_LIB_CORE_CONF_H
 #define HIP_LIB_CORE_CONF_H
 

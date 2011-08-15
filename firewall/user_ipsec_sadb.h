@@ -29,9 +29,6 @@
  * accessasible through HITs and (dst IP, spi).
  *
  * @brief Security association database for IPsec connections
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- * @author Stefan Götz <stefan.goetz@web.de>
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_SADB_H

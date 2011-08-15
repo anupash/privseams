@@ -27,8 +27,6 @@
  * @file
  * @brief Few "utility" functions for the firewall
  *
- * @author Essi Vehmersalo
- *
  * @todo the actual utility of this file seems questionable (should be removed)
  */
 
