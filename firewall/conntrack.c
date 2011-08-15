@@ -1012,7 +1012,7 @@ out_err:
     return err;
 }
 
-/** verify message authenticity for message types with existing security state
+/** Verify message authenticity for message types with existing security state.
  *
  * @param common    the hip packet to be verified
  * @param tuple     the corresponding connection tuple
@@ -1043,8 +1043,8 @@ static int hip_fw_verify_packet(struct hip_common *const common,
     return 1;
 }
 
-/** verify message authenticity for message types without existing security
- *  state and store credentials for valid packets
+/** Verify message authenticity for message types without existing security
+ *  state and store the credentials for valid packets.
  *
  * @param common    the hip packet to be verified
  * @param tuple     the corresponding connection tuple
