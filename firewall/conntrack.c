@@ -2266,7 +2266,7 @@ void hip_fw_conntrack_periodic_cleanup(void)
  * Remove all connections with their associated HIP and ESP tuples that have been
  * set up by connection tracking.
  */
-void hip_fw_uninit_conntrack()
+void hip_fw_uninit_conntrack(void)
 {
     while (conn_list) {
         remove_connection(conn_list->data);
