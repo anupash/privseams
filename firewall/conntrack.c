@@ -690,6 +690,7 @@ out_err:
             free(connection->original.hip_tuple);
         }
         if (connection->reply.hip_tuple) {
+            free(connection->reply.hip_tuple->data);
             free(connection->reply.hip_tuple);
         }
         free(connection);
