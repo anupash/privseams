@@ -636,6 +636,7 @@ static void firewall_exit(void)
     hip_fw_uninit_esp_prot();
     hip_fw_uninit_esp_prot_conntrack();
     hip_fw_uninit_lsi_support();
+    hip_fw_uninit_conntrack();
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
@@ -842,8 +843,6 @@ static int filter_esp(const struct hip_fw_context *ctx)
 /**
  * filter the hip packet according to the connection tracking rules
  *
- * @param ip6_src source address of the HIP control packet
- * @param ip6_dst destination address of the HIP control packet
  * @param buf the HIP control packet
  * @param hook ipqueue hook
  * @param in_if ipqueue input interface
@@ -852,13 +851,11 @@ static int filter_esp(const struct hip_fw_context *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int filter_hip(const struct in6_addr *ip6_src,
-                      const struct in6_addr *ip6_dst,
-                      struct hip_common *buf,
+static int filter_hip(struct hip_common *const buf,
                       const unsigned int hook,
-                      const char *in_if,
-                      const char *out_if,
-                      struct hip_fw_context *ctx)
+                      const char *const in_if,
+                      const char *const out_if,
+                      struct hip_fw_context *const ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
     struct dlist *list = get_rule_list(hook);
@@ -910,10 +907,10 @@ static int filter_hip(const struct in6_addr *ip6_src,
     }
 
     if (print_addr) {
-        HIP_INFO_HIT("src hit", &(buf->hits));
-        HIP_INFO_HIT("dst hit", &(buf->hitr));
-        HIP_INFO_IN6ADDR("src ip", ip6_src);
-        HIP_INFO_IN6ADDR("dst ip", ip6_dst);
+        HIP_INFO_HIT("src hit", &buf->hits);
+        HIP_INFO_HIT("dst hit", &buf->hitr);
+        HIP_INFO_IN6ADDR("src ip", &ctx->src);
+        HIP_INFO_IN6ADDR("dst ip", &ctx->dst);
     }
 
     while (list != NULL) {
@@ -989,12 +986,13 @@ static int filter_hip(const struct in6_addr *ip6_src,
          * must be last, so not called if packet is going to be
          * dropped */
         if (match && rule->state) {
+            int filter_state_verdict = filter_state(buf, rule->state, rule->accept, ctx);
+
             /* we at least had some packet before -> check
              * this packet this will also check the signature of
              * the packet, if we already have a src_HI stored
              * for the _connection_ */
-            if (!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept,
-                              ctx)) {
+            if (filter_state_verdict == 0 || filter_state_verdict == -1) {
                 match = 0;
             } else {
                 // if it is a valid packet, this also tracked the packet
@@ -1029,7 +1027,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
     }
 
     if (verdict && !conntracked) {
-        verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
+        verdict = conntrack(buf, ctx);
     }
 
     return verdict;
@@ -1049,9 +1047,7 @@ static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
     int verdict = accept_hip_esp_traffic_by_default;
 
     if (filter_traffic) {
-        verdict = filter_hip(&ctx->src,
-                             &ctx->dst,
-                             ctx->transport_hdr.hip,
+        verdict = filter_hip(ctx->transport_hdr.hip,
                              ctx->ipq_packet->hook,
                              ctx->ipq_packet->indev_name,
                              ctx->ipq_packet->outdev_name,
