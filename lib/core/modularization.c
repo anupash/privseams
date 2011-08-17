@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2010-2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -276,11 +276,20 @@ static void *lmod_get_state_item_by_id(struct modular_state *state,
  */
 void *lmod_get_state_item(struct modular_state *state, const char *item_name)
 {
-    unsigned int state_id;
+    int state_id;
+
+    if (!state || !item_name) {
+        HIP_ERROR("Missing state or item name.\n");
+        return NULL;
+    }
 
     state_id = lmod_get_state_item_id(state, item_name);
-
-    return lmod_get_state_item_by_id(state, state_id);
+    if (state_id == -1) {
+        HIP_ERROR("State %s not found.\n", item_name);
+        return NULL;
+    } else {
+        return lmod_get_state_item_by_id(state, state_id);
+    }
 }
 
 /**
