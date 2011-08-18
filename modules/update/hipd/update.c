@@ -32,6 +32,7 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -153,6 +154,46 @@ out_err:
 }
 
 /**
+ * Verify the validity of the ACK ID of a received Update packet and update the
+ * range in which Update packets will be accepted accordingly.
+ *
+ * @param  state              The update state of the respective HA.
+ * @param  ack_peer_update_id The received ACK ID.
+ *
+ * @return true  if received ACK is valid
+ *         false else
+ */
+static bool check_and_update_ack_id_bounds(struct update_state *const state,
+                                           const uint32_t ack_peer_update_id)
+{
+    HIP_ASSERT(state);
+
+    /* Of the three UPDATE packets the first and second must be acknowledged.
+     * hip_update_get_out_id() gets the latest outgoing UPDATE ID whereas
+     * update_id_out_lower_bound stores the oldest sent UPDATE ID with an
+     * outstanding acknowledgement. Together they form the window in which
+     * incoming ACKs are valid. Multiple ACKs may be outstanding for example
+     * when both host and peer initiate an update. In this case both
+     * U1 (update initiated by the host) and U2 (response to update initiated
+     * by the peer) are to be acknowledged and their IDs stored in
+     * update_id_out_lower_bound and hip_update_get_out_id() respectively.
+     */
+    if (state->update_id_out_lower_bound <= hip_update_get_out_id(state)) {
+        if (ack_peer_update_id < state->update_id_out_lower_bound ||
+            ack_peer_update_id > hip_update_get_out_id(state)) {
+            return false;
+        }
+    } else {
+        if (ack_peer_update_id < state->update_id_out_lower_bound &&
+            ack_peer_update_id > hip_update_get_out_id(state)) {
+            return false;
+        }
+    }
+    state->update_id_out_lower_bound = ack_peer_update_id;
+    return true;
+}
+
+/**
  * Check if UPDATE sequence and acknowledgment numbers are as expected.
  *
  * @param packet_type the packet type
@@ -212,12 +253,12 @@ static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
                   ack_peer_update_id);
 
-        // we only want acks for our most current update
-        if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
-            HIP_DEBUG("Update ID (%u) in the ACK parameter is not "
-                      "equal to the last outgoing Update ID (%u). "
+        if (!check_and_update_ack_id_bounds(localstate, ack_peer_update_id)) {
+            HIP_DEBUG("Update ID (%u) in the ACK parameter is not in the "
+                      "current Update ID window (%u-%u). "
                       "Dropping the packet.\n",
                       ack_peer_update_id,
+                      localstate->update_id_out_lower_bound,
                       hip_update_get_out_id(localstate));
             err = -1;
             goto out_err;
@@ -484,10 +525,11 @@ static int hip_update_init_state(struct modular_state *state)
         return -1;
     }
 
-    update_state->update_state   = 0;
-    update_state->valid_locators = 0;
-    update_state->update_id_out  = 0;
-    update_state->update_id_in   = 0;
+    update_state->update_state              = 0;
+    update_state->valid_locators            = 0;
+    update_state->update_id_out             = 0;
+    update_state->update_id_out_lower_bound = 0;
+    update_state->update_id_in              = 0;
 
     res = lmod_add_state_item(state, update_state, "update");
     if (res == -1) {
