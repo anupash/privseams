@@ -25,6 +25,7 @@
 
 #include <check.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "lib/core/protodefs.h"
 #include "modules/midauth/hipd/midauth.h"
