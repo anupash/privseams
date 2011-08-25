@@ -65,7 +65,6 @@ noinst_PROGRAMS = test/fw_port_bindings_performance
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
 
-
 ### tests ###
 if HIP_UNITTESTS
 TESTS           = test/check_firewall \
@@ -77,6 +76,7 @@ check_PROGRAMS  = test/check_firewall \
                   test/check_lib_tool \
                   test/check_modules_midauth
 endif
+
 
 
 ### source declarations ###
@@ -198,14 +198,17 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
+                                 lib/core/lmod.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/nlink.c           \
                                  lib/tool/pk.c              \
                                  lib/tool/xfrmapi.c
 
+
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
+
 
 test_check_firewall_SOURCES = test/check_firewall.c          \
                               test/mocks.c                   \

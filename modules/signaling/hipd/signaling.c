@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "lib/modularization/lmod.h"
+#include "lib/core/lmod.h"
 #include "lib/core/debug.h"
 #include "lib/core/common.h"
 #include "lib/core/state.h"

@@ -47,7 +47,8 @@ enum hipfw_pkt_type {
     OTHER_PACKET = 0,
     HIP_PACKET,
     ESP_PACKET,
-    FW_PROTO_NUM
+    TCP_PACKET,
+    FW_PROTO_NUM,
 };
 
 struct hip_fw_context {
@@ -68,6 +69,7 @@ struct hip_fw_context {
     union {
         struct hip_esp    *esp;
         struct hip_common *hip;
+        struct tcphdr     *tcp;
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
 

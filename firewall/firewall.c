@@ -55,6 +55,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -1085,6 +1086,44 @@ static int hip_fw_handle_esp_output(struct hip_fw_context *ctx)
 }
 
 /**
+ * Process a TCP packet from the outbound packet capture queue
+ *
+ * @param ctx the packet context
+ *
+ * @return the verdict (1 for pass and 0 for drop)
+ */
+static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
+{
+    HIP_DEBUG("\n");
+
+    return hip_fw_handle_other_output(ctx);
+}
+
+/**
+ * Process a TCP packet from the inbound packet capture queue
+ *
+ * @param ctx the packet context
+ *
+ * @return the verdict (1 for pass and 0 for drop)
+ */
+static int hip_fw_handle_tcp_input(struct hip_fw_context *ctx)
+{
+    int verdict = accept_normal_traffic_by_default;
+
+    HIP_DEBUG("\n");
+
+    // any incoming plain TCP packet might be an opportunistic I1
+    HIP_DEBUG_HIT("hit src", &ctx->src);
+    HIP_DEBUG_HIT("hit dst", &ctx->dst);
+
+    // as we should never receive TCP with HITs, this will only apply
+    // to IPv4 TCP
+    verdict = hip_fw_handle_other_input(ctx);
+
+    return verdict;
+}
+
+/**
  * Process any other packet from the outbound packet capture queue
  *
  * @note hooks userspace IPsec and LSI
@@ -1242,10 +1281,12 @@ static int firewall_init(void)
     fw_handlers[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
     fw_handlers[NF_IP_LOCAL_IN][HIP_PACKET]   = hip_fw_handle_hip_output;
     fw_handlers[NF_IP_LOCAL_IN][ESP_PACKET]   = hip_fw_handle_esp_input;
+    fw_handlers[NF_IP_LOCAL_IN][TCP_PACKET]   = hip_fw_handle_tcp_input;
 
     fw_handlers[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output;
     fw_handlers[NF_IP_LOCAL_OUT][HIP_PACKET]   = hip_fw_handle_hip_output;
     fw_handlers[NF_IP_LOCAL_OUT][ESP_PACKET]   = hip_fw_handle_esp_output;
+    fw_handlers[NF_IP_LOCAL_OUT][TCP_PACKET]   = hip_fw_handle_tcp_output;
 
     //apply rules for forwarded hip and esp traffic
     fw_handlers[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
@@ -1367,6 +1408,18 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
                                      (((char *) iphdr) + ctx->ip_hdr_len);
 
             goto end_init;
+        } else if (iphdr->ip_p == IPPROTO_TCP) {
+            // this might be a TCP packet for opportunistic mode
+            HIP_DEBUG("plain TCP packet\n");
+
+            ctx->packet_type       = TCP_PACKET;
+            ctx->transport_hdr.tcp = (struct tcphdr *)
+                                     (((char *) iphdr) + ctx->ip_hdr_len);
+
+            HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
+            HIP_DEBUG("dst port: %u\n", ntohs(ctx->transport_hdr.tcp->dest));
+
+            goto end_init;
         } else if (iphdr->ip_p != IPPROTO_UDP) {
             // if it's not UDP either, it's unsupported
             HIP_DEBUG("some other packet\n");
@@ -1420,6 +1473,18 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
             ctx->packet_type       = ESP_PACKET;
             ctx->transport_hdr.esp = (struct hip_esp *)
                                      (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
+
+            goto end_init;
+        } else if (ip6_hdr->ip6_nxt == IPPROTO_TCP) {
+            // this might be a TCP packet for opportunistic mode
+            HIP_DEBUG("plain TCP packet\n");
+
+            ctx->packet_type       = TCP_PACKET;
+            ctx->transport_hdr.tcp = (struct tcphdr *)
+                                     (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
+
+            HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
+            HIP_DEBUG("dst port: %u\n", ntohs(ctx->transport_hdr.tcp->dest));
 
             goto end_init;
         } else if (ip6_hdr->ip6_nxt != IPPROTO_UDP) {
