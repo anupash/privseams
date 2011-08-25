@@ -37,6 +37,8 @@
 #include "debug.h"
 #include "icomm.h"
 #include "state.h"
+#include "lib/core/lmod.h"
+
 
 
 /* Removed in 2.6.11 - why ? */
