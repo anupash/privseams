@@ -217,6 +217,8 @@
 #define HIP_PARAM_HIT_TO_IP_SET         32820
 /* #define HIP_PARAM_TURN_INFO             32821 */
 #define HIP_PARAM_ITEM_LENGTH           32822
+/* free slots */
+#define HIP_PARAM_SIGNALING_PORTINFO    32830
 /* End of HIPL private parameters. */
 #define HIP_PARAM_HMAC                  61505
 #define HIP_PARAM_HMAC2                 61569

@@ -1216,6 +1216,8 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_SRC_TCP_PORT:    return "HIP_PARAM_SRC_TCP_PORT";
     case HIP_PARAM_DST_TCP_PORT:    return "HIP_PARAM_DST_TCP_PORT";
     case HIP_PARAM_HOSTNAME:        return "HIP_PARAM_HOSTNAME";
+    case HIP_PARAM_SIGNALING_APPINFO:   return "HIP_PARAM_SIGNALING_APPINFO";
+    case HIP_PARAM_SIGNALING_PORTINFO:  return "HIP_PARAM_SIGNALING_PORTINFO";
     default:                        return lmod_get_parameter_identifier(param_type);
     }
     return "UNDEFINED";
