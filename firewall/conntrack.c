@@ -74,6 +74,8 @@
 #include "config.h"
 #include "reinject.h"
 
+#include "modules/signaling/firewall/signaling_hipfw.h"
+
 
 static struct dlist *hip_list  = NULL;
 static struct dlist *esp_list  = NULL;
@@ -1233,6 +1235,10 @@ static int handle_i2(struct hip_common *const common,
         return 0;
     }
 
+    /* handle signaling_appinfo parameter */
+    HIP_IFEL(signaling_hipfw_handle_appinfo(common, tuple, ctx),
+            -1, "Failed check for application in I2.\n");
+
     /* check if the I2 contains ESP protection anchor and store state */
     if (esp_prot_conntrack_I2_anchor(common, tuple)) {
         HIP_ERROR("failed to track esp protection extension state\n");
@@ -1289,7 +1295,14 @@ static int handle_r2(struct hip_common *const common,
         return 0;
     }
 
+    /* handle signaling_appinfo parameter */
+    if (signaling_hipfw_handle_appinfo(common, tuple, ctx)) {
+        HIP_ERROR("Failed check for application in R2.\n");
+        return 0;
+    }
+
     return 1;
+
 }
 
 /**

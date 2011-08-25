@@ -94,7 +94,7 @@
 #include "rule_management.h"
 #include "user_ipsec_api.h"
 #include "firewall.h"
-
+#include "modules/signaling/firewall/signaling_hipfw.h"
 
 /* location of the lock file */
 #define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR "/hip_firewall.lock"
