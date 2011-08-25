@@ -131,6 +131,43 @@ int hip_trigger_update(struct hip_hadb_state *const hadb_entry);
 
 enum update_types hip_classify_update_type(const struct hip_common *const hip_msg);
 
+
+struct update_state {
+    /** A kludge to get the UPDATE retransmission to work.
+        @todo Remove this kludge. */
+    int update_state;
+
+    /** Update function set.
+        @note Do not modify this value directly. Use
+        hip_hadb_set_handle_function_set() instead. */
+    hip_update_func_set_t *hadb_update_func;
+
+    /** This "linked list" includes the locators we recieved in the initial
+     * UPDATE packet. Locators are stored as "struct in6_addr *"s.
+     *
+     * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+     * addresses.
+     *
+     * Notice that there's a hack that a hash table is used as a linked list
+     * here but this is common allover HIPL and it doesn't seem to cause
+     * performance problems.
+     */
+    HIP_HASHTABLE *addresses_to_send_echo_request;
+
+    /** Stored outgoing UPDATE ID counter. */
+    uint32_t                     update_id_out;
+    /** Stored incoming UPDATE ID counter. */
+    uint32_t                     update_id_in;
+};
+
+
+
 int hip_update_init(void);
 
+uint32_t hip_update_get_out_id(struct update_state *state);
+
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */
+
+
+
+
