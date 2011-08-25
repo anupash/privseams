@@ -240,18 +240,18 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     int err = 0;
     int length_contents = 0;
     void *contents_start, *p_tmp;
-    struct signaling_port_state *port_state = NULL;
+    struct signaling_state *sig_state = NULL;
     hip_ha_t *entry = NULL;
     char app_path_buf[PATHBUF_SIZE];
 
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
                  -1, "failed to retrieve hadb entry");
-    HIP_IFEL(!(port_state = lmod_get_state_item(entry->hip_modular_state, "signaling_port_state")),
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
                  -1, "failed to retrieve state for signaling ports\n");
-    HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", port_state->src_port, port_state->dest_port);
+    HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
 
     /* Dynamically lookup application from port information */
-    HIP_IFEL(0 > signaling_netstat_get_application_path(port_state->src_port, port_state->dest_port, app_path_buf),
+    HIP_IFEL(0 > signaling_netstat_get_application_path(sig_state->connection.src_port, sig_state->connection.dest_port, app_path_buf),
             -1, "Got not path to application. \n");
 
     /* Verify the application */

@@ -13,7 +13,7 @@
 #include "signaling_state.h"
 
 /*
- * Initialize an signaling_port_state instance.
+ * Initialize an signaling_state instance.
  *
  * Allocates the required memory and sets the members to the start values.
  *
@@ -23,15 +23,15 @@
 int signaling_init_state(struct modular_state *state)
 {
     int err = 0;
-    struct signaling_port_state *port_state = NULL;
+    struct signaling_state *sig_state = NULL;
 
-    HIP_IFEL(!(port_state = (struct signaling_port_state *) malloc(sizeof(struct signaling_port_state))),
+    HIP_IFEL(!(sig_state = (struct signaling_state *) malloc(sizeof(struct signaling_state))),
              -1,
              "Error on allocating memory for a port_state instance.\n");
 
-    memset(port_state, 0, sizeof(struct signaling_port_state));
+    memset(sig_state, 0, sizeof(struct signaling_state));
 
-    err = lmod_add_state_item(state, port_state, "signaling_port_state");
+    err = lmod_add_state_item(state, sig_state, "signaling_state");
 
 out_err:
     return err;
