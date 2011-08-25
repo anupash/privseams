@@ -513,9 +513,15 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     }
 
     /* Check packet destination */
-    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        HIP_ERROR("Packet is not destined for this host. Dropping.\n");
-        return -1;
+    /* I1 may be opportunistic with zero dst HIT */
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr) &&
+        !ipv6_addr_any(&ctx->input_msg->hitr)) {
+        HIP_DEBUG("Packet is not destined for this host.\n");
+#ifdef CONFIG_HIP_RVS
+        /* RVS/Relay is handled later in the code. */
+        if (hip_relay_get_status() == HIP_RELAY_OFF)
+#endif
+            return -1;
     }
 
     /* Debug printing of received packet information. All received HIP
@@ -1169,14 +1175,6 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
-
-    /* I1 may be opportunistic with zero dst HIT */
-    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr) &&
-        !ipv6_addr_any(&ctx->input_msg->hitr)) {
-        HIP_DEBUG_HIT("Dst HIT does not belong to this host",
-                      &ctx->input_msg->hitr);
-        return -1;
-    }
 
     if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
         HIP_DEBUG("Received illegal controls: 0x%x.\n",
