@@ -37,7 +37,7 @@
 #include "debug.h"
 #include "icomm.h"
 #include "state.h"
-#include "lib/core/lmod.h"
+#include "lib/core/modularization.h"
 
 
 

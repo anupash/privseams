@@ -8,7 +8,7 @@
 #ifndef HIP_HIPD_SIGNALING_STATE_H
 #define HIP_HIPD_SIGNALING_STATE_H
 
-#include "lib/core/lmod.h"
+#include "lib/core/modularization.h"
 
 
 struct signaling_port_state {

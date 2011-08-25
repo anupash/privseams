@@ -8,7 +8,7 @@
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"
-#include "lib/core/lmod.h"
+#include "lib/core/modularization.h"
 #include "lib/core/builder.h"
 #include "lib/core/prefix.h"
 #include "hipd/hadb.h"
