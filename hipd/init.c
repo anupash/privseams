@@ -666,6 +666,15 @@ static void hip_init_packet_types(void)
     lmod_register_packet_type(HIP_LUPDATE,   "HIP_LUPDATE");
 }
 
+static int hip_init_user_handle_functions(void)
+{
+    int err = 0;
+
+    hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &hip_netdev_trigger_bex_msg, 4000);
+
+    return err;
+}
+
 static int hip_init_handle_functions(void)
 {
     int err = 0;
@@ -1037,6 +1046,8 @@ int hipd_init(const uint64_t flags)
     hip_init_packet_types();
 
     hip_init_handle_functions();
+
+    hip_init_user_handle_functions();
 
     hip_register_maint_function(&hip_nat_refresh_port,         10000);
     hip_register_maint_function(&hip_relht_maintenance,        20000);

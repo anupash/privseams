@@ -135,9 +135,7 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
     msg_type      = hip_get_msg_type(ctx->input_msg);
     send_response = hip_get_msg_response(ctx->input_msg);
 
-    if (hip_user_run_handles(msg_type, ctx->input_msg, &app_src)) {
-        err = hip_handle_user_msg(ctx->input_msg, &app_src);
-    }
+    err = hip_handle_user_msg(ctx->input_msg, &app_src);
 
     if (send_response) {
         HIP_DEBUG("Send response\n");

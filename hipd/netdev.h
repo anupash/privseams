@@ -47,7 +47,7 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit);
 int hip_remove_iface_all_local_hits(void);
 int hip_add_iface_local_route(const hip_hit_t *local_hit);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
-int hip_netdev_trigger_bex_msg(const struct hip_common *msg);
+int hip_netdev_trigger_bex_msg(struct hip_common *msg, struct sockaddr_in6 *src);
 void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 int hip_netdev_white_list_add(const char *const device_name);

@@ -1015,13 +1015,17 @@ out_err:
  * @return zero on success and non-zero on error
  * @todo move this to some other file
  */
-int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
+int hip_netdev_trigger_bex_msg(struct hip_common *msg,
+                               UNUSED struct sockaddr_in6 *src)
 {
     const hip_hit_t             *our_hit  = NULL, *peer_hit  = NULL;
     const hip_lsi_t             *our_lsi  = NULL, *peer_lsi  = NULL;
     const struct in6_addr       *our_addr = NULL, *peer_addr = NULL;
     const struct hip_tlv_common *param;
     int                          err = 0;
+
+    HIP_DEBUG("HIP_MSG_TRIGGER_BEX\n");
+    hip_firewall_status = 1;
 
     HIP_DUMP_MSG(msg);
 

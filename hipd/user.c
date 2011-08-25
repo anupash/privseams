@@ -181,9 +181,8 @@ int hip_user_run_handles(const uint8_t msg_type,
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
-        HIP_DEBUG("User message (type: %d) not dynamically handled -> " \
-                  "trigger static handling.\n", msg_type);
-        return 1;
+        HIP_DEBUG("No user handles for message (type: %d) and not handled statically.\n", msg_type);
+        return -1;
     }
 
     while ((iter = hip_ll_iterate(hip_user_msg_handles[msg_type],
@@ -498,12 +497,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_GET_DEFAULT_HIT:
         err = hip_get_default_hit_msg(msg);
         break;
-    case HIP_MSG_TRIGGER_BEX:
-        HIP_DEBUG("HIP_MSG_TRIGGER_BEX\n");
-        hip_firewall_status = 1;
-        err                 = hip_netdev_trigger_bex_msg(msg);
-        goto out_err;
-        break;
     case HIP_MSG_USERSPACE_IPSEC:
         HIP_DUMP_MSG(msg);
         err = hip_userspace_ipsec_activate(msg);
@@ -704,8 +697,10 @@ int hip_handle_user_msg(struct hip_common *msg,
                   hip_broadcast_status, HIP_MSG_BROADCAST_OFF);
         break;
     default:
-        HIP_ERROR("Unknown socket option (%d)\n", msg_type);
-        err = -ESOCKTNOSUPPORT;
+        if(hip_user_run_handles(msg_type, msg, src) < 0) {;
+            HIP_ERROR("Unknown socket option (%d)\n", msg_type);
+            err = -ESOCKTNOSUPPORT;
+        }
     }
 
 out_err:
