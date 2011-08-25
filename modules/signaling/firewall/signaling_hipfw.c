@@ -68,3 +68,44 @@ int signaling_hipfw_handle_appinfo(const struct hip_common *common, UNUSED struc
 out_err:
 	return err;
 }
+
+/*
+ * Returns a verdict 1 for pass, 0 for drop.
+ */
+int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
+
+    int err = 1, found = 0;
+    int src_port, dest_port;
+    signaling_cdb_entry_t *entry;
+
+
+    /* Get ports from tcp header */
+    src_port = ntohs(ctx->transport_hdr.tcp->source);
+    dest_port = ntohs(ctx->transport_hdr.tcp->dest);
+
+    HIP_DEBUG("Determining if there is a connection between \n");
+    HIP_DEBUG_HIT("\tsrc", &ctx->src);
+    HIP_DEBUG_HIT("\tdst", &ctx->dst);
+    HIP_DEBUG("\t on ports %d/%d or if corresponding application is allowed.\n", src_port, dest_port);
+
+    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
+    if(entry == NULL) {
+        HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
+        /* Let packet proceed because BEX will be triggered by userspace ipsec */
+        err = 1;
+        goto out_err;
+    }
+
+    found = signaling_cdb_ports_find(src_port, dest_port, entry);
+    if(found) {
+        HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
+        err = 1;
+    } else {
+        HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
+        err = 0;
+    }
+
+out_err:
+    return err;
+}
+

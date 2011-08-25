@@ -50,4 +50,7 @@ int signaling_hipfw_init(void);
  */
 int signaling_hipfw_handle_appinfo(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
 
+/* Check if the packet is conntracked or not. Take the corresponding actions. */
+int signaling_hipfw_conntrack(hip_fw_context_t *ctx);
+
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/
