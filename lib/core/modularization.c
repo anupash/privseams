@@ -36,7 +36,6 @@
 #include "modularization.h"
 #include "ife.h"
 
-
 /**
  * A generic struct for function pointer.
  */
@@ -99,6 +98,17 @@ static struct hip_ll packet_types;
  * parameter type must register it using lmod_register_parameter_type.
  */
 static struct hip_ll parameter_types;
+
+/**
+ * List of parameter types.
+ *
+ * Used to track all registered parameter types. Each module which defines a new
+ * parameter type should register it using lmod_register_parameter_type. So, two
+ * independent modules cannot unintentionally use the same parameter type number
+ * for different purposes.
+ *
+ */
+static hip_ll_t parameter_types;
 
 /**
  * Number of enabled modules.
