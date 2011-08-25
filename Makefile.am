@@ -207,7 +207,6 @@ if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
-
 test_check_firewall_SOURCES = test/check_firewall.c          \
                               test/mocks.c                   \
                               test/firewall/conntrack.c      \
@@ -253,6 +252,8 @@ tools_pisacert_LDADD                     = lib/core/libhipcore.la
 ### dynamic library dependencies ###
 
 test_check_firewall_LDFLAGS              = -ldl
+
+include modules/signaling/Makefile.am
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \

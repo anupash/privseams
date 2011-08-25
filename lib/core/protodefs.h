@@ -164,6 +164,10 @@
 #define HIP_PARAM_LOCAL_NAT_PORT       4125
 #define HIP_PARAM_PEER_NAT_PORT        4126
 
+#define HIP_PARAM_SIGNALING_APPNAME    5000
+#define HIP_PARAM_SIGNALING_APPDEVELOPER 5002
+#define HIP_PARAM_SIGNALING_APPSERIAL  5004
+
 /* Range 32768 - 49141 for HIPL private network parameters. Please add
  * here only network messages, not internal messages!
  * @todo: move these to icomm.h */
