@@ -11,6 +11,7 @@ modules_signaling_hipd_libhipsignaling_la_SOURCES = modules/signaling/hipd/signa
 modules_signaling_lib_libhipsignaling_common_la_SOURCES = modules/signaling/lib/signaling_common_builder.c
 
 hipd_hipd_LDADD += modules/signaling/hipd/libhipsignaling.la \
-                   modules/signaling/lib/libhipsignaling_common.la
+                   modules/signaling/lib/libhipsignaling_common.la \
+                   -L/home/ziegeldorf/thesisrepository/code/x509ac -lx509ac -lssl
 
 firewall_hipfw_LDADD += modules/signaling/lib/libhipsignaling_common.la
