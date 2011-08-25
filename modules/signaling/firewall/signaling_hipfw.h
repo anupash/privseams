@@ -42,18 +42,10 @@
 
 #include "lib/core/protodefs.h"
 
-int signaling_hipfw_init(void);
-
 /*
  * Do something with the application information included in the I2 or R2 packet.
  * For now, just print it.
  */
 int signaling_hipfw_handle_appinfo(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
-
-/* Check if the packet is conntracked or not. Take the corresponding actions. */
-int signaling_hipfw_conntrack(hip_fw_context_t *ctx);
-
-int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx);
-
 
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

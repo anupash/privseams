@@ -94,7 +94,7 @@
 #include "rule_management.h"
 #include "user_ipsec_api.h"
 #include "firewall.h"
-#include "modules/signaling/firewall/signaling_hipfw.h"
+#include "modules/signaling/firewall/signaling_hipfw_oslayer.h"
 
 /* location of the lock file */
 #define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR "/hip_firewall.lock"
@@ -496,7 +496,7 @@ static int firewall_init_extensions(void)
     hip_firewall_init_raw_sockets();
 
     /* Initialize signaling module */
-    HIP_IFEL(signaling_hipfw_init(), -1, "failed to init signaling extensions\n");
+    HIP_IFEL(signaling_hipfw_oslayer_init(), -1, "failed to init signaling extensions\n");
 
 out_err:
     return err;

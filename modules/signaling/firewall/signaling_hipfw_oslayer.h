@@ -28,38 +28,21 @@
  *
  */
 
-/* required for IFNAMSIZ in libipq headers */
-#define _BSD_SOURCE
+#ifndef HIP_HIPFW_SIGNALING_HIPFW_OSLAYER_H
+#define HIP_HIPFW_SIGNALING_HIPFW_OSLAYER_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <stdint.h>
 
-#include "lib/core/builder.h"
-#include "lib/core/ife.h"
+#include "firewall/firewall_defines.h"
 
-#include "modules/signaling/lib/signaling_prot_common.h"
-#include "modules/signaling/lib/signaling_common_builder.h"
+#include "lib/core/protodefs.h"
 
-#include "signaling_hipfw.h"
+int signaling_hipfw_oslayer_init(void);
 
-/*
- * Print all application information included in the packet.
- */
-int signaling_hipfw_handle_appinfo(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
-{
-	int err = 1;
-	UNUSED const struct signaling_param_appinfo *appinfo = NULL;
+/* Check if the packet is conntracked or not. Take the corresponding actions. */
+int signaling_hipfw_conntrack(hip_fw_context_t *ctx);
 
-	/* Get the parameter */
-	HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(common, HIP_PARAM_SIGNALING_APPINFO)),
-	        -1, "No application info parameter found in the message.\n");
+int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx);
 
-	/* Print out contents */
-	signaling_param_appinfo_print(appinfo);
 
-out_err:
-	return err;
-}
-
+#endif /*HIP_HIPFW_SIGNALING_HIPFW_OSLAYER_H*/
