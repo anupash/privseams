@@ -73,9 +73,8 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     int verdict = VERDICT_DEFAULT;
     int found = 0;
     int src_port, dest_port;
-    signaling_cdb_entry_t *entry;
-    struct signaling_connection *conn;
-
+    signaling_cdb_entry_t *entry = NULL;
+    struct signaling_connection *conn = NULL;
 
     /* Get ports from tcp header */
     src_port    = ntohs(ctx->transport_hdr.tcp->source);

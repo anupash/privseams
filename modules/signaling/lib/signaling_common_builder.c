@@ -45,86 +45,7 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
-/*
- * Allocate an appinfo parameter and initialize to standard values.
- *
- * @param length  The total maximum length of the new parameter (including type and length field).
- * @return        A application context parameter initialized to 0 values on success, which
- *                the caller needs to deallocate. NULL on error.
- */
-static struct signaling_param_app_context * signaling_param_appinfo_init(unsigned int length) {
-    int err = 0;
-    struct signaling_param_app_context *par = NULL;
-
-    /* Size must be at least be enough to accomodate fixed contents and tlv header */
-    HIP_IFEL((length < sizeof(struct signaling_param_app_context)),
-             -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
-    HIP_IFEL(!(par = (struct signaling_param_app_context *) malloc(length)),
-             -1, "Could not allocate memory for new appinfo parameter\n");
-
-    /* Set contents to zero (defined standard values). */
-    memset((uint8_t *)par, 0, length);
-
-    /* Set type and length */
-    hip_set_param_type((hip_tlv_common_t *) par, HIP_PARAM_SIGNALING_APPINFO);
-    hip_set_param_contents_len((hip_tlv_common_t *) par, length-2);
-
-out_err:
-    if (err)
-        return NULL;
-
-    return par;
-}
-
-static int signaling_param_appinfo_get_content_length(const struct signaling_application_context *app_ctx) {
-    int res = 0;
-
-    if(app_ctx == NULL) {
-        return -1;
-    }
-
-    /* Length of length fields = 8 (4 x 2 Bytes) */
-    res += sizeof(struct signaling_param_app_context) - sizeof(struct hip_tlv_common);
-
-    /* Length of variable input */
-    res += strlen(app_ctx->application_dn);
-    res += strlen(app_ctx->issuer_dn);
-    res += strlen(app_ctx->requirements);
-    res += strlen(app_ctx->groups);
-
-    return res;
-}
-
-static int siganling_build_param_appinfo_contents(struct signaling_param_app_context *par,
-                                                  const struct signaling_application_context *app_ctx) {
-    int err = 0;
-    uint8_t *p_tmp;
-
-    /* Sanity checks */
-    HIP_IFEL((par == NULL || app_ctx == NULL), -1, "No parameter or application context given.\n");
-
-    /* Set length fields and make sure to keep to maximum lengths */
-    par->app_dn_length  = htons(MIN(strlen(app_ctx->application_dn), SIGNALING_APP_DN_MAX_LEN));
-    par->iss_dn_length  = htons(MIN(strlen(app_ctx->issuer_dn),      SIGNALING_ISS_DN_MAX_LEN));
-    par->req_length     = htons(MIN(strlen(app_ctx->requirements),   SIGNALING_APP_REQ_MAX_LEN));
-    par->grp_length     = htons(MIN(strlen(app_ctx->groups),         SIGNALING_APP_GRP_MAX_LEN));
-
-    /* Set the contents
-     * We dont need to check for NULL pointers since length is then set to 0 */
-    p_tmp = (uint8_t *) par + sizeof(struct signaling_param_app_context);
-    memcpy(p_tmp, app_ctx->application_dn, ntohs(par->app_dn_length));
-    p_tmp += ntohs(par->app_dn_length);
-    memcpy(p_tmp, app_ctx->issuer_dn, ntohs(par->iss_dn_length));
-    p_tmp += ntohs(par->iss_dn_length);
-    memcpy(p_tmp, app_ctx->requirements, ntohs(par->req_length));
-    p_tmp += ntohs(par->req_length);
-    memcpy(p_tmp, app_ctx->groups, ntohs(par->grp_length));
-
-out_err:
-    return err;
-}
-
-uint8_t signaling_build_flags(const struct signaling_connection *const conn)
+static uint8_t signaling_build_flags(const struct signaling_connection *const conn)
 {
     uint8_t ret = 0;
     if (conn->side == INITIATOR) {
@@ -179,8 +100,6 @@ int signaling_build_param_connection_identifier(hip_common_t *msg, const struct 
     hip_set_param_contents_len((struct hip_tlv_common *) &conn_id,
                                sizeof(struct signaling_param_connection_identifier) - sizeof(struct hip_tlv_common));
     conn_id.id       = htonl(conn->id);
-    conn_id.src_port = htons(conn->src_port);
-    conn_id.dst_port = htons(conn->dst_port);
     conn_id.flags    = signaling_build_flags(conn);
 
     HIP_IFEL(hip_build_param(msg, &conn_id),
@@ -201,26 +120,75 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_application_context *app_ctx)
+int signaling_build_param_application_context(hip_common_t *msg,
+                                              const struct signaling_port_pair *port_list,
+                                              const struct signaling_application_context *app_ctx)
 {
-    struct signaling_param_app_context *appinfo = NULL;
+    struct signaling_param_app_context appinfo;
     int err = 0;
-    int length_contents = 0;
+    int i = 0;
+    int len_contents = 0;
+    int tmp_len;
+    uint8_t *p_tmp = NULL;
+    struct signaling_port_pair *pp = NULL;
+    char param_buf[HIP_MAX_PACKET];
 
     /* Sanity checks */
     HIP_IFEL(msg == NULL,     -1, "Got no msg context. (msg == NULL)\n");
     HIP_IFEL(app_ctx == NULL, -1, "Got no context to built the parameter from.\n");
 
-    /* BUILD THE PARAMETER */
-    length_contents = signaling_param_appinfo_get_content_length(app_ctx);
-    appinfo         = signaling_param_appinfo_init(sizeof(struct hip_tlv_common) + length_contents);
-    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, app_ctx),
-            -1, "Failed to build appinfo parameter.\n");
-    HIP_IFEL(hip_build_param(msg, appinfo),
-            -1, "Failed to append appinfo parameter to message.\n");
+    /* BUILD THE PARAMETER CONTENTS */
+    pp = (struct signaling_port_pair *) param_buf;
+
+    /* Set the ports */
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if (port_list[i].src_port == 0 && port_list[i].dst_port == 0) {
+            break;
+        }
+        pp[i].src_port = htons(port_list[i].src_port);
+        pp[i].dst_port = htons(port_list[i].dst_port);
+    }
+    appinfo.port_count = htons(i);
+    p_tmp = (uint8_t *) (pp + i);
+
+    /* Set the application */
+    tmp_len = MIN(strlen(app_ctx->application_dn), SIGNALING_APP_DN_MAX_LEN);
+    memcpy(p_tmp, app_ctx->application_dn, tmp_len);
+    appinfo.app_dn_length  = htons(tmp_len);
+    len_contents += tmp_len;
+    p_tmp += tmp_len;
+
+    /* Set the issuer */
+    tmp_len = MIN(strlen(app_ctx->issuer_dn), SIGNALING_ISS_DN_MAX_LEN);
+    memcpy(p_tmp, app_ctx->issuer_dn, tmp_len);
+    appinfo.iss_dn_length  = htons(tmp_len);
+    len_contents += tmp_len;
+    p_tmp += tmp_len;
+
+    /* Set the requirements */
+    tmp_len = MIN(strlen(app_ctx->requirements), SIGNALING_APP_REQ_MAX_LEN);
+    memcpy(p_tmp, app_ctx->requirements, tmp_len);
+    appinfo.req_length  = htons(tmp_len);
+    len_contents += tmp_len;
+    p_tmp += tmp_len;
+
+    /* Set the group */
+    tmp_len = MIN(strlen(app_ctx->groups), SIGNALING_APP_GRP_MAX_LEN);
+    memcpy(p_tmp, app_ctx->groups, tmp_len);
+    appinfo.grp_length  = htons(tmp_len);
+    len_contents += tmp_len;
+    p_tmp += tmp_len;
+
+    /* Set type and length */
+    len_contents += sizeof(struct signaling_param_app_context) - sizeof(struct hip_tlv_common);
+    hip_set_param_contents_len((struct hip_tlv_common *) &appinfo, len_contents);
+    hip_set_param_type((struct hip_tlv_common *) &appinfo, HIP_PARAM_SIGNALING_APPINFO);
+
+    /* Append the parameter to the message */
+    HIP_IFEL(hip_build_generic_param(msg, &appinfo, sizeof(struct signaling_param_app_context), param_buf),
+             -1, "Failed to append appinfo parameter to message.\n");
 
 out_err:
-    free(appinfo);
     return err;
 }
 
@@ -414,7 +382,8 @@ int signaling_build_application_context(const struct signaling_param_app_context
 
     /* copy contents and make sure maximum lengths are kept */
     tmp_len = MIN(ntohs(param_app_ctx->app_dn_length), SIGNALING_APP_DN_MAX_LEN);
-    p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context);
+    p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context)
+                  + ntohs(param_app_ctx->port_count) * sizeof(struct signaling_port_pair);
     memcpy(app_ctx->application_dn, p_contents, tmp_len);
     app_ctx->application_dn[tmp_len] = '\0';
     p_contents += tmp_len;
@@ -469,7 +438,30 @@ out_err:
     return err;
 }
 
-void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
+int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
+                                           struct signaling_port_pair *const port_list) {
+    int err = 0;
+    int i = 0;
+    const struct signaling_port_pair *pp = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!param_app_ctx,    -1, "Got NULL application context parameter.\n");
+    HIP_IFEL(!port_list,        -1, "Got NULL port list to write to.\n");
+    HIP_IFEL(hip_get_param_type(param_app_ctx) != HIP_PARAM_SIGNALING_APPINFO,
+            -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
+
+    /* copy the ports from the message */
+    pp = (const struct signaling_port_pair *) (param_app_ctx + 1);
+    for (i = 0; i < MIN(ntohs(param_app_ctx->port_count), SIGNALING_MAX_SOCKETS); i++) {
+        port_list[i].src_port = ntohs(pp[i].dst_port);
+        port_list[i].dst_port = ntohs(pp[i].src_port);
+    }
+
+out_err:
+    return err;
+}
+
+void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
     const hip_tlv_common_t *param = NULL;
 
@@ -535,7 +527,7 @@ int signaling_get_update_type(hip_common_t *msg) {
  * @return      the free space left in the message, excluding space for
  *              MAC and signature
  */
-int signaling_get_free_message_space(struct hip_common *msg, hip_ha_t *ha) {
+int signaling_get_free_message_space(const hip_common_t *msg, hip_ha_t *ha) {
     uint8_t *dst;
     const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
     const int param_mac_length = 24;

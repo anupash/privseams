@@ -209,6 +209,7 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
                                         signaling_cdb_entry_t * entry,
                                         struct signaling_connection **ret) {
     int err = 0;
+    int i = 0;
     struct slist *listitem;
     struct signaling_connection *conn = NULL;
 
@@ -218,11 +219,14 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
     listitem = entry->connections;
     while(listitem) {
         conn = (struct signaling_connection *) listitem->data;
-        if((src_port  == conn->src_port && dest_port == conn->dst_port) ||
-           (dest_port == conn->src_port && src_port  == conn->dst_port)) {
-            err = 1;
-            *ret = conn;
-            goto out_err;
+        for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+            if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
+                break;
+            } else if ((conn->sockets[i].src_port == src_port && conn->sockets[i].dst_port == dest_port) ||
+                       (conn->sockets[i].dst_port == src_port && conn->sockets[i].src_port == dest_port)) {
+                *ret = conn;
+                return 1;
+            }
         }
         listitem = listitem->next;
     }
@@ -361,6 +365,7 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
                       struct signaling_connection *conn)
 {
     int err = 0;
+    int i;
     int found;
     signaling_cdb_entry_t *entry = NULL;
     struct signaling_connection *new_conn;
@@ -377,7 +382,15 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    found = signaling_cdb_entry_find_connection(conn->src_port, conn->dst_port, entry, &existing_conn);
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
+            found = 0;
+            break;
+        } else if ((found = signaling_cdb_entry_find_connection(conn->sockets[i].src_port, conn->sockets[i].dst_port, entry, &existing_conn))) {
+            break;
+        }
+    }
+
     if (found > 0) {
         signaling_cdb_update_entry(existing_conn, conn);
     } else {

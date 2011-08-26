@@ -147,7 +147,7 @@ static int test_send_param_app_to_firewall(struct signaling_connection_context *
     if(signaling_build_param_connection_identifier(msg, conn_ctx)) {
         HIP_DEBUG("Building of connection identifier parameter failed\n");
     }
-    HIP_IFEL(signaling_build_param_application_context(msg, &conn_ctx->app),
+    HIP_IFEL(signaling_build_param_application_context(msg, NULL, &conn_ctx->app),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Sending message of size %d \n", hip_get_msg_total_len(msg));
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");

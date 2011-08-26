@@ -66,13 +66,29 @@ static void signaling_param_print_field(const char *prefix, const uint16_t lengt
  */
 void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx) {
     const uint8_t *p_content;
+    const struct signaling_port_pair *pp;
+    int i;
 
     if(param_app_ctx == NULL) {
         HIP_DEBUG("No appinfo parameter given.\n");
         return;
     }
+
+    p_content = (const uint8_t *) (param_app_ctx + 1);
+
     HIP_DEBUG("+------------ APP INFO START ----------------------\n");
-    p_content = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context);
+    HIP_DEBUG("Sockets: (%d) \t\t", ntohs(param_app_ctx->port_count));
+    pp = (const struct signaling_port_pair *) p_content;
+    for (i = 0; i < ntohs(param_app_ctx->port_count); i++) {
+        if (pp[i].src_port == 0 && pp[i].dst_port == 0 && i > 0) {
+            break;
+        }
+        fprintf(stderr, "[%d: %d -> %d] ", i, ntohs(pp[i].src_port), ntohs(pp[i].dst_port));
+    }
+    fprintf(stderr, "\n");
+
+    p_content += ntohs(param_app_ctx->port_count) * sizeof(struct signaling_port_pair);
+
     signaling_param_print_field("Application DN:", ntohs(param_app_ctx->app_dn_length), p_content);
     p_content += ntohs(param_app_ctx->app_dn_length);
     signaling_param_print_field("AC Issuer DN:\t", ntohs(param_app_ctx->iss_dn_length), p_content);
@@ -168,6 +184,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  * @param prefix    prefix is prepended to all output of this function
  */
 void signaling_connection_print(const struct signaling_connection *const conn, const char *const prefix) {
+    int i;
     char prefix_buf[strlen(prefix)+2];
     sprintf(prefix_buf, "%s\t", prefix);
 
@@ -180,7 +197,14 @@ void signaling_connection_print(const struct signaling_connection *const conn, c
     HIP_DEBUG("%s  Identifier:\t\t %d\n", prefix, conn->id);
     HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(conn->status));
     HIP_DEBUG("%s  Side:\t\t %s\n",   prefix, conn->side == INITIATOR ? "INITIATOR" : "RESPONDER");
-    HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, conn->src_port, conn->dst_port);
+    HIP_DEBUG("%s  Sockets:\t\t ", prefix);
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0 && i > 0) {
+            break;
+        }
+        fprintf(stderr, "[%d: %d -> %d]  ", i, conn->sockets[i].src_port, conn->sockets[i].dst_port);
+    }
+    fprintf(stderr, "\n");
     HIP_DEBUG("%s  Outgoing connection context:\n",prefix);
     signaling_connection_context_print(&conn->ctx_out, prefix_buf);
     HIP_DEBUG("%s  Incoming connection context:\n",prefix);
@@ -201,8 +225,7 @@ void signaling_param_connection_identifier_print(const struct signaling_param_co
     }
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER START ----------------------\n");
     HIP_DEBUG("Connection ID:\t %d \n", ntohl(conn_id->id));
-    HIP_DEBUG("Src Port:\t\t %d \n",    ntohs(conn_id->src_port));
-    HIP_DEBUG("Dst Port:\t\t %d \n",    ntohs(conn_id->dst_port));
+    signaling_flags_print(conn_id->flags, "");
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER END   ----------------------\n");
 }
 
@@ -290,9 +313,8 @@ int signaling_init_connection(struct signaling_connection *const conn) {
     HIP_IFEL(!conn, -1, "Connection context has to be allocated before initialization\n");
     conn->id                = 0;
     conn->status            = SIGNALING_CONN_NEW;
-    conn->src_port          = 0;
-    conn->dst_port          = 0;
     conn->side              = INITIATOR;
+    memset(conn->sockets, 0, sizeof(conn->sockets));
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
              -1, "Could not init incoming connection context\n");
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_out, OUT),
@@ -324,13 +346,19 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        conn->dst_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
-        conn->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
         conn->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
-    HIP_IFEL(signaling_init_connection_context_from_msg(&conn->ctx_in, msg),
-             -1, "Could not initialize incomeing connection context from message\n");
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+        signaling_build_application_context((const struct signaling_param_app_context *) param, &conn->ctx_in.app);
+        signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+        signaling_build_user_context((const struct signaling_param_user_context *) param, &conn->ctx_in.user);
+    }
 
 out_err:
     return err;
@@ -341,22 +369,32 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
 {
     int err                     = 0;
     const struct hip_tlv_common *param     = NULL;
-    const struct signaling_param_connection_identifier *param_conn_id = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        param_conn_id = (const struct signaling_param_connection_identifier *) param;
-        conn->id         = ntohl(param_conn_id->id);
-        conn->dst_port   = ntohs(param_conn_id->src_port);
-        conn->src_port   = ntohs(param_conn_id->dst_port);
+        conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
-    HIP_IFEL(signaling_update_flags_from_connection_id(msg, conn),
-             -1, "Could not update flags from connection id parameter \n");
-    HIP_IFEL(signaling_init_connection_context_from_msg(&conn->ctx_in, msg),
-             -1, "Could not initialize incomeing connection context from message\n");
+
+    signaling_update_flags_from_connection_id(msg, conn);
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+        signaling_build_application_context((const struct signaling_param_app_context *) param, &conn->ctx_in.app);
+        // init ports only for the responder, the initiator already has them
+        // todo: [mult conn] define some checks, that ports are equal?
+        if (conn->side == RESPONDER) {
+            signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
+        }
+    }
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+        signaling_build_user_context((const struct signaling_param_user_context *) param, &conn->ctx_in.user);
+    }
+
 out_err:
     return err;
 }

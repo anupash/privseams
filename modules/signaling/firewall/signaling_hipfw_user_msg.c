@@ -108,11 +108,12 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
     /* Build the local connection context */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.status            = SIGNALING_CONN_NEW;
-    new_conn.id                = signaling_cdb_get_next_connection_id();
-    new_conn.src_port          = src_port;
-    new_conn.dst_port          = dst_port;
-    new_conn.side              = INITIATOR;
+    new_conn.status               = SIGNALING_CONN_NEW;
+    new_conn.id                   = signaling_cdb_get_next_connection_id();
+    new_conn.side                 = INITIATOR;
+    // todo: [mult conns] use socket cache list here
+    new_conn.sockets[0].src_port  = src_port;
+    new_conn.sockets[0].dst_port  = dst_port;
 
     /* Look up the local connection context */
     if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
@@ -274,7 +275,10 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
 
     /* Since the remote context has been accepted,
      * build the local connection context and check it, too. */
-    if (signaling_get_verified_application_context_by_ports(recv_conn->src_port, recv_conn->dst_port, &new_conn.ctx_out)) {
+    // todo: [mult conns] verify all contexts and that they're equal
+    if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
+                                                            recv_conn->sockets[0].dst_port,
+                                                            &new_conn.ctx_out)) {
         HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
         signaling_init_application_context(&new_conn.ctx_out.app);
     }

@@ -141,7 +141,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha,
     if(signaling_build_param_connection_identifier(msg_buf, conn)) {
         HIP_DEBUG("Building of connection identifier parameter failed\n");
     }
-    if(signaling_build_param_application_context(msg_buf, &conn->ctx_out.app)) {
+    if(signaling_build_param_application_context(msg_buf, conn->sockets, &conn->ctx_out.app)) {
         HIP_DEBUG("Building of application context parameter failed\n");
     }
     if(signaling_build_param_user_context(msg_buf, &conn->ctx_out.user)) {
@@ -194,7 +194,7 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
     if(signaling_build_param_connection_identifier(msg_buf, conn)) {
       HIP_DEBUG("Building of connection identifier parameter failed\n");
     }
-    if(signaling_build_param_application_context(msg_buf, &conn->ctx_out.app)) {
+    if(signaling_build_param_application_context(msg_buf, conn->sockets, &conn->ctx_out.app)) {
       HIP_DEBUG("Building of application context parameter failed\n");
     }
     if(signaling_build_param_user_context(msg_buf, &conn->ctx_out.user)) {
@@ -970,7 +970,7 @@ int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSE
         err = 0;
     }
 
-    if(signaling_build_param_application_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.app)) {
+    if(signaling_build_param_application_context(ctx->output_msg, sig_state->pending_conn->sockets, &sig_state->pending_conn->ctx_out.app)) {
         HIP_DEBUG("Building of application context parameter failed.\n");
         err = 0;
     }

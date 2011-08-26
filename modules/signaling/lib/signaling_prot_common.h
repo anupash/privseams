@@ -88,6 +88,9 @@
 #define SIGNALING_USER_KEY_MAX_LEN  HIP_MAX_RSA_KEY_LEN / 8 + 4 // see lib/core/protodefs.h
 #define SIGNALING_PATH_MAX_LEN      PATH_MAX
 
+/* Maximum of sockets per connection */
+#define SIGNALING_MAX_SOCKETS       50
+
 /* Failure types for user authentication */
 #define SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED    1
 #define SIGNALING_USER_AUTH_AUTHORITY_REJECTED      2
@@ -161,8 +164,6 @@ struct signaling_ntf_user_auth_failed_data {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |                     Connection Identifier                     |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |         SRC PORT              |          DEST PORT            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |    FLAGS    |                                                 /
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |                            PADDING                            |
@@ -180,8 +181,6 @@ struct signaling_param_connection_identifier {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
     uint32_t id;
-    uint16_t src_port;
-    uint16_t dst_port;
     uint8_t flags;
 } __attribute__ ((packed));
 
@@ -239,17 +238,31 @@ struct signaling_param_user_context {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |    REQ     Length             |     GRP     Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |    Distinguished Name of Application                          /
+     |          CONN COUNT           |       RESERVED                |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /    ...        |    Distinguished Name of Issuer               /
+     |                      PORT PARI <1>                            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /    ...                                        |               /
+     |                      PORT PARI <2>                            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /    Requirement Information                                    /
+     |                      PORT PARI <CONN COUNT>                   |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /  ....                         | Group Information             /
+     /                                                               /
+     /           Distinguished Name of Application                   /
+     /                                                               |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |               |             PADDING                           |
+     /                                                               /
+     /           Distinguished Name of Issuer                        /
+     /                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /                                                               /
+     /           Requirement Information                             /
+     /                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /                                                               /
+     /           Group Information                                   /
+     /                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                    PADDING                                    |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 */
@@ -261,6 +274,8 @@ struct signaling_param_app_context {
     hip_tlv_len_t iss_dn_length;
     hip_tlv_len_t req_length;
     hip_tlv_len_t grp_length;
+    uint16_t port_count;
+    uint16_t reserved;
 } __attribute__ ((packed));
 
 
@@ -269,6 +284,15 @@ struct signaling_param_app_context {
  *                    INTERNAL STATE DEFINITIONS
  *
  * ------------------------------------------------------------------------------------ */
+
+
+/*
+ *  Convenient struct to hold pairs of ports.
+ */
+struct signaling_port_pair {
+    uint16_t src_port;
+    uint16_t dst_port;
+};
 
 /*
      Internal representation of context information for an application.
@@ -330,10 +354,10 @@ struct signaling_connection_context {
  */
 struct signaling_connection {
     uint32_t id;
-    uint16_t src_port;
-    uint16_t dst_port;
     int status;
     int side;
+    uint16_t src_port;
+    struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
 };
