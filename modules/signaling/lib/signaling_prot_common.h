@@ -65,7 +65,7 @@
 #define SIGNALING_APP_REQ_MAX_LEN   64
 #define SIGNALING_APP_GRP_MAX_LEN   64
 #define SIGNALING_USER_ID_MAX_LEN   128
-#define SIGNALING_PATH_MAX_LEN      PATH_MAX
+#define SIGNALING_PATH_MAX_LEN      2048
 
 /* ------------------------------------------------------------------------------------
  *
