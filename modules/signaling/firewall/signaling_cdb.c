@@ -122,7 +122,7 @@ static IMPLEMENT_LHASH_COMP_FN(signaling_cdb_entries, signaling_cdb_entry_t)
  */
 static void signaling_cdb_entry_free(signaling_cdb_entry_t *entry)
 {
-    SList *element;
+    struct slist *element;
     element = entry->connection_contexts;
     while (element) {
         free(element->data);
@@ -207,7 +207,7 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
                                         signaling_cdb_entry_t * entry,
                                         struct signaling_connection_context **ret) {
     int err = 0;
-    SList *listitem;
+    struct slist *listitem;
     struct signaling_connection_context *ctx = NULL;
 
     HIP_IFEL(entry == NULL,
@@ -364,7 +364,7 @@ out_err:
  * Prints one database entry.
  */
 static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
-    SList *listentry;
+    struct slist *listentry;
     struct signaling_connection_context *ctx;
 
     HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");

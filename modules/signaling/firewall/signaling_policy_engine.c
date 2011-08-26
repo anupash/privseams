@@ -48,7 +48,7 @@
 
 const char *path_rules     = {"rules"};
 
-SList *policy_tuples = NULL;
+struct slist *policy_tuples = NULL;
 
 static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
@@ -211,7 +211,7 @@ int signaling_policy_check(UNUSED const struct tuple *tuple, UNUSED const struct
 }
 
 void signaling_policy_engine_print_rule_set(const char *prefix) {
-    SList *listentry;
+    struct slist *listentry;
     listentry = policy_tuples;
     struct policy_tuple *entry;
 

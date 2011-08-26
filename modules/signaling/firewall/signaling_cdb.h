@@ -44,7 +44,7 @@
 typedef struct signaling_cdb_entry {
     hip_hit_t local_hit;
     hip_hit_t remote_hit;
-    SList * connection_contexts;
+    struct slist * connection_contexts;
 } signaling_cdb_entry_t;
 
 int signaling_cdb_init(void);
