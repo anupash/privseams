@@ -42,10 +42,9 @@
 
 #include "lib/core/protodefs.h"
 
-/*
- * Do something with the application information included in the I2 or R2 packet.
- * For now, just print it.
- */
-int signaling_hipfw_handle_appinfo(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
+int signaling_hipfw_handle_i2(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
+int signaling_hipfw_handle_r2(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
+int signaling_hipfw_handle_update(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
+
 
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/
