@@ -33,6 +33,7 @@
 
 #include <arpa/inet.h>
 #include <string.h>
+#include <openssl/x509.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/common.h"
@@ -42,6 +43,7 @@
 
 #include "firewall/hslist.h"
 
+#include "modules/signaling/lib/signaling_user_api.h"
 #include "signaling_policy_engine.h"
 
 const char *path_rules     = {"rules"};
@@ -50,10 +52,14 @@ SList *policy_tuples = NULL;
 
 static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
-    hip_in6_ntop(&tuple->host_id, dst);
 
     HIP_DEBUG("%s-------------- POLICY TUPLE ----------------\n", prefix);
-    HIP_DEBUG("%s  HOST:\t %s\n", prefix, dst);
+    if (ipv6_addr_any(&tuple->host_id)) {
+        HIP_DEBUG("%s  HOST:\t ANY HOST\n", prefix);
+    } else {
+        hip_in6_ntop(&tuple->host_id, dst);
+        HIP_DEBUG("%s  HOST:\t %s\n", prefix, dst);
+    }
     HIP_DEBUG("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
     HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
     HIP_DEBUG("%s  TRGT:\t %s\n",  prefix, tuple->target  == 1 ? "ALLOW" : "DROP");
@@ -66,7 +72,7 @@ static int read_tuple(config_setting_t *tuple) {
     const char *host_id         = NULL;
     const char *user_id         = NULL;
     const char *app_id          = NULL;
-    long target                 = 0;
+    const char *target_string   = NULL;
 
     HIP_IFEL(!tuple, -1, "Got NULL-tuple\n");
     HIP_IFEL(!(entry = malloc(sizeof(struct policy_tuple))),
@@ -91,10 +97,10 @@ static int read_tuple(config_setting_t *tuple) {
         strncpy(entry->app_id, user_id, SIGNALING_APP_DN_MAX_LEN - 1);
         entry->app_id[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
     }
-    if(CONFIG_FALSE == config_setting_lookup_int(tuple, "target", &target)) {
+    if(CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
         entry->target = 0;
     } else {
-        entry->target = target;
+        entry->target = strcmp(target_string, "ALLOW") == 0 ? 1 : 0;
     }
 
     policy_tuples = append_to_slist(policy_tuples, entry);
@@ -178,12 +184,18 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
 int signaling_policy_check(UNUSED const struct tuple *tuple, UNUSED const struct signaling_connection_context *conn_ctx) {
     int match = 0;
     struct policy_tuple tuple_for_conn;
-    SList *listentry;
+    struct slist *listentry;
+    X509_NAME *x509_subj_name;
 
     /* Construct the tuple for the current context */
-    memcpy(&tuple_for_conn.app_id,  conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
-    memcpy(&tuple_for_conn.user_id, conn_ctx->user_ctx.subject_name, SIGNALING_USER_ID_MAX_LEN);
+    memcpy(tuple_for_conn.app_id,  conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
     memcpy(&tuple_for_conn.host_id, &tuple->hip_tuple->data->src_hit, sizeof(struct in6_addr));
+    if(!signaling_DER_to_X509_NAME(conn_ctx->user_ctx.subject_name, conn_ctx->user_ctx.subject_name_len, &x509_subj_name)) {
+        X509_NAME_oneline(x509_subj_name, tuple_for_conn.user_id, SIGNALING_USER_ID_MAX_LEN);
+        tuple_for_conn.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+    } else {
+        tuple_for_conn.user_id[0] = '\0';
+    }
 
     /* Find a match */
     listentry = policy_tuples;

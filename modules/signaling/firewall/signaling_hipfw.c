@@ -206,7 +206,7 @@ out_err:
 int signaling_hipfw_handle_i2(const struct hip_common *common, struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
 {
     struct signaling_connection_context *conn_ctx;
-    int verdict = 1; // ALLOW
+    int verdict = 1;
     int err;
 
     HIP_IFEL(!(conn_ctx = malloc(sizeof(struct signaling_connection_context))),
@@ -226,17 +226,15 @@ int signaling_hipfw_handle_i2(const struct hip_common *common, struct tuple *tup
     if (verdict) {
         if (signaling_hipfw_conntrack(tuple, conn_ctx)) {
             // for now we let pass, if we were very restrictive,
-            // we would spead verdict = DROP here
+            // we would spread verdict = DROP here
             HIP_DEBUG("Couldn't conntrack connection context\n");
         }
     }
 
-out_err:
-    if (err) {
-        free(conn_ctx);
-        verdict = 0;
-    }
     return verdict;
+out_err:
+    free(conn_ctx);
+    return 0;
 }
 
 /*

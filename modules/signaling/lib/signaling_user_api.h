@@ -11,6 +11,8 @@
 
 #include <sys/types.h>
 
+#include "signaling_prot_common.h"
+
 /* Utility functions to convert X509 certificates/names to DER encoding and back */
 int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf);
 int signaling_X509_to_DER(X509 *const cert, unsigned char **buf);

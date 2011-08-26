@@ -1301,7 +1301,7 @@ static int handle_r2(struct hip_common *const common,
     }
 
     /* handle signaling_appinfo parameter */
-    if (signaling_hipfw_handle_r2(common, tuple, ctx)) {
+    if (signaling_hipfw_handle_r2(common, tuple, ctx) != 1) {
         HIP_ERROR("Failed check for application in R2.\n");
         return 0;
     }
