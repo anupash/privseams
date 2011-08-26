@@ -483,9 +483,16 @@ int impl_ecdsa_sign(const unsigned char *const digest,
     sig_size = ECDSA_size(ecdsa);
     memset(signature, 0, sig_size);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_ECDSA_SIGN_IMPL\n");
+    hip_perf_start_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
+#endif
     ecdsa_sig = ECDSA_do_sign(digest, HIP_AH_SHA_LEN, ecdsa);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_ECDSA_SIGN_IMPL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
+#endif
     HIP_IFEL(!ecdsa_sig, -1, "ECDSA_do_sign failed\n");
-
     /* build signature from ECDSA_SIG struct */
     bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
     bn2bin_safe(ecdsa_sig->s, signature + sig_size / 2, sig_size / 2);
@@ -564,7 +571,15 @@ int impl_ecdsa_verify(const unsigned char *const digest,
     HIP_IFEL(!ecdsa_sig, 1, "Failed to allocate ECDSA_SIG\n");
     ecdsa_sig->r = BN_bin2bn(signature, sig_size / 2, NULL);
     ecdsa_sig->s = BN_bin2bn(signature + sig_size / 2, sig_size / 2, NULL);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
     err          = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);

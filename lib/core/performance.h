@@ -77,10 +77,12 @@ enum perf_sensor {
     PERF_CLOSE_COMPLETE,
     PERF_DSA_VERIFY_IMPL,
     PERF_RSA_VERIFY_IMPL,
+    PERF_ECDSA_VERIFY_IMPL,
 
-    PERF_NEW_CONN,
-    PERF_HANDLE_I2,
-    PERF_HANDLE_R2,
+    PERF_NEW_CONN,           // test 0
+    PERF_HANDLE_I2,          // test 2
+    PERF_HANDLE_R2,          // test 3
+    PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,
@@ -89,6 +91,7 @@ enum perf_sensor {
     PERF_DSA_SIGN_IMPL,
     PERF_I1_SEND,
     PERF_RSA_SIGN_IMPL,
+    PERF_ECDSA_SIGN_IMPL,
     PERF_STARTUP,
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

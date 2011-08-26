@@ -262,6 +262,11 @@ int signaling_verify_user_signature(struct hip_common *msg) {
     EC_KEY *ecdsa = NULL;
     struct hip_host_id pseudo_ui;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+#endif
+
     orig_len = hip_get_msg_total_len(msg);
 
     /* sanity checks */
@@ -323,6 +328,10 @@ out_err:
     RSA_free(rsa);
     EC_KEY_free(ecdsa);
     X509_NAME_free(subject_name);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_VERIFY_USER_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+#endif
     return err;
 }
 

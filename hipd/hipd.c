@@ -307,8 +307,11 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL, "results/PERF_RSA_SIGN_IMPL.csv");
+    hip_perf_set_name(perf_set, PERF_ECDSA_SIGN_IMPL, "results/PERF_ECDSA_SIGN_IMPL.csv");
+    hip_perf_set_name(perf_set, PERF_ECDSA_VERIFY_IMPL, "results/PERF_ECDSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_I2, "results/PERF_HANDLE_I2.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_R2, "results/PERF_HANDLE_R2.csv");
+    hip_perf_set_name(perf_set, PERF_VERIFY_USER_SIG, "results/PERF_VERIFY_USER_SIG.csv");
 
     hip_perf_open(perf_set);
 
