@@ -95,6 +95,7 @@
 #include "user_ipsec_api.h"
 #include "firewall.h"
 #include "modules/signaling/firewall/signaling_hipfw_oslayer.h"
+#include "modules/signaling/firewall/signaling_hipfw.h"
 
 /* location of the lock file */
 #define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR "/hip_firewall.lock"
@@ -367,6 +368,42 @@ static int hip_fw_uninit_lsi_support(void)
 }
 
 /**
+ * Initialize signaling firewall application.
+ *
+ * @return zero on success and non-zero on failure
+ */
+static int hip_fw_init_signaling_hipfw(void)
+{
+    int err = 0;
+
+    if (filter_traffic) {
+        HIP_IFEL(signaling_hipfw_init(NULL),
+                 -1, "failed to init signaling firewall\n");
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * Uninitialize signaling firewall application.
+ *
+ * @return zero on success and non-zero on failure
+ */
+static int hip_fw_uninit_signaling_hipfw(void)
+{
+    int err = 0;
+
+    if (filter_traffic) {
+        HIP_IFEL(signaling_hipfw_uninit(), -1,
+                 "failed to uninit signaling firewall\n");
+    }
+
+out_err:
+    return err;
+}
+
+/**
  * Initialize all basic and extended packet capture rules
  *
  */
@@ -485,6 +522,7 @@ static int firewall_init_extensions(void)
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
+    HIP_IFEL(hip_fw_init_signaling_hipfw(), -1, "failed to load extension\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
     midauth_init();
@@ -641,6 +679,7 @@ static void firewall_exit(void)
     hip_fw_uninit_esp_prot_conntrack();
     hip_fw_uninit_lsi_support();
     hip_fw_uninit_conntrack();
+    hip_fw_uninit_signaling_hipfw();
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */

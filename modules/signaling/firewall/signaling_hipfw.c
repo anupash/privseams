@@ -145,6 +145,17 @@ out_err:
     return err;
 }
 
+/**
+ * Uninitialize the middlebox firewall application.
+ * So far, there's nothing to be done.
+ *
+ * @return 0 on success, negative on error
+ */
+int signaling_hipfw_uninit(void) {
+    return 0;
+}
+
+
 /*
  * Add all information about application and user to the connection tracking table.
  *
