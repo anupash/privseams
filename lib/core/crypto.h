@@ -61,7 +61,6 @@
 #define RSA_KEY_DEFAULT_BITS       1024
 #define ECDSA_DEFAULT_CURVE        NID_X9_62_prime256v1
 
-
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_rsa_key"
 #define DEFAULT_HOST_ECDSA_KEY_FILE_BASE    HIPL_SYSCONFDIR "/hip_host_ecdsa_key"
