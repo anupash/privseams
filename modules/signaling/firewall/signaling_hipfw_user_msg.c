@@ -47,7 +47,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_SYSTEM_CALL\n");
+    HIP_DEBUG("Start PERF_IP6TABLES\n");
     hip_perf_start_benchmark(perf_set, PERF_IP6TABLES);
 #endif
     while(i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
@@ -60,7 +60,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
         i++;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_SYSTEM_CALL\n");
+    HIP_DEBUG("Stop PERF_IP6TABLES\n");
     hip_perf_stop_benchmark(perf_set, PERF_IP6TABLES);
     hip_perf_write_benchmark(perf_set, PERF_IP6TABLES);
 #endif

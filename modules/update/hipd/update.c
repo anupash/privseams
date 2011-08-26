@@ -850,11 +850,11 @@ int hip_update_init(void)
                                           &hip_send_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+/*HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
                                           &hip_update_ipsec_sa,
                                           30500),
-             -1, "Error on registering UPDATE handle function.\n");
+           -1, "Error on registering UPDATE handle function.\n"); */
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
                                           &hip_update_change_state,
@@ -931,11 +931,11 @@ int hip_update_init(void)
                                           &hip_send_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+ /*   HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
                                           &hip_update_ipsec_sa,
                                           30500),
-             -1, "Error on registering UPDATE handle function.\n");
+             -1, "Error on registering UPDATE handle function.\n"); */
 
     HIP_IFEL(hip_user_register_handle(HIP_MSG_MANUAL_UPDATE_PACKET,
                                       &hip_update_manual_update,
