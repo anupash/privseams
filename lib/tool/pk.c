@@ -235,16 +235,6 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
         err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
     }
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_VERIFY, PERF_RSA_VERIFY_IMPL, PERF_DSA_VERIFY_IMPL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
-    hip_perf_stop_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
-    hip_perf_stop_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_VERIFY);
-    hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-#endif
-
     if (hip_get_msg_type(msg) == HIP_R1) {
         memcpy(pz->opaque, opaque, HIP_PUZZLE_OPAQUE_LEN);
         memcpy(pz->I, rand_i, PUZZLE_LENGTH);
@@ -286,10 +276,6 @@ int hip_ecdsa_verify(void *const peer_pub, struct hip_common *const msg)
  */
 int hip_rsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
-#endif
     return verify(peer_pub, msg, HIP_HI_RSA);
 }
 
@@ -303,10 +289,6 @@ int hip_rsa_verify(void *const peer_pub, struct hip_common *const msg)
  */
 int hip_dsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-#endif
     return verify(peer_pub, msg, HIP_HI_DSA);
 }
 

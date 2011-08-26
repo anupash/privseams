@@ -699,15 +699,16 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
-        hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+        HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
 #endif
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
                      -1, "ECDSA user signature did not verify correctly\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
-        hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
-        hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+        HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
 #endif
         break;
     case EVP_PKEY_RSA:
@@ -723,7 +724,6 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
 
 #ifdef CONFIG_HIP_PERFORMANCE
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
-    hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
 
 out_err:

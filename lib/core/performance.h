@@ -79,10 +79,6 @@ enum perf_sensor {
     PERF_HANDLE_CLOSE,
     PERF_HANDLE_CLOSE_ACK,
     PERF_CLOSE_COMPLETE,
-    PERF_DSA_VERIFY_IMPL,
-    PERF_RSA_VERIFY_IMPL,
-    PERF_ECDSA_VERIFY_IMPL,  // test 2.1.1
-
     PERF_PERF,               // time to stop and write a perf set
     PERF_NEW_CONN,           // test 0
     PERF_CONN_REQUEST,       // test 1
@@ -101,17 +97,26 @@ enum perf_sensor {
     PERF_HIPFW_R2_FINISH,    // time from receiving final request until acceptance of connection
     PERF_IP6TABLES,          // time for setting up ip6table rules
     PERF_X509AC_VERIFY_CERT_CHAIN,
+    PERF_X509_VERIFY_CERT_CHAIN,
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,
     PERF_DH_CREATE,
     PERF_SIGN,
-    PERF_DSA_SIGN_IMPL,
     PERF_I1_SEND,
-    PERF_RSA_SIGN_IMPL,
     PERF_STARTUP,
-    PERF_ECDSA_SIGN_IMPL,
+    PERF_R1_VERIFY_HOST_SIG, // time to verify host signature on R1
+    PERF_I2_HOST_SIGN,       // time to generate host signature on I2
+    PERF_I2_USER_SIGN,       // time to generate user signature on I2
+    PERF_I2_VERIFY_HOST_SIG, // time to verify host signature on I2
+    PERF_I2_VERIFY_USER_SIG, // time to verify user signature on I2
+    PERF_R2_HOST_SIGN,       // time to generate host signature on R2
+    PERF_R2_USER_SIGN,       // time to generate user signature on R2
+    PERF_R2_VERIFY_HOST_SIG, // time to verify host signature on R2
+    PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2
+    PERF_I3_HOST_SIGN,       // time to generate host signature on I3
+    PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
 
     /* Number of sensors for the HIP daemon. */

@@ -482,7 +482,6 @@ int impl_ecdsa_sign(const unsigned char *const digest,
 
     sig_size = ECDSA_size(ecdsa);
     memset(signature, 0, sig_size);
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_ECDSA_SIGN_IMPL\n");
     hip_perf_start_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
@@ -493,7 +492,8 @@ int impl_ecdsa_sign(const unsigned char *const digest,
     hip_perf_stop_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
 #endif
-    HIP_IFEL(!ecdsa_sig, -1, "ECDSA_do_sign failed\n");
+    HIP_IFEL(!ecdsa_sig, 1, "ECDSA_do_sign failed\n");
+
     /* build signature from ECDSA_SIG struct */
     bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
     bn2bin_safe(ecdsa_sig->s, signature + sig_size / 2, sig_size / 2);
@@ -524,15 +524,7 @@ int impl_dsa_sign(const unsigned char *const digest, DSA *const dsa, unsigned ch
     signature[0] = t;
 
     /* calculate the DSA signature of the message hash */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_DSA_SIGN_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
-#endif
     dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_DSA_SIGN_IMPL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
-#endif
     HIP_IFEL(!dsa_sig, 1, "DSA_do_sign failed\n");
 
     /* build signature from DSA_SIG struct */
@@ -577,15 +569,7 @@ int impl_ecdsa_verify(const unsigned char *const digest,
     hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
 #endif
     err = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
-#ifdef CONFIG_HIP_PERFORMANCE
-    hip_perf_start_benchmark(perf_set, PERF_PERF);
-    HIP_DEBUG("Stop and write PERF_ECDSA_VERIFY_IMPL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
-    HIP_DEBUG("Stop and write PERF_PERF\n");
-    hip_perf_stop_benchmark(perf_set, PERF_PERF);
-    hip_perf_write_benchmark(perf_set, PERF_PERF);
-#endif
+
 out_err:
     ECDSA_SIG_free(ecdsa_sig);
     return err;
@@ -613,15 +597,7 @@ int impl_dsa_verify(const unsigned char *const digest, DSA *const dsa, const uns
     dsa_sig->s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
 
     /* verify the DSA signature */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-#endif
     err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 1 ? 0 : 1;
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_DSA_VERIFY_IMPL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-#endif
 
 out_err:
     DSA_SIG_free(dsa_sig);

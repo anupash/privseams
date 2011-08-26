@@ -216,8 +216,17 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
     /* Add host authentication. */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
              -1, "Building of HMAC failed\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I3_HOST_SIGN\n");
+        hip_perf_start_benchmark(perf_set, PERF_I3_HOST_SIGN);
+#endif
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
              -EINVAL, "Could not sign I3. Failing\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I3_HOST_SIGN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
+#endif
 
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
@@ -733,11 +742,22 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_R2, PERF_USER_COMM, PERF_I2_R2, PERF_HIPD_R2_FINISH\n");
+    HIP_DEBUG("Stop PERF_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2);
+    HIP_DEBUG("Start PERF_R2_I3\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_I3);
+
+    /* The packet is on the wire, so write all tests now.. */
+    HIP_DEBUG("Write PERF_R2, PERF_USER_COMM, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG,"
+              " PERF_X509_VERIFY_CERT_CHAIN, PERF_I3_HOST_SIGN\n");
     hip_perf_write_benchmark(perf_set, PERF_R2);
     hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
     hip_perf_write_benchmark(perf_set, PERF_I2_R2);
     hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
+    hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
 #endif
 
 out_err:
@@ -784,6 +804,20 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
 
+    /* Signature validation */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I3_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
+#endif
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                            ctx->input_msg),
+             -EINVAL,
+             "I3 signature verification failed.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I3_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
+#endif
+
     /* Check if we're done with this connection or if we have to wait for addition authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
         HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of remote user.\n");
@@ -809,10 +843,11 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
         HIP_DEBUG("Auth completed after I3/U3 \n");
         signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN\n");
+        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG\n");
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
         hip_perf_write_benchmark(perf_set, PERF_R2_I3);
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
 #endif
     }
 

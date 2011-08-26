@@ -577,15 +577,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     hip_run_handle_functions(type, state, ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL," \
-              " PERF_VERIFY, PERF_DSA_VERIFY_IMPL, PERF_RSA_VERIFY_IMPL," \
-              " PERF_DH_CREATE\n");
+    HIP_DEBUG("Write PERF_SIGN, PERF_DH_CREATE\n");
     hip_perf_write_benchmark(perf_set, PERF_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_VERIFY);
-    hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
 #endif
 
@@ -746,16 +739,16 @@ int hip_check_r1(RVS const uint8_t packet_type,
             -EINVAL);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY\n");
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Start PERF_R1_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
              -EINVAL,
              "Verification of R1 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_VERIFY\n");
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Stop PERF_R1_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
 #endif
 
 out_err:
@@ -1034,16 +1027,16 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
 
     /* Signature validation */
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY(3)\n");
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
              -EINVAL,
              "R2 signature verification failed.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_VERIFY(3)\n");
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
 #endif
 
 out_err:
@@ -1583,16 +1576,16 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
     /* Validate signature */
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY(2)\n");
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+     HIP_DEBUG("Start PERF_I2_VERIFY_HOST_SIG\n");
+     hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
              -EINVAL,
              "Verification of I2 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_VERIFY(2)\n");
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+     HIP_DEBUG("Stop PERF_I2_VERIFY_HOST_SIG\n");
+     hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
 #endif
 
     if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
