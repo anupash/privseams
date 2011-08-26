@@ -58,9 +58,17 @@
 
 int update_sent = 0;
 
+/**
+ * Determine the type of a signaling UPDATE message.
+ *
+ * @param msg   the UPDATE message
+ *
+ * @return the signaling update type, or negative if this is no siganling update message
+ */
 int signaling_get_update_type(hip_common_t *msg) {
-    int err = 0;
     const hip_tlv_common_t * param = NULL;
+    int err = -1;
+
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No appinfo parameter found, no signaling update type.\n");
 
@@ -69,7 +77,7 @@ int signaling_get_update_type(hip_common_t *msg) {
     }
 
     if((param = hip_get_param(msg, HIP_PARAM_ACK))) {
-            return SIGNALING_SECOND_BEX_UPDATE;
+        return SIGNALING_SECOND_BEX_UPDATE;
     }
 
 out_err:
