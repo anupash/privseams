@@ -326,7 +326,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
 
     /* Check the remote context against our local policy,
      * block this connection if context is rejected */
-    if (signaling_policy_engine_check_and_flag(hitr, &existing_conn->ctx_in)) {
+    if (signaling_policy_engine_check_and_flag(hits, &existing_conn->ctx_in)) {
         existing_conn->status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_print();
         signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
@@ -334,7 +334,9 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     }
 
     /* Check if we want to allow the connection */
-    if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
+    if (existing_conn->status == SIGNALING_CONN_BLOCKED) {
+        HIP_DEBUG("Connection is blocked by peer host (or network).\n");
+    } else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
@@ -387,7 +389,9 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     signaling_copy_connection(existing_conn, recv_conn);
 
     /* Check if we want to allow the connection */
-    if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
+    if (existing_conn->status == SIGNALING_CONN_BLOCKED) {
+        HIP_DEBUG("Connection is blocked by peer host (or network).\n");
+    } else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);

@@ -24,6 +24,7 @@ int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **
 /* Load and save certificate chains */
 STACK_OF(X509) *signaling_load_certificate_chain(char *certfile);
 int signaling_save_certificate_chain(STACK_OF(X509) *cert_chain, const char *filename);
+X509 *load_x509_certificate(const char *const file);
 
 /* Verifiers */
 int match_public_key(X509 *cert, const EVP_PKEY *pkey);

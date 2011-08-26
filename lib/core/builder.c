@@ -1861,6 +1861,10 @@ int hip_verify_network_header(struct hip_common *hip_common,
     HIP_IFEL(hip_common->ver_res != ((HIP_VER_RES << 4) | 1), -EPROTOTYPE,
              "Invalid version in received packet. Dropping\n");
 
+    HIP_DEBUG("Recevied packet: \n");
+    HIP_INFO_HIT("   src: ", &hip_common->hits);
+    HIP_INFO_HIT("   dst: ", &hip_common->hitr);
+
     HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hits), -EAFNOSUPPORT,
              "Received a non-HIT in HIT-source. Dropping\n");
     HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hitr) &&

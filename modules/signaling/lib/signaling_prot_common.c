@@ -327,6 +327,7 @@ int signaling_init_connection(struct signaling_connection *const conn) {
     conn->id                = 0;
     conn->status            = SIGNALING_CONN_NEW;
     conn->side              = INITIATOR;
+    conn->reason_reject     = 0;
     memset(conn->sockets, 0, sizeof(conn->sockets));
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
              -1, "Could not init incoming connection context\n");

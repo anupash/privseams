@@ -149,16 +149,20 @@ int hip_run_handle_functions(const uint8_t packet_type,
 
     HIP_IFEL(!hip_handle_functions[packet_type][ha_state],
              -1,
-             "Error on running handle functions.\nPacket type: %d, HA state: %d\n",
+             "No handle for packet type %d in HA state %d\n",
              packet_type,
              ha_state);
 
     while ((iter = hip_ll_iterate(hip_handle_functions[packet_type][ha_state],
                                   iter))
            && !ctx->error) {
-        ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
-                                                         ha_state,
-                                                         ctx);
+        err = ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
+                                                               ha_state,
+                                                               ctx);
+        if (err) {
+            HIP_DEBUG("Error after running handle, dropping packet...\n");
+            return err;
+        }
     }
 
 out_err:

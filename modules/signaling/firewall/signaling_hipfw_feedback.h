@@ -33,8 +33,8 @@
  *
  */
 
-#ifndef HIP_HIPFW_SIGNALING_HIPFW_H
-#define HIP_HIPFW_SIGNALING_HIPFW_H
+#ifndef HIP_HIPFW_SIGNALING_HIPFW_FEEDBACK_H
+#define HIP_HIPFW_SIGNALING_HIPFW_FEEDBACK_H
 
 #include <stdint.h>
 
@@ -42,13 +42,14 @@
 #include "firewall/firewall_defines.h"
 #include "lib/core/protodefs.h"
 
-int signaling_hipfw_init(const char *policy_file);
-int signaling_hipfw_uninit(void);
+#include "modules/signaling/lib/signaling_prot_common.h"
 
-int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, hip_fw_context_t *ctx);
-int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, hip_fw_context_t *ctx);
-int signaling_hipfw_handle_i3(struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx);
-int signaling_hipfw_handle_update(const struct hip_common *common, struct tuple *tuple, hip_fw_context_t *ctx);
-int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx);
+int signaling_hipfw_feedback_init(const char *key_file, const char *cert_file);
+int signaling_hipfw_feedback_uninit(void);
 
-#endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/
+int signaling_hipfw_send_connection_failed_ntf(UNUSED struct hip_common *common,
+                                              UNUSED struct tuple *tuple,
+                                              UNUSED const hip_fw_context_t *ctx,
+                                              const int reason,
+                                              const struct signaling_connection *conn);
+#endif /*HIP_HIPFW_SIGNALING_HIPFW_FEEDBACK_H*/

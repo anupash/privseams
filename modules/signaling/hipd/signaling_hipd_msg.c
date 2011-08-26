@@ -46,10 +46,12 @@
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/crypto.h"
+#include "lib/tool/pk.h"
 
 #include "hipd/hadb.h"
 #include "hipd/user.h"
 #include "hipd/output.h"
+#include "hipd/close.h"
 
 
 #include "modules/update/hipd/update.h"
@@ -93,7 +95,32 @@ int signaling_get_update_type(struct hip_common *msg) {
     } else if (param_cert && param_ack) {
         return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
     }
+/*
+ *   Wrapper for hip_send_close(...).
+ *
+ *   @param peer_hit    the hit of the peer to close
+ *   @return            0 on success, negative on error
+ */
+static int signaling_close_peer(hip_hit_t *peer_hit) {
+    int err                 = 0;
+    uint16_t mask           = 0;
+    hip_common_t *msg_buf   = NULL;
 
+    /* Allocate and build message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+            -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, peer_hit, peer_hit);
+
+    /* Add hit to close, this parameter is critical. */
+    HIP_IFEL(hip_build_param_contents(msg_buf, peer_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (dst hit) failed\n");
+
+    HIP_IFEL(hip_send_close(msg_buf, 0),
+             -1, "Could not close hip associaton\n");
+
+    return 0;
+
+out_err:
     return err;
 }
 
@@ -420,6 +447,47 @@ out_err:
 }
 
 /**
+ * Build and send a notification about failed connection establishment.
+ *
+ * @param reason    the reason why the authentication failed
+ */
+int signaling_send_connection_failed_ntf(hip_ha_t *ha,
+                                         const int reason,
+                                         const struct signaling_connection *conn) {
+    int err                 = 0;
+    uint16_t mask           = 0;
+    hip_common_t *msg_buf   = NULL;
+
+    /* Sanity checks */
+    HIP_IFEL(!ha, -1, "Given host association is NULL \n");
+
+    /* Allocate and build message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+            -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+    hip_build_network_hdr(msg_buf, HIP_NOTIFY, mask, &ha->hit_our, &ha->hit_peer);
+
+    /* Append notification parameter */
+    signaling_build_param_connection_fail(msg_buf, reason);
+
+    /* Append connection identifier */
+    signaling_build_param_connection_identifier(msg_buf, conn);
+
+    /* Sign the packet */
+    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+              -EINVAL, "Could not sign UPDATE. Failing\n");
+
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       msg_buf,
+                       ha,
+                       1);
+out_err:
+    return err;
+}
+
+/**
  * Build and send a notification about failed user authentication.
  *
  * @param reason    the reason why the authentication failed
@@ -666,7 +734,9 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
      * send an error notification with the reason and discard the i2. */
     if (conn->status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
-        // todo: send error notification
+        signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
+        HIP_DEBUG("Closing HA to peer...\n");
+        signaling_close_peer(&ctx->hadb_entry->hit_peer);
         return -1;
     }
 
@@ -738,7 +808,9 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         }
     } else {
         HIP_DEBUG("Firewall has blocked the connection after receipt of R2/U2, sending error notification to responder... \n");
-        // todo: send error notification
+        signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
+        HIP_DEBUG("Closing HA to peer...\n");
+        signaling_close_peer(&ctx->hadb_entry->hit_peer);
         return -1;
     }
 
@@ -1111,18 +1183,155 @@ out_err:
     return err;
 }
 
+static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    struct signaling_hipd_state *sig_state                      = NULL;
+    struct signaling_connection *conn                           = NULL;
+    const struct signaling_param_connection_identifier *conn_id = NULL;
+    const struct hip_notification *notification                 = NULL;
+    const struct signaling_ntf_connection_failed_data *ntf_data = NULL;
+    const struct hip_tlv_common *param                          = NULL;
+    const struct hip_cert *param_cert                           = NULL;
+    X509 *cert                                                  = NULL;
+    EVP_PKEY *pub_key                                           = NULL;
+    int reason = 0;
+    int err = 1;
+    const struct in6_addr *peer_hit = NULL;
+    const struct in6_addr *our_hit  = NULL;
+    const struct in6_addr *src_hit  = NULL;
+    int origin = 0;
+    hip_ha_t *ha   = NULL;
+
+    /* Get connection context */
+    HIP_IFEL(!(notification = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
+             -1, "Message contains no notification parameter.\n");
+    HIP_IFEL(!(conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
+             -1, "Could not find connection identifier in notification. \n");
+
+    /* Is this from a middlebox or the peer host? */
+    param = hip_get_param(ctx->input_msg, HIP_PARAM_HIT);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        peer_hit = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(peer_hit)) {
+            peer_hit = NULL;
+            HIP_DEBUG("HIT = NULL \n");
+        }
+    }
+    if (!ctx->hadb_entry || (peer_hit && ipv6_addr_cmp(peer_hit, &ctx->hadb_entry->hit_peer))) {
+        HIP_DEBUG("Notification comes from a middlebox.\n");
+        origin = 1;  // 1 = from middlebox
+        our_hit = &ctx->input_msg->hitr;
+        src_hit = &ctx->input_msg->hits;
+    } else {
+        HIP_DEBUG("Notification comes from peer host.\n");
+        origin = 0;
+        our_hit = &ctx->input_msg->hitr;
+        peer_hit = src_hit = &ctx->input_msg->hits;
+    }
+
+    HIP_INFO_HIT(" NTF src:   ", src_hit);
+    HIP_INFO_HIT(" NTF our:   ", our_hit);
+    HIP_INFO_HIT(" NTF other: ", peer_hit);
+
+    /* Try to find connection */
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
+             -1, "No HA entry found for HITs, no need to update state.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling\n");
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, ntohs(conn_id->id))),
+             -1, "Connection does not exist. \n");
+
+    /* Now verify the signature */
+    if (origin) {
+        if (!(param_cert = hip_get_param(ctx->input_msg, HIP_PARAM_CERT))) {
+            HIP_ERROR("Notification contains no certificate, cannot verify signature!\n");
+        } else if (signaling_DER_to_X509((const unsigned char *) (param_cert + 1),
+                                         ntohs(param_cert->length) - sizeof(struct hip_cert) + sizeof(struct hip_tlv_common),
+                                         &cert)) {
+            HIP_ERROR("Notification contains broken certificate, cannot verify signature!\n");
+        } else {
+            pub_key = X509_get_pubkey(cert);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_NOTIFY_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+            err = hip_ecdsa_verify(EVP_PKEY_get1_EC_KEY(pub_key), ctx->input_msg);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_NOTIFY_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+            if(err) {
+                HIP_ERROR("signature on notification did not verify correctly\n");
+                return -1;
+            }
+        }
+    } else {
+    /* Verify signature */
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_NOTIFY_VERIFY_HOST_SIG\n");
+        hip_perf_start_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+        HIP_IFEL(ctx->hadb_entry->verify(ha->peer_pub_key,
+                                         ctx->input_msg),
+                                         -EINVAL,
+                                         "Verification of Notification signature failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_NOTIFY_VERIFY_HOST_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+    }
+    HIP_DEBUG("Verified signature on notification...\n");
+
+    /* Get notification data */
+    ntf_data =  (const struct signaling_ntf_connection_failed_data *) notification->data;
+    reason = ntohs(ntf_data->reason);
+    HIP_DEBUG("Received connection failed notification for following reasons:\n");
+    if (reason) {
+        if (reason & APPLICATION_BLOCKED) {
+            HIP_DEBUG("\t -> Application blocked.\n");
+        }
+        if (reason & USER_BLOCKED) {
+            HIP_DEBUG("\t -> User blocked.\n");
+        }
+        if (reason & HOST_BLOCKED) {
+            HIP_DEBUG("\t -> Host blocked.\n");
+        }
+        if (reason & PRIVATE_REASON) {
+            HIP_DEBUG("\t -> Reason is private.\n");
+        }
+    } else {
+        HIP_DEBUG("\t -> Invalid reason.\n");
+    }
+
+    /* Adapt connection status */
+    conn->status = SIGNALING_CONN_BLOCKED;
+    conn->reason_reject = reason;
+    signaling_send_connection_update_request(our_hit, peer_hit, conn);
+
+out_err:
+    return err;
+}
+
 int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err                                                     = 0;
-    struct signaling_hipd_state *sig_state                      = NULL;
     const struct hip_notification *ntf                          = NULL;
-    const struct signaling_ntf_user_auth_failed_data *ntf_data  = NULL;
+
 
     HIP_IFEL(!(ntf = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
              -1, "Could not get notification parameter from NOTIFY msg.\n");
-    ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-            -1, "failed to retrieve state for signaling module \n");
 
+    switch (ntohs(ntf->msgtype)) {
+    case SIGNALING_CONNECTION_FAILED:
+        HIP_DEBUG("Got notification about failed connection.\n");
+        err = signaling_handle_notify_connection_failed(packet_type, ha_state, ctx);
+        break;
+    case SIGNALING_USER_AUTH_FAILED:
+        HIP_DEBUG("Got notification about failed user authentication.\n");
+        break;
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Write PERF_NOTIFY_VERIFY_HOST_SIG\n");
+    hip_perf_write_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
 out_err:
     return err;
 }

@@ -313,6 +313,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_R2_I3, "results/PERF_R2_I3.csv");
     hip_perf_set_name(perf_set, PERF_I3, "results/PERF_I3.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE, "results/PERF_UPDATE.csv");
+    hip_perf_set_name(perf_set, PERF_NOTIFY, "results/PERF_NOTIFY.csv");
     hip_perf_set_name(perf_set, PERF_DH_CREATE, "results/PERF_DH_CREATE.csv");
     hip_perf_set_name(perf_set, PERF_SIGN, "results/PERF_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY, "results/PERF_VERIFY.csv");
@@ -343,6 +344,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_I3_VERIFY_HOST_SIG, "results/PERF_I3_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_HOST_SIGN, "results/PERF_UPDATE_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_VERIFY_HOST_SIG, "results/PERF_UPDATE_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG, "results/PERF_NOTIFY_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_X509_VERIFY_CERT_CHAIN, "results/PERF_X509_VERIFY_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_SEND_CERT_CHAIN, "results/PERF_SEND_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_CERTIFICATE_EXCHANGE, "results/PERF_CERTIFICATE_EXCHANGE.csv");

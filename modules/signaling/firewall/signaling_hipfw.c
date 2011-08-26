@@ -60,6 +60,7 @@ typedef struct {
 #include "signaling_policy_engine.h"
 #include "signaling_cdb.h"
 #include "signaling_hipfw.h"
+#include "signaling_hipfw_feedback.h"
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -71,6 +72,8 @@ int do_conntrack = 0;
 const char *default_policy_file      = {"/usr/local/etc/hip/signaling_firewall_policy.cfg"};
 
 const char *path_do_conntracking     = {"do_conntracking"};
+const char *path_key_file            = {"/usr/local/etc/hip/mb-key.pem"};
+const char *path_cert_file           = {"/usr/local/etc/hip/mb-cert.pem"};
 
 /**
  * releases the configuration file and frees the configuration memory
@@ -165,6 +168,10 @@ int signaling_hipfw_init(const char *policy_file) {
     /* Initialize the policy engine */
     HIP_IFEL(signaling_policy_engine_init(cfg),
              -1, "Failed to start policy engine \n");
+
+    /* Init firewall identity */
+    signaling_hipfw_feedback_init(path_key_file, path_cert_file);
+
 out_err:
     return err;
 }
@@ -179,6 +186,8 @@ int signaling_hipfw_uninit(void) {
     HIP_DEBUG("Uninit signaling firewall \n");
     signaling_cdb_uninit();
     signaling_policy_engine_uninit();
+    signaling_hipfw_feedback_uninit();
+
     return 0;
 }
 
@@ -260,6 +269,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         new_conn.status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
         signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
         return 0;
     }
 
@@ -334,7 +344,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
         if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
             HIP_ERROR("Requested authentication in I2, but R2 is missing signed request parameter. \n");
-            // todo: [user auth] send notification
+            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
             return 0;
         }
     }
@@ -344,6 +354,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
         conn->status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_add(&common->hits, &common->hitr, conn);
         signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
         return 0;
     }
 
@@ -591,6 +602,80 @@ int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct
         break;
     default:
         HIP_DEBUG("Received unknown UPDATE type. \n");
+    }
+
+out_err:
+    return err;
+}
+
+static int signaling_handle_notify_connection_failed(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx) {
+    struct signaling_connection *conn = NULL;
+    const struct signaling_param_connection_identifier *conn_id = NULL;
+    const struct hip_notification *notification = NULL;
+    const struct signaling_ntf_connection_failed_data *ntf_data = NULL;
+    int reason = 0;
+    int err = 1;
+
+    /* Get connection context */
+    HIP_IFEL(!(notification = hip_get_param(common, HIP_PARAM_NOTIFICATION)),
+             1, "Message contains no notification parameter.\n");
+    HIP_IFEL(!(conn_id = hip_get_param(common, HIP_PARAM_SIGNALING_CONNECTION_ID)),
+             1, "Could not find connection identifier in notification. \n");
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, ntohs(conn_id->id))),
+             1, "Could not get connection state from connection-tracking table\n");
+
+    /* Get notification data */
+    ntf_data =  (const struct signaling_ntf_connection_failed_data *) notification->data;
+    reason = ntohs(ntf_data->reason);
+    HIP_DEBUG("Received connection failed notification for following reasons:\n");
+    if (reason) {
+        if (reason & APPLICATION_BLOCKED) {
+            HIP_DEBUG("\t -> Application blocked.\n");
+        }
+        if (reason & USER_BLOCKED) {
+            HIP_DEBUG("\t -> User blocked.\n");
+        }
+        if (reason & HOST_BLOCKED) {
+            HIP_DEBUG("\t -> Host blocked.\n");
+        }
+        if (reason & PRIVATE_REASON) {
+            HIP_DEBUG("\t -> Reason is private.\n");
+        }
+    } else {
+        HIP_DEBUG("\t -> Invalid reason.\n");
+    }
+
+    /* Adapt connection status */
+    HIP_DEBUG("Blocking the following connection:\n");
+    conn->status = SIGNALING_CONN_BLOCKED;
+    signaling_connection_print(conn, "\t");
+
+out_err:
+    return err;
+}
+
+
+/*
+ * Handles an NOTIFY packet observed by the firewall.
+ *
+ * @return the verdict, i.e. 1 for pass, 0 for drop
+ */
+int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
+{
+    int err = 1;
+    const struct hip_notification *notification = NULL;
+
+    /* Get notification type data */
+    HIP_IFEL(!(notification = hip_get_param(common, HIP_PARAM_NOTIFICATION)),
+             1, "Message contains no notification parameter.\n");
+
+    /* Handle different types */
+    switch (htons(notification->msgtype)) {
+    case SIGNALING_CONNECTION_FAILED:
+        err = signaling_handle_notify_connection_failed(common, tuple, ctx);
+        break;
+    default:
+        HIP_DEBUG("Unhandled notification type: %d \n", htons(notification->msgtype));
     }
 
 out_err:

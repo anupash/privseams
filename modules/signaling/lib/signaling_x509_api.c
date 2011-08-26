@@ -86,7 +86,7 @@ out_err:
     return err;
 }
 
-UNUSED static X509 *load_x509_certificate(const char *const file) {
+X509 *load_x509_certificate(const char *const file) {
     int err     = 0;
     FILE *fp    = NULL;
     X509 *cert  = NULL;
@@ -95,7 +95,7 @@ UNUSED static X509 *load_x509_certificate(const char *const file) {
 
     fp   = fopen(file, "rb");
     HIP_IFEL(!fp, -ENOMEM,
-             "Could not open certificate key file %s for reading\n", file);
+             "Could not open certificate file %s for reading\n", file);
 
     cert = PEM_read_X509(fp, NULL, NULL, NULL);
     if ((err = fclose(fp))) {

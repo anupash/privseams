@@ -316,6 +316,38 @@ out_err:
 }
 
 /**
+ * Build a connection failed notification parameter.
+ *
+ * @param msg       the message to which to append the parameter
+ * @param reason    the reason why the connection failed.
+ *                  this is used in the notification data field
+ *
+ * @return          0 on sucess, negative if paramater building failed
+ */
+int signaling_build_param_connection_fail(hip_common_t *msg, const uint16_t reason) {
+    int err = 0;
+    int len;
+    struct hip_notification ntf;
+    struct signaling_ntf_connection_failed_data ntf_data;
+
+    /* first build the notification header */
+    hip_set_param_type((struct hip_tlv_common *) &ntf, HIP_PARAM_NOTIFICATION);
+    len = sizeof(struct hip_notification) - sizeof(struct hip_tlv_common) + sizeof(struct signaling_ntf_user_auth_failed_data);
+    hip_set_param_contents_len((struct hip_tlv_common *) &ntf, len);
+    ntf.msgtype = ntohs(SIGNALING_CONNECTION_FAILED);
+
+    /* then build the notification data */
+    ntf_data.reason = htons(reason);
+
+    /* finally build the parameter into the message */
+    HIP_IFEL(hip_build_generic_param(msg, &ntf, sizeof(struct hip_notification), &ntf_data),
+             -1, "Could not build notification parameter into message \n");
+
+out_err:
+    return err;
+}
+
+/**
  * Build a user authentication failed notification parameter.
  *
  * @param msg       the message to which to append the parameter

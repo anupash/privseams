@@ -95,7 +95,10 @@ enum perf_sensor {
     PERF_MBOX_I3_VERIFY_HOST_SIG,
     PERF_MBOX_I2_VERIFY_USER_PUBKEY,
     PERF_MBOX_R2_VERIFY_USER_PUBKEY,
+    PERF_MBOX_NOTIFY,
+    PERF_MBOX_NOTIFY_VERIFY_HOST_SIG,
     PERF_UPDATE,
+    PERF_NOTIFY,
     PERF_VERIFY,
     PERF_BASE,
     PERF_CLOSE_SEND,
@@ -151,6 +154,7 @@ enum perf_sensor {
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
     PERF_UPDATE_HOST_SIGN,   // time to sign an update packet
     PERF_UPDATE_VERIFY_HOST_SIG, // time to verify user signature on UPDATE
+    PERF_NOTIFY_VERIFY_HOST_SIG, // time to verify signature on NOTIFY
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST

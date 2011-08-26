@@ -107,6 +107,7 @@
 
 /* Signaling notification message types */
 #define SIGNALING_USER_AUTH_FAILED                  124
+#define SIGNALING_CONNECTION_FAILED                 125
 
 /* Direction for connections */
 enum direction {
@@ -121,6 +122,13 @@ enum flag_internal {
     USER_AUTHED,
     HOST_AUTH_REQUEST,
     HOST_AUTHED
+};
+
+enum flag_connection_reject {
+    APPLICATION_BLOCKED = 1,
+    USER_BLOCKED = 2,
+    HOST_BLOCKED = 4,
+    PRIVATE_REASON = 8
 };
 
 enum flag_conn_id {
@@ -144,7 +152,34 @@ enum side {
  * ------------------------------------------------------------------------------------ */
 
 /*
+     Format for the notification data, for the "connection failed" notification.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |           REASON              |                               /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /                            PADDING                            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ */
+
+struct signaling_ntf_connection_failed_data {
+    uint16_t reason;
+} __attribute__ ((packed));
+
+/*
      Format for the notification data, for the "user authentication failed" notification.
+
+     REASON has the following format
+     0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                 RESERVED                          | H | U | A |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+     H = host blocked
+     U = user blocked
+     A = application blocked
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -405,6 +440,7 @@ struct signaling_connection {
     uint32_t id;
     int status;
     int side;
+    int reason_reject;
     struct timeval timestamp;
     struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;

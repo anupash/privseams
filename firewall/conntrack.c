@@ -1746,7 +1746,7 @@ static int check_packet(struct hip_common *common,
             err = handle_update(common, tuple, ctx);
         }
     } else if (common->type_hdr == HIP_NOTIFY) {
-        err = 1;
+        err = signaling_hipfw_handle_notify(common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE) {
         err = handle_close(common, tuple);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {

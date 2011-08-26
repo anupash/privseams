@@ -291,6 +291,8 @@ static const struct policy_tuple *match_tuple_list(const struct policy_tuple *tu
         if(match_tuples(tuple_conn, (struct policy_tuple *) listentry->data)) {
             return listentry->data;
         }
+        HIP_DEBUG("Following tuple did not match:\n");
+        print_policy_tuple((struct policy_tuple *) listentry->data, "\t");
         listentry = listentry->next;
     }
     return NULL;

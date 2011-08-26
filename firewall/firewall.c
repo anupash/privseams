@@ -956,6 +956,14 @@ static int filter_hip(struct hip_common *const buf,
         print_addr = 1;
     } else if (buf->type_hdr == HIP_NOTIFY) {
         HIP_DEBUG("received packet type: NOTIFY\n");
+       // IPV6_TO_IPV4_MAP(&ctx->src, &in_addr);
+        //inet_aton("10.0.3.2", &own_addr);
+        //if (!memcmp(&in_addr, &own_addr, sizeof(in_addr))) {
+        //   HIP_DEBUG("Got own notification \n");
+        //    return 1;
+        //} else {
+        //    HIP_DEBUG("Got other notification \n");
+        //}
     } else if (buf->type_hdr == HIP_LUPDATE) {
         HIP_DEBUG("received packet type: LIGHT UPDATE\n");
     } else {
@@ -1815,6 +1823,11 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I3);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG);
         break;
+    case HIP_NOTIFY:
+        HIP_DEBUG("Stop and write PERF_MBOX_NOTIFY, write PERF_MBOX_NOTIFY_VERIFY_HOST_SIG\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_NOTIFY);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_NOTIFY);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_NOTIFY_VERIFY_HOST_SIG);
     default:
         HIP_DEBUG("Stop and write PERF_MBOX_PACKET\n\n");
         //hip_perf_stop_benchmark(perf_set, PERF_MBOX_PACKET);
@@ -2015,6 +2028,8 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG, "results/PERF_MBOX_I3_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_I2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_R2_VERIFY_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_NOTIFY, "results/PERF_MBOX_NOTIFY.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_NOTIFY_VERIFY_HOST_SIG, "results/PERF_MBOX_NOTIFY_VERIFY_HOST_SIG.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
@@ -2139,15 +2154,16 @@ int hipfw_main(const char *const rule_file,
 
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
-            #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3, PERF_MBOX_NOTIFY\n");
             hip_perf_start_benchmark(perf_set, PERF_MBOX_PACKET);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I1);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R1);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I2);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I3);
-        #endif
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_NOTIFY);
+#endif
             err = hip_fw_handle_packet(buf, h4, 4, &ctx);
         }
 

@@ -75,12 +75,20 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
 
     /* Handle Notifications */
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_NONE,        &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_UNASSOCIATED,&signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT,     &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I2_SENT,     &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_R2_SENT,     &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &signaling_handle_incoming_notification, INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
+
+
 
     /* Add application context to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_application_context, OUTBOUND_I2_CREATE_APPINFO_PRIO),
