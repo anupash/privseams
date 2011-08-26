@@ -15,10 +15,21 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 
-int signaling_send_connection_request(const hip_hit_t *src_hit,
-                                      const hip_hit_t *dst_hit,
-                                      const struct signaling_connection *conn);
+int signaling_send_first_connection_request(const hip_hit_t *src_hit,
+                                            const hip_hit_t *dst_hit,
+                                            const struct signaling_connection *conn);
+
+int signaling_send_second_connection_request(const hip_hit_t *src_hit,
+                                             const hip_hit_t *dst_hit,
+                                             const struct signaling_connection *conn);
+
+int signaling_send_connection_update_request(const hip_hit_t *src_hit,
+                                             const hip_hit_t *dst_hit,
+                                             const struct signaling_connection *conn);
+
 
 int signaling_handle_connection_request(struct hip_common *msg, struct sockaddr_in6 *src);
+
+
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_USER_MSG_H*/

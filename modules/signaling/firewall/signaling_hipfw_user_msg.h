@@ -19,6 +19,10 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
 
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg);
 
-int signaling_hipfw_handle_connection_request(struct hip_common *msg);
+int signaling_hipfw_handle_first_connection_request(struct hip_common *msg);
+
+int signaling_hipfw_handle_second_connection_request(struct hip_common *msg);
+
+int signaling_hipfw_handle_connection_update_request(struct hip_common *msg);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPFW_USER_MSG_H*/

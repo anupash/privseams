@@ -316,7 +316,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
      * on success this will put the local connection context into our local state */
     HIP_IFEL(signaling_init_connection_from_msg(&conn_tmp, first_update),
              -1, "Could not init connection context from first update \n");
-    signaling_send_connection_request(src_hit, dst_hit, &conn_tmp);
+    signaling_send_first_connection_request(src_hit, dst_hit, &conn_tmp);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
              -1, "Could not get connection id %d from state \n", conn_tmp.id);
 
@@ -601,7 +601,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
 
     /* Tell the firewall/oslayer about the new connection and await it's decision */
-    HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
     /* If connection has been blocked by the oslayer.
@@ -668,7 +668,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
     /* Ask the firewall for a decision on the remote connection context */
-    HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2 to hipfw \n");
 
     /* Send an I3 if connection has not been blocked by the oslayer.
@@ -730,7 +730,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3 \n");
-        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
     }
 
 
@@ -826,7 +826,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                 signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn);
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
                 signaling_connection_print(conn, "");
-                signaling_send_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+                signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
             } else {
                 HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
                 free(cert);
@@ -847,7 +847,7 @@ out_err:
     return err;
 }
 
-static int signaling_handle_incoming_certificate_udpate_ack(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err = 0;
     const struct signaling_param_connection_identifier *param_conn_id = NULL;
     struct signaling_hipd_state *sig_state = NULL;
@@ -878,14 +878,14 @@ static int signaling_handle_incoming_certificate_udpate_ack(UNUSED const uint8_t
         HIP_DEBUG("Auth still uncompleted after sending own certificate chain.");
         HIP_ERROR("User authentication was requested but failed. Dropping the connection.\n");
         existing_conn->status = SIGNALING_CONN_BLOCKED;
-        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
         return -1;
     }
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
         HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
     } else {
         HIP_DEBUG("Auth completed after I3 \n");
-        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
     }
 
 out_err:
@@ -918,7 +918,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
         signaling_flag_unset(&conn.ctx_in.flags, USER_AUTHED);
-        HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn),
+        HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &conn),
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                      -1, "failed to retrieve state for signaling\n");
@@ -927,7 +927,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
     } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
         HIP_DEBUG("Received certificate Update Ack... \n");
-        err = signaling_handle_incoming_certificate_udpate_ack(packet_type, ha_state, ctx);
+        err = signaling_handle_incoming_certificate_update_ack(packet_type, ha_state, ctx);
     }
 
 out_err:

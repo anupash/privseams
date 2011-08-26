@@ -152,10 +152,16 @@ int hip_handle_msg(struct hip_common *msg)
         HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
                  "Couldn't notify daemon of firewall presence\n");
         break;
-    case HIP_MSG_SIGNALING_REQUEST_CONNECTION:
-        signaling_hipfw_handle_connection_request(msg);
+    case HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST:
+        signaling_hipfw_handle_first_connection_request(msg);
         break;
-    case HIP_MSG_SIGNALING_CONFIRM_CONNECTION:
+    case HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST:
+        signaling_hipfw_handle_second_connection_request(msg);
+        break;
+    case HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST:
+        signaling_hipfw_handle_connection_update_request(msg);
+        break;
+    case HIP_MSG_SIGNALING_CONFIRMATION:
         signaling_hipfw_handle_connection_confirmation(msg);
         break;
     default:

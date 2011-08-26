@@ -92,7 +92,7 @@ static int signaling_send_connection_confirmation(const hip_hit_t *hits,
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
             -1, "alloc memory for adding scdb entry\n");
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRM_CONNECTION, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRMATION, 0), -1,
               "build hdr failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits,
                                       HIP_PARAM_HIT,
@@ -192,26 +192,33 @@ out_err:
  *
  * @return              0 on sucess, negative on error
   */
-int signaling_send_connection_request(const hip_hit_t *src_hit,
-                                      const hip_hit_t *dst_hit,
-                                      const struct signaling_connection *conn) {
+static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
+                                                 const hip_hit_t *dst_hit,
+                                                 const int type,
+                                                 const struct signaling_connection *conn) {
     int err = 0;
+    struct hip_common *msg = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!conn,                -1, "Need connection state to build connection/update request\n");
+    HIP_IFEL(!src_hit || !dst_hit, -1, "Need both source and destination hit \n");
 
     /* Allocate, build and send a message of type
      * HIP_MSG_SIGNALING_REQUEST_CONNECTION to the hipfw,
      * containing the receive application context */
-    struct hip_common *msg = NULL;
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
-             -1, "build hdr failed\n");
+    HIP_IFEL(hip_build_user_hdr(msg, type, 0), -1, "build hdr failed\n");
+
+    /* Include hits and connection state */
     HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (dst hit) failed\n");
+            -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build connection context failed \n");
 
-    HIP_DEBUG("Sending connection context request for following context to HIPF:\n");
+    /* Print and send */
+    HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
     signaling_connection_print(conn, "");
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
@@ -222,6 +229,24 @@ int signaling_send_connection_request(const hip_hit_t *src_hit,
 out_err:
     free(msg);
     return err;
+}
+
+int signaling_send_first_connection_request(const hip_hit_t *src_hit,
+                                            const hip_hit_t *dst_hit,
+                                            const struct signaling_connection *conn) {
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, conn);
+}
+
+int signaling_send_second_connection_request(const hip_hit_t *src_hit,
+                                             const hip_hit_t *dst_hit,
+                                             const struct signaling_connection *conn) {
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST, conn);
+}
+
+int signaling_send_connection_update_request(const hip_hit_t *src_hit,
+                                             const hip_hit_t *dst_hit,
+                                             const struct signaling_connection *conn) {
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST, conn);
 }
 
 /**

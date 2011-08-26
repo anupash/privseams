@@ -41,7 +41,7 @@ static int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, con
     struct hip_common *msg  = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, 0),
              -1, "build hdr failed\n");
     HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (dst hit) failed\n");
@@ -134,7 +134,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
     struct hip_common *msg  = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRM_CONNECTION, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRMATION, 0),
              -1, "build hdr failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hitr, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (dst hit) failed\n");
@@ -171,7 +171,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     const hip_hit_t *dst_hit                    = NULL;
     struct signaling_connection conn;
 
-    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
+    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
 
     HIP_DEBUG("Got confirmation about a previously requested connection from HIPD\n");
@@ -191,13 +191,11 @@ out_err:
 }
 
 /**
- * This function receives and handles a message of type HIP_MSG_SIGNALING_REQUEST_CONNECTION
- * from the HIPD. The message contains at least the remote connection context. If it does not
- * contain the local connection context, the connection is new and the firewall must perform
- * the lookup of application and user. Otherwise the firewall checks the supplied contexts
- * against the local policy.
+ * This function receives and handles a message of type HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST
+ * from the HIPD. This message must only be sent by the HIPD after receiving an I2 or
+ * the first BEX UPDATE. The message must contain the remote connection context from the Inititator.
  *
- * We have to
+ * The firewall needs to
  *   a) check whether we want to allow the remote connection context
  *   b) establish the local connection context
  *   c) check whether to allow the local connection context
@@ -207,100 +205,172 @@ out_err:
  *
  * @return 0 on success
  */
-int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
+int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
+    int err                                         = 0;
+    const struct hip_tlv_common *param              = NULL;
+    const hip_hit_t *hits                           = NULL;
+    const hip_hit_t *hitr                           = NULL;
+    const struct signaling_connection *recv_conn    = NULL;
+    struct signaling_connection new_conn;
+
+    /* sanity checks */
+    HIP_IFEL(!msg, -1, "Msg is NULL \n");
+
+    /* Establish a new connection state from the incoming connection context */
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+            -1, "Could not get connection parameter from connection request \n");
+    recv_conn = (const struct signaling_connection *) (param + 1);
+    signaling_get_hits_from_msg(msg, &hitr, &hits);
+    signaling_copy_connection(&new_conn, recv_conn);
+
+    /* Check the remote context against out local policy,
+     * block this connection if context is rejected */
+    if (!signaling_policy_check(hits, &new_conn.ctx_in)) {
+        HIP_DEBUG("Received connection request has been rejected by local policy (incoming context rejected) \n");
+        new_conn.status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(hits, hitr, &new_conn);
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+        return 0;
+    } else {
+        // todo: [AUTH] policy engine needs to return whether auth is requested or not
+        signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
+        // todo: [AUTH] right now, we do not care about the responder's user
+        //signaling_flag_set(&new_conn.ctx_in.flags, USER_AUTHED);
+    }
+
+    /* Since the remote context has been accepted,
+     * build the local connection context and check it, too. */
+    signaling_get_verified_application_context_by_ports(recv_conn->src_port, recv_conn->dst_port, &new_conn.ctx_out);
+    signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user);
+    if (!signaling_policy_check(hits, &new_conn.ctx_out)) {
+        HIP_DEBUG("Received connection request has been rejected by local policy (outgoing context rejected) \n");
+        new_conn.status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(hits, hitr, &new_conn);
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+        return 0;
+    } else {
+        // todo: [AUTH] set these from the answer of the policy engine
+        signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
+        signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
+    }
+
+    /* Both the local and the remote connection context have passed
+     * the policy checks. We can now add the connection and send a
+     * confirmation to the HIPD */
+    new_conn.status = SIGNALING_CONN_PROCESSING;
+    signaling_cdb_add(hits, hitr, &new_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+
+out_err:
+    return err;
+}
+
+/**
+ * This function receives and handles a message of type HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST
+ * from the HIPD. This message must only be sent by the HIPD after receiving an R2 or
+ * the second BEX UPDATE. The message must contain the remote connection context from the Responder.
+ *
+ * The firewall needs to
+ *   a) Check whether we want to allow the remote connection context.
+ *   b) Send a confirmation.
+ *
+ * @param msg the message from the hipd
+ *
+ * @return 0 on success
+ */
+int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     int err                                         = 0;
     const struct hip_tlv_common *param              = NULL;
     const hip_hit_t *hits                           = NULL;
     const hip_hit_t *hitr                           = NULL;
     const struct signaling_connection *recv_conn    = NULL;
     struct signaling_connection *existing_conn      = NULL;
-    struct signaling_connection new_conn;
 
-    /* Establish the connection context */
+    /* sanity checks */
+    HIP_IFEL(!msg, -1, "Msg is NULL \n");
+
+    /* Get and update the local connection state */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection parameter from connection request \n");
-    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
     recv_conn = (const struct signaling_connection *) (param + 1);
-    HIP_DEBUG("Received connection request from HIPD\n");
-    signaling_connection_print(recv_conn, "\t");
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, recv_conn->id)),
+             -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);
+    signaling_copy_connection(existing_conn, recv_conn);
 
-    /* Check if this is a first time connection request.
-     * In this case we need to build the local connection context.
-     * If not we update our incoming connection context. */
-    existing_conn = signaling_cdb_entry_get_connection(hits, hitr, recv_conn->id);
-    if(!existing_conn) {
-        /* Add a new empty entry to the scdb */
-        signaling_copy_connection(&new_conn, recv_conn);
-        if (signaling_get_verified_application_context_by_ports(recv_conn->src_port, recv_conn->dst_port, &new_conn.ctx_out)) {
-            HIP_DEBUG("Application lookup/verification failed.\n");
-        }
-        if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
-            HIP_DEBUG("Could not get user name \n");
-        }
-        HIP_IFEL(signaling_cdb_add(hits, hitr, &new_conn),
-                 -1, "Could not add new connection to cdb \n");
-        HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, new_conn.id)),
-                 -1, "Could not retrieve cdb entry \n");
-    } else {
-        signaling_copy_connection(existing_conn, recv_conn);
-    }
-
-    /* Check the remote context against out local policy,
+    /* Check the remote context against our local policy,
      * block this connection if context is rejected */
-    if (!signaling_policy_check(hits, &recv_conn->ctx_in)) {
+    if (!signaling_policy_check(hits, &existing_conn->ctx_in)) {
         HIP_DEBUG("Received connection request has been rejected by local policy (incoming context rejected) \n");
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        HIP_IFEL(signaling_cdb_add(hits, hitr, &new_conn), -1, "Could not insert connection into cdb\n");
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
-        return 0;
-    } else {
-        // todo: [AUTH] policy engine needs to return whether auth is requested or not
-        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
-        // todo: [AUTH] right now, we do not care about the responder's user
-        if (existing_conn->side == INITIATOR) {
-            signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
-        }
-    }
-
-    /* Check the local context against our local policy,
-     * block the connection if the context is rejected */
-    if (!signaling_policy_check(hits, &existing_conn->ctx_out)) {
-        HIP_DEBUG("Received connection request has been rejected by local policy (outgoing context rejected) \n");
         existing_conn->status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_print();
         signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
         return 0;
     } else {
-        // todo: [AUTH] set these at the right place
-        signaling_flag_set(&existing_conn->ctx_out.flags, HOST_AUTHED);
-        signaling_flag_set(&existing_conn->ctx_out.flags, USER_AUTHED);
+        // todo: [AUTH] policy engine needs to return whether auth is requested or not
+        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
+        // todo: [AUTH] right now, we do not care about the responder's user
+        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
     }
 
-    /* Both the incoming and outgoing contexts have passed local policy checks.
-     * Now, we need to determine the state transition for the connection. */
-    switch (existing_conn->status) {
-    case SIGNALING_CONN_NEW:
-        HIP_DEBUG("Moved connection state to PROCESSING, waiting for ACK after R2/I3 now\n");
-        existing_conn->status = SIGNALING_CONN_PROCESSING;
-        break;
-    case SIGNALING_CONN_PROCESSING:
-        if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
-            signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
-            existing_conn->status = SIGNALING_CONN_ALLOWED;
-        } else {
-            HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
-            signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
-            signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
-        }
-        break;
-    default:
-        HIP_ERROR("Connection state is not allowed at this point: %s \n", signaling_connection_status_name(existing_conn->status));
+    /* Check if we want to allow the connection */
+    if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
+        signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
+        existing_conn->status = SIGNALING_CONN_ALLOWED;
+    } else {
+        HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
+        signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
+        signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
     }
 
-    /* Finally send a positive answer back to HIPD */
+    /* Answer to HIPD */
     signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+
+out_err:
+    return err;
+}
+
+/**
+ *
+ */
+int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
+    int err                                         = 0;
+    const struct hip_tlv_common *param              = NULL;
+    const hip_hit_t *hits                           = NULL;
+    const hip_hit_t *hitr                           = NULL;
+    const struct signaling_connection *recv_conn    = NULL;
+    struct signaling_connection *existing_conn      = NULL;
+
+    /* Get the connection state */
+    signaling_get_hits_from_msg(msg, &hitr, &hits);
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+             -1, "Could not get connection parameter from connection request \n");
+    recv_conn = (const struct signaling_connection *) (param + 1);
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, recv_conn->id)),
+             -1, "Received connection update request for non-existant connection id %d \n", recv_conn->id);
+
+    HIP_DEBUG("Received connection update request from HIPD\n");
+    signaling_connection_print(recv_conn, "\t");
+
+    /* Just copy whole connection state */
+    signaling_copy_connection(existing_conn, recv_conn);
+
+    /* Check if we want to allow the connection */
+    if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
+        signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
+        existing_conn->status = SIGNALING_CONN_ALLOWED;
+    } else {
+        HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
+        signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
+        signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
+    }
+
+    /* Answer to HIPD */
+    signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+
+    return 0;
 
 out_err:
     return err;
