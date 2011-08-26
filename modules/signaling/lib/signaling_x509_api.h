@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 #include <openssl/x509.h>
+#include <x509ac.h>
 
 #include "signaling_prot_common.h"
 
@@ -27,6 +28,7 @@ int signaling_save_certificate_chain(STACK_OF(X509) *cert_chain, const char *fil
 /* Verifiers */
 int match_public_key(X509 *cert, const EVP_PKEY *pkey);
 int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, STACK_OF(X509) *trusted_chain, STACK_OF(X509) *untrusted_chain);
+int verify_ac_certificate_chain(X509AC *leaf_cert, const char *trusted_lookup_dir, STACK_OF(X509) *trusted_chain, STACK_OF(X509) *untrusted_chain);
 
 /* Other utility functions */
 void stack_reverse(STACK_OF(X509) **cert_chain);

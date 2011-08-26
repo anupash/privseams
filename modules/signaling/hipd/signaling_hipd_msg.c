@@ -749,6 +749,12 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         return -1;
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_R2);
+#endif
+
     /* Check if authentication of initiator user was requested,
      * if yes send certificate chain */
     if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {

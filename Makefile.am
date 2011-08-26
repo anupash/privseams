@@ -51,7 +51,8 @@ endif
 ### superuser programs ###
 sbin_PROGRAMS = hipd/hipd      \
                 tools/hipconf  \
-                tools/pisacert
+                tools/pisacert \
+                tools/accert
 
 if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
@@ -93,6 +94,7 @@ test_user_sock_performance_SOURCES = test/user_sock_performance.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
+tools_accert_SOURCES = tools/accert.c
 
 hipd_hipd_sources = hipd/accessor.c              \
                     hipd/cert.c                  \
@@ -252,6 +254,8 @@ test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
+tools_accert_LDADD                       = lib/core/libhipcore.la
+tools_accert_LDADD                      += -L/home/ziegeldorf/thesisrepository/code/x509ac -lx509ac
 
 ### dynamic library dependencies ###
 

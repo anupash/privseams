@@ -28,38 +28,42 @@
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
+#include "signaling_user_management.h"
+#include "signaling_x509_api.h"
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
  *
  * @note app_file is supposed to be 0-terminated
  */
-static X509AC *get_application_attribute_certificate(const char *app_file)
+static X509AC *get_application_attribute_certificate_chain(const char *app_file, STACK_OF(X509) **chain)
 {
     FILE *fp = NULL;
-    char *app_cert_file = NULL;
+    char app_cert_file[PATH_MAX];
     X509AC *app_cert = NULL;
     int err = 0;
 
     HIP_IFEL(app_file == NULL, -1, "Got no path to application (NULL).\n");
 
-    /* Build path to application certificate */
-    HIP_IFEL(!(app_cert_file = malloc(strlen(app_file) + 6)),
-             -1, "Could not allocate memory for filename \n");
-    memset(app_cert_file, 0, strlen(app_file) + 6);
-    strcat(app_cert_file, app_file);
-    strcat(app_cert_file, ".cert");
-
-    /* Now get the application certificate */
+    /* Get the application attribute certificate */
+    sprintf(app_cert_file, "%s.cert", app_file);
     HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
             -1,"Application certificate could not be found at %s.\n", app_cert_file);
     HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
             -1, "Could not decode application certificate.\n");
     fclose(fp);
 
-out_err:
-    free(app_cert_file);
+    /* Look if there is a chain for this certificate */
+    if (!chain) {
+        return app_cert;
+    }
+    sprintf(app_cert_file, "%s.chain", app_file);
+    *chain = signaling_load_certificate_chain(app_cert_file);
+
     return app_cert;
+
+out_err:
+    return NULL;
 }
 
 /**
@@ -262,58 +266,35 @@ out_err:
 int signaling_verify_application(const char *app_path)
 {
     int err = 0;
-    const char *issuer_cert_file;
-    FILE *fp = NULL;
-    /* X509 Stuff */
     X509AC *app_cert = NULL;
-    X509 *issuercert = NULL;
-    X509_STORE *store = NULL;
-    X509_STORE_CTX *verify_ctx = NULL;
+    STACK_OF(X509) *untrusted_chain = NULL;
 
-    /* Get application certificate */
-    HIP_IFEL(!(app_cert = get_application_attribute_certificate(app_path)),
+    /* Get application certificate chain */
+    HIP_IFEL(!(app_cert = get_application_attribute_certificate_chain(app_path, &untrusted_chain)),
              -1, "No application certificate found for application: %s.\n", app_path);
 
-    /* Look for and get issuer certificate */
-    issuer_cert_file = "/root/cert.pem";
-    HIP_IFEL(!(fp = fopen(issuer_cert_file, "r")),
-             -1, "No issuer cert file given.\n");
-    HIP_IFEL(!(issuercert = PEM_read_X509(fp, NULL, NULL, NULL)),
-             -1, "Could not decode root cert file.\n");
-    HIP_DEBUG("Using issuer certificate at: %s.\n", issuer_cert_file);
-    fclose(fp);
+    HIP_DEBUG("Found chain of size %d \n", sk_X509_num(untrusted_chain));
+    //HIP_DEBUG("Application certificate: \n");
+    //X509AC_print(app_cert);
 
     /* Before we do any verifying, check that hashes match */
     HIP_IFEL(0 > verify_application_hash(app_path, app_cert),
              -1, "Hash of application doesn't match hash in certificate.\n");
 
-    /* Setup the certificate store, which is passed used in the verification context store */
-    HIP_IFEL(!(store = X509_STORE_new()),
-             -1, "Error setting up the store. Exiting... \n");
-
-    /* Add the issuer certificate into the certificate lookup store. */
-    if(issuercert != NULL) {
-        X509_STORE_add_cert(store, issuercert);
-    }
-
-    /* Setup the store context that is passed to the verify function. */
-    HIP_IFEL(!(verify_ctx = X509_STORE_CTX_new()),
-             -1, "Error setting up the verify context.\n");
-
-    /* Init the store context */
-    HIP_IFEL(!(X509_STORE_CTX_init(verify_ctx, store, NULL, NULL)),
-             -1, "Error initializing the verify context.\n");
-
-    /* Now do the verifying */
-    HIP_IFEL(!X509AC_verify_cert(verify_ctx, app_cert),
-             -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
-
+    /* Now verify the chain */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_X509AC_VERIFY_CERT_CHAIN\n");   // test 1.1.2
+    hip_perf_start_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+#endif
+    HIP_IFEL(verify_ac_certificate_chain(app_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, untrusted_chain),
+             -1, "Attribute certificate for application %s did not verify correctly.\n", app_path);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_X509AC_VERIFY_CERT_CHAIN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+#endif
 out_err:
-    if (verify_ctx) {
-        X509_STORE_CTX_free(verify_ctx);
-    }
-    // function is null tolerant
-    X509_STORE_free(store);
+    sk_X509_free(untrusted_chain);
     if (app_cert) {
         X509AC_free(app_cert);
     }
@@ -347,6 +328,7 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
 #endif
     HIP_IFEL(signaling_verify_application(sys_ctx.path),
              -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CTX_LOOKUP\n");
     hip_perf_stop_benchmark(perf_set, PERF_CTX_LOOKUP);
@@ -354,7 +336,7 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     HIP_DEBUG("Start PERF_CTX_LOOKUP\n");     // test 1.1.3
     hip_perf_start_benchmark(perf_set, PERF_CTX_LOOKUP);
 #endif
-    HIP_IFEL(!(ac = get_application_attribute_certificate(sys_ctx.path)),
+    HIP_IFEL(!(ac = get_application_attribute_certificate_chain(sys_ctx.path, NULL)),
             -1, "Could not open application certificate.");
     HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app),
              -1, "Could not build application context for application: %s.\n", sys_ctx.path);
@@ -366,6 +348,4 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
 out_err:
     return err;
 }
-
-
 

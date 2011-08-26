@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <pwd.h>
 
+#include <x509ac-supp.h>
+
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
@@ -280,6 +282,59 @@ int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, ST
      } else {
          err = 0;
      }
+
+out_err:
+    X509_STORE_CTX_free(verify_ctx);
+    return err;
+}
+
+/**
+ * Build and verify a certificate chain with an x509 attribute certificate as leaf.
+ *
+ * @param leaf_cert             the attribute certificate to verify
+ * @param trusted_lookup_dir    certificates in this directory are used as root certificates
+ * @param trusted_chain         a certificate stack, that can containt additional trusted certificate
+ * @param untruste_chain        a chain of untrusted certificates, that can be used to build a complete certificate chain
+ *
+ * @return                      0 if a certificate chain could be build and verified, a non-zero error code otherwise
+ */
+int verify_ac_certificate_chain(X509AC *leaf_cert, const char *trusted_lookup_dir, STACK_OF(X509) *trusted_chain, STACK_OF(X509) *untrusted_chain)
+{
+    int err                         = 0;
+    X509_LOOKUP *lookup             = NULL;
+    X509_STORE *verify_ctx_store    = NULL;
+    X509_STORE_CTX *verify_ctx      = NULL;
+
+    /* Build the verify context */
+    HIP_IFEL(!(verify_ctx_store = X509_STORE_new()),
+             -1, "Could not set up certificate store \n");
+
+    HIP_IFEL(!(lookup = X509_STORE_add_lookup(verify_ctx_store, X509_LOOKUP_hash_dir())),
+             -1, "Failed to init lookup directory \n");
+    if (trusted_lookup_dir) {
+        HIP_IFEL(!X509_LOOKUP_add_dir(lookup, trusted_lookup_dir, X509_FILETYPE_PEM),
+                 -1, "Could not add directory %s to trusted lookup resources \n", trusted_lookup_dir);
+    } else {
+        X509_LOOKUP_add_dir(lookup, NULL, X509_FILETYPE_DEFAULT);
+    }
+
+    HIP_IFEL(!(verify_ctx = X509_STORE_CTX_new()),
+             -1, "Could not allocate new verify context \n");
+    HIP_IFEL(!X509_STORE_CTX_init(verify_ctx, verify_ctx_store, NULL, untrusted_chain),
+             -1, "Could not setup verify context\n");
+    if(trusted_chain) {
+        X509_STORE_CTX_trusted_stack(verify_ctx, trusted_chain);
+    }
+
+    /* Finally do the verification and output some info */
+    err = X509AC_verify_cert(verify_ctx, leaf_cert);
+    if (err) {
+        HIP_ERROR("Attribute certificate did not verify correctly, error %d.\n", err);
+        return 1;
+    } else {
+        HIP_ERROR("Attribute certificate verified!\n");
+        err = 0;
+    }
 
 out_err:
     X509_STORE_CTX_free(verify_ctx);

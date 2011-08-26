@@ -86,10 +86,13 @@ enum perf_sensor {
     PERF_HANDLE_I2,          // test 2
     PERF_HANDLE_R2,          // test 3
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
+    PERF_HIPFW_REQ0,
     PERF_HIPFW_REQ1,         // test 2.2
     PERF_HIPFW_REQ2,         // test 3.2
     PERF_HIPFW_REQ3,         // test 4.3
-    PERF_IP6TABLES,
+    PERF_IP6TABLES,          // test
+    PERF_X509AC_VERIFY_CERT_CHAIN,
+    PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,
@@ -102,7 +105,6 @@ enum perf_sensor {
 
     PERF_ECDSA_SIGN_IMPL,
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
-    PERF_USER_COMM,          // arount tests 2.2, 3.2 and 4.3
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

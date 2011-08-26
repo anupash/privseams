@@ -91,7 +91,7 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
     HIP_DEBUG("Start PERF_SEND_CONN_REQUEST\n");
     hip_perf_start_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
 #endif
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_SEND_CONN_REQUEST\n");
     hip_perf_stop_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
@@ -134,6 +134,8 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
                                       HIP_PARAM_SIGNALING_CONNECTION,
                                       sizeof(struct signaling_connection)),
              -1, "build application context failed \n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
+
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_HIPFW_REQ1\n");
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ1);
@@ -145,7 +147,6 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
 #endif
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection confirmation to HIPD: \n");
     signaling_connection_print(conn, "");

@@ -376,6 +376,8 @@ static int hip_fw_init_signaling_extensions(void)
 {
     int err = 0;
 
+    OpenSSL_add_all_algorithms();
+
     if (filter_traffic) {
         HIP_IFEL(signaling_hipfw_init(NULL),
                  -1, "failed to init signaling firewall\n");
@@ -1946,6 +1948,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ3, "results/PERF_HIPFW_REQ3.csv");
     hip_perf_set_name(perf_set, PERF_CTX_LOOKUP, "results/PERF_CTX_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_IP6TABLES, "results/PERF_IP6TABLES.csv");
+    hip_perf_set_name(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN, "results/PERF_X509AC_VERIFY_CERT_CHAIN.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
