@@ -15,12 +15,13 @@
 #include "signaling_common_builder.h"
 #include "signaling_x509_api.h"
 
+
 static const char *signaling_connection_status_name(int status) {
     switch (status) {
     case SIGNALING_CONN_NEW:
         return "NEW";
-    case SIGNALING_CONN_PENDING:
-        return "PENDING";
+    case SIGNALING_CONN_PROCESSING:
+        return "PROCESSING";
     case SIGNALING_CONN_WAITING:
         return "WAITING";
     case SIGNALING_CONN_BLOCKED:

@@ -49,6 +49,9 @@
 /* database storing the connection tracking entries, indexed by src _and_ dst hits */
 HIP_HASHTABLE *scdb   = NULL;
 
+/* variable for storing the next free connection id */
+static int next_conn_id;
+
 /**
  * hashes the inner addresses (for now) to lookup the corresponding SA entry
  *
@@ -169,8 +172,7 @@ int signaling_cdb_init(void)
 
     HIP_IFEL(!(scdb = hip_ht_init(LHASH_HASH_FN(signaling_cdb_entry), LHASH_COMP_FN(signaling_cdb_entries))),
             -1, "failed to initialize sadb\n");
-
-    HIP_DEBUG("scdb initialized\n");
+    next_conn_id = 0;
 
 out_err:
     return err;
@@ -291,7 +293,7 @@ out_err:
 }
 
 static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *local_hit,
-                      const struct in6_addr *remote_hit) {
+                                                     const struct in6_addr *remote_hit) {
     int err = 0;
     signaling_cdb_entry_t * entry = NULL;
 
@@ -357,10 +359,15 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
         new_conn_ctx = malloc(sizeof(struct signaling_connection_context));
         signaling_copy_connection_context(new_conn_ctx, ctx);
         entry->connection_contexts = append_to_slist(entry->connection_contexts, new_conn_ctx);
+        next_conn_id = new_conn_ctx->id + 1;
     }
 
 out_err:
     return err;
+}
+
+uint32_t signaling_cdb_get_next_connection_id(void) {
+    return next_conn_id;
 }
 
 /*

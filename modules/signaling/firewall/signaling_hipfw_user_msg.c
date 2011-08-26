@@ -44,11 +44,9 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
              -1, "build connection context failed \n");
-    HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
-             -1, "build connection context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
-    HIP_DEBUG("Resend request to HIPD to establish a new connection with following connection context: \n");
+    HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
     signaling_connection_context_print(conn_ctx, "");
 
 out_err:
@@ -76,7 +74,8 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
              -1, "Application lookup/verification failed.\n");
     HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
-    new_ctx.connection_status = SIGNALING_CONN_PENDING;
+    new_ctx.connection_status = SIGNALING_CONN_NEW;
+    new_ctx.id                = signaling_cdb_get_next_connection_id();
 
     /* Since this is a new connection we have to add an entry to the scdb */
     HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_ctx),
@@ -84,9 +83,6 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
 
     /* Now request the connection from the HIPD */
     signaling_hipfw_send_connection_request(src_hit, dst_hit, &new_ctx);
-
-    HIP_DEBUG("Send request to HIPD to establish a new connection with following connection context: \n");
-    signaling_connection_context_print(&new_ctx, "");
 
 out_err:
     free(msg);
@@ -229,6 +225,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
              -1, "Application lookup/verification failed.\n");
     HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
+    new_ctx.id = remote_ctx->id;
 
     /* c) check with local policy if we want to allow the local connection context
      *    if we allow the connection, add it right away, or wait for user auth confirmation.
@@ -236,7 +233,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
      *    */
 
     if (remote_ctx->connection_status == SIGNALING_CONN_USER_UNAUTHED) {
-        new_ctx.connection_status = SIGNALING_CONN_PENDING;
+        new_ctx.connection_status = SIGNALING_CONN_PROCESSING;
         signaling_cdb_add(hits, hitr, &new_ctx);
         signaling_cdb_print();
         /* tell the HIPD that user auth is required (hack) */

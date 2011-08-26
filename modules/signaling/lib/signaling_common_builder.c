@@ -165,20 +165,20 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_connection_context *ctx)
+int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_application_context *app_ctx)
 {
     struct signaling_param_app_context *appinfo = NULL;
     int err = 0;
     int length_contents = 0;
 
     /* Sanity checks */
-    HIP_IFEL(msg == NULL, -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(ctx == NULL, -1, "Got no context to built the parameter from.\n");
+    HIP_IFEL(msg == NULL,     -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(app_ctx == NULL, -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE PARAMETER */
-    length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx);
+    length_contents = signaling_param_appinfo_get_content_length(app_ctx);
     appinfo         = signaling_param_appinfo_init(sizeof(struct hip_tlv_common) + length_contents);
-    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, &ctx->app_ctx),
+    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, app_ctx),
             -1, "Failed to build appinfo parameter.\n");
     HIP_IFEL(hip_build_param(msg, appinfo),
             -1, "Failed to append appinfo parameter to message.\n");
@@ -522,6 +522,6 @@ int signaling_get_free_message_space(struct hip_common *msg, hip_ha_t *ha) {
     }
     param_signature_length += sizeof(struct hip_sig) + 7;
 
-    return MAX(max_dst - (dst + param_mac_length + param_signature_length), 0);
+    return MAX(max_dst - (dst + param_mac_length + param_signature_length + sizeof(struct signaling_param_connection_identifier)), 0);
 }
 

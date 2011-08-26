@@ -152,6 +152,9 @@ int signaling_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_
 
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
 
+    HIP_DEBUG("Sent connection confirmation to firewall/oslayer: \n");
+    signaling_connection_context_print(ctx, "\t");
+
 out_err:
     free(msg);
     return err;
@@ -177,6 +180,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
     struct signaling_hipd_state *sig_state  = NULL;
     const struct hip_tlv_common *param      = NULL;
     hip_ha_t *entry                         = NULL;
+    struct signaling_connection_context ctx;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
@@ -186,20 +190,21 @@ int signaling_handle_connection_context(struct hip_common *msg,
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
              -1, "Missing application_context parameter\n");
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
+    HIP_IFEL(signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1)),
              -1, "Could not copy connection context\n");
 
-    if (sig_state->ctx.connection_status == SIGNALING_CONN_USER_UNAUTHED) {
+    if (ctx.connection_status == SIGNALING_CONN_USER_UNAUTHED) {
         /* The firewall wants the user to be authenticated */
         HIP_DEBUG("Requesting user certificate chain for remote user \n");
         signaling_send_user_auth_failed_ntf(entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
-
-        /* Set connection context to NEW since USER UNAUTHED was only for internal communication */
-        sig_state->ctx.connection_status = SIGNALING_CONN_NEW;
+        /* Set connection context to PENDING since USER UNAUTHED was only for internal communication */
+        ctx.connection_status = SIGNALING_CONN_PROCESSING;
     }
 
+    HIP_IFEL(signaling_hipd_state_add_connection_context(sig_state, &ctx),
+             -1, "Could save connection in local state\n");
     HIP_DEBUG("Saved connection context from hipfw for R2:\n");
-    signaling_connection_context_print(&sig_state->ctx, "");
+    signaling_connection_context_print(&ctx, "");
 
 out_err:
     return err;
@@ -225,7 +230,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     const struct hip_tlv_common *param;
     hip_ha_t *entry = NULL;
     struct signaling_hipd_state *sig_state = NULL;
-    struct signaling_connection_context resp_ctx;
+    struct signaling_connection_context ctx;
     int err = 0;
 
     /* Determine if we already have an association */
@@ -237,32 +242,34 @@ int signaling_handle_connection_request(struct hip_common *msg,
         /* check if there is a connection context, if not exit */
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
                  -1, "Missing application_context parameter\n");
-
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
-        /* check if previous BEX has been completed, if send notification to oslayer to wait with this connection */
+        /* get a local copy of the connection context */
+        HIP_IFEL(signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1)),
+                 -1, "Could not copy connection context\n");
+
+        /* check if previous BEX has been completed */
         if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT) || sig_state->update_in_progress) {
-            HIP_DEBUG("We have a BEX running, postponing establishment of new connection. STATE = %d \n", entry->state);
-            signaling_copy_connection_context(&resp_ctx, (const struct signaling_connection_context *) (param + 1));
-            resp_ctx.connection_status = SIGNALING_CONN_WAITING;
-            signaling_send_connection_confirmation(our_hit, peer_hit, &resp_ctx);
-            goto out_err;
+            ctx.connection_status = SIGNALING_CONN_WAITING;
+        } else {
+            ctx.connection_status = SIGNALING_CONN_PROCESSING;
         }
 
         /* save application context to our local state */
-        signaling_connection_context_print((const struct signaling_connection_context *) (param + 1), "");
-        // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-        HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
-                 -1, "Could not copy connection context\n");
+        HIP_IFEL(signaling_hipd_state_add_connection_context(sig_state, &ctx),
+                 -1, "Could save connection in local state\n");
 
         /* now trigger the UPDATE */
-        HIP_IFEL(signaling_send_first_update(our_hit, peer_hit),
-                 -1, "Failed triggering first bex update.\n");
-        sig_state->update_in_progress = 1;
-
-        HIP_DEBUG("Triggered UPDATE for following connection context:\n");
-        signaling_connection_context_print(&sig_state->ctx, "");
+        if (ctx.connection_status == SIGNALING_CONN_PROCESSING) {
+            HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, &ctx),
+                     -1, "Failed triggering first bex update.\n");
+            HIP_DEBUG("Triggered UPDATE for following connection context:\n");
+            signaling_connection_context_print(&ctx, "");
+        } else {
+            HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
+            signaling_connection_context_print(&ctx, "");
+        }
 
     } else {       // BEX
         HIP_DEBUG("Triggering BEX \n");
@@ -277,12 +284,21 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
                  -1, "Missing application_context parameter\n");
         // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-        HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
+        HIP_IFEL(signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1)),
                  -1, "Could not copy connection context\n");
+        ctx.connection_status = SIGNALING_CONN_PROCESSING;
+
+        /* save application context to our local state */
+        HIP_IFEL(signaling_hipd_state_add_connection_context(sig_state, &ctx),
+                 -1, "Could save connection in local state\n");
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
-        signaling_connection_context_print(&sig_state->ctx, "");
+        signaling_connection_context_print(&ctx, "");
     }
+
+
+    /* send status for new connection to os layer */
+    signaling_send_connection_confirmation(our_hit, peer_hit, &ctx);
 
 out_err:
     return err;

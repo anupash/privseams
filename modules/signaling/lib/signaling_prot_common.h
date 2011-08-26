@@ -63,7 +63,7 @@
 
 /* Connection status types */
 #define SIGNALING_CONN_NEW      0
-#define SIGNALING_CONN_PENDING  1
+#define SIGNALING_CONN_PROCESSING  1
 #define SIGNALING_CONN_WAITING  2
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11
@@ -108,7 +108,7 @@
 
 struct signaling_ntf_user_auth_failed_data {
     uint16_t reason;
-};
+} __attribute__ ((packed));
 
 
 /*
@@ -127,6 +127,8 @@ struct signaling_ntf_user_auth_failed_data {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |         SRC PORT              |          DEST PORT            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                            PADDING                            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 */
 struct signaling_param_connection_identifier {
@@ -135,7 +137,7 @@ struct signaling_param_connection_identifier {
     uint32_t id;
     uint16_t src_port;
     uint16_t dst_port;
-};
+} __attribute__ ((packed));
 
 /*
      Parameter for a user signature.

@@ -57,12 +57,14 @@ int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_s
 int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /* Functions for initiating and answering to a bex update */
-int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit);
+int signaling_send_first_update(const struct in6_addr *src_hit,
+                                const struct in6_addr *dst_hit,
+                                struct signaling_connection_context *ctx);
 int signaling_send_second_update(const struct hip_common *first_update);
 
 /* Functions for certificate exchange */
 int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
-int signaling_send_user_certificate_chain(hip_ha_t *ha);
+int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection_context *conn_ctx);
 
 /* Classification of signaling update messages */
 int signaling_get_update_type(struct hip_common *msg);

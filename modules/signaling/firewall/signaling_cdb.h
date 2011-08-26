@@ -64,6 +64,8 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
 struct signaling_connection_context *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
                                                                const struct in6_addr *dst_hit);
 
+uint32_t signaling_cdb_get_next_connection_id(void);
+
 void signaling_cdb_print(void);
 
 #endif /* HIP_HIPFW_SIGNALING_HIPFW_CONNTRACK_DB_H */
