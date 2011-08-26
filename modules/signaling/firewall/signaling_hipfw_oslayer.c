@@ -139,6 +139,12 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     struct signaling_connection new_conn;
     int pos = 0;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN\n");
+    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
+    hip_perf_start_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+#endif
+
     /* Find if there is a waiting connection for this source and destination application. */
     if ((new_connection_wait_timeout.tv_sec != 0 || new_connection_wait_timeout.tv_usec != 0) &&
         (conn = signaling_cdb_entry_find_connection_by_dst_port(src_hit, dst_hit, dst_port))) {

@@ -2002,6 +2002,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK, "results/PERF_HANDLE_CLOSE_ACK.csv");
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "results/PERF_CLOSE_COMPLETE.csv");
     hip_perf_set_name(perf_set, PERF_NEW_CONN, "results/PERF_NEW_CONN.csv");
+    hip_perf_set_name(perf_set, PERF_NEW_UPDATE_CONN, "results/PERF_NEW_UPDATE_CONN.csv");
     hip_perf_set_name(perf_set, PERF_CONN_REQUEST, "results/PERF_CONN_REQUEST.csv");
     hip_perf_set_name(perf_set, PERF_SEND_CONN_REQUEST, "results/PERF_SEND_CONN_REQUEST.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ1, "results/PERF_HIPFW_REQ1.csv");

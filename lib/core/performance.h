@@ -85,6 +85,9 @@ enum perf_sensor {
     PERF_R2x4,
     PERF_R2_I3,             // time at responder between sending R2 and receiving I3
     PERF_I3,
+    PERF_CONN_U1,
+    PERF_CONN_U2,
+    PERF_CONN_U3,
     PERF_MBOX_I1,
     PERF_MBOX_R1,
     PERF_MBOX_I2,
@@ -111,6 +114,7 @@ enum perf_sensor {
     PERF_CLOSE_COMPLETE,
     PERF_PERF,               // time to stop and write a perf set
     PERF_NEW_CONN,           // test 0
+    PERF_NEW_UPDATE_CONN,    // time to establish a new connection when a HA already exists
     PERF_CONN_REQUEST,       // test 1
     PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
     PERF_NETSTAT_LOOKUP,     // tests 1.1.1
@@ -162,6 +166,13 @@ enum perf_sensor {
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
     PERF_UPDATE_HOST_SIGN,   // time to sign an update packet
     PERF_UPDATE_VERIFY_HOST_SIG, // time to verify user signature on UPDATE
+    PERF_CONN_U1_VERIFY_USER_SIG, // time to verify signature on connection UPDATE 2
+    PERF_CONN_U1_USER_SIGN, // time to verify signature on connection UPDATE 1
+    PERF_CONN_U1_HOST_SIGN, // time to verify signature on connection UPDATE 1
+    PERF_CONN_U2_VERIFY_USER_SIG, // time to verify signature on connection UPDATE 2
+    PERF_CONN_U2_USER_SIGN, // time to generate host signature on UPDATE 2
+    PERF_CONN_U2_HOST_SIGN, // time to generate host signature on UPDATE 2
+    PERF_CONN_U3_HOST_SIGN, // time to generate host signature on UPDATE 3
     PERF_NOTIFY_VERIFY_HOST_SIG, // time to verify signature on NOTIFY
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign

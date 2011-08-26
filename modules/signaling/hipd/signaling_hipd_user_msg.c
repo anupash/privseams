@@ -369,10 +369,13 @@ int signaling_handle_connection_request(struct hip_common *msg,
     signaling_send_connection_confirmation(our_hit, peer_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+        HIP_DEBUG("Stop and write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
         hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
         hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
 #endif
+
 out_err:
     return err;
 }

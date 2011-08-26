@@ -142,8 +142,9 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
 
-        HIP_DEBUG("Write PERF_NEW_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+        HIP_DEBUG("Write PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
@@ -341,9 +342,14 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_NEW_CONN, PERF_HIPFW_R2_FINISH\n");
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
+        if (existing_conn->id <= 0) {
+            HIP_DEBUG("Stop PERF_NEW_CONN, PERF_HIPFW_R2_FINISH\n");
+            hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+            hip_perf_stop_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
+        } else {
+            HIP_DEBUG("Stop PERF_NEW_UPDATE_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+        }
 #endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
@@ -396,9 +402,14 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH, PERF_NEW_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        if (existing_conn->id <= 0) {
+            HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH, PERF_NEW_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
+            hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        } else {
+            HIP_DEBUG("Stop PERF_NEW_UPDATE_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+        }
 #endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");

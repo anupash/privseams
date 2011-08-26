@@ -289,6 +289,8 @@ int hipd_main(uint64_t flags)
     check_and_create_dir("results", HIP_DIR_MODE);
 
     hip_perf_set_name(perf_set, PERF_STARTUP, "results/PERF_STARTUP.csv");
+
+    /* BEX */
     hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_I1_R1, "results/PERF_I1_R1.csv");
@@ -335,6 +337,12 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_NEW_CONN, "results/PERF_NEW_CONN.csv");
     hip_perf_set_name(perf_set, PERF_PERF, "results/PERF_PERF.csv");
 
+    /* Conneciton update BEX */
+    hip_perf_set_name(perf_set, PERF_NEW_UPDATE_CONN, "results/PERF_NEW_UPDATE_CONN.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U1, "results/PERF_CONN_U1.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U2, "results/PERF_CONN_U2.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U3, "results/PERF_CONN_U3.csv");
+
     /* signature verification and generation */
     hip_perf_set_name(perf_set, PERF_R1_VERIFY_HOST_SIG, "results/PERF_R1_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_I2_HOST_SIGN, "results/PERF_I2_HOST_SIGN.csv");
@@ -347,21 +355,32 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_SIG, "results/PERF_R2_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_I3_HOST_SIGN, "results/PERF_I3_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_I3_VERIFY_HOST_SIG, "results/PERF_I3_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_I2_VERIFY_USER_PUBKEY, "results/PERF_I2_VERIFY_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_PUBKEY, "results/PERF_R2_VERIFY_USER_PUBKEY.csv");
+
     hip_perf_set_name(perf_set, PERF_UPDATE_HOST_SIGN, "results/PERF_UPDATE_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_VERIFY_HOST_SIG, "results/PERF_UPDATE_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U1_VERIFY_USER_SIG, "results/PERF_CONN_U1_VERIFY_USER_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U2_VERIFY_USER_SIG, "results/PERF_CONN_U2_VERIFY_USER_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U1_USER_SIGN, "results/PERF_CONN_U1_USER_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U1_HOST_SIGN, "results/PERF_CONN_U1_HOST_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U2_USER_SIGN, "results/PERF_CONN_U2_USER_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U2_HOST_SIGN, "results/PERF_CONN_U2_HOST_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_CONN_U3_HOST_SIGN, "results/PERF_CONN_U3_HOST_SIGN.csv");
+
     hip_perf_set_name(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG, "results/PERF_NOTIFY_VERIFY_HOST_SIG.csv");
+
     hip_perf_set_name(perf_set, PERF_X509_VERIFY_CERT_CHAIN, "results/PERF_X509_VERIFY_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_SEND_CERT_CHAIN, "results/PERF_SEND_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_RECEIVE_CERT_CHAIN, "results/PERF_RECEIVE_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_CERTIFICATE_EXCHANGE, "results/PERF_CERTIFICATE_EXCHANGE.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CERT_CHAIN, "results/PERF_HANDLE_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_CERT_UP_CERT_ACK, "results/PERF_CERT_UP_CERT_ACK.csv");
+
     hip_perf_set_name(perf_set, PERF_ECDSA_VERIFY_IMPL, "results/PERF_ECDSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_ECDSA_SIGN_IMPL, "results/PERF_ECDSA_SIGN_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_LOAD_USER_KEY, "results/PERF_LOAD_USER_KEY.csv");
     hip_perf_set_name(perf_set, PERF_LOAD_USER_PUBKEY, "results/PERF_LOAD_USER_PUBKEY.csv");
-    hip_perf_set_name(perf_set, PERF_I2_VERIFY_USER_PUBKEY, "results/PERF_I2_VERIFY_USER_PUBKEY.csv");
-    hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_PUBKEY, "results/PERF_R2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_TEST1, "results/PERF_TEST1.csv");
     hip_perf_set_name(perf_set, PERF_TEST2, "results/PERF_TEST2.csv");
 

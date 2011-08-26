@@ -25,11 +25,17 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
+#include "firewall/common_types.h"
+#include "firewall/hslist.h"
+
+
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
 #include "signaling_user_management.h"
 #include "signaling_x509_api.h"
+
+struct slist *verified_apps = NULL;
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
@@ -266,8 +272,23 @@ out_err:
 int signaling_verify_application(const char *app_path)
 {
     int err = 0;
+    unsigned char md[SHA_DIGEST_LENGTH];
+    struct slist *verified_app = verified_apps;
+    char *hash = NULL;
+
     X509AC *app_cert = NULL;
     STACK_OF(X509) *untrusted_chain = NULL;
+
+    /* Look if it has been verified before. */
+    HIP_IFEL(0 > hash_file(app_path, md),
+             -1, "Could not compute hash of binary.\n");
+    while (verified_app) {
+        if (!memcmp(md, verified_app->data, SHA_DIGEST_LENGTH)) {
+            HIP_DEBUG("Application has recently been verified and is unchanged, skipping certificate chain verification. \n");
+            return 0;
+        }
+        verified_app = verified_app->next;
+    }
 
     /* Get application certificate chain */
     HIP_IFEL(!(app_cert = get_application_attribute_certificate_chain(app_path, &untrusted_chain)),
@@ -292,6 +313,13 @@ int signaling_verify_application(const char *app_path)
     HIP_DEBUG("Stop PERF_X509AC_VERIFY_CERT_CHAIN\n");
     hip_perf_stop_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
 #endif
+
+    /* Add to verified applications */
+    hash = malloc(SHA_DIGEST_LENGTH);
+    memcpy(hash, md, SHA_DIGEST_LENGTH);
+    verified_apps = append_to_slist(verified_apps, hash);
+    HIP_DEBUG("Added hash of application to verified apps. \n", hash);
+
 out_err:
     sk_X509_free(untrusted_chain);
     if (app_cert) {
