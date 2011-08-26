@@ -73,6 +73,7 @@
 /* Failure types for user authentication */
 #define SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED    1
 #define SIGNALING_USER_AUTH_AUTHORITY_REJECTED      2
+#define SIGNALING_USER_AUTH_KEY_MISSMATCH           3
 
 /* Signaling notification message types */
 #define SIGNALING_USER_AUTH_FAILED                  124

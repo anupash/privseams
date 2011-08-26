@@ -463,7 +463,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     /* Now verify users public key against his certificate */
     HIP_IFEL(signaling_DER_to_X509_NAME(usr_ctx.subject_name, usr_ctx.subject_name_len, &subject_name),
              -1, "Could not decode to x509 name.");
-    err = signaling_user_api_verify_pubkey(subject_name, NULL, NULL);
+    err = signaling_user_api_verify_pubkey(subject_name, pkey, NULL);
     if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
