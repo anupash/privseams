@@ -294,33 +294,6 @@ out_err:
     return err;
 }
 
-static int free_message_space(struct hip_common *msg, hip_ha_t *ha) {
-    uint8_t *dst;
-    const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
-    const int param_mac_length = 24;
-    int param_signature_length;
-
-    if (!ha || !msg) {
-        return -1;
-    }
-
-    dst = (uint8_t *) msg + hip_get_msg_total_len(msg);
-    switch (hip_get_host_id_algo(ha->our_pub)) {
-    case HIP_HI_ECDSA:
-        param_signature_length = ECDSA_size(ha->our_priv_key);
-        break;
-    case HIP_HI_RSA:
-        param_signature_length = RSA_size(ha->our_priv_key);
-        break;
-    default:
-        param_signature_length = 200;
-    }
-    param_signature_length += sizeof(struct hip_sig) + 7;
-
-    return MAX(max_dst - (dst + param_mac_length + param_signature_length), 0);
-}
-
-
 /**
  * Send a whole certificate chain, possibly dstributed over multiple messages.
  * TODO: Refactor this and move the building parts to the builder.
@@ -370,7 +343,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
             cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
             HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
                      -1, "Could not get DER encoding of certificate\n");
-            free_space = free_message_space(msg_buf, ha);
+            free_space = signaling_get_free_message_space(msg_buf, ha);
             if (free_space == -1) {
                 err = -1;
                 goto out_err;

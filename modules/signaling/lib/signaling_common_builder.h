@@ -27,6 +27,7 @@ void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t *
 
 /* Utility functions */
 int signaling_get_update_type(struct hip_common *msg);
+int signaling_get_free_message_space(struct hip_common *msg, hip_ha_t *ha);
 
 
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_
