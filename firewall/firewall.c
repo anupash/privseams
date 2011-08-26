@@ -1833,6 +1833,14 @@ out_err:
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_NOTIFY);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_NOTIFY);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_NOTIFY_VERIFY_HOST_SIG);
+        break;
+    case HIP_UPDATE:
+        HIP_DEBUG("Stop and write PERF_MBOX_UPDATE, write PERF_MBOX_UPDATE, PERF_MBOX_UPDATE_VERIFY_HOST_SIG, PERF_X509_VERIFY_CERT_CHAIN\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_UPDATE);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_UPDATE);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_UPDATE_VERIFY_HOST_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_X509_VERIFY_CERT_CHAIN);
+        break;
     default:
         HIP_DEBUG("Stop and write PERF_MBOX_PACKET\n\n");
         //hip_perf_stop_benchmark(perf_set, PERF_MBOX_PACKET);
@@ -2038,6 +2046,9 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_R2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_NOTIFY, "results/PERF_MBOX_NOTIFY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_NOTIFY_VERIFY_HOST_SIG, "results/PERF_MBOX_NOTIFY_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_UPDATE, "results/PERF_MBOX_UPDATE.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_UPDATE_VERIFY_HOST_SIG, "results/PERF_MBOX_UPDATE_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_X509_VERIFY_CERT_CHAIN, "results/PERF_MBOX_X509_VERIFY_CERT_CHAIN.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
@@ -2163,7 +2174,7 @@ int hipfw_main(const char *const rule_file,
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3, PERF_MBOX_NOTIFY\n");
+            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3, PERF_MBOX_NOTIFY, PERF_MBOX_UPDATE\n");
             hip_perf_start_benchmark(perf_set, PERF_MBOX_PACKET);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I1);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R1);
@@ -2171,6 +2182,7 @@ int hipfw_main(const char *const rule_file,
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I3);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_NOTIFY);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_UPDATE);
 #endif
             err = hip_fw_handle_packet(buf, h4, 4, &ctx);
         }

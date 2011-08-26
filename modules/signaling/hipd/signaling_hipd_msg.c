@@ -269,16 +269,8 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
              -1, "Building of HMAC failed\n");
 
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I3_HOST_SIGN\n");
-        hip_perf_start_benchmark(perf_set, PERF_I3_HOST_SIGN);
-#endif
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
              -EINVAL, "Could not sign I3. Failing\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I3_HOST_SIGN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
-#endif
 
     if(signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
         HIP_DEBUG("User failed to sign packet.\n");

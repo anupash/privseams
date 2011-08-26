@@ -279,11 +279,13 @@ int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, ST
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_X509_VERIFY_CERT_CHAIN\n");
         hip_perf_start_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_X509_VERIFY_CERT_CHAIN);
 #endif
      err = X509_verify_cert(verify_ctx);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_X509_VERIFY_CERT_CHAIN\n");
         hip_perf_stop_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_X509_VERIFY_CERT_CHAIN);
 #endif
      if (err != 1) {
          err = X509_STORE_CTX_get_error(verify_ctx);
