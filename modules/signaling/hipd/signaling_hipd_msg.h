@@ -45,6 +45,7 @@
 /* Handler for incoming messages */
 int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_incoming_i3(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_notification(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 

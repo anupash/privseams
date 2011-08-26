@@ -557,7 +557,16 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
     }
 
+    /* send connection context to firewall
+     * TODO: wait for an answer from the firewall regarding this new remote context */
     signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
+
+    /* send an I3 if connection has been accepted by the oslayer */
+    // TODO
+    if (1) {
+        conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
+        signaling_send_I3(ctx->hadb_entry, &conn_ctx);
+    }
 
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
@@ -569,6 +578,28 @@ out_err:
     return err;
 }
 
+/*
+ * Handles an incoming I3 packet.
+ *
+ * We have to confirm the status of the connection to the firewall.
+ */
+int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = 0;
+    struct signaling_connection_context conn_ctx;
+
+    /* sanity checks */
+    HIP_IFEL(packet_type != HIP_I3, -1, "Not an I3 Packet\n")
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from R2 \n");
+    conn_ctx.connection_status = SIGNALING_CONN_USER_AUTHED;
+
+    /* Tell the firewall/oslayer about the new connection and await it's decision */
+    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
+
+out_err:
+    return err;
+}
 /**
  * Handle an UPDATE message that contains (parts from) a user certificate chain.
  *
@@ -700,7 +731,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_DEBUG("Received SECOND BEX Update... \n");
         HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
-        conn_ctx.connection_status = SIGNALING_CONN_UNAUTHED;
+        conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),

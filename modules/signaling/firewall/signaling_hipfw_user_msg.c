@@ -233,7 +233,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     } else {
         /* tell the HIPD that the connection has been accepted by local policy
          * and add it to the connection tracking DB */
-        new_ctx.connection_status = SIGNALING_CONN_ALLOWED;
+        new_ctx.connection_status = SIGNALING_CONN_PROCESSING;
         signaling_cdb_add(hits, hitr, &new_ctx);
         signaling_cdb_print();
     }

@@ -103,6 +103,8 @@
 #include "builder.h"
 #include "modularization.h"
 
+#include "modules/signaling/lib/signaling_prot_common.h"
+
 
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
@@ -599,7 +601,6 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
     if (!ok && lmod_packet_type_exists(type) != -1) {
         ok = 1;
     }
-
 
     return ok;
 }
