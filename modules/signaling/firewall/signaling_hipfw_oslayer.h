@@ -44,6 +44,7 @@
 #define VERDICT_DEFAULT VERDICT_ACCEPT
 
 int signaling_hipfw_oslayer_init(void);
+int signaling_hipfw_oslayer_uninit(void);
 
 /* Check if the packet is conntracked or not. Take the corresponding actions. */
 int signaling_hipfw_conntrack(hip_fw_context_t *ctx);

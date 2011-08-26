@@ -65,6 +65,11 @@ int signaling_hipfw_oslayer_init(void) {
     return 0;
 }
 
+int signaling_hipfw_oslayer_uninit(void) {
+    return 0;
+}
+
+
 /*
  * Returns a verdict 1 for pass, 0 for drop.
  */

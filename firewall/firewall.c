@@ -368,17 +368,20 @@ static int hip_fw_uninit_lsi_support(void)
 }
 
 /**
- * Initialize signaling firewall application.
+ * Initialize signaling extensions.
  *
  * @return zero on success and non-zero on failure
  */
-static int hip_fw_init_signaling_hipfw(void)
+static int hip_fw_init_signaling_extensions(void)
 {
     int err = 0;
 
     if (filter_traffic) {
         HIP_IFEL(signaling_hipfw_init(NULL),
                  -1, "failed to init signaling firewall\n");
+    } else {
+        HIP_IFEL(signaling_hipfw_oslayer_init(),
+                 -1, "failed to init signaling os layer\n");
     }
 
 out_err:
@@ -390,13 +393,16 @@ out_err:
  *
  * @return zero on success and non-zero on failure
  */
-static int hip_fw_uninit_signaling_hipfw(void)
+static int hip_fw_uninit_signaling_extensions(void)
 {
     int err = 0;
 
     if (filter_traffic) {
         HIP_IFEL(signaling_hipfw_uninit(), -1,
                  "failed to uninit signaling firewall\n");
+    } else {
+        HIP_IFEL(signaling_hipfw_oslayer_uninit(), -1,
+                 "failed to uninit signaling os layer\n");
     }
 
 out_err:
@@ -533,8 +539,7 @@ static int firewall_init_extensions(void)
     hip_firewall_init_raw_sockets();
 
     /* Initialize signaling module */
-    HIP_IFEL(hip_fw_init_signaling_hipfw(), -1, "failed to load extension\n");
-    HIP_IFEL(signaling_hipfw_oslayer_init(), -1, "failed to init signaling extensions\n");
+    HIP_IFEL(hip_fw_init_signaling_extensions(), -1, "failed to load signaling extension\n");
 
 out_err:
     return err;
@@ -679,7 +684,7 @@ static void firewall_exit(void)
     hip_fw_uninit_esp_prot_conntrack();
     hip_fw_uninit_lsi_support();
     hip_fw_uninit_conntrack();
-    hip_fw_uninit_signaling_hipfw();
+    hip_fw_uninit_signaling_extensions();
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
