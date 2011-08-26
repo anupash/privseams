@@ -189,6 +189,15 @@ int signaling_handle_connection_context(struct hip_common *msg,
     HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
              -1, "Could not copy connection context\n");
 
+    if (sig_state->ctx.connection_status == SIGNALING_CONN_USER_UNAUTHED) {
+        /* The firewall wants the user to be authenticated */
+        HIP_DEBUG("Requesting user certificate chain for remote user \n");
+        signaling_send_user_auth_failed_ntf(entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
+
+        /* Set connection context to NEW since USER UNAUTHED was only for internal communication */
+        sig_state->ctx.connection_status = SIGNALING_CONN_NEW;
+    }
+
     HIP_DEBUG("Saved connection context from hipfw for R2:\n");
     signaling_connection_context_print(&sig_state->ctx, "");
 

@@ -402,7 +402,7 @@ out_err:
  * and expect our own connection context from the hipfw to send it in the R2.
  *
  */
-static int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+UNUSED static int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
     struct signaling_connection_context conn_ctx;
@@ -482,11 +482,49 @@ static int signaling_handle_r2_user_context(UNUSED const uint8_t packet_type, UN
  * Handles an incomding I2 packet.
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
-    int err     = 0;
+    int err = 0;
+    const struct signaling_param_user_context *param_usr_ctx = NULL;
+    struct signaling_hipd_state * sig_state = NULL;
+    struct signaling_connection_context conn_ctx;
 
+    /* sanity checks */
     HIP_IFEL(packet_type != HIP_I2, -1, "Not an I2 Packet\n")
-    signaling_handle_i2_user_context(packet_type, ha_state, ctx);
-    signaling_handle_i2_app_context(packet_type, ha_state, ctx);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from R2 \n");
+
+    /* Try to authenticate the user */
+    err = signaling_verify_user_signature(ctx->input_msg);
+    switch (err) {
+    case 0:
+        /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
+        HIP_DEBUG("User signature verification successful\n");
+        conn_ctx.connection_status = SIGNALING_CONN_USER_AUTHED;
+        break;
+    case -1:
+        /* In this case we just assume user auth has failed, we do not request his certificates,
+         * since this was an internal error. Here, some retransmission of the received packet would be needed */
+        HIP_DEBUG("Error processing user signature \n");
+        conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
+        break;
+    default:
+        /* In this case, we need to request the user's certificate chain.
+         * We tell the firewall, that we haven't authenticated the user,
+         * so that it can either block until user is authed or allow if the local policy
+         * doesn't care about the user. */
+        HIP_DEBUG("Could not verify user's certifcate chain:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
+        conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
+
+        /* cache the user identity to able to identify it later on */
+        HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
+                 -1, " error getting user context. \n");
+        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling module\n");
+        signaling_build_user_context(param_usr_ctx, &sig_state->user_cert_ctx.user_ctx);
+    }
+
+    /* Tell the firewall/oslayer about the new connection and await it's decision */
+    signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
 out_err:
     return err;
@@ -554,8 +592,8 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
             continue;
         }
         sk_X509_push(cert_chain, cert);
-        HIP_DEBUG("Recevied and pushed:\n");
-        X509_print_fp(stderr, cert);
+        //HIP_DEBUG("Recevied and pushed:\n");
+        //X509_print_fp(stderr, cert);
 
         /* check if we have received the last cert */
         if (sk_X509_num(cert_chain) == param_cert->cert_count) {
@@ -580,9 +618,14 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
             HIP_IFEL(signaling_user_api_verify_pubkey(subject_name, pkey, cert, 1),
                      -1, "Could not verify users public key with received certificate chain\n");
             if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain)) {
-                /* Public key verification was successful, so we save the chain */
+                /* Public key verification was successful, so we save the chain and confirm to the firewall */
                 sk_X509_push(cert_chain, cert);
                 signaling_add_user_certificate_chain(cert_chain);
+                sig_state->ctx.connection_status = SIGNALING_CONN_USER_AUTHED;
+                HIP_DEBUG("Confirming user authentication to OSLAYER\n");
+                signaling_connection_context_print(&sig_state->ctx, "");
+                signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &sig_state->ctx);
+
             } else {
                 HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
                 free(cert);

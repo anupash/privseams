@@ -27,6 +27,10 @@ static const char *signaling_connection_status_name(int status) {
         return "BLOCKED";
     case SIGNALING_CONN_ALLOWED:
         return "ALLOWED";
+    case SIGNALING_CONN_USER_AUTHED:
+        return "USER AUTHED";
+    case SIGNALING_CONN_USER_UNAUTHED:
+        return "USER UNAUTHED";
     default:
         return "UNKOWN";
     }

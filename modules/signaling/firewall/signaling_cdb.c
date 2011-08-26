@@ -336,6 +336,7 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
     int err = 0;
     int found;
     signaling_cdb_entry_t *entry = NULL;
+    struct signaling_connection_context *new_conn_ctx;
     struct signaling_connection_context *existing_app_ctx;
 
     HIP_IFEL(!local_hit || !remote_hit,
@@ -353,7 +354,9 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
     if (found > 0) {
         signaling_cdb_update_entry(existing_app_ctx, ctx);
     } else {
-        entry->connection_contexts = append_to_slist(entry->connection_contexts, ctx);
+        new_conn_ctx = malloc(sizeof(struct signaling_connection_context));
+        signaling_copy_connection_context(new_conn_ctx, ctx);
+        entry->connection_contexts = append_to_slist(entry->connection_contexts, new_conn_ctx);
     }
 
 out_err:

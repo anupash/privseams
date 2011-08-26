@@ -66,6 +66,8 @@
 #define SIGNALING_CONN_WAITING  2
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11
+#define SIGNALING_CONN_USER_AUTHED   20
+#define SIGNALING_CONN_USER_UNAUTHED 21
 
 /* Maximum lengths for application and user context */
 #define SIGNALING_APP_DN_MAX_LEN    128

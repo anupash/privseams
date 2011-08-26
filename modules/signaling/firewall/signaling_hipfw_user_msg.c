@@ -164,7 +164,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
 
     HIP_DEBUG("Got confirmation about a previously requested connection from HIPD\n");
-    HIP_DUMP_MSG(msg);
+    //HIP_DUMP_MSG(msg);
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
@@ -176,6 +176,9 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     HIP_IFEL(signaling_copy_connection_context(ctx, (const struct signaling_connection_context*) (param + 1)),
              -1, "Failed to init app context \n");
 
+    if (ctx->connection_status == SIGNALING_CONN_USER_AUTHED) {
+        ctx->connection_status = SIGNALING_CONN_ALLOWED;
+    }
     signaling_cdb_add(src_hit, dst_hit, ctx);
     signaling_cdb_print();
 
@@ -203,8 +206,10 @@ out_err:
  * HIPD requested the local connection context for the new connection.
  *
  * We have to
- *   a) check whether we want to allow this connection
-     b) send an answer with the local context
+ *   a) check whether we want to allow the remote connection context
+ *   b) establish the local connection context
+ *   c) check whether to allow the local connection context
+     d) send an answer with the local context
  *
  * @param msg the message from the hipd
  *
@@ -212,6 +217,7 @@ out_err:
  */
 int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     int err                                         = 0;
+    const struct signaling_connection_context *remote_ctx    = NULL;
     struct signaling_connection_context *new_ctx    = NULL;
     const struct hip_tlv_common *param              = NULL;
     const hip_hit_t *hits                           = NULL;
@@ -219,20 +225,23 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     uint16_t src_port , dst_port;
 
     /* Get HITs and Ports from the message */
-    signaling_get_hits_from_msg(msg, &hits, &hitr);
+    signaling_get_hits_from_msg(msg, &hitr, &hits);
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
              -1, "Could not get application context parameter from connection request \n");
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    dst_port = ((const struct signaling_connection_context *) (param + 1))->src_port;
-    src_port = ((const struct signaling_connection_context *) (param + 1))->dest_port;
+    remote_ctx = (const struct signaling_connection_context *) (param + 1);
+    dst_port = remote_ctx->src_port;
+    src_port = remote_ctx->dest_port;
 
     HIP_DEBUG("Received connection context request for following context: \n");
-    signaling_connection_context_print((const struct signaling_connection_context *) (param + 1), "");
+    signaling_connection_context_print(remote_ctx, "");
 
-    /* a) check if we want to allow the connection */
-        // TODO: DO this here
+    /* a) check with local policy if we want to allow the remote connection context
+     *    here we only assume that user authentication is required always
+     * TODO: hand context to some policy decision engine */
 
-    /* b) build the local connection context and send it */
+
+    /* b) build the local connection context */
     HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
              -1, "Could not allocate memory for new connection context\n");
     HIP_IFEL(signaling_init_connection_context(new_ctx),
@@ -241,11 +250,26 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
              -1, "Application lookup/verification failed.\n");
     HIP_IFEL(signaling_user_api_get_uname(new_ctx->user_ctx.euid, &new_ctx->user_ctx),
              -1, "Could not get user name \n");
-    new_ctx->connection_status = SIGNALING_CONN_ALLOWED;
+
+    /* c) check with local policy if we want to allow the local connection context
+     *    if we allow the connection, add it right away, or wait for user auth confirmation.
+     *    TODO: hand local context to some policy decision engine
+     *    */
+    if (remote_ctx->connection_status == SIGNALING_CONN_USER_UNAUTHED) {
+        /* tell the HIPD that user auth is required */
+        new_ctx->connection_status = SIGNALING_CONN_USER_UNAUTHED;
+    } else {
+        /* tell the HIPD that the connection has been accepted by local policy
+         * and add it to the connection tracking DB */
+        new_ctx->connection_status = SIGNALING_CONN_ALLOWED;
+    }
     signaling_cdb_add(hits, hitr, new_ctx);
     signaling_cdb_print();
+
+    /* d) send answer to HIPD */
     signaling_hipfw_send_connection_context(hits, hitr, new_ctx);
 
 out_err:
+    free(new_ctx);
     return err;
 }
