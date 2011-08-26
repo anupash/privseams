@@ -123,7 +123,7 @@ UNUSED static int compare_tuples(const struct policy_tuple *t1, const struct pol
     return 0;
 }
 
-static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
+static void print_policy_tuple(const struct policy_tuple *tuple, UNUSED const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
 
     HIP_DEBUG("%s-------------- POLICY TUPLE ----------------\n", prefix);
@@ -137,6 +137,22 @@ static void print_policy_tuple(const struct policy_tuple *tuple, const char *pre
     HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
     HIP_DEBUG("%s  TRGT:\t %s\n",  prefix, tuple->target  == POLICY_ACCEPT ? "ALLOW" : "DROP");
     HIP_DEBUG("%s--------------------------------------------\n", prefix);
+}
+
+static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED const char *prefix) {
+    char dst[INET6_ADDRSTRLEN];
+
+    printf("%s--------------     TUPLE    ----------------\n", prefix);
+    if (ipv6_addr_any(&tuple->host_id)) {
+        printf("%s  HOST:\t ANY HOST\n", prefix);
+    } else {
+        hip_in6_ntop(&tuple->host_id, dst);
+        printf("%s  HOST:\t %s\n", prefix, dst);
+    }
+    printf("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
+    printf("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
+    printf("%s  TRGT:\t %s\n",  prefix, tuple->target  == POLICY_ACCEPT ? "ALLOW" : "DROP");
+    printf("%s--------------------------------------------\n", prefix);
 }
 
 static int read_tuple(config_setting_t *tuple, struct slist **rulelist) {
@@ -167,7 +183,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist) {
     if(CONFIG_FALSE == config_setting_lookup_string(tuple, "application", &app_id)) {
         entry->app_id[0] = '\0';
     } else {
-        strncpy(entry->app_id, user_id, SIGNALING_APP_DN_MAX_LEN - 1);
+        strncpy(entry->app_id, app_id, SIGNALING_APP_DN_MAX_LEN - 1);
         entry->app_id[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
     }
     if(CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
@@ -261,13 +277,15 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
     /* Check if hits match or if rule allows any hit */
     if(ipv6_addr_cmp(&tuple_rule->host_id, &in6addr_any) != 0) {
         if(ipv6_addr_cmp(&tuple_rule->host_id, &tuple_conn->host_id) != 0) {
+            HIP_DEBUG("Host does not match\n");
             return 0;
         }
     }
 
     /* Check if user ids match or if rule allows any user */
-    if(strlen(tuple_rule->user_id) != 0) {
+    if(strlen(tuple_rule->user_id) > 0) {
         if(strcmp(tuple_rule->user_id, tuple_conn->user_id) != 0) {
+            HIP_DEBUG("User does not match\n");
             return 0;
         }
     }
@@ -275,6 +293,7 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
     /* Check if app ids match or if rule allows any app */
     if(strlen(tuple_rule->app_id) != 0) {
         if(strcmp(tuple_rule->app_id, tuple_conn->app_id) != 0) {
+            HIP_DEBUG("App does not match\n");
             return 0;
         }
     }
@@ -362,10 +381,12 @@ int signaling_policy_check(const struct in6_addr *const hit,
 
     /* Find a match for authed tuple */
     if ((tuple_match = match_tuple_list(&tuple_for_conn_authed, rule_list))) {
-        HIP_DEBUG("Connection tuple:\n");
-        print_policy_tuple(&tuple_for_conn_authed, "\t");
-        HIP_DEBUG("is matched by rule tuple:\n");
-        print_policy_tuple(tuple_match, "\t");
+        printf("\033[22;32mConnection could be matched to firewall rules:\n\033[22;37m");
+        printf("Connection tuple:\n");
+        printf_policy_tuple(&tuple_for_conn_authed, "\t");
+        printf("is matched by rule tuple:\n");
+        printf_policy_tuple(tuple_match, "\t");
+
         return tuple_match->target;
     }
 
@@ -378,6 +399,9 @@ int signaling_policy_check(const struct in6_addr *const hit,
     /* If we wouldn't have a match for the unauthed tuple, reject. */
     if (!(tuple_match = match_tuple_list(&tuple_for_conn_unauthed, rule_list))) {
         HIP_DEBUG("Rejected because no match for unauthed tuple.\n");
+        printf("\033[22;32mRejected because no match for unauthed tuple.\n\033[22;37m");
+        printf("Rejected tuple:\n");
+        printf_policy_tuple(&tuple_for_conn_authed, "\t");
         return POLICY_REJECT;
     }
 
@@ -405,10 +429,11 @@ int signaling_policy_check(const struct in6_addr *const hit,
         ret |= POLICY_APP_AUTH_REQUIRED;
     }
 
-    HIP_DEBUG("Unauthed connection tuple:\n");
-    print_policy_tuple(&tuple_for_conn_unauthed, "\t");
-    HIP_DEBUG("is matched by rule tuple:\n");
-    print_policy_tuple(tuple_match, "\t");
+    printf("\033[22;32mConnection could be matched to firewall rules:\n\033[22;37m");
+    printf("Connection tuple:\n");
+    printf_policy_tuple(&tuple_for_conn_unauthed, "\t");
+    printf("is matched by rule tuple:\n");
+    printf_policy_tuple(tuple_match, "\t");
 
     return ret;
 }
@@ -428,9 +453,10 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
     req_auth_types = signaling_policy_check(hit, conn_ctx);
     if (req_auth_types & POLICY_REJECT) {
         HIP_DEBUG("Connection request has been rejected by local policy. \n");
+        printf("\033[22;31m Connection request has been rejected by local policy.\n\033[22;37m");
         return -1;
     } else if (req_auth_types == POLICY_ACCEPT){
-        HIP_DEBUG("Connection request has been accepted as is by local policy \n");
+        HIP_DEBUG("Connection request has been accepted as is by local policy. \n");
         /* tell the HIPD that it needs not request authentication for the firewall */
         signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
         signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
@@ -453,7 +479,7 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
 }
 
 
-void signaling_policy_engine_print_rule_set(const char *prefix) {
+void signaling_policy_engine_print_rule_set(UNUSED const char *prefix) {
     struct slist *listentry;
     struct policy_tuple *entry;
 

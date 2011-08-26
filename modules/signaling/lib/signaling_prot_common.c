@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
@@ -34,7 +35,7 @@ const char *signaling_connection_status_name(int status) {
     }
 }
 
-static const char *signaling_user_key_name(int key_type) {
+UNUSED static const char *signaling_user_key_name(int key_type) {
     switch (key_type) {
     case HIP_HI_RSA:
         return "RSA";
@@ -47,7 +48,7 @@ static const char *signaling_user_key_name(int key_type) {
     }
 }
 
-static void signaling_param_print_field(const char *prefix, const uint16_t length, const unsigned char *p_content) {
+static void signaling_param_print_field(UNUSED const char *prefix, const uint16_t length, const unsigned char *p_content) {
     char buf[length+1];
 
     if(length == 0) {
@@ -108,7 +109,7 @@ void signaling_param_application_context_print(const struct signaling_param_app_
  * @param header    0 for no header, 1 to print a header
  */
 void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
-                                         const char *prefix, const int header) {
+                                         UNUSED const char *prefix, const int header) {
     if(app_ctx == NULL) {
         HIP_DEBUG("%sNo application ctx parameter given.\n", prefix);
         return;
@@ -132,7 +133,7 @@ void signaling_application_context_print(const struct signaling_application_cont
  * @param header    0 for no header, 1 to print a header
  */
 void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
-                                  const char *prefix, const int header) {
+                                  UNUSED const char *prefix, const int header) {
     X509_NAME *subj_name;
     char subj_name_string[SIGNALING_USER_ID_MAX_LEN] = { "<decoding error>" };
 
@@ -165,7 +166,7 @@ void signaling_user_context_print(const struct signaling_user_context * const us
  * @param ctx       the connection context to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_context_print(const struct signaling_connection_context * const ctx, const char *prefix) {
+void signaling_connection_context_print(const struct signaling_connection_context * const ctx, UNUSED const char *prefix) {
     if(ctx == NULL) {
         HIP_DEBUG("%sNo connection context struct given.\n", prefix);
         return;
@@ -185,7 +186,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  * @param conn      the connection to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_print(const struct signaling_connection *const conn, const char *const prefix) {
+void signaling_connection_print(const struct signaling_connection *const conn, UNUSED const char *const prefix) {
     int i;
     char prefix_buf[strlen(prefix)+2];
     sprintf(prefix_buf, "%s\t", prefix);
@@ -593,7 +594,7 @@ out_err:
  * @param conn      the connection to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_flags_print(uint8_t flags, const char *const prefix) {
+void signaling_flags_print(uint8_t flags, UNUSED const char *const prefix) {
     char buf[100];
     memset(buf, 0, sizeof(buf));
 

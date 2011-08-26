@@ -240,6 +240,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection new_conn;
     struct userdb_user_entry *db_entry = NULL;
 
+    printf("\033[22;34mReceived I2 packet\n\033[01;37m");
+
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
@@ -290,6 +292,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_cdb_print();
 
     /* Let packet pass */
+    printf("\033[22;32mAccepted I2 packet\n\n\033[01;37m");
     return 1;
 
 out_err:
@@ -316,6 +319,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     const struct signaling_param_user_auth_request *auth_req = NULL;
     struct userdb_user_entry *db_entry = NULL;
 
+    printf("\033[22;34mReceived R2 packet\n\033[22;37m");
+
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
@@ -338,6 +343,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     userdb_handle_user_signature(common, conn, OUT);
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
+
 
 
     /* Step b) */
@@ -371,6 +377,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_cdb_print();
 
     /* Let packet pass */
+    printf("\033[22;32mAccepted R2 packet\n\n\033[22;37m");
     return 1;
 
 out_err:
@@ -394,6 +401,8 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     struct signaling_connection *existing_conn = NULL;
     const struct signaling_param_user_auth_request *auth_req = NULL;
     int wait_auth = 0;
+
+    printf("\033[22;34mReceived I3 packet\n\033[01;37m");
 
     /* Step a) */
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
@@ -430,7 +439,7 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     }
 
     signaling_cdb_print();
-
+    printf("\033[22;32mAccepted I3 packet\n\n\033[01;37m");
     return 1;
 
 out_err:
