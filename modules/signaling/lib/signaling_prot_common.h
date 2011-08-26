@@ -350,9 +350,14 @@ int signaling_copy_connection(struct signaling_connection * const dst,
 
 /* Flag handling */
 void signaling_flags_print(uint8_t flags, const char *const prefix);
+int signaling_flag_check_auth_complete(uint8_t flags);
 int signaling_flag_check(uint8_t flags, enum flag f);
 void signaling_flag_set(uint8_t *flags, enum flag f);
 void signaling_flag_unset(uint8_t *flags, enum flag f);
+
+/* Misc */
+const char *signaling_connection_status_name(int status);
+
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

@@ -70,23 +70,26 @@ out_err:
 }
 
 /**
- * HIPD should send a HIP_MSG_SIGNALING_REQUEST_CONNECTION message to the firewall,
- * only when it is the responder to a new connection.
- * By sending a HIP_MSG_SIGNALING_REQUEST_CONNECTION with the received application
- * context to the firewall, HIPD notifies the firewall of the new connection and
- * request the local application context for this connection.
- * The local application context must be included in the R2 or UPDATE response resp.
+ * HIPD sends a HIP_MSG_SIGNALING_REQUEST_CONNECTION message to the firewall,
+ * when it receives the remote connection context or updates of it.
+ * With this message, HIPD tells HIPFW about the incoming connection
+ * and gives HIPFW the chance to check this connection against the policy.
  *
- * @note This function blocks until the firewall has sent its response with the local application context in it.
+ * @note This function blocks until the firewall has sent its response.
+ *       The response must include the same connection but may have flags changed
+ *       or content filled in.
  *
  * @param src_hit       src hit of the new incoming connection
  * @param dst_hit       dst hit of the new incoming connection
- * @param remote_ctx    the received connection context for the new incoming connection
+ * @param conn          the connection witht the incoming and outgoing connection context
+ *                      if the outgoing is empty (standard values) the firewall needs
+ *                      to look the context up and fill it in
  *
- * @return          0 on sucess, negative on error
+ * @return              0 on sucess, negative on error
   */
-int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                              const struct signaling_connection *conn) {
+int signaling_send_connection_request(const hip_hit_t *src_hit,
+                                      const hip_hit_t *dst_hit,
+                                      const struct signaling_connection *conn) {
     int err = 0;
 
     /* Allocate, build and send a message of type
@@ -104,11 +107,11 @@ int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hi
              -1, "build connection context failed \n");
 
     HIP_DEBUG("Sending connection context request for following context to HIPF:\n");
-    signaling_connection_context_print(&conn->ctx_in, "");
+    signaling_connection_print(conn, "");
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
     /* We expect the corresponding local application context in the response. */
-    HIP_IFEL(signaling_handle_connection_context(msg, NULL),
+    HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL),
              -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
 out_err:
@@ -174,7 +177,7 @@ out_err:
  *
  * @return 0 on success, negative on error
  */
-int signaling_handle_connection_context(struct hip_common *msg,
+int signaling_handle_connection_confirmation(struct hip_common *msg,
                                         UNUSED struct sockaddr_in6 *src) {
     int err                                 = 0;
     const hip_hit_t *our_hit                = NULL;
@@ -183,7 +186,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
     const struct hip_tlv_common *param      = NULL;
     hip_ha_t *entry                         = NULL;
     struct signaling_connection conn;
-    struct signaling_connection *existing_conn;
+    struct signaling_connection *existing_conn = NULL;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
@@ -199,7 +202,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
     if (!signaling_flag_check(conn.ctx_in.flags, USER_AUTHED)) {
         /* The firewall wants the user to be authenticated */
         HIP_DEBUG("Requesting user certificate chain for remote user \n");
-        signaling_send_user_auth_failed_ntf(entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
+        //signaling_send_user_auth_failed_ntf(entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
     existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id);
@@ -211,8 +214,8 @@ int signaling_handle_connection_context(struct hip_common *msg,
                  -1, "Could not copy connection context to state \n");
     }
 
-    HIP_DEBUG("Saved connection context from hipfw for R2:\n");
-    signaling_connection_context_print(&conn.ctx_out, "");
+    HIP_DEBUG("Saved connection context from hipfw to state:\n");
+    signaling_connection_print(&conn, "");
 
 out_err:
     return err;
@@ -273,10 +276,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
             HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, &conn),
                      -1, "Failed triggering first bex update.\n");
             HIP_DEBUG("Triggered UPDATE for following connection context:\n");
-            signaling_connection_context_print(&conn.ctx_out, "");
+            signaling_connection_print(&conn, "");
         } else {
             HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
-            signaling_connection_context_print(&conn.ctx_out, "");
+            signaling_connection_print(&conn, "");
         }
 
     } else {       // BEX
@@ -298,10 +301,13 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
         /* save application context to our local state */
         HIP_IFEL(signaling_hipd_state_add_connection(sig_state, &conn),
-                 -1, "Could save connection in local state\n");
+                 -1, "Could not save connection in local state\n");
+
+        HIP_DEBUG("HIPD STATE \n");
+        signaling_hipd_state_print(sig_state);
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
-        signaling_connection_context_print(&conn.ctx_out, "");
+        signaling_connection_print(&conn, "");
     }
 
 

@@ -153,7 +153,7 @@ int hip_handle_msg(struct hip_common *msg)
                  "Couldn't notify daemon of firewall presence\n");
         break;
     case HIP_MSG_SIGNALING_REQUEST_CONNECTION:
-        signaling_hipfw_handle_connection_context_request(msg);
+        signaling_hipfw_handle_connection_request(msg);
         break;
     case HIP_MSG_SIGNALING_CONFIRM_CONNECTION:
         signaling_hipfw_handle_connection_confirmation(msg);

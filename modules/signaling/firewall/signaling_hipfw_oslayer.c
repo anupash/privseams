@@ -48,13 +48,21 @@
 #include "signaling_hipfw_oslayer.h"
 #include "signaling_hipfw_user_msg.h"
 #include "signaling_cdb.h"
+#include "signaling_policy_engine.h"
 
 /* Init connection tracking data base */
 int signaling_hipfw_oslayer_init(void) {
-    int err = 0;
-    err = signaling_cdb_init();
+    if (signaling_cdb_init()) {
+        HIP_ERROR("Could not init connection tracking database \n");
+        return -1;
+    }
 
-    return err;
+    if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_local_firewall_policy.cfg")) {
+            HIP_ERROR("Could not init connection tracking database \n");
+            return -1;
+        }
+
+    return 0;
 }
 
 /*

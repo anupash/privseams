@@ -44,9 +44,11 @@ struct policy_tuple {
 };
 
 int signaling_policy_engine_init(config_t *cfg);
+int signaling_policy_engine_init_from_file(const char *const policy_file);
 
 void signaling_policy_engine_print_rule_set(const char *prefix);
 
-int signaling_policy_check(const struct tuple *tuple, const struct signaling_connection_context *conn_ctx);
+int signaling_policy_check(const struct in6_addr *const hit,
+                           const struct signaling_connection_context *const conn_ctx);
 
 #endif /* HIP_HIPFW_SIGNALING_POLICY_ENGINE_H */

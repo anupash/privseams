@@ -237,7 +237,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
     }
 
     /* Get a verdict on given hosts, user and application from the policy engine */
-    verdict = signaling_policy_check(tuple, &conn_ctx);
+    verdict = signaling_policy_check(&tuple->hip_tuple->data->src_hit, &conn_ctx);
     if(!verdict) {
         HIP_DEBUG("Connection has been rejected according to the firewall's policy\n");
     } else {

@@ -259,6 +259,28 @@ out_err:
     return NULL;
 }
 
+struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
+                                                     const struct in6_addr *remote_hit,
+                                                     const uint32_t id)
+{
+    struct slist *listitem;
+    struct signaling_connection *conn = NULL;
+    signaling_cdb_entry_t *entry = NULL;
+
+    if ((entry = signaling_cdb_entry_find(local_hit, remote_hit))) {
+        listitem = entry->connections;
+        while(listitem) {
+            conn = (struct signaling_connection *) listitem->data;
+            if(conn->id == id) {
+                return conn;
+            }
+            listitem = listitem->next;
+        }
+    } else {
+        return NULL;
+    }
+    return NULL;
+}
 
 /**
  * searches the scdb for an entry
@@ -319,6 +341,8 @@ static int signaling_cdb_update_entry(struct signaling_connection *old,
                                       const struct signaling_connection *new) {
 
     old->status = new->status;
+    old->ctx_in.flags  = new->ctx_in.flags;
+    old->ctx_out.flags = new->ctx_out.flags;
     // TODO: update application context and user context
 
     return 0;

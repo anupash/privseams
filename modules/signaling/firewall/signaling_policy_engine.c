@@ -46,13 +46,69 @@
 #include "modules/signaling/lib/signaling_x509_api.h"
 #include "signaling_policy_engine.h"
 
+/* Paths to configuration elements */
 const char *path_rules_in      = {"rules_in"};
 const char *path_rules_out     = {"rules_out"};
 const char *path_rules_fwd     = {"rules_fwd"};
 
+/* Cache for the rules set */
 struct slist *policy_tuples_in  = NULL;
 struct slist *policy_tuples_out = NULL;
 struct slist *policy_tuples_fwd = NULL;
+
+/**
+ * releases the configuration file and frees the configuration memory
+ *
+ * @param cfg   parsed configuration parameters
+ * @return      always 0
+ */
+static int release_config(config_t *cfg)
+{
+    int err = 0;
+
+    if (cfg) {
+#ifdef HAVE_LIBCONFIG
+        config_destroy(cfg);
+        free(cfg);
+#endif
+    }
+
+    return err;
+}
+
+/**
+ * Parses the firewall config-file and stores the parameters in memory
+ *
+ * @return  configuration parameters
+ */
+static config_t *read_config(const char *config_file)
+{
+    config_t *cfg = NULL;
+
+/* WORKAROUND in order to not introduce a new dependency for HIPL
+ *
+ * FIXME this should be removed once we go tiny */
+#ifdef HAVE_LIBCONFIG
+    int err       = 0;
+
+    HIP_IFEL(!(cfg = malloc(sizeof(config_t))), -1,
+             "Unable to allocate memory!\n");
+
+    // init context and read file
+    config_init(cfg);
+    HIP_IFEL(!config_read_file(cfg, config_file),
+             -1, "unable to read config file at %s \n", config_file);
+
+out_err:
+    if (err) {
+        HIP_DEBUG("Config read error: %s \n", config_error_text(cfg));
+        release_config(cfg);
+        cfg = NULL;
+    }
+#endif
+
+    return cfg;
+}
 
 static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
@@ -166,6 +222,15 @@ int signaling_policy_engine_init(config_t *cfg) {
     return err;
 }
 
+int signaling_policy_engine_init_from_file(const char *const policy_file) {
+    config_t *cfg = NULL;
+    if (!(cfg = read_config(policy_file))) {
+        HIP_ERROR("Could not parse policy file for policy engine.\n");
+        return -1;
+    }
+    return signaling_policy_engine_init(cfg);
+}
+
 static int match_tuples(const struct policy_tuple *tuple_conn, const struct policy_tuple *tuple_rule) {
     /* Check if hits match or if rule allows any hit */
     if(ipv6_addr_cmp(&tuple_rule->host_id, &in6addr_any) != 0) {
@@ -205,7 +270,8 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
  *
  * @return          1 if the connection complies with the policy, 0 otherwise
  */
-int signaling_policy_check(const struct tuple *tuple, const struct signaling_connection_context *conn_ctx) {
+int signaling_policy_check(const struct in6_addr *const hit,
+                           const struct signaling_connection_context *const conn_ctx) {
     int match = 0;
     struct policy_tuple tuple_for_conn;
     struct slist *listentry = NULL;
@@ -213,7 +279,7 @@ int signaling_policy_check(const struct tuple *tuple, const struct signaling_con
 
     /* Construct the tuple for the current context */
     memcpy(tuple_for_conn.app_id,  conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
-    memcpy(&tuple_for_conn.host_id, &tuple->hip_tuple->data->src_hit, sizeof(struct in6_addr));
+    memcpy(&tuple_for_conn.host_id, hit, sizeof(struct in6_addr));
     if(!signaling_DER_to_X509_NAME(conn_ctx->user.subject_name, conn_ctx->user.subject_name_len, &x509_subj_name)) {
         X509_NAME_oneline(x509_subj_name, tuple_for_conn.user_id, SIGNALING_USER_ID_MAX_LEN);
         tuple_for_conn.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';

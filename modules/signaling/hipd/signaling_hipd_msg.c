@@ -316,7 +316,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
      * on success this will put the local connection context into our local state */
     HIP_IFEL(signaling_init_connection_from_msg(&conn_tmp, first_update),
              -1, "Could not init connection context from first update \n");
-    signaling_send_connection_context_request(src_hit, dst_hit, &conn_tmp);
+    signaling_send_connection_request(src_hit, dst_hit, &conn_tmp);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
              -1, "Could not get connection id %d from state \n", conn_tmp.id);
 
@@ -508,11 +508,23 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection conn;
 
     /* sanity checks */
-    HIP_IFEL(packet_type != HIP_I2, -1, "Not an I2 Packet\n")
+    HIP_IFEL(packet_type != HIP_I2, -1, "Not an I2 Packet\n");
     HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
 
-    /* Try to authenticate the user */
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling module\n");
+
+    /* Check for middlebox flags on authentication of U1 and H1.
+     * If these are flagged, we flag them in the corresponding connection context,
+     * so that we know that we expect certificates.
+     * todo: define the middlebox parameters and check them */
+    if (0) {
+        signaling_flag_set(&conn.ctx_in.flags, USER_AUTH_REQUEST);
+        signaling_flag_set(&conn.ctx_in.flags, HOST_AUTH_REQUEST);
+    }
+
+    /* Try to authenticate the user and set flags accordingly */
     err = signaling_verify_user_signature(ctx->input_msg);
     switch (err) {
     case 0:
@@ -538,14 +550,22 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
         /* cache the user identity to able to identify it later on */
         HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
                  -1, " error getting user context. \n");
-        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-                 -1, "failed to retrieve state for signaling module\n");
         signaling_build_user_context(param_usr_ctx, &sig_state->user_cert_ctx.user_ctx);
     }
 
-    /* Tell the firewall/oslayer about the new connection and await it's decision */
-    signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&conn.ctx_in.flags, HOST_AUTHED);
+    HIP_DEBUG("Still here 0\n");
+    /* Add this connection to state */
+    HIP_IFEL(signaling_hipd_state_add_connection(sig_state, &conn),
+             -1, "Could not add connection from I2\n");
 
+    HIP_DEBUG("Still here 1\n");
+
+    /* Tell the firewall/oslayer about the new connection and await it's decision */
+    signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn);
+
+    HIP_DEBUG("Still here xxx\n");
 out_err:
     return err;
 }
@@ -563,8 +583,10 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection conn;
     struct signaling_connection *existing_conn               = NULL;
 
+    /* sanity checks */
     HIP_IFEL(packet_type != HIP_R2, -1, "Not an R2 Packet\n");
 
+    /* get connection and add remote context */
     HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -573,6 +595,14 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get state for existing connection\n");
     signaling_copy_connection_context(&existing_conn->ctx_in, &conn.ctx_in);
 
+    /* check for middlebox flags on user and host authentication
+     * todo: define parameters and check them */
+    if (0) {
+        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTH_REQUEST);
+        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTH_REQUEST);
+    }
+
+    /* Try to authenticate the user and set flags accordingly */
     err = signaling_verify_user_signature(ctx->input_msg);
     switch (err) {
     case 0:
@@ -589,14 +619,17 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         signaling_flag_unset(&existing_conn->ctx_in.flags, USER_AUTHED);
     }
 
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
+    signaling_flag_set(&existing_conn->ctx_out.flags, HOST_AUTHED);
+
     /* send connection context to firewall
      * TODO: wait for an answer from the firewall regarding this new remote context */
-    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+    signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
 
     /* send an I3 if connection has been accepted by the oslayer */
     // TODO
     if (1) {
-        existing_conn->status = SIGNALING_CONN_ALLOWED;
         signaling_send_I3(ctx->hadb_entry, existing_conn);
     }
 
@@ -617,15 +650,29 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 {
     int err = 0;
     struct signaling_connection conn;
+    struct signaling_connection *existing_conn = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
 
     /* sanity checks */
     HIP_IFEL(packet_type != HIP_I3, -1, "Not an I3 Packet\n")
+
+    /* get connection and add remote context */
     HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
-             -1, "Could not init connection context from R2 \n");
-    signaling_flag_set(&conn.ctx_in.flags, USER_AUTHED);
+             -1, "Could not init connection context from I3 \n");
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling ports\n");
+    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id)),
+             -1, "Could not get state for existing connection\n");
+
+    /* check for middlebox flags on user and host authentication
+     * todo: define parameters and check them */
+    if (0) {
+        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTH_REQUEST);
+        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTH_REQUEST);
+    }
 
     /* Tell the firewall/oslayer about the new connection and await it's decision */
-    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn);
+    signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
 
 out_err:
     return err;
@@ -713,7 +760,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                 signaling_add_user_certificate_chain(cert_chain);
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
-                signaling_connection_context_print(&conn->ctx_in, "");
+                signaling_connection_print(conn, "");
                 signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
 
             } else {

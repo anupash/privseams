@@ -14,7 +14,7 @@
 #include "lib/core/protodefs.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
-int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit_t *hitr,
+int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_t *hitr,
                                             const struct signaling_connection *const conn);
 
 int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
@@ -25,6 +25,6 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
 
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg);
 
-int signaling_hipfw_handle_connection_context_request(struct hip_common *msg);
+int signaling_hipfw_handle_connection_request(struct hip_common *msg);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPFW_USER_MSG_H*/

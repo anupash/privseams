@@ -16,7 +16,7 @@
 #include "signaling_x509_api.h"
 
 
-static const char *signaling_connection_status_name(int status) {
+const char *signaling_connection_status_name(int status) {
     switch (status) {
     case SIGNALING_CONN_NEW:
         return "NEW";
@@ -28,10 +28,6 @@ static const char *signaling_connection_status_name(int status) {
         return "BLOCKED";
     case SIGNALING_CONN_ALLOWED:
         return "ALLOWED";
-    case SIGNALING_CONN_USER_AUTHED:
-        return "USER AUTHED";
-    case SIGNALING_CONN_USER_UNAUTHED:
-        return "USER UNAUTHED";
     default:
         return "UNKOWN";
     }
@@ -329,8 +325,8 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        conn->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
-        conn->dst_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
+        conn->dst_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
+        conn->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
         conn->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
@@ -461,6 +457,11 @@ void signaling_flags_print(uint8_t flags, const char *const prefix) {
     HIP_DEBUG("%s  Flags: %s int = %d \n", prefix, buf, flags);
 }
 
+int signaling_flag_check_auth_complete(uint8_t flags) {
+    return (signaling_flag_check(flags, HOST_AUTHED) && !signaling_flag_check(flags, HOST_AUTH_REQUEST) &&
+            signaling_flag_check(flags, USER_AUTHED) && !signaling_flag_check(flags, USER_AUTH_REQUEST));
+}
+
 /**
  * @return 1 if flag is set, 0 otherwise
  */
@@ -485,3 +486,4 @@ void signaling_flag_set(uint8_t *flags, enum flag f) {
 void signaling_flag_unset(uint8_t *flags, enum flag f) {
     *flags &= ~(1 << (int) f);
 }
+
