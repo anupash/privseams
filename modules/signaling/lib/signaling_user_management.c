@@ -781,12 +781,16 @@ int userdb_handle_user_signature(struct hip_common *const msg,
     HIP_DEBUG("Start PERF_I2_VERIFY_USER_PUBKEY, PERF_R2_VERIFY_USER_PUBKEY\n");
     hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
 #endif
     v_err = userdb_verify_public_key(conn_ctx->userdb_entry->uname, conn_ctx->userdb_entry->pub_key);
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_I2_VERIFY_USER_PUBKEY, PERF_R2_VERIFY_USER_PUBKEY\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
 #endif
     switch (v_err) {
     case X509_V_OK:

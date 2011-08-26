@@ -79,6 +79,10 @@ enum perf_sensor {
     PERF_I2,
     PERF_I2_R2,             // time at initiator between sending I2 and receiving R2
     PERF_R2,
+    PERF_R2x1,
+    PERF_R2x2,
+    PERF_R2x3,
+    PERF_R2x4,
     PERF_R2_I3,             // time at responder between sending R2 and receiving I3
     PERF_I3,
     PERF_MBOX_I1,
@@ -124,13 +128,17 @@ enum perf_sensor {
     PERF_HIPD_I3_FINISH,     // time from receiving I3 until sending request to hipfw
     PERF_HIPFW_I3_FINISH,    // time from receiving final request until acceptance of connection
     PERF_IP6TABLES,          // time for setting up ip6table rules
+    PERF_I2_VERIFY_USER_PUBKEY,
+    PERF_R2_VERIFY_USER_PUBKEY,
     PERF_X509AC_VERIFY_CERT_CHAIN,
     PERF_X509_VERIFY_CERT_CHAIN,
     PERF_X509_VERIFY_CERT_CHAIN_RESPONDER,  // hack
     PERF_HANDLE_CERT_CHAIN_RESPONDER, // hack
     PERF_SEND_CERT_CHAIN,    // time to push out a certificate chain
+    PERF_RECEIVE_CERT_CHAIN, // time to receive certificate chain
     PERF_CERTIFICATE_EXCHANGE, // time for additional certificate exchange
     PERF_HANDLE_CERT_CHAIN,  // time to save, verify etc
+    PERF_CERT_UP_CERT_ACK,  // time after sending a chain until receiving the ack
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
     PERF_LOAD_USER_KEY,      // time to load the users key from harddrive
     PERF_LOAD_USER_PUBKEY,   // time to load the users public key from harddrive

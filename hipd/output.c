@@ -1168,6 +1168,7 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_KEY);
     hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_USER_PUBKEY);
 #endif
 
     return err;

@@ -995,8 +995,9 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2\n");
+    HIP_DEBUG("Start PERF_R2, PERF_HIPD_R2_FINISH\n");
     hip_perf_start_benchmark(perf_set, PERF_R2);
+    hip_perf_start_benchmark(perf_set, PERF_R2x1);
     hip_perf_start_benchmark(perf_set, PERF_HIPD_R2_FINISH);
 #endif
 
@@ -1043,6 +1044,7 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_R2x1);
 #endif
 
 out_err:
@@ -1070,6 +1072,11 @@ int hip_handle_r2(RVS const uint8_t packet_type,
 {
     const struct hip_locator  *locator  = NULL;
     const struct hip_esp_info *esp_info = NULL;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2x2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2x2);
+#endif
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Retransmission\n");
@@ -1159,6 +1166,10 @@ int hip_setup_ipsec_sa(UNUSED const uint8_t packet_type,
         return -1;
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2x2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2x2);
+#endif
     return 0;
 }
 
