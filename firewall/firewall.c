@@ -1756,6 +1756,7 @@ out_err:
             HIP_DEBUG("=== Verdict: allow packet ===\n");
             allow_packet(hndl, ctx->ipq_packet->packet_id);
         } else {
+            update_all_headers(ctx);
             HIP_DEBUG("=== Verdict: allow modified packet ===\n");
             allow_modified_packet(hndl, ctx->ipq_packet->packet_id,
                                   ctx->ipq_packet->data_len,

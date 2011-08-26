@@ -28,10 +28,13 @@
 
 #include <netinet/in.h>
 
+#include "firewall_defines.h"
+
 const char *addr_to_numeric(const struct in6_addr *addrp);
 struct in6_addr *numeric_to_addr(const char *num);
 int system_print(const char *command);
 int system_printf(const char *command, ...);
+void update_all_headers(struct hip_fw_context *ctx);
 
 /** The maximum command line length (that is, argument to system()) we expect. */
 #define MAX_COMMAND_LINE 196

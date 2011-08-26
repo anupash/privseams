@@ -32,7 +32,6 @@
 
 #include "lib/core/protodefs.h"
 #include "modules/midauth/lib/midauth_builder.h"
-#include "firewall_defines.h"
 
 typedef int (*midauth_handler)(struct hip_fw_context *ctx);
 
