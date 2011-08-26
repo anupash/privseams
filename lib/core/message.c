@@ -124,7 +124,7 @@ static int hip_peek_recv_total_len(int sockfd,
     struct timespec ts;
 
     ts.tv_sec  = 0;
-    ts.tv_nsec = 100000000;
+    ts.tv_nsec = 1000000;
 
     /* We're using system call here add thus resetting errno. */
     errno = 0;
