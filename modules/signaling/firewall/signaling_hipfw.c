@@ -53,6 +53,7 @@ typedef struct {
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
+#include "modules/signaling/lib/signaling_user_management.h"
 
 #include "signaling_policy_engine.h"
 #include "signaling_hipfw.h"
@@ -64,7 +65,7 @@ typedef struct {
 int do_conntrack = 0;
 
 /* Paths to configuration elements */
-const char *default_policy_file      = {"/etc/hip/signaling_firewall_policy.cfg"};
+const char *default_policy_file      = {"/usr/local/etc/hip/signaling_firewall_policy.cfg"};
 
 const char *path_do_conntracking     = {"do_conntracking"};
 
@@ -203,16 +204,33 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_i2(const struct hip_common *common, struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
+int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
 {
-    struct signaling_connection_context *conn_ctx;
+    struct signaling_connection_context *conn_ctx = NULL;
     int verdict = 1;
-    int err;
+    int err = 0;
 
     HIP_IFEL(!(conn_ctx = malloc(sizeof(struct signaling_connection_context))),
              -1, "Could not allocate new connection context\n");
     HIP_IFEL(signaling_init_connection_context_from_msg(conn_ctx, common),
              -1, "Could not init new connection context from message\n");
+
+    /* Verify the user signature in the packet. */
+    err = signaling_verify_user_signature(common);
+    switch (err) {
+    case 0:
+        HIP_DEBUG("User signature verification successful\n");
+        break;
+    case -1:
+        HIP_DEBUG("Error processing user signature, assuming \"ANY USER\"\n");
+        free(conn_ctx);
+        return 0;
+    default:
+        HIP_DEBUG("Could not verify certifcate chain:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
+        HIP_DEBUG("Requesting user's certificate chain.\n");
+        // TODO: send a notification / certificate request
+    }
 
     /* Get a verdict on given hosts, user and application from the policy engine */
     verdict = signaling_policy_check(tuple, conn_ctx);
@@ -244,7 +262,7 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_r2(const struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx)
+int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx)
 {
     return signaling_hipfw_handle_i2(common, tuple, ctx);
 }
