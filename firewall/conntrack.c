@@ -657,6 +657,7 @@ static int insert_new_connection(const struct hip_data *const data,
     connection->original.hip_tuple->data->dst_hit = data->dst_hit;
     connection->original.hip_tuple->data->src_hi  = NULL;
     connection->original.hip_tuple->data->verify  = NULL;
+    connection->original.connection_contexts     = NULL;
 
     //reply direction tuple
     connection->reply.state      = HIP_STATE_UNASSOCIATED;
@@ -674,6 +675,7 @@ static int insert_new_connection(const struct hip_data *const data,
     connection->reply.hip_tuple->data->dst_hit = data->src_hit;
     connection->reply.hip_tuple->data->src_hi  = NULL;
     connection->reply.hip_tuple->data->verify  = NULL;
+    connection->reply.connection_contexts        = NULL;
 
     //add tuples to list
     hip_list  = append_to_list(hip_list, connection->original.hip_tuple);

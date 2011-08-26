@@ -140,6 +140,8 @@ struct tuple {
     int                esp_relay;
     struct in6_addr    esp_relay_daddr;
     in_port_t          esp_relay_dport;
+    /* Signaling module */
+    struct slist      *connection_contexts;
 };
 
 struct connection {
