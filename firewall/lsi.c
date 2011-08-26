@@ -88,9 +88,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                     const hip_lsi_t *src_lsi,
                     const hip_lsi_t *dst_lsi,
                     const struct in6_addr *src_ip,
-                    const struct in6_addr *dst_ip,
-                    const uint16_t src_port,
-                    const uint16_t dst_port)
+                    const struct in6_addr *dst_ip)
 {
     struct hip_common *msg = NULL;
     int                err = 0;
@@ -152,9 +150,6 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_IPV6_ADDR failed\n");
     }
-
-    /* Include port numbers in bex trigger. port numbers are used by signaling module */
-    signaling_build_param_portinfo(msg, src_port, dst_port);
 
     HIP_DUMP_MSG(msg);
 
@@ -409,7 +404,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
     entry_peer = hip_firewall_cache_db_match(lsi_src, lsi_dst, FW_CACHE_LSI, 1);
 
     if (!entry_peer) {
-        HIP_IFEL(hip_trigger_bex(NULL, NULL, lsi_src, lsi_dst, NULL, NULL, 0, 0),
+        HIP_IFEL(hip_trigger_bex(NULL, NULL, lsi_src, lsi_dst, NULL, NULL),
                  -1, "Base Exchange Trigger failed\n");
     } else if (entry_peer->state == HIP_STATE_NONE ||
                entry_peer->state == HIP_STATE_UNASSOCIATED) {
@@ -417,7 +412,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                  &entry_peer->hit_peer,
                                  &entry_peer->lsi_our,
                                  &entry_peer->lsi_peer,
-                                 NULL, NULL, 0, 0),
+                                 NULL, NULL),
                  -1, "Base Exchange Trigger failed\n");
     } else if (entry_peer->state == HIP_STATE_ESTABLISHED) {
         HIP_IFEL(hip_reinject_packet(&entry_peer->hit_our,

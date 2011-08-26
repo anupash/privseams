@@ -38,9 +38,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                     const hip_lsi_t *src_lsi,
                     const hip_lsi_t *dst_lsi,
                     const struct in6_addr *src_ip,
-                    const struct in6_addr *dst_ip,
-                    const uint16_t src_port,
-                    const uint16_t dst_port);
+                    const struct in6_addr *dst_ip);
 
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,

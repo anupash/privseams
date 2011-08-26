@@ -166,37 +166,6 @@ out_err:
     return err;
 }
 
-/*
- * Builds and appends an appinfo parameter to the given message setting only the port fields.
- * This is used for communicating ports between hipfw and hipd. The application's name etc. remains empty,
- * since application lookup and verification is done in HIPD.
- *
- * Comment:
- *      The firewall might do the application lookup and verification, if connection tracking is based on
- *      application instead of ports (as for now). Then the application's name etc. should be filled in,
- *      so that the application does not have to repeat the lookup.
- */
-int signaling_build_param_portinfo(hip_common_t *msg, uint16_t src_port, uint16_t dst_port) {
-    struct signaling_param_app_context * par = NULL;
-    int err = 0;
-
-    HIP_IFEL(!(src_port || dst_port),
-            -1, "No port information given, omitting building of parameter HIP_PARAM_SIGNALING_APPINFO.\n");
-
-    /* TODO: need to free parameter after it has been built */
-    par = signaling_param_appinfo_init(sizeof(struct signaling_param_app_context));
-    par->src_port = htons(src_port);
-    par->dest_port = htons(dst_port);
-
-    HIP_IFEL(hip_build_param(msg, par),
-            -1, "HIP builder failed building appinfo parameter into message.\n");
-
-out_err:
-    free(par);
-    return err;
-
-}
-
 /**
  * @return zero for success, or non-zero on error
  */

@@ -232,7 +232,6 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
     uint16_t                esp_packet_len = 0;
     int                     out_ip_version = 0;
     int                     err            = 0;
-    uint16_t srcport, destport;
 
     /* we should only get HIT addresses here
      * LSI have been handled by LSI module before and converted to HITs */
@@ -255,20 +254,7 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
         /* no SADB entry -> trigger base exchange providing src and dst hit as
          * used by the application */
 
-        /* Provide source and destination ports.
-         * This is used by the signaling module and included in the user-BEX message.
-         * TODO: this should be done somewhere else (modularization) */
-        if(ctx->transport_hdr.tcp) {
-            srcport=ntohs(ctx->transport_hdr.tcp->source);
-            destport=ntohs(ctx->transport_hdr.tcp->dest);
-        } else {
-            // TODO: how can protocols like ICMP(v6) without port information be handled?
-            HIP_DEBUG("SIGNALING: Cannot get port information from packet.\n");
-            srcport = 0;
-            destport = 0;
-        }
-
-        HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL, srcport, destport),
+        HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL),
                  -1, "trigger bex\n");
 
         // as we don't buffer the packet right now, we have to drop it
