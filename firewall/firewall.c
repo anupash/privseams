@@ -1717,6 +1717,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 {
     // assume DROP
     int verdict = 0;
+    int ptype = 0;
 
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */
@@ -1774,6 +1775,55 @@ out_err:
         HIP_DEBUG("=== Verdict: drop packet ===\n");
         drop_packet(hndl, ctx->ipq_packet->packet_id);
     }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    if (ctx->packet_type == HIP_PACKET) {
+        ptype = ( (struct hip_common *) ctx->transport_hdr.hip)->type_hdr;
+    }
+    HIP_DEBUG("Packet type %d, hip type %d \n", ctx->packet_type, ptype);
+    switch (ptype) {
+    case HIP_I1:
+        HIP_DEBUG("Stop and write PERF_MBOX_I1\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I1);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I1);
+        break;
+    case HIP_R1:
+        HIP_DEBUG("Stop and write PERF_MBOX_R1, PERF_MBOX_R1_VERIFY_HOST_SIG\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R1);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
+        break;
+    case HIP_I2:
+        HIP_DEBUG("Stop and write PERF_MBOX_I2, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_PUBKEY\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I2);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
+        break;
+    case HIP_R2:
+        HIP_DEBUG("Stop and write PERF_MBOX_R2, PERF_MBOX_R2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_PUBKEY\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R2);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
+        break;
+    case 6: //HIP_I3:
+        HIP_DEBUG("Stop and write PERF_MBOX_I3, PERF_MBOX_I3_VERIFY_HOST_SIG\n\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I3);
+        hip_perf_write_benchmark(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG);
+        break;
+    default:
+        HIP_DEBUG("Stop and write PERF_MBOX_PACKET\n\n");
+        //hip_perf_stop_benchmark(perf_set, PERF_MBOX_PACKET);
+        //hip_perf_write_benchmark(perf_set, PERF_MBOX_PACKET);
+        break;
+    }
+#endif
+
+
 
     // nothing to clean up here as we re-use buf, hndl and ctx
 
@@ -1951,6 +2001,20 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_VERIFY_APPLICATION, "results/PERF_VERIFY_APPLICATION.csv");
     hip_perf_set_name(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN, "results/PERF_X509AC_VERIFY_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_IP6TABLES, "results/PERF_IP6TABLES.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I1, "results/PERF_MBOX_I1.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R1, "results/PERF_MBOX_R1.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I2, "results/PERF_MBOX_I2.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R2, "results/PERF_MBOX_R2.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I3, "results/PERF_MBOX_I3.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_PACKET, "results/PERF_MBOX_PACKET.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG, "results/PERF_MBOX_R1_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG, "results/PERF_MBOX_I2_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG, "results/PERF_MBOX_I2_VERIFY_USER_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG, "results/PERF_MBOX_R2_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG, "results/PERF_MBOX_R2_VERIFY_USER_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG, "results/PERF_MBOX_I3_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_I2_VERIFY_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_R2_VERIFY_USER_PUBKEY.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
@@ -2075,6 +2139,15 @@ int hipfw_main(const char *const rule_file,
 
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
+            #ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_PACKET);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I1);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_R1);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_R2);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I3);
+        #endif
             err = hip_fw_handle_packet(buf, h4, 4, &ctx);
         }
 

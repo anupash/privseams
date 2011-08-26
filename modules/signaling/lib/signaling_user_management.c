@@ -700,16 +700,20 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG\n");
+        HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
         hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
 #endif
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
                      -1, "ECDSA user signature did not verify correctly\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG\n");
+        HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
         hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
 #endif
         break;
     case EVP_PKEY_RSA:
@@ -773,7 +777,17 @@ int userdb_handle_user_signature(struct hip_common *const msg,
     }
 
     /* try to authenticate user's public key */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_VERIFY_USER_PUBKEY, PERF_R2_VERIFY_USER_PUBKEY\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
+#endif
     v_err = userdb_verify_public_key(conn_ctx->userdb_entry->uname, conn_ctx->userdb_entry->pub_key);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_PUBKEY, PERF_R2_VERIFY_USER_PUBKEY\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
+#endif
     switch (v_err) {
     case X509_V_OK:
         /* In this case we can tell the oslayer to add the connection, if it complies with local policy */

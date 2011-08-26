@@ -1033,6 +1033,13 @@ static int hip_fw_verify_packet(struct hip_common *const common,
     /* no need to verify that HI matches HIT in this packet, as:
      * 1.) HI -> HIT matching must be ensured when saving HI in this tuple
      * 2.) tuple is looked up corresponding to HITs */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
+#endif
+    HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_HOST_SIG\n");
+
 
     if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
                                        common)) {
@@ -1040,7 +1047,11 @@ static int hip_fw_verify_packet(struct hip_common *const common,
 
         return 0;
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
+#endif
     HIP_INFO("Signature successfully verified\n");
 
     return 1;

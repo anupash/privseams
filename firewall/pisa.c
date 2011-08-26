@@ -378,17 +378,6 @@ static int pisa_handler_i1(UNUSED struct hip_fw_context *ctx)
  */
 static int pisa_handler_r1(UNUSED struct hip_fw_context *ctx)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R1\n");
-    hip_perf_start_benchmark(perf_set, PERF_R1);
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R1\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1);
-    hip_perf_write_benchmark(perf_set, PERF_R1);
-#endif
-
     return NF_ACCEPT;
 }
 
