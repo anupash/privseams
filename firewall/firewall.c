@@ -110,6 +110,7 @@
 int accept_normal_traffic_by_default  = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
 int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int log_level                         = LOGDEBUG_NONE;
+
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 static hip_hit_t default_hit;
 /* Default LSI - do not access this directly, call hip_fw_get_default_lsi() */
@@ -136,6 +137,8 @@ int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
 int esp_speedup               = 0; /**< Enable esp speedup via dynamic iptables usage (-u option). */
+int sgnl_timeout                          = 0;
+
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
 #endif
@@ -156,6 +159,7 @@ int hip_fw_sock = 0;
  * @todo make static, no-one should read on that
  */
 static int hip_fw_async_sock = 0;
+
 
 /*----------------INIT FUNCTIONS------------------*/
 

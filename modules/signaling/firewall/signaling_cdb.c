@@ -201,7 +201,7 @@ int signaling_cdb_uninit(void)
 }
 
 /**
- * Searches for connection for a sepcific destination port inside the given entry.
+ * Searches for connection for a sepcific destination port inside the given entry that is on status waiting.
  *
  * @return < 0 for error, 0 for not found, > 0 for found.
  */
@@ -231,7 +231,7 @@ struct signaling_connection *signaling_cdb_entry_find_connection_by_dst_port(con
                 break;
             }
         }
-        if (conn->sockets[0].dst_port == dest_port) {
+        if (conn->sockets[0].dst_port == dest_port && conn->status == SIGNALING_CONN_WAITING) {
             return conn;
         }
         listitem = listitem->next;

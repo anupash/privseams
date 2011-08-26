@@ -72,9 +72,10 @@ static void hipfw_usage(void)
     puts("      -e = use esp protection extension (also sets -i)");
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
-    puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
+    puts("      -T <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
+    puts("      -t = timeout in microseconds to wait for new connections before triggering bex/update\n");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
     puts("      -w = IP address of web-based authentication server");
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
      * Otherwise may get warnings from system_print() commands. */
     setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:uvV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:uvVT:")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -160,6 +161,9 @@ int main(int argc, char *argv[])
 #endif
         case 'p':
             limit_capabilities = 1;
+            break;
+        case 'T':
+            sgnl_timeout = atoi(optarg);
             break;
         case 't':
             connection_timeout = strtoul(optarg, &end_of_number, 10);

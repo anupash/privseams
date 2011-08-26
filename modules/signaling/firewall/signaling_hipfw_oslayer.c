@@ -39,6 +39,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "firewall/firewall.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
@@ -60,8 +61,10 @@ int signaling_hipfw_oslayer_init(void) {
         return -1;
     }
 
-    new_connection_wait_timeout.tv_sec = 0;
-    new_connection_wait_timeout.tv_usec = 0;
+    new_connection_wait_timeout.tv_sec =  0;
+    new_connection_wait_timeout.tv_usec = sgnl_timeout;
+
+    HIP_DEBUG("Using timeout of %3.2f ms \n", sgnl_timeout/1000.0);
 
     if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_firewall_policy.cfg")) {
             HIP_ERROR("Could not init connection tracking database \n");
