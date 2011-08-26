@@ -2069,6 +2069,9 @@ int hipfw_main(const char *const rule_file,
         }
 
         hip_fw_conntrack_periodic_cleanup();
+
+        /* Call to periodic maintenance function of firewall signaling extension. */
+        signaling_firewall_maintenance();
     }
 
 out_err:

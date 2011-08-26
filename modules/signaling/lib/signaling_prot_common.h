@@ -37,6 +37,7 @@
 #ifndef HIP_LIB_CORE_SIGNALING_PROT_COMMON_H
 #define HIP_LIB_CORE_SIGNALING_PROT_COMMON_H
 
+#include <sys/time.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <linux/limits.h>
@@ -381,6 +382,7 @@ struct signaling_connection {
     uint32_t id;
     int status;
     int side;
+    struct timeval timestamp;
     struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
@@ -425,6 +427,8 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
                                          enum direction dir);
 int signaling_copy_connection(struct signaling_connection * const dst,
                               const struct signaling_connection * const src);
+int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
+                                       struct signaling_connection *const conn);
 
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,

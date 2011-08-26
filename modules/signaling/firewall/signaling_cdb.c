@@ -201,6 +201,47 @@ int signaling_cdb_uninit(void)
 }
 
 /**
+ * Searches for connection for a sepcific destination port inside the given entry.
+ *
+ * @return < 0 for error, 0 for not found, > 0 for found.
+ */
+struct signaling_connection *signaling_cdb_entry_find_connection_by_dst_port(const struct in6_addr *src_hit,
+                                                                             const struct in6_addr *dst_hit,
+                                                                             const uint16_t dest_port) {
+    int err = 0;
+    int i = 0;
+    struct slist *listitem;
+    struct signaling_connection *conn = NULL;
+    signaling_cdb_entry_t *entry = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!src_hit || !dst_hit, -1, "Need both source and destination hit. \n");
+
+    if (!(entry = signaling_cdb_entry_find(src_hit, dst_hit))) {
+        return NULL;
+    }
+
+    listitem = entry->connections;
+    while(listitem) {
+        conn = (struct signaling_connection *) listitem->data;
+        for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+            if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
+                break;
+            } else if (conn->sockets[i].dst_port != dest_port) {
+                break;
+            }
+        }
+        if (conn->sockets[0].dst_port == dest_port) {
+            return conn;
+        }
+        listitem = listitem->next;
+    }
+
+out_err:
+    return NULL;
+}
+
+/**
  * Searches for a pair of ports inside the given entry.
  *
  * @return < 0 for error, 0 for not found, > 0 for found.

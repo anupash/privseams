@@ -476,6 +476,29 @@ out_err:
 }
 
 /**
+ * @return -1 if the port list is full, other wise the position where the ports were added
+ */
+int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
+                                       struct signaling_connection *const conn) {
+    int i;
+    int err = -1;
+
+    /* sanity checks */
+    HIP_IFEL(!conn, -1, "Need connection context to add port pair\n");
+
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
+            conn->sockets[i].src_port = src_port;
+            conn->sockets[i].dst_port = dst_port;
+            return i;
+        }
+    }
+
+out_err:
+    return err;
+}
+
+/**
  * Initializes the given connection context by stripping all
  * connection context information found in the message.
  * Values that are not given in the  message are initialized to default.

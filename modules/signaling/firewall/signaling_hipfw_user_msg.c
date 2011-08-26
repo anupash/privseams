@@ -35,8 +35,8 @@
  *
  * @return          0 on sucess, negative on error
  */
-static int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                                   const struct signaling_connection *const conn) {
+int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                                            const struct signaling_connection *const conn) {
     int err                 = 0;
     struct hip_common *msg  = NULL;
 
@@ -53,70 +53,6 @@ static int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, con
 
     HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
     signaling_connection_print(conn, "");
-
-out_err:
-    free(msg);
-    return err;
-}
-
-
-/**
- * HIPFW sends a CONNECTION_REQUEST message to the HIPD, when it has detected a new connection attempt.
- * In this case we are the initiator.
- *
- * @return          0 on sucess, negative on error
- */
-int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                                                     uint16_t src_port, uint16_t dst_port) {
-    int err = 0;
-    struct signaling_connection new_conn;
-    struct hip_common *msg                          = NULL;
-
-    /* Build the local connection context */
-    HIP_IFEL(signaling_init_connection(&new_conn),
-             -1, "Could not init connection context\n");
-    new_conn.status               = SIGNALING_CONN_NEW;
-    new_conn.id                   = signaling_cdb_get_next_connection_id();
-    new_conn.side                 = INITIATOR;
-    // todo: [mult conns] use socket cache list here
-    new_conn.sockets[0].src_port  = src_port;
-    new_conn.sockets[0].dst_port  = dst_port;
-
-    /* Look up the local connection context */
-    if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
-        HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
-        signaling_init_application_context(&new_conn.ctx_out.app);
-    }
-    if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
-        HIP_DEBUG("Could not get user name, assuming ANY USER. \n");
-        signaling_init_user_context(&new_conn.ctx_out.user);
-    }
-
-    /* Set host and user authentication flags.
-     * These are trivially true. */
-    signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
-    signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
-
-    /* Check the local context against our local policy,
-     * block this connection if context is rejected */
-    if (signaling_policy_engine_check_and_flag(dst_hit, &new_conn.ctx_out)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn), -1, "Could not insert connection into cdb\n");
-        signaling_cdb_print();
-        return 0;
-    }
-
-    /* set local host and user to authed since we have passed policy check */
-    signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
-    signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
-
-    /* Since this is a new connection we have to add an entry to the scdb */
-    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn),
-             -1, "Could not add entry to scdb.\n");
-    signaling_cdb_print();
-
-    /* Now request the connection from the HIPD */
-    signaling_hipfw_send_connection_request(src_hit, dst_hit, &new_conn);
 
 out_err:
     free(msg);
