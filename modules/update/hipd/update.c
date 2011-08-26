@@ -60,7 +60,7 @@
 #include "update_locator.h"
 #include "update_param_handling.h"
 #include "update.h"
-#include "modules/signaling/hipd/signaling_hipd_msg.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
 
 /**
  * Prepare the creation of a new UPDATE packet.

@@ -25,4 +25,8 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
                                  struct signaling_user_context *usr_ctx);
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
 
+/* Utility functions */
+int signaling_get_update_type(struct hip_common *msg);
+
+
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

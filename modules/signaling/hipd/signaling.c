@@ -12,8 +12,6 @@
 #include "signaling_hipd_user_msg.h"
 #include "signaling_hipd_state.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
-#include "modules/signaling/lib/signaling_perf_test.h"
-
 
 #define INBOUND_CHECK_APPINFO_PRIO              29000
 #define INBOUND_CHECK_USERINFO_PRIO             29100
