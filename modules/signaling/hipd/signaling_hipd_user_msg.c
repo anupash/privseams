@@ -219,8 +219,9 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
     HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
     signaling_connection_print(conn, "");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HIPD_R2_FINISH\n");
+    HIP_DEBUG("Stop PERF_HIPD_R2_FINISH, PERF_HIPD_I3_FINISH\n");
     hip_perf_stop_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+    hip_perf_stop_benchmark(perf_set, PERF_HIPD_I3_FINISH);
     HIP_DEBUG("Start PERF_USER_COMM\n");
     hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
 #endif

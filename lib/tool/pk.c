@@ -107,10 +107,22 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
         HIP_ERROR("Digest error.\n");
         return -1;
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_HOST_SIGN, PERF_R2_HOST_SIGN, PERF_I3_HOST_SIGN\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_I3_HOST_SIGN);
+#endif
     if (impl_ecdsa_sign(sha1_digest, ecdsa, signature)) {
         HIP_ERROR("Signing error\n");
         return -1;
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_HOST_SIGN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
+#endif
 
     if (hip_get_msg_type(msg) == HIP_R1) {
         if (hip_build_param_signature2_contents(

@@ -779,13 +779,15 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R2_I3\n");
+    HIP_DEBUG("Stop PERF_R2_I3\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_I3);
+    HIP_DEBUG("Start PERF_HIPD_I3_FINISH\n");
+    hip_perf_start_benchmark(perf_set, PERF_HIPD_I3_FINISH);
 #endif
 
     /* sanity checks */
     if (packet_type == HIP_I3) {
-        HIP_DEBUG("Handling an R2\n");
+        HIP_DEBUG("Handling an I3\n");
     } else if (packet_type == HIP_UPDATE) {
         HIP_DEBUG("Handling a third bex update like I3\n");
     } else {
@@ -836,19 +838,19 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     }
 
     if (!wait_auth) {
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_NEW_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-#endif
         HIP_DEBUG("Auth completed after I3/U3 \n");
         signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG\n");
+        HIP_DEBUG("Stop PERF_NEW_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG, PERF_HIPD_I3_FINISH\n");
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
         hip_perf_write_benchmark(perf_set, PERF_R2_I3);
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
         hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_HIPD_I3_FINISH);
 #endif
+
     }
 
 out_err:
@@ -1086,6 +1088,7 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
                  -1, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
              -1, "User failed to sign packet.\n");
+
 out_err:
     return err;
 }
@@ -1136,3 +1139,4 @@ int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED con
 out_err:
     return err;
 }
+

@@ -72,7 +72,7 @@ int userdb_add_certifiate(struct userdb_certificate_context *cert_ctx,
                           const struct hip_cert *param_cert);
 int userdb_add_certificates_from_msg(const struct hip_common *const msg,
                                      struct userdb_user_entry *user);
-int userdb_add_key(struct userdb_user_entry *user,
+int userdb_add_key_from_rr(struct userdb_user_entry *user,
                    const struct hip_host_id_key_rdata *const key_rr_header,
                    const unsigned int key_rr_len,
                    const unsigned char *key_rr);

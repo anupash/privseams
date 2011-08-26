@@ -750,7 +750,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
     HIP_DEBUG("Stop PERF_R1_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
 #endif
-
 out_err:
     if (err) {
         ctx->error = err;
@@ -1175,12 +1174,12 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     int mask = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_NEW_CONN\n");
+    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
     HIP_DEBUG("Start PERF_BASE\n");
     hip_perf_start_benchmark(perf_set, PERF_BASE);
     HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
-    HIP_DEBUG("Start PERF_NEW_CONN\n");
-    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
 #endif
 
     if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
@@ -1406,14 +1405,12 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_IFEL(!(solution = hip_get_param(ctx->input_msg, HIP_PARAM_SOLUTION)),
              -ENODATA,
              "SOLUTION parameter missing from I2 packet. Dropping\n");
-
     HIP_IFEL(hip_verify_cookie(&ctx->src_addr,
                                &ctx->dst_addr,
                                ctx->input_msg,
                                solution),
              -EPROTO,
              "Cookie solution rejected. Dropping the I2 packet.\n");
-
     HIP_IFEL(hip_produce_keying_material(ctx,
                                          solution->I,
                                          solution->J),

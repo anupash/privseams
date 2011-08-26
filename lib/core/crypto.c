@@ -477,8 +477,8 @@ int impl_ecdsa_sign(const unsigned char *const digest,
 
     HIP_IFEL(!digest, -1, "NULL digest \n");
     HIP_IFEL(!signature, -1, "NULL signature output destination \n");
-    HIP_IFEL(!EC_KEY_check_key(ecdsa),
-             -1, "Check of signing key failed. \n");
+    //HIP_IFEL(!EC_KEY_check_key(ecdsa),
+    //         -1, "Check of signing key failed. \n");
 
     sig_size = ECDSA_size(ecdsa);
     memset(signature, 0, sig_size);
@@ -569,6 +569,11 @@ int impl_ecdsa_verify(const unsigned char *const digest,
     hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
 #endif
     err = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+    hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);

@@ -142,7 +142,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
 
-        HIP_DEBUG("Write PERF_NEW_CONN,PERF_HIPFW_R2_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+        HIP_DEBUG("Write PERF_NEW_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
@@ -152,6 +152,8 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
         hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
+        hip_perf_write_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
+
 #endif
 
     HIP_DEBUG("Sent connection confirmation to HIPD: \n");
@@ -367,9 +369,9 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     struct signaling_connection *existing_conn      = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HIPFW_REQ3\n");
+    HIP_DEBUG("Start PERF_HIPFW_REQ3, PERF_HIPFW_I3_FINISH\n");
     hip_perf_start_benchmark(perf_set, PERF_HIPFW_REQ3);
-
+    hip_perf_start_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
 #endif
     /* Get the connection state */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
@@ -391,8 +393,8 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_NEW_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
 #endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");

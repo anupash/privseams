@@ -594,12 +594,14 @@ out_err:
     hip_perf_start_benchmark(perf_set, PERF_I2_R2);
 
     /* The packet is on the wire, so write all tests now.. */
-    HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN\n");
+    HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_DESERIALIZE_ECDSA\n");
     hip_perf_write_benchmark(perf_set, PERF_R1);
     hip_perf_write_benchmark(perf_set, PERF_I1_R1);
     hip_perf_write_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
     hip_perf_write_benchmark(perf_set, PERF_I2_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_I2_USER_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_DESERIALIZE_ECDSA);
+    hip_perf_write_benchmark(perf_set, PERF_SERIALIZE_ECDSA);
 #endif
     return err;
 }
@@ -985,19 +987,10 @@ int hip_hmac2_and_sign(UNUSED const uint8_t packet_type,
         HIP_ERROR("Failed to build parameter HMAC2 contents.\n");
         return -1;
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Start PERF_R2_HOST_SIGN\n");
-     hip_perf_start_benchmark(perf_set, PERF_R2_HOST_SIGN);
-#endif
     if (ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
         HIP_ERROR("Could not sign R2. Failing\n");
         return -EINVAL;
     }
-#ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Stop PERF_R2_HOST_SIGN\n");
-     hip_perf_stop_benchmark(perf_set, PERF_R2_HOST_SIGN);
-#endif
 
     return 0;
 }
@@ -1112,10 +1105,13 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
 {
     int err = 0;
 
-    err = hip_send_pkt(&ctx->dst_addr, &ctx->src_addr,
-                       ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0,
-                       ctx->hadb_entry->peer_udp_port, ctx->output_msg,
-                       ctx->hadb_entry, 1);
+    err = hip_send_pkt(&ctx->dst_addr,
+                       &ctx->src_addr,
+                       (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ctx->hadb_entry->peer_udp_port,
+                       ctx->output_msg,
+                       ctx->hadb_entry,
+                       1);
 
     HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
@@ -1128,7 +1124,7 @@ out_err:
 
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HOST_SIG, PERF_VERIFY_USER_SIG"
-              "PERF_I3_HOST_SIGN, PERF_I2_VERIFY_USER_SIG, PERF_R2_HOST_SIGN, PERF_R2_USER_SIGN\n");
+              "PERF_I3_HOST_SIGN, PERF_I2_VERIFY_USER_SIG, PERF_R2_HOST_SIGN, PERF_R2_USER_SIGN, PERF_DESERIALIZE_ECDSA, PERF_SERIALIZE_ECDSA\n");
     hip_perf_write_benchmark(perf_set, PERF_I2);
     hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
     hip_perf_write_benchmark(perf_set, PERF_R1_I2);
@@ -1139,6 +1135,8 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_DESERIALIZE_ECDSA);
+    hip_perf_write_benchmark(perf_set, PERF_SERIALIZE_ECDSA);
 #endif
 
     return err;

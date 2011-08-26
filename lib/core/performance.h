@@ -95,6 +95,8 @@ enum perf_sensor {
     PERF_HIPFW_REQ3,         // test 4.3
     PERF_HIPD_R2_FINISH,     // time from receiving R2 until sending request to hipfw
     PERF_HIPFW_R2_FINISH,    // time from receiving final request until acceptance of connection
+    PERF_HIPD_I3_FINISH,     // time from receiving I3 until sending request to hipfw
+    PERF_HIPFW_I3_FINISH,    // time from receiving final request until acceptance of connection
     PERF_IP6TABLES,          // time for setting up ip6table rules
     PERF_X509AC_VERIFY_CERT_CHAIN,
     PERF_X509_VERIFY_CERT_CHAIN,
@@ -117,7 +119,13 @@ enum perf_sensor {
     PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2
     PERF_I3_HOST_SIGN,       // time to generate host signature on I3
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
+    PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
+    PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
+    PERF_SERIALIZE_ECDSA,    // time to serialize an ecdsa key
+    PERF_DESERIALIZE_ECDSA,  // time to deserialize an ecdsa key
+    PERF_TEST1,              // variable test
+    PERF_TEST2,              // variable test
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

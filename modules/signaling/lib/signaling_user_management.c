@@ -218,7 +218,7 @@ struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *u
     new->flags = 0;
     new->uid = user->uid;
     if (user->key_rr_len > 0) {
-        userdb_add_key(new, &user->rdata, user->key_rr_len, user->pkey);
+        userdb_add_key_from_rr(new, &user->rdata, user->key_rr_len, user->pkey);
     } else {
         new->pub_key = NULL;
     }
@@ -340,7 +340,7 @@ struct userdb_certificate_context *userdb_get_certificate_context_by_key(const s
  * @param key_rr        the resource record for the public key
  * @param key_rr_len    the length of the key resource record (without the length of the key_rr_header)
  */
-int userdb_add_key(struct userdb_user_entry *user,
+int userdb_add_key_from_rr(struct userdb_user_entry *user,
                    const struct hip_host_id_key_rdata *const key_rr_header,
                    const unsigned int key_rr_len,
                    const unsigned char *key_rr)
@@ -361,6 +361,7 @@ int userdb_add_key(struct userdb_user_entry *user,
 out_err:
     return err;
 }
+
 
 /**
  * @return the id of the next expected certificate, 0 if chain is complete

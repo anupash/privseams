@@ -230,7 +230,7 @@ int signaling_build_param_user_context(hip_common_t *msg,
         HIP_DEBUG("GOT keyy rr of length %d\n", user_ctx->key_rr_len);
         memcpy(user_ctx->pkey, key_rr, user_ctx->key_rr_len);
         // set key in userdb
-        userdb_add_key(db_entry, &user_ctx->rdata, user_ctx->key_rr_len, key_rr);
+        db_entry->pub_key = user_pkey;
 
         // necessary because any_key_to_rr returns only the length of the key rrwithout the header
         user_ctx->key_rr_len += sizeof(struct hip_host_id_key_rdata);
