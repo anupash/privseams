@@ -670,6 +670,12 @@ int hip_check_r1(RVS const uint8_t packet_type,
     const char                  *str   = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I1_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1_R1);
+    hip_perf_write_benchmark(perf_set, PERF_I1_R1);
+#endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
     hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
@@ -987,6 +993,13 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
 {
     int      err  = 0;
     uint16_t mask = 0;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I2_R2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_R2);
+    hip_perf_write_benchmark(perf_set, PERF_I2_R2);
+#endif
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_R2);
@@ -1319,6 +1332,13 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     const struct hip_hip_transform *hip_transform  = NULL;
     struct hip_host_id             *host_id_in_enc = NULL;
     struct hip_host_id              host_id;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R1_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1_I2);
+    hip_perf_write_benchmark(perf_set, PERF_R1_I2);
+#endif
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);

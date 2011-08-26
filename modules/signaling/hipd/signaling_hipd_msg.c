@@ -785,6 +785,12 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state *sig_state = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R2_I3\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_I3);
+    hip_perf_write_benchmark(perf_set, PERF_R2_I3);
+#endif
+
     /* sanity checks */
     if (packet_type == HIP_I3) {
         HIP_DEBUG("Handling an R2\n");

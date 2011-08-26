@@ -235,6 +235,11 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
     hip_perf_write_benchmark(perf_set, PERF_I1_SEND);
 #endif
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I1_R1\n");
+    hip_perf_start_benchmark(perf_set, PERF_I1_R1);
+#endif
+
 out_err:
     free(i1);
     return err;
@@ -580,6 +585,11 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_R1);
     hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_R2\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_R2);
+#endif
     return err;
 }
 
@@ -900,6 +910,12 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_I1);
     hip_perf_write_benchmark(perf_set, PERF_I1);
 #endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R1_I2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1_I2);
+#endif
+
     free(r1pkt);
     free(local_plain_hit);
     return err;
@@ -1091,6 +1107,10 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_I2);
 #endif
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_I3\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_I3);
+#endif
     return err;
 }
 

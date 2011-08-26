@@ -65,9 +65,13 @@ void hip_perf_destroy(struct perf_set *perf_set);
 
 enum perf_sensor {
     PERF_I1,
+    PERF_I1_R1,             // time at initiator between sending I1 and receiving R1
     PERF_R1,
+    PERF_R1_I2,             // time at responder between sending R1 and receiving I2
     PERF_I2,
+    PERF_I2_R2,             // time at initiator between sending I2 and receiving R2
     PERF_R2,
+    PERF_R2_I3,             // time at responder between sending R2 and receiving I3
     PERF_UPDATE,
     PERF_VERIFY,
     PERF_BASE,
@@ -79,6 +83,7 @@ enum perf_sensor {
     PERF_RSA_VERIFY_IMPL,
     PERF_ECDSA_VERIFY_IMPL,  // test 2.1.1
 
+    PERF_PERF,               // time to stop and write a perf set
     PERF_NEW_CONN,           // test 0
     PERF_CONN_REQUEST,       // test 1
     PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)

@@ -291,9 +291,13 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_STARTUP, "results/PERF_STARTUP.csv");
     hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
+    hip_perf_set_name(perf_set, PERF_I1_R1, "results/PERF_I1_R1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
+    hip_perf_set_name(perf_set, PERF_R1_I2, "results/PERF_R1_I2.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
+    hip_perf_set_name(perf_set, PERF_I2_R2, "results/PERF_I2_R2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
+    hip_perf_set_name(perf_set, PERF_R2_I3, "results/PERF_R2_I3.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE, "results/PERF_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_DH_CREATE, "results/PERF_DH_CREATE.csv");
     hip_perf_set_name(perf_set, PERF_SIGN, "results/PERF_SIGN.csv");
@@ -315,6 +319,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_TRIGGER_CONN, "results/PERF_TRIGGER_CONN.csv");
     hip_perf_set_name(perf_set, PERF_USER_COMM, "results/PERF_USER_COMM.csv");
     hip_perf_set_name(perf_set, PERF_NEW_CONN, "results/PERF_NEW_CONN.csv");
+    hip_perf_set_name(perf_set, PERF_PERF, "results/PERF_PERF.csv");
     hip_perf_open(perf_set);
 
     HIP_DEBUG("Start PERF_STARTUP\n");

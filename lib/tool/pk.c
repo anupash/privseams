@@ -232,9 +232,16 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
 #endif
         err = impl_ecdsa_verify(sha1_digest, peer_pub, sig->signature);
 #ifdef CONFIG_HIP_PERFORMANCE
+    hip_perf_start_benchmark(perf_set, PERF_PERF);
+#endif
+#ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
     hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
+#ifdef CONFIG_HIP_PERFORMANCE
+    hip_perf_stop_benchmark(perf_set, PERF_PERF);
+    hip_perf_write_benchmark(perf_set, PERF_PERF);
 #endif
     } else {
         err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
