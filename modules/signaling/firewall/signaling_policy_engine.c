@@ -188,9 +188,9 @@ int signaling_policy_check(const struct tuple *tuple, const struct signaling_con
     X509_NAME *x509_subj_name;
 
     /* Construct the tuple for the current context */
-    memcpy(tuple_for_conn.app_id,  conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
+    memcpy(tuple_for_conn.app_id,  conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
     memcpy(&tuple_for_conn.host_id, &tuple->hip_tuple->data->src_hit, sizeof(struct in6_addr));
-    if(!signaling_DER_to_X509_NAME(conn_ctx->user_ctx.subject_name, conn_ctx->user_ctx.subject_name_len, &x509_subj_name)) {
+    if(!signaling_DER_to_X509_NAME(conn_ctx->user.subject_name, conn_ctx->user.subject_name_len, &x509_subj_name)) {
         X509_NAME_oneline(x509_subj_name, tuple_for_conn.user_id, SIGNALING_USER_ID_MAX_LEN);
         tuple_for_conn.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
     } else {

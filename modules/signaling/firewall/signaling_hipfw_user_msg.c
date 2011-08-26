@@ -31,7 +31,7 @@
  * @return          0 on sucess, negative on error
  */
 int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                            const struct signaling_connection_context *conn_ctx) {
+                                            const struct signaling_connection *const conn) {
     int err                 = 0;
     struct hip_common *msg  = NULL;
 
@@ -42,12 +42,12 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
-             -1, "build connection context failed \n");
+    HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build connection parameter failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
-    signaling_connection_context_print(conn_ctx, "");
+    signaling_connection_context_print(&conn->ctx_out, "");
 
 out_err:
     free(msg);
@@ -64,25 +64,27 @@ out_err:
 int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit_t *dst_hit,
                                                      uint16_t src_port, uint16_t dst_port) {
     int err = 0;
-    struct signaling_connection_context  new_ctx;
+    struct signaling_connection new_conn;
     struct hip_common *msg                          = NULL;
 
     /* Build the local connection context */
-    HIP_IFEL(signaling_init_connection_context(&new_ctx),
+    HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
+    new_conn.src_port = src_port;
+    new_conn.dst_port = dst_port;
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user),
              -1, "Could not get user name \n");
-    new_ctx.connection_status = SIGNALING_CONN_NEW;
-    new_ctx.id                = signaling_cdb_get_next_connection_id();
+    new_conn.status            = SIGNALING_CONN_NEW;
+    new_conn.id                = signaling_cdb_get_next_connection_id();
 
     /* Since this is a new connection we have to add an entry to the scdb */
-    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_ctx),
+    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn),
              -1, "Could not add entry to scdb.\n");
 
     /* Now request the connection from the HIPD */
-    signaling_hipfw_send_connection_request(src_hit, dst_hit, &new_ctx);
+    signaling_hipfw_send_connection_request(src_hit, dst_hit, &new_conn);
 
 out_err:
     free(msg);
@@ -101,7 +103,7 @@ out_err:
  * @return          0 on success, negative on error
  */
 int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit_t *hitr,
-                                            const struct signaling_connection_context *ctx)
+                                            const struct signaling_connection *const conn)
 {
     int err                 = 0;
     struct hip_common *msg  = NULL;
@@ -113,14 +115,14 @@ int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, ctx,
-                                      HIP_PARAM_SIGNALING_CONNECTION_CONTEXT,
-                                      sizeof(struct signaling_connection_context)),
+    HIP_IFEL(hip_build_param_contents(msg, conn,
+                                      HIP_PARAM_SIGNALING_CONNECTION,
+                                      sizeof(struct signaling_connection)),
              -1, "build application context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection context to HIPD for use in R2: \n");
-    signaling_connection_context_print(ctx, "");
+    signaling_connection_context_print(&conn->ctx_out, "");
 
 out_err:
     free(msg);
@@ -142,7 +144,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     const struct hip_tlv_common *param          = NULL;
     const hip_hit_t *src_hit                    = NULL;
     const hip_hit_t *dst_hit                    = NULL;
-    struct signaling_connection_context ctx;
+    struct signaling_connection conn;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -152,16 +154,17 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
-            -1, "No HIP_PARAM_SIGNALING_CONNECTION_CONTEXT parameter in message.\n");
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+            -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1));
+    signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
     // todo: handle unauthed case porperly
-    if (ctx.connection_status == SIGNALING_CONN_USER_AUTHED || ctx.connection_status == SIGNALING_CONN_USER_UNAUTHED) {
-        ctx.connection_status = SIGNALING_CONN_ALLOWED;
+    if (conn.ctx_in.status == SIGNALING_CONN_USER_AUTHED || conn.ctx_in.status == SIGNALING_CONN_USER_UNAUTHED) {
+        conn.status = SIGNALING_CONN_ALLOWED;
     }
-    signaling_cdb_add(src_hit, dst_hit, &ctx);
+
+    signaling_cdb_add(src_hit, dst_hit, &conn);
     signaling_cdb_print();
 
 out_err:
@@ -186,24 +189,25 @@ out_err:
  */
 int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     int err                                         = 0;
-    const struct signaling_connection_context *remote_ctx    = NULL;
     const struct hip_tlv_common *param              = NULL;
     const hip_hit_t *hits                           = NULL;
     const hip_hit_t *hitr                           = NULL;
-    struct signaling_connection_context new_ctx;
+    const struct signaling_connection *conn         = NULL;
+    struct signaling_connection new_conn;
+
     uint16_t src_port , dst_port;
 
     /* Get HITs and Ports from the message */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
-             -1, "Could not get application context parameter from connection request \n");
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+             -1, "Could not get connection parameter from connection request \n");
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    remote_ctx = (const struct signaling_connection_context *) (param + 1);
-    dst_port = remote_ctx->src_port;
-    src_port = remote_ctx->dest_port;
+    conn = (const struct signaling_connection *) (param + 1);
+    dst_port = conn->src_port;
+    src_port = conn->dst_port;
 
     HIP_DEBUG("Received connection context request for following context: \n");
-    signaling_connection_context_print(remote_ctx, "");
+    signaling_connection_context_print(&conn->ctx_in, "");
 
     /* a) check with local policy if we want to allow the remote connection context
      *    here we only assume that user authentication is required always
@@ -211,35 +215,24 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
 
 
     /* b) build the local connection context */
-    HIP_IFEL(signaling_init_connection_context(&new_ctx),
+    HIP_IFEL(signaling_copy_connection(&new_conn, conn),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user),
              -1, "Could not get user name \n");
-    new_ctx.id = remote_ctx->id;
 
     /* c) check with local policy if we want to allow the local connection context
      *    if we allow the connection, add it right away, or wait for user auth confirmation.
      *    TODO: hand local context to some policy decision engine
      *    */
 
-    if (remote_ctx->connection_status == SIGNALING_CONN_USER_UNAUTHED) {
-        new_ctx.connection_status = SIGNALING_CONN_PROCESSING;
-        signaling_cdb_add(hits, hitr, &new_ctx);
-        signaling_cdb_print();
-        /* tell the HIPD that user auth is required (hack) */
-        new_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
-    } else {
-        /* tell the HIPD that the connection has been accepted by local policy
-         * and add it to the connection tracking DB */
-        new_ctx.connection_status = SIGNALING_CONN_PROCESSING;
-        signaling_cdb_add(hits, hitr, &new_ctx);
-        signaling_cdb_print();
-    }
+    new_conn.status = SIGNALING_CONN_PROCESSING;
+    signaling_cdb_add(hits, hitr, &new_conn);
+    signaling_cdb_print();
 
     /* d) send answer to HIPD */
-    signaling_hipfw_send_connection_context(hits, hitr, &new_ctx);
+    signaling_hipfw_send_connection_context(hits, hitr, &new_conn);
 
 out_err:
     return err;

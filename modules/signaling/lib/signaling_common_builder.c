@@ -132,21 +132,21 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_connection_identifier(hip_common_t *msg, const struct signaling_connection_context *ctx)
+int signaling_build_param_connection_identifier(hip_common_t *msg, const struct signaling_connection *conn)
 {
     int err = 0;
     struct signaling_param_connection_identifier conn_id;
 
     /* Sanity checks */
-    HIP_IFEL(msg == NULL, -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(ctx == NULL, -1, "Got no context to built the parameter from.\n");
+    HIP_IFEL(msg  == NULL, -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(conn == NULL, -1, "Got no context to built the parameter from.\n");
 
     hip_set_param_type((struct hip_tlv_common *) &conn_id, HIP_PARAM_SIGNALING_CONNECTION_ID);
     hip_set_param_contents_len((struct hip_tlv_common *) &conn_id,
                                sizeof(struct signaling_param_connection_identifier) - sizeof(struct hip_tlv_common));
-    conn_id.id       = htonl(ctx->id);
-    conn_id.src_port = htons(ctx->src_port);
-    conn_id.dst_port = htons(ctx->dest_port);
+    conn_id.id       = htonl(conn->id);
+    conn_id.src_port = htons(conn->src_port);
+    conn_id.dst_port = htons(conn->dst_port);
     HIP_IFEL(hip_build_param(msg, &conn_id),
              -1, "Failed to append connection identifier parameter to message.\n");
 

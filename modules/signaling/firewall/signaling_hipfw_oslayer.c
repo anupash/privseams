@@ -66,7 +66,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     int found = 0;
     int src_port, dest_port;
     signaling_cdb_entry_t *entry;
-    struct signaling_connection_context *app_ctx;
+    struct signaling_connection *conn;
 
 
     /* Get ports from tcp header */
@@ -90,12 +90,12 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     }
 
     /* If there is an association, is the connection known? */
-    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &app_ctx);
+    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &conn);
     if(found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;
     } else if(found > 0) {
-        switch (app_ctx->connection_status) {
+        switch (conn->status) {
         case SIGNALING_CONN_ALLOWED:
             HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
             verdict = VERDICT_ACCEPT;
@@ -114,7 +114,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
             break;
         case SIGNALING_CONN_NEW:
         default:
-            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", app_ctx->connection_status);
+            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", conn->status);
             verdict = VERDICT_DROP;
         }
     } else {

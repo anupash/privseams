@@ -15,10 +15,10 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit_t *hitr,
-                                            const struct signaling_connection_context *ctx);
+                                            const struct signaling_connection *const conn);
 
 int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                            const struct signaling_connection_context *conn_ctx);
+                                            const struct signaling_connection *const conn);
 
 int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit_t *dst_hit,
                                             uint16_t src_port, uint16_t dst_port);

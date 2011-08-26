@@ -44,7 +44,7 @@
 typedef struct signaling_cdb_entry {
     hip_hit_t local_hit;
     hip_hit_t remote_hit;
-    struct slist * connection_contexts;
+    struct slist * connections;
 } signaling_cdb_entry_t;
 
 int signaling_cdb_init(void);
@@ -52,16 +52,16 @@ int signaling_cdb_uninit(void);
 
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
-                      struct signaling_connection_context *ctx);
+                      struct signaling_connection *conn);
 
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
                                                 const struct in6_addr *remote_hit);
 
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
                                         signaling_cdb_entry_t * entry,
-                                        struct signaling_connection_context **ret);
+                                        struct signaling_connection **ret);
 
-struct signaling_connection_context *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
+struct signaling_connection *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
                                                                const struct in6_addr *dst_hit);
 
 uint32_t signaling_cdb_get_next_connection_id(void);

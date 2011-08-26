@@ -334,16 +334,14 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     X509AC *ac = NULL;
     struct system_app_context sys_ctx;
 
-    ctx->src_port = src_port;
-    ctx->dest_port = dst_port;
     HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(src_port, dst_port, &sys_ctx),
              -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", src_port, dst_port);
-    ctx->user_ctx.uid = sys_ctx.uid;
+    ctx->user.uid = sys_ctx.uid;
     HIP_IFEL(signaling_verify_application(sys_ctx.path),
              -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
     HIP_IFEL(!(ac = get_application_attribute_certificate(sys_ctx.path)),
             -1, "Could not open application certificate.");
-    HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app_ctx),
+    HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app),
              -1, "Could not build application context for application: %s.\n", sys_ctx.path);
 
 out_err:

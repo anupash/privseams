@@ -51,14 +51,18 @@
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
 #define HIP_PARAM_SIGNALING_APPINFO             5002
 #define HIP_PARAM_SIGNALING_USERINFO            5004
-#define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5006
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
+
+/* Parameters for internal communication */
+#define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5006
+#define HIP_PARAM_SIGNALING_CONNECTION          5008
 
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE              33001
 #define SIGNALING_SECOND_BEX_UPDATE             33002
-#define SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE  33003
-#define SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE 33004
+#define SIGNALING_THIRD_BEX_UPDATE              33003
+#define SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE  33010
+#define SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE 33011
 
 /* User message types (adds to icomm.h)*/
 #define HIP_MSG_SIGNALING_REQUEST_CONNECTION        138
@@ -89,6 +93,12 @@
 
 /* Signaling notification message types */
 #define SIGNALING_USER_AUTH_FAILED                  124
+
+/* Direction for connections */
+enum direction {
+    IN,
+    OUT
+};
 
 /* ------------------------------------------------------------------------------------
  *
@@ -262,21 +272,37 @@ struct signaling_user_context {
     unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
 };
 
+
 /*
-     Internal representation of context information for a connection.
-     This structure should be used whenever state needs to be kept about a connection.
-
-     Use signaling_init_connection_context() to initialize this structure to standard values.
-
-     All integers are in host-byte-order.
+ *   Internal representation of context information for a unidirectional connection.
+ *
+ *   Use signaling_init_connection_context() to initialize this structure to standard values.
+ *
+ *   All integers are in host-byte-order.
 */
 struct signaling_connection_context {
+    uint8_t  flags;
+    uint8_t  direction;
+    uint16_t status;
+    struct signaling_application_context app;
+    struct signaling_user_context user;
+};
+
+/**
+ *   Internal representation of context information for a bidirectional connection.
+ *   This structure should be used whenever state needs to be kept about a connection.
+ *
+ *   Use signaling_init_connection() to initialize this structure to standard values.
+ *
+ *   All integers are in host-byte-order.
+ */
+struct signaling_connection {
     uint32_t id;
+    uint16_t status;
     uint16_t src_port;
-    uint16_t dest_port;
-    int connection_status;
-    struct signaling_application_context app_ctx;
-    struct signaling_user_context user_ctx;
+    uint16_t dst_port;
+    struct signaling_connection_context ctx_out;
+    struct signaling_connection_context ctx_in;
 };
 
 /* ------------------------------------------------------------------------------------
@@ -290,20 +316,30 @@ void signaling_param_user_context_print(const struct signaling_param_user_contex
 void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx);
 void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id);
 
-void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
+void signaling_application_context_print(const struct signaling_application_context *const app_ctx,
                                          const char *prefix, const int header);
-void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
+void signaling_user_context_print(const struct signaling_user_context *const user_ctx,
                                   const char * prefix, const int header);
-void signaling_connection_context_print(const struct signaling_connection_context * const ctx, const char * prefix);
+void signaling_connection_context_print(const struct signaling_connection_context *const ctx, const char * prefix);
+void signaling_connection_print(const struct signaling_connection *const conn, const char * prefix);
 
 /* Initalization of internal structures */
 int signaling_init_user_context(struct signaling_user_context * const user_ctx);
+
 int signaling_init_application_context(struct signaling_application_context * const app_ctx);
-int signaling_init_connection_context(struct signaling_connection_context * const ctx);
+
+int signaling_init_connection_context(struct signaling_connection_context *const ctx,
+                                      enum direction dir);
 int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
                                                const struct hip_common * const msg);
 int signaling_copy_connection_context(struct signaling_connection_context * const dst,
                                       const struct signaling_connection_context * const src);
+
+int signaling_init_connection(struct signaling_connection *const conn);
+int signaling_init_connection_from_msg(struct signaling_connection *const conn,
+                                       const hip_common_t * const msg);
+int signaling_copy_connection(struct signaling_connection * const dst,
+                              const struct signaling_connection * const src);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

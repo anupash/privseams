@@ -126,7 +126,7 @@ static IMPLEMENT_LHASH_COMP_FN(signaling_cdb_entries, signaling_cdb_entry_t)
 static void signaling_cdb_entry_free(signaling_cdb_entry_t *entry)
 {
     struct slist *element;
-    element = entry->connection_contexts;
+    element = entry->connections;
     while (element) {
         free(element->data);
         element = element->next;
@@ -207,21 +207,21 @@ int signaling_cdb_uninit(void)
  */
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
                                         signaling_cdb_entry_t * entry,
-                                        struct signaling_connection_context **ret) {
+                                        struct signaling_connection **ret) {
     int err = 0;
     struct slist *listitem;
-    struct signaling_connection_context *ctx = NULL;
+    struct signaling_connection *conn = NULL;
 
     HIP_IFEL(entry == NULL,
             -1, "Entry is null.\n" );
 
-    listitem = entry->connection_contexts;
+    listitem = entry->connections;
     while(listitem) {
-        ctx = (struct signaling_connection_context *) listitem->data;
-        if((src_port == ctx->src_port && dest_port == ctx->dest_port) ||
-           (dest_port == ctx->src_port && src_port == ctx->dest_port)) {
+        conn = (struct signaling_connection *) listitem->data;
+        if((src_port  == conn->src_port && dest_port == conn->dst_port) ||
+           (dest_port == conn->src_port && src_port  == conn->dst_port)) {
             err = 1;
-            *ret = ctx;
+            *ret = conn;
             goto out_err;
         }
         listitem = listitem->next;
@@ -236,21 +236,21 @@ out_err:
  *
  * @return < 0 for error, 0 for not found, > 0 for found.
  */
-struct signaling_connection_context *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
-                                                               const struct in6_addr *dst_hit) {
+struct signaling_connection *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
+                                                       const struct in6_addr *dst_hit) {
     int err                                  = 0;
     struct slist *listitem                   = NULL;
     signaling_cdb_entry_t *entry             = NULL;
-    struct signaling_connection_context *ctx = NULL;
+    struct signaling_connection *conn        = NULL;
 
     HIP_IFEL(!(entry = signaling_cdb_entry_find(src_hit, dst_hit)),
              -1, "No CDB entry for given HIT Pair\n");
 
-    listitem = entry->connection_contexts;
+    listitem = entry->connections;
     while(listitem) {
-        ctx = (struct signaling_connection_context *) listitem->data;
-        if (ctx->connection_status == SIGNALING_CONN_WAITING) {
-            return ctx;
+        conn = (struct signaling_connection *) listitem->data;
+        if (conn->status == SIGNALING_CONN_WAITING) {
+            return conn;
         }
         listitem = listitem->next;
     }
@@ -301,7 +301,7 @@ static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *loca
              -1, "Could not allocate memory for new scdb entry \n");
     memcpy(&entry->local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
-    entry->connection_contexts = NULL;
+    entry->connections = NULL;
 
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
@@ -315,9 +315,12 @@ out_err:
 /*
  * Updates all fields in old with values from new.
  */
-static int signaling_cdb_update_entry(struct signaling_connection_context *old,
-                                      const struct signaling_connection_context *new) {
-    old->connection_status = new->connection_status;
+static int signaling_cdb_update_entry(struct signaling_connection *old,
+                                      const struct signaling_connection *new) {
+
+    old->status = new->status;
+    old->ctx_in.status = new->ctx_in.status;
+    old->ctx_out.status = new->ctx_out.status;
     // TODO: update application context and user context
 
     return 0;
@@ -333,13 +336,13 @@ static int signaling_cdb_update_entry(struct signaling_connection_context *old,
  * */
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
-                      struct signaling_connection_context *ctx)
+                      struct signaling_connection *conn)
 {
     int err = 0;
     int found;
     signaling_cdb_entry_t *entry = NULL;
-    struct signaling_connection_context *new_conn_ctx;
-    struct signaling_connection_context *existing_app_ctx;
+    struct signaling_connection *new_conn;
+    struct signaling_connection *existing_conn;
 
     HIP_IFEL(!local_hit || !remote_hit,
              -1, "Got local or remote hit NULL\n");
@@ -352,14 +355,14 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    found = signaling_cdb_entry_find_connection(ctx->src_port, ctx->dest_port, entry, &existing_app_ctx);
+    found = signaling_cdb_entry_find_connection(conn->src_port, conn->dst_port, entry, &existing_conn);
     if (found > 0) {
-        signaling_cdb_update_entry(existing_app_ctx, ctx);
+        signaling_cdb_update_entry(existing_conn, conn);
     } else {
-        new_conn_ctx = malloc(sizeof(struct signaling_connection_context));
-        signaling_copy_connection_context(new_conn_ctx, ctx);
-        entry->connection_contexts = append_to_slist(entry->connection_contexts, new_conn_ctx);
-        next_conn_id = new_conn_ctx->id + 1;
+        new_conn = malloc(sizeof(struct signaling_connection));
+        signaling_copy_connection(new_conn, conn);
+        entry->connections = append_to_slist(entry->connections, new_conn);
+        next_conn_id = new_conn->id + 1;
     }
 
 out_err:
@@ -375,19 +378,19 @@ uint32_t signaling_cdb_get_next_connection_id(void) {
  */
 static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     struct slist *listentry;
-    struct signaling_connection_context *ctx;
+    struct signaling_connection *conn;
 
     HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
     HIP_DEBUG_HIT("\tLocal Hit:\t", &entry->local_hit);
     HIP_DEBUG_HIT("\tRemote Hit:\t", &entry->remote_hit);
 
-    HIP_DEBUG("\tApplication contexts:\n");
+    HIP_DEBUG("\tLocal application context:\n");
 
-    listentry = entry->connection_contexts;
+    listentry = entry->connections;
     while(listentry != NULL) {
         if(listentry->data != NULL) {
-            ctx = (struct signaling_connection_context *) listentry->data;
-            signaling_connection_context_print(ctx, "\t");
+            conn = ((struct signaling_connection *) listentry->data);
+            signaling_connection_print(conn, "\t");
         }
         listentry = listentry->next;
     }

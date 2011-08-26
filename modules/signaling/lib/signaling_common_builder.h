@@ -12,11 +12,11 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /* Builders for on the wire parameters */
-int signaling_build_param_connection_identifier(struct hip_common *msg,
-                                                const struct signaling_connection_context *ctx);
-int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_connection_context *ctx);
+int signaling_build_param_connection_identifier(hip_common_t *msg,
+                                                const struct signaling_connection *conn);
+int signaling_build_param_application_context(hip_common_t *msg,
                                               const struct signaling_application_context *app_ctx);
-int signaling_build_param_user_context(struct hip_common *msg,
+int signaling_build_param_user_context(hip_common_t *msg,
                                        struct signaling_user_context *user_ctx);
 int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid);
 int signaling_build_param_user_auth_fail(struct hip_common *msg, const uint16_t reason);

@@ -147,7 +147,7 @@ static int test_send_param_app_to_firewall(struct signaling_connection_context *
     if(signaling_build_param_connection_identifier(msg, conn_ctx)) {
         HIP_DEBUG("Building of connection identifier parameter failed\n");
     }
-    HIP_IFEL(signaling_build_param_application_context(msg, &conn_ctx->app_ctx),
+    HIP_IFEL(signaling_build_param_application_context(msg, &conn_ctx->app),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Sending message of size %d \n", hip_get_msg_total_len(msg));
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
@@ -171,7 +171,7 @@ static void do_tests(int runs) {
     struct signaling_connection_context *conn_ctx;
 
     conn_ctx = malloc(sizeof(struct signaling_connection_context));
-    signaling_init_connection_context(conn_ctx);
+    signaling_init_connection_context(conn_ctx, OUT);
 
     printf("--------------------------------------------\n"
            "Socket performance on internal struct\n"
@@ -215,10 +215,10 @@ static void do_tests(int runs) {
            "Socket performance on medium full wire struct\n"
            "--------------------------------------------\n");
     //strcpy(conn_ctx->user_ctx.subject_name, "Jan Henrik Ziegeldorf");
-    strcpy(conn_ctx->app_ctx.application_dn, "Mozilla Firefox 3.2.1");
-    strcpy(conn_ctx->app_ctx.issuer_dn, "Versign Inc.");
-    strcpy(conn_ctx->app_ctx.groups, "Browser");
-    strcpy(conn_ctx->app_ctx.requirements, "tcp, in/out");
+    strcpy(conn_ctx->app.application_dn, "Mozilla Firefox 3.2.1");
+    strcpy(conn_ctx->app.issuer_dn, "Versign Inc.");
+    strcpy(conn_ctx->app.groups, "Browser");
+    strcpy(conn_ctx->app.requirements, "tcp, in/out");
 
     signaling_connection_context_print(conn_ctx, "");
 
@@ -240,10 +240,10 @@ static void do_tests(int runs) {
            "--------------------------------------------\n");
 
     //strncpy(conn_ctx->user_ctx.subject_name, fill, 127);
-    strncpy(conn_ctx->app_ctx.application_dn, fill, 127);
-    strncpy(conn_ctx->app_ctx.issuer_dn, fill, 127);
-    strncpy(conn_ctx->app_ctx.groups, fill, 63);
-    strncpy(conn_ctx->app_ctx.requirements, fill, 63);
+    strncpy(conn_ctx->app.application_dn, fill, 127);
+    strncpy(conn_ctx->app.issuer_dn, fill, 127);
+    strncpy(conn_ctx->app.groups, fill, 63);
+    strncpy(conn_ctx->app.requirements, fill, 63);
 
     signaling_connection_context_print(conn_ctx, "");
 

@@ -154,18 +154,46 @@ void signaling_user_context_print(const struct signaling_user_context * const us
  */
 void signaling_connection_context_print(const struct signaling_connection_context * const ctx, const char *prefix) {
     if(ctx == NULL) {
-        HIP_DEBUG("%sNo ctx parameter given.\n", prefix);
+        HIP_DEBUG("%sNo connection context struct given.\n", prefix);
         return;
     }
 
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
-    HIP_DEBUG("%s  Identifier:\t %d\n", prefix, ctx->id);
-    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(ctx->connection_status));
-    HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, ctx->src_port, ctx->dest_port);
-    signaling_user_context_print(&ctx->user_ctx, prefix, 0);
-    signaling_application_context_print(&ctx->app_ctx, prefix, 0);
+    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(ctx->status));
+    signaling_user_context_print(&ctx->user, prefix, 0);
+    signaling_application_context_print(&ctx->app, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
+
+/**
+ * Print the internal connection structure.
+ *
+ * @param conn      the connection to print
+ * @param prefix    prefix is prepended to all output of this function
+ */
+void signaling_connection_print(const struct signaling_connection *const conn, const char *const prefix) {
+    char prefix_buf[strlen(prefix)+2];
+
+    memset(prefix_buf, 0, strlen(prefix)+2);
+    strcat(prefix_buf, prefix);
+    strcat(prefix_buf, "\t");
+
+    if(conn == NULL) {
+        HIP_DEBUG("%sNo connection struct given.\n", prefix);
+        return;
+    }
+
+    HIP_DEBUG("%s+------------ CONNECTION START ----------------------\n", prefix);
+    HIP_DEBUG("%s  Identifier:\t\t %d\n", prefix, conn->id);
+    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(conn->status));
+    HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, conn->src_port, conn->dst_port);
+    HIP_DEBUG("%s  Outgoing connection context:\n",prefix);
+    signaling_connection_context_print(&conn->ctx_out, prefix_buf);
+    HIP_DEBUG("%s  Incoming connection context:\n",prefix);
+    signaling_connection_context_print(&conn->ctx_in, prefix_buf);
+    HIP_DEBUG("%s+------------ CONNECTION END   ----------------------\n", prefix);
+}
+
 
 /**
  * Prints the connection identifier parameter.
@@ -180,7 +208,7 @@ void signaling_param_connection_identifier_print(const struct signaling_param_co
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER START ----------------------\n");
     HIP_DEBUG("Connection ID:\t %d \n", ntohl(conn_id->id));
     HIP_DEBUG("Src Port:\t\t %d \n",    ntohs(conn_id->src_port));
-    HIP_DEBUG("Dst Port:\t\t %d \n",    ntohs(conn_id->src_port));
+    HIP_DEBUG("Dst Port:\t\t %d \n",    ntohs(conn_id->dst_port));
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER END   ----------------------\n");
 }
 
@@ -262,17 +290,94 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_connection_context(struct signaling_connection_context * const ctx) {
+int signaling_init_connection(struct signaling_connection *const conn) {
+    int err = 0;
+
+    HIP_IFEL(!conn, -1, "Connection context has to be allocated before initialization\n");
+    conn->id                = 0;
+    conn->status            = SIGNALING_CONN_NEW;
+    conn->src_port          = 0;
+    conn->dst_port          = 0;
+    HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
+             -1, "Could not init incoming connection context\n");
+    HIP_IFEL(signaling_init_connection_context(&conn->ctx_out, OUT),
+             -1, "Could not init outgoing connection context\n");
+out_err:
+    return err;
+}
+
+/**
+ * Initializes the given connection context by stripping all
+ * connection context information found in the message.
+ * Values that are not given in the  message are initialized to default.
+ *
+ * @param ctx a pointer to the connection context that should be initialized
+ * @param msg a msg that contains connection context information
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_connection_from_msg(struct signaling_connection *const conn,
+                                       const hip_common_t * const msg) {
+    int err                     = 0;
+    const struct hip_tlv_common *param     = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
+
+    /* init and fill the connection context */
+    HIP_IFEL(signaling_init_connection(conn), -1, "Failed to init connection context\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
+        conn->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
+        conn->dst_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
+        conn->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+    }
+
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn->ctx_in, msg),
+             -1, "Could not initialize incomeing connection context from message\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * Copies a complete connection structure from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_connection(struct signaling_connection * const dst,
+                                      const struct signaling_connection * const src) {
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_connection));
+    return 0;
+}
+
+/**
+ * Initializes the given connection context to default values.
+ * Memory for context has to be allocated and freed by the caller.
+ *
+ * @param ctx a pointer to the connection context that should be initialized
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_connection_context(struct signaling_connection_context *const ctx,
+                                      enum direction dir) {
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
-    ctx->id                 = 0;
-    ctx->connection_status  = SIGNALING_CONN_NEW;
-    ctx->src_port           = 0;
-    ctx->dest_port          = 0;
-    HIP_IFEL(signaling_init_application_context(&ctx->app_ctx),
+    ctx->direction          = dir;
+    ctx->flags              = 0;
+    ctx->status             = SIGNALING_CONN_NEW;
+    HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
-    HIP_IFEL(signaling_init_user_context(&ctx->user_ctx),
+    HIP_IFEL(signaling_init_user_context(&ctx->user),
              -1, "Could not init user context\n");
 
 out_err:
@@ -298,26 +403,19 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
 
     /* init and fill the connection context */
-    HIP_IFEL(signaling_init_connection_context(ctx), -1, "Failed to init connection context\n");
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        ctx->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
-        ctx->dest_port  = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
-        ctx->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
-    }
+    HIP_IFEL(signaling_init_connection_context(ctx, IN), -1, "Failed to init connection context\n");
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param,
-                                                     &ctx->app_ctx),
+                                                     &ctx->app),
                  -1, "Could not init application context from app ctx parameter \n");
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
         HIP_IFEL(signaling_build_user_context((const struct signaling_param_user_context *) param,
-                                              &ctx->user_ctx),
+                                              &ctx->user),
                  -1, "Could not init user context from user ctx parameter \n");
     }
 
