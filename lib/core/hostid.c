@@ -576,12 +576,6 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
     struct hip_ecdsa_keylen key_lens;
     EC_KEY                 *ret;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_DESERIALIZE_ECDSA");
-    hip_perf_start_benchmark(perf_set, PERF_DESERIALIZE_ECDSA);
-#endif
-
-
     if (!host_id) {
         HIP_ERROR("NULL host id\n");
         return NULL;
@@ -638,11 +632,6 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
     //    HIP_ERROR("Key check failed. \n");
     //    return NULL;
     //}
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_DESERIALIZE_ECDSA");
-    hip_perf_stop_benchmark(perf_set, PERF_DESERIALIZE_ECDSA);
-#endif
 
     return ret;
 }
@@ -1165,10 +1154,6 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     uint16_t        curveid;
     const EC_GROUP *group = NULL;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_SERIALIZE_ECDSA");
-    hip_perf_start_benchmark(perf_set, PERF_SERIALIZE_ECDSA);
-#endif
     /* sanity check */
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
              -1, "Invalid public key.\n");
@@ -1211,10 +1196,7 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     if (!public) {
         bn2bin_safe(priv_key, buffer + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
     }
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_SERIALIZE_ECDSA");
-    hip_perf_stop_benchmark(perf_set, PERF_SERIALIZE_ECDSA);
-#endif
+
     *ec_key_rr = buffer;
     return out_len;
 

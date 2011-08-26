@@ -667,6 +667,7 @@ int hip_check_r1(RVS const uint8_t packet_type,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
     hip_perf_start_benchmark(perf_set, PERF_R1);
+    hip_perf_start_benchmark(perf_set, PERF_R1x1);
 #endif
 
     HIP_IFEL(!ctx->hadb_entry, -1,
@@ -749,6 +750,7 @@ int hip_check_r1(RVS const uint8_t packet_type,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R1_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_R1x1);
 #endif
 out_err:
     if (err) {
@@ -786,6 +788,11 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     int                          retransmission = 0;
     const struct hip_r1_counter *r1cntr         = NULL;
     struct puzzle_hash_input     puzzle_input;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R1x2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1x2);
+#endif
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");

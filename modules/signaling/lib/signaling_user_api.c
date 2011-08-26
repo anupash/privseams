@@ -169,8 +169,17 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
         HIP_IFEL(!(homedir = get_user_homedir(uid)),
                  -1, "Could not get homedir for user %d.\n", uid);
         sprintf(filebuf, "%s/.signaling/user-ecdsa-key.pem", homedir);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_LOAD_USER_KEY\n");
+        hip_perf_start_benchmark(perf_set, PERF_LOAD_USER_KEY);
+#endif
         HIP_IFEL(load_ecdsa_private_key(filebuf, &ecdsa),
                  -1, "Could not get private key for signing \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_LOAD_USER_KEY\n");
+        hip_perf_stop_benchmark(perf_set, PERF_LOAD_USER_KEY);
+#endif
+
         sig_len     = ECDSA_size(ecdsa);
         *sig_type   = HIP_SIG_ECDSA;
 #ifdef CONFIG_HIP_PERFORMANCE

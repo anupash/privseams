@@ -67,6 +67,14 @@ enum perf_sensor {
     PERF_I1,
     PERF_I1_R1,             // time at initiator between sending I1 and receiving R1
     PERF_R1,
+    PERF_R1x1,
+    PERF_R1x2,
+    PERF_R1x3,
+    PERF_R1x4,
+    PERF_R1x4x1,
+    PERF_R1x4x2,
+    PERF_R1x4x3,
+    PERF_R1x5,
     PERF_R1_I2,             // time at responder between sending R1 and receiving I2
     PERF_I2,
     PERF_I2_R2,             // time at initiator between sending I2 and receiving R2
@@ -103,6 +111,8 @@ enum perf_sensor {
     PERF_X509_VERIFY_CERT_CHAIN,
     PERF_CERTIFICATE_EXCHANGE, // time for additional certificate exchange
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
+    PERF_LOAD_USER_KEY,      // time to load the users key from harddrive
+    PERF_LOAD_USER_PUBKEY,   // time to load the users public key from harddrive
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,
@@ -125,8 +135,6 @@ enum perf_sensor {
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
-    PERF_SERIALIZE_ECDSA,    // time to serialize an ecdsa key
-    PERF_DESERIALIZE_ECDSA,  // time to deserialize an ecdsa key
     PERF_TEST1,              // variable test
     PERF_TEST2,              // variable test
 

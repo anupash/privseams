@@ -293,6 +293,19 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_I1_R1, "results/PERF_I1_R1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
+
+    /* splitting R1 */
+    hip_perf_set_name(perf_set, PERF_R1x1, "results/PERF_R1x1.csv");
+    hip_perf_set_name(perf_set, PERF_R1x2, "results/PERF_R1x2.csv");
+    hip_perf_set_name(perf_set, PERF_R1x3, "results/PERF_R1x3.csv");
+    hip_perf_set_name(perf_set, PERF_R1x4, "results/PERF_R1x4.csv");
+    hip_perf_set_name(perf_set, PERF_R1x4x1, "results/PERF_R1x4x1.csv");
+    hip_perf_set_name(perf_set, PERF_R1x4x2, "results/PERF_R1x4x2.csv");
+    hip_perf_set_name(perf_set, PERF_R1x4x3, "results/PERF_R1x4x3.csv");
+    hip_perf_set_name(perf_set, PERF_R1x5, "results/PERF_R1x5.csv");
+
+    hip_perf_set_name(perf_set, PERF_R1x5, "results/PERF_R1x5.csv");
+
     hip_perf_set_name(perf_set, PERF_R1_I2, "results/PERF_R1_I2.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_I2_R2, "results/PERF_I2_R2.csv");
@@ -333,8 +346,8 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_CERTIFICATE_EXCHANGE, "results/PERF_CERTIFICATE_EXCHANGE.csv");
     hip_perf_set_name(perf_set, PERF_ECDSA_VERIFY_IMPL, "results/PERF_ECDSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_ECDSA_SIGN_IMPL, "results/PERF_ECDSA_SIGN_IMPL.csv");
-    hip_perf_set_name(perf_set, PERF_SERIALIZE_ECDSA, "results/PERF_SERIALIZE_ECDSA.csv");
-    hip_perf_set_name(perf_set, PERF_DESERIALIZE_ECDSA, "results/PERF_DESERIALIZE_ECDSA.csv");
+    hip_perf_set_name(perf_set, PERF_LOAD_USER_KEY, "results/PERF_LOAD_USER_KEY.csv");
+    hip_perf_set_name(perf_set, PERF_LOAD_USER_PUBKEY, "results/PERF_LOAD_USER_PUBKEY.csv");
 
     hip_perf_set_name(perf_set, PERF_TEST1, "results/PERF_TEST1.csv");
     hip_perf_set_name(perf_set, PERF_TEST2, "results/PERF_TEST2.csv");

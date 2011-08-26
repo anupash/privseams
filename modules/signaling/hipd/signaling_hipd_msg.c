@@ -1102,6 +1102,10 @@ int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSE
     int err = 0;
     struct signaling_hipd_state *sig_state = NULL;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R1x3\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1x3);
+#endif
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
@@ -1129,13 +1133,20 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
 {
     int err = 0;
     struct signaling_hipd_state *sig_state;
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R1x4x3\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1x4x3);
+#endif
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
              -1, "User failed to sign packet.\n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R1x4, PERF_R1x4x3\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1x4);
+    hip_perf_stop_benchmark(perf_set, PERF_R1x4x3);
+#endif
 out_err:
     return err;
 }
@@ -1150,6 +1161,11 @@ int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const
                  -1, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry),
             -1, "Building of user context parameter failed.\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R1x3\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1x3);
+#endif
 
 out_err:
     return err;
