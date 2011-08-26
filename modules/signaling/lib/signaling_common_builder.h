@@ -12,17 +12,17 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /* Builders for on the wire parameters */
-int signaling_build_param_application_context(hip_common_t *msg, const struct signaling_connection_context *ctx);
-int signaling_build_param_user_context(hip_common_t *msg,
+int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_connection_context *ctx);
+int signaling_build_param_user_context(struct hip_common *msg,
                                        struct signaling_user_context *user_ctx);
-int signaling_build_param_user_signature(hip_common_t *msg, const uid_t uid);
-int signaling_build_param_user_auth_fail(hip_common_t *msg, const uint16_t reason);
+int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid);
+int signaling_build_param_user_auth_fail(struct hip_common *msg, const uint16_t reason);
 
 /* Builders for internal state structures */
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
                                         struct signaling_application_context *app_ctx);
 int signaling_build_user_context(const struct signaling_param_user_context *param_usr_ctx,
                                  struct signaling_user_context *usr_ctx);
-void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
+void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
 
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

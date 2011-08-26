@@ -71,6 +71,6 @@ int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
 int signaling_send_user_certificate_chain(hip_ha_t *ha);
 
 /* Classification of signaling update messages */
-int signaling_get_update_type(hip_common_t *msg);
+int signaling_get_update_type(struct hip_common *msg);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/

@@ -264,7 +264,7 @@ int signaling_init_user_context(struct signaling_user_context * const user_ctx);
 int signaling_init_application_context(struct signaling_application_context * const app_ctx);
 int signaling_init_connection_context(struct signaling_connection_context * const ctx);
 int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
-                                               const hip_common_t * const msg);
+                                               const struct hip_common * const msg);
 int signaling_copy_connection_context(struct signaling_connection_context * const dst,
                                       const struct signaling_connection_context * const src);
 

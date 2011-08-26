@@ -143,7 +143,7 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_application_context(hip_common_t *msg, const struct signaling_connection_context *ctx)
+int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_connection_context *ctx)
 {
     struct signaling_param_app_context *appinfo = NULL;
     int err = 0;
@@ -206,7 +206,7 @@ out_err:
  *
  * @return          zero for success, or non-zero on error
  */
-int signaling_build_param_user_context(hip_common_t *msg,
+int signaling_build_param_user_context(struct hip_common *msg,
                                        struct signaling_user_context *user_ctx)
 {
     struct signaling_param_user_context *param_userinfo = NULL;
@@ -278,7 +278,7 @@ int signaling_build_param_user_context(hip_common_t *msg,
  *
  *  @return         0 on success, negative otherwise
  */
-int signaling_build_param_user_signature(hip_common_t *msg, const uid_t uid) {
+int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid) {
     int err = 0;
     struct hip_sig sig;
     unsigned char signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
@@ -316,7 +316,7 @@ out_err:
  *
  * @return          0 on sucess, negative if paramater building failed
  */
-int signaling_build_param_user_auth_fail(hip_common_t *msg, const uint16_t reason) {
+int signaling_build_param_user_auth_fail(struct hip_common *msg, const uint16_t reason) {
     int err = 0;
     int len;
     struct hip_notification ntf;
@@ -411,7 +411,7 @@ out_err:
     return err;
 }
 
-void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
+void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
     const hip_tlv_common_t *param = NULL;
 

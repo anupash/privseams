@@ -71,7 +71,7 @@ int update_sent = 0;
  *
  * @return the signaling update type, or negative if this is no siganling update message
  */
-int signaling_get_update_type(hip_common_t *msg) {
+int signaling_get_update_type(struct hip_common *msg) {
     int err = -1;
     const struct signaling_param_app_context *param_app_ctx     = NULL;
     const struct hip_seq *param_seq                             = NULL;
@@ -101,10 +101,10 @@ int signaling_get_update_type(hip_common_t *msg) {
  * Setting either seq or ack_id to
  *
  */
-static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct signaling_connection_context *ctx, const uint32_t seq) {
+static struct hip_common *build_update_message(hip_ha_t *ha, const int type, struct signaling_connection_context *ctx, const uint32_t seq) {
     int err                 = 0;
     uint16_t mask           = 0;
-    hip_common_t *msg_buf   = NULL;
+    struct hip_common *msg_buf   = NULL;
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
@@ -161,7 +161,7 @@ int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6
     hip_ha_t *ha                            = NULL;
     struct signaling_hipd_state * sig_state = NULL;
     struct update_state * updatestate       = NULL;
-    hip_common_t * update_packet_to_send    = NULL;
+    struct hip_common * update_packet_to_send    = NULL;
 
     /* sanity tests */
     HIP_IFEL(!src_hit, -1, "No source HIT given \n");
@@ -208,7 +208,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
     hip_ha_t *ha                                    = NULL;
     struct signaling_hipd_state * sig_state         = NULL;
     struct update_state * updatestate               = NULL;
-    hip_common_t * update_packet_to_send            = NULL;
+    struct hip_common * update_packet_to_send            = NULL;
     struct signaling_connection_context conn_ctx;
 
 
@@ -265,7 +265,7 @@ int signaling_send_user_auth_failed_ntf(hip_ha_t *ha,
                                         const int reason) {
     int err                 = 0;
     uint16_t mask           = 0;
-    hip_common_t *msg_buf   = NULL;
+    struct hip_common *msg_buf   = NULL;
 
     /* Sanity checks */
     HIP_IFEL(!ha, -1, "Given host association is NULL \n");
@@ -330,7 +330,7 @@ static int free_message_space(struct hip_common *msg, hip_ha_t *ha) {
 int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     int err = 0;
     uint16_t mask           = 0;
-    hip_common_t *msg_buf = NULL;
+    struct hip_common *msg_buf = NULL;
     struct update_state * updatestate       = NULL;
     struct signaling_hipd_state * sig_state = NULL;
     STACK_OF(X509) *cert_chain = NULL;

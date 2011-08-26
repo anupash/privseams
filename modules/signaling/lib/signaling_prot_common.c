@@ -272,7 +272,7 @@ out_err:
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
-                                               const hip_common_t * const msg) {
+                                               const struct hip_common * const msg) {
     int err                     = 0;
     const hip_tlv_common_t *param     = NULL;
 
