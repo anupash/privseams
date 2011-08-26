@@ -75,7 +75,6 @@ void signaling_param_application_context_print(const struct signaling_param_app_
         return;
     }
     HIP_DEBUG("+------------ APP INFO START ----------------------\n");
-    HIP_DEBUG("Ports: src %d, dest %d\n", ntohs(param_app_ctx->src_port), ntohs(param_app_ctx->dest_port));
     p_content = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context);
     signaling_param_print_field("Application DN:", ntohs(param_app_ctx->app_dn_length), p_content);
     p_content += ntohs(param_app_ctx->app_dn_length);
@@ -159,14 +158,30 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     }
 
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
-    HIP_DEBUG("%s  Status:\t\t %s\n", prefix, signaling_connection_status_name(ctx->connection_status));
+    HIP_DEBUG("%s  Identifier:\t %d\n", prefix, ctx->id);
+    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(ctx->connection_status));
     HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, ctx->src_port, ctx->dest_port);
     signaling_user_context_print(&ctx->user_ctx, prefix, 0);
     signaling_application_context_print(&ctx->app_ctx, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
 
-
+/**
+ * Prints the connection identifier parameter.
+ *
+ * @param conn_id the connection identifier parameter to print
+ */
+void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id) {
+    if(conn_id == NULL) {
+        HIP_DEBUG("No connection identifier parameter given.\n");
+        return;
+    }
+    HIP_DEBUG("+------------ CONNECTION IDENTIFIER START ----------------------\n");
+    HIP_DEBUG("Connection ID:\t %d \n", ntohl(conn_id->id));
+    HIP_DEBUG("Src Port:\t\t %d \n",    ntohs(conn_id->src_port));
+    HIP_DEBUG("Dst Port:\t\t %d \n",    ntohs(conn_id->src_port));
+    HIP_DEBUG("+------------ CONNECTION IDENTIFIER END   ----------------------\n");
+}
 
 /**
  * Prints the user context parameter.
@@ -250,7 +265,7 @@ int signaling_init_connection_context(struct signaling_connection_context * cons
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
-
+    ctx->id                 = 0;
     ctx->connection_status  = SIGNALING_CONN_NEW;
     ctx->src_port           = 0;
     ctx->dest_port          = 0;
@@ -283,10 +298,16 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
 
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection_context(ctx), -1, "Failed to init connection context\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
+        ctx->src_port   = ntohs(((const struct signaling_param_connection_identifier *) param)->src_port);
+        ctx->dest_port  = ntohs(((const struct signaling_param_connection_identifier *) param)->dst_port);
+        ctx->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+    }
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        ctx->src_port   = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-        ctx->dest_port  = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
         HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param,
                                                      &ctx->app_ctx),
                  -1, "Could not init application context from app ctx parameter \n");

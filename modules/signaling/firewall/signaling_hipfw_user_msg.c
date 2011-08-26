@@ -44,6 +44,8 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
              -1, "build connection context failed \n");
+    HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+             -1, "build connection context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Resend request to HIPD to establish a new connection with following connection context: \n");

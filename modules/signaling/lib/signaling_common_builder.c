@@ -84,10 +84,7 @@ static int signaling_param_appinfo_get_content_length(const struct signaling_app
     }
 
     /* Length of length fields = 8 (4 x 2 Bytes) */
-    res += 8;
-
-    /* Length of port information = 4 (2 x 2 Bytes) */
-    res += 4;
+    res += sizeof(struct signaling_param_app_context) - sizeof(struct hip_tlv_common);
 
     /* Length of variable input */
     res += strlen(app_ctx->application_dn);
@@ -99,18 +96,12 @@ static int signaling_param_appinfo_get_content_length(const struct signaling_app
 }
 
 static int siganling_build_param_appinfo_contents(struct signaling_param_app_context *par,
-                                                  uint16_t src_port,
-                                                  uint16_t dest_port,
                                                   const struct signaling_application_context *app_ctx) {
     int err = 0;
     uint8_t *p_tmp;
 
     /* Sanity checks */
     HIP_IFEL((par == NULL || app_ctx == NULL), -1, "No parameter or application context given.\n");
-
-    /* Set ports */
-    par->src_port   = htons(src_port);
-    par->dest_port  = htons(dest_port);
 
     /* Set length fields and make sure to keep to maximum lengths */
     par->app_dn_length  = htons(MIN(strlen(app_ctx->application_dn), SIGNALING_APP_DN_MAX_LEN));
@@ -132,6 +123,37 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_app_con
 out_err:
     return err;
 }
+/**
+ * Builds a hip_param_connection_identifier parameter into msg,
+ * using the values in the connection context .
+  *
+ * @param ctx the connection context where values are taken from
+ * @param msg the message, where the parameter is appended
+
+ * @return zero for success, or non-zero on error
+ */
+int signaling_build_param_connection_identifier(hip_common_t *msg, const struct signaling_connection_context *ctx)
+{
+    int err = 0;
+    struct signaling_param_connection_identifier conn_id;
+
+    /* Sanity checks */
+    HIP_IFEL(msg == NULL, -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(ctx == NULL, -1, "Got no context to built the parameter from.\n");
+
+    hip_set_param_type((struct hip_tlv_common *) &conn_id, HIP_PARAM_SIGNALING_CONNECTION_ID);
+    hip_set_param_contents_len((struct hip_tlv_common *) &conn_id,
+                               sizeof(struct signaling_param_connection_identifier) - sizeof(struct hip_tlv_common));
+    conn_id.id       = htonl(ctx->id);
+    conn_id.src_port = htons(ctx->src_port);
+    conn_id.dst_port = htons(ctx->dest_port);
+    HIP_IFEL(hip_build_param(msg, &conn_id),
+             -1, "Failed to append connection identifier parameter to message.\n");
+
+out_err:
+    return err;
+}
+
 
 /**
  * Builds a hip_param_signaling_appinfo parameter into msg,
@@ -156,7 +178,7 @@ int signaling_build_param_application_context(struct hip_common *msg, const stru
     /* BUILD THE PARAMETER */
     length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx);
     appinfo         = signaling_param_appinfo_init(sizeof(struct hip_tlv_common) + length_contents);
-    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx),
+    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, &ctx->app_ctx),
             -1, "Failed to build appinfo parameter.\n");
     HIP_IFEL(hip_build_param(msg, appinfo),
             -1, "Failed to append appinfo parameter to message.\n");

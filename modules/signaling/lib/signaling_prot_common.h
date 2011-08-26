@@ -45,9 +45,10 @@
 
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
-#define HIP_PARAM_SIGNALING_APPINFO             5000
-#define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5002
+#define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
+#define HIP_PARAM_SIGNALING_APPINFO             5002
 #define HIP_PARAM_SIGNALING_USERINFO            5004
+#define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5006
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
 
 /* Update message types */
@@ -111,7 +112,35 @@ struct signaling_ntf_user_auth_failed_data {
 
 
 /*
+     Parameter for a connection identifier.
+     The parameter contains source and destination port numbers,
+     as well as a connection identifier, that is unique per host association.
+
+     All integers are in network byte order.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |             Type              |             Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                     Connection Identifier                     |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |         SRC PORT              |          DEST PORT            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+*/
+struct signaling_param_connection_identifier {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    uint32_t id;
+    uint16_t src_port;
+    uint16_t dst_port;
+};
+
+/*
      Parameter for a user signature.
+
+     All integers are in network byte order.
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -158,8 +187,6 @@ struct signaling_param_user_context {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |             Type              |             Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |         SRC PORT              |          DEST PORT            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |    APP-DN  Length             |     ISS-DN  Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |    REQ     Length             |     GRP     Length            |
@@ -182,8 +209,6 @@ struct signaling_param_user_context {
 struct signaling_param_app_context {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
-    uint16_t src_port;
-    uint16_t dest_port;
     hip_tlv_len_t app_dn_length;
     hip_tlv_len_t iss_dn_length;
     hip_tlv_len_t req_length;
@@ -241,6 +266,7 @@ struct signaling_user_context {
      All integers are in host-byte-order.
 */
 struct signaling_connection_context {
+    uint32_t id;
     uint16_t src_port;
     uint16_t dest_port;
     int connection_status;
@@ -257,6 +283,7 @@ struct signaling_connection_context {
 /* Printing of parameters and internal structures */
 void signaling_param_user_context_print(const struct signaling_param_user_context * const param_user_ctx);
 void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx);
+void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id);
 
 void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
                                          const char *prefix, const int header);

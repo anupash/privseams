@@ -144,7 +144,9 @@ static int test_send_param_app_to_firewall(struct signaling_connection_context *
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_PERF_TEST, 0), -1,
               "build hdr failed\n");
-
+    if(signaling_build_param_connection_identifier(msg, conn_ctx)) {
+        HIP_DEBUG("Building of connection identifier parameter failed\n");
+    }
     HIP_IFEL(signaling_build_param_application_context(msg, conn_ctx),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Sending message of size %d \n", hip_get_msg_total_len(msg));

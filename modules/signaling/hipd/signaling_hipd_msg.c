@@ -122,13 +122,16 @@ static struct hip_common *build_update_message(hip_ha_t *ha, const int type, str
                  -1, "Building of ACK parameter failed\n");
     }
 
-    /* Add application and user context.
+    /* Add connection id, application and user context.
      * These parameters (as well as the user's signature are non-critical */
+    if(signaling_build_param_connection_identifier(msg_buf, ctx)) {
+        HIP_DEBUG("Building of connection identifier parameter failed\n");
+    }
     if(signaling_build_param_application_context(msg_buf, ctx)) {
-        HIP_DEBUG("Building of APPInfo parameter failed\n");
+        HIP_DEBUG("Building of application context parameter failed\n");
     }
     if(signaling_build_param_user_context(msg_buf, &ctx->user_ctx)) {
-        HIP_DEBUG("Building of userinfo parameter for I2 failed.\n");
+        HIP_DEBUG("Building of user conext parameter failed.\n");
     }
 
     /* Add host authentication */
@@ -712,6 +715,9 @@ int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSE
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
+    if(signaling_build_param_connection_identifier(ctx->output_msg, &sig_state->ctx)) {
+        HIP_DEBUG("Building of connection identifier parameter failed\n");
+    }
     HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of application context parameter failed.\n");
 

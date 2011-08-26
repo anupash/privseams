@@ -12,6 +12,8 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /* Builders for on the wire parameters */
+int signaling_build_param_connection_identifier(struct hip_common *msg,
+                                                const struct signaling_connection_context *ctx);
 int signaling_build_param_application_context(struct hip_common *msg, const struct signaling_connection_context *ctx);
 int signaling_build_param_user_context(struct hip_common *msg,
                                        struct signaling_user_context *user_ctx);
