@@ -182,6 +182,7 @@ void signaling_connection_print(const struct signaling_connection *const conn, c
     HIP_DEBUG("%s+------------ CONNECTION START ----------------------\n", prefix);
     HIP_DEBUG("%s  Identifier:\t\t %d\n", prefix, conn->id);
     HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(conn->status));
+    HIP_DEBUG("%s  Side:\t\t %s\n",   prefix, conn->side == INITIATOR ? "INITIATOR" : "RESPONDER");
     HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, conn->src_port, conn->dst_port);
     HIP_DEBUG("%s  Outgoing connection context:\n",prefix);
     signaling_connection_context_print(&conn->ctx_out, prefix_buf);
@@ -294,6 +295,7 @@ int signaling_init_connection(struct signaling_connection *const conn) {
     conn->status            = SIGNALING_CONN_NEW;
     conn->src_port          = 0;
     conn->dst_port          = 0;
+    conn->side              = INITIATOR;
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
              -1, "Could not init incoming connection context\n");
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_out, OUT),
@@ -336,6 +338,32 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 out_err:
     return err;
 }
+
+int signaling_update_connection_from_msg(struct signaling_connection *const conn,
+                                         const hip_common_t * const msg)
+{
+    int err                     = 0;
+    const struct hip_tlv_common *param     = NULL;
+    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
+    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
+        param_conn_id = (const struct signaling_param_connection_identifier *) param;
+        conn->id         = ntohl(param_conn_id->id);
+        conn->dst_port   = ntohs(param_conn_id->src_port);
+        conn->src_port   = ntohs(param_conn_id->dst_port);
+    }
+    HIP_IFEL(signaling_update_flags_from_connection_id(msg, conn),
+             -1, "Could not update flags from connection id parameter \n");
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn->ctx_in, msg),
+             -1, "Could not initialize incomeing connection context from message\n");
+out_err:
+    return err;
+}
+
 
 /**
  * Copies a complete connection structure from src to dst.
@@ -436,6 +464,54 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
     return 0;
 }
 
+int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
+                                              struct signaling_connection *const conn)
+{
+    int err = 0;
+    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!conn,           -1, "Cannot update flags of NULL-connection\n");
+    HIP_IFEL(!msg,            -1, "Cannot update flags from NULL-msg\n");
+
+    /* Set flags from connection id flags */
+    param_conn_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
+    if (param_conn_id && hip_get_param_type(param_conn_id) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
+        if (conn->side == INITIATOR) {
+            if (signaling_flag_check(param_conn_id->flags, FH1)) {
+                signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FU1)) {
+                signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FH2)) {
+                signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FU2)) {
+                signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+            }
+        } else {
+            if (signaling_flag_check(param_conn_id->flags, FH1)) {
+                signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FU1)) {
+                signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FH2)) {
+                signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
+            }
+            if (signaling_flag_check(param_conn_id->flags, FU2)) {
+                signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+            }
+        }
+    }
+
+    /* Set flags from middlebox flags */
+    // todo [AUTH] process middlebox flags
+
+out_err:
+    return err;
+}
 
 /**
  * Print the internal connection structure.
@@ -465,8 +541,8 @@ int signaling_flag_check_auth_complete(uint8_t flags) {
 /**
  * @return 1 if flag is set, 0 otherwise
  */
-int signaling_flag_check(uint8_t flags, enum flag f) {
-    return (flags & (1 << (int) f)) > 0;
+int signaling_flag_check(uint8_t flags, int f) {
+    return (flags & (1 << f)) > 0;
 }
 
 /**
@@ -474,7 +550,7 @@ int signaling_flag_check(uint8_t flags, enum flag f) {
  *
  * @return flags with f set to 1
  */
-void signaling_flag_set(uint8_t *flags, enum flag f) {
+void signaling_flag_set(uint8_t *flags, int f) {
     *flags |= 1 << (int) f;
 }
 
@@ -483,7 +559,7 @@ void signaling_flag_set(uint8_t *flags, enum flag f) {
  *
  * @return flags with f set to 1
  */
-void signaling_flag_unset(uint8_t *flags, enum flag f) {
+void signaling_flag_unset(uint8_t *flags, int f) {
     *flags &= ~(1 << (int) f);
 }
 

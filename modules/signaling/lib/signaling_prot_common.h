@@ -101,12 +101,25 @@ enum direction {
     FWD     // pass through traffic (routers)
 };
 
-enum flag {
+enum flag_internal {
     USER_AUTH_REQUEST,
     USER_AUTHED,
     HOST_AUTH_REQUEST,
     HOST_AUTHED
 };
+
+enum flag_conn_id {
+    FH1,
+    FU1,
+    FH2,
+    FU2
+};
+
+enum side {
+    INITIATOR,
+    RESPONDER
+};
+
 
 /* ------------------------------------------------------------------------------------
  *
@@ -148,7 +161,16 @@ struct signaling_ntf_user_auth_failed_data {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |         SRC PORT              |          DEST PORT            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    FLAGS    |                                                 /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |                            PADDING                            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+     Flags has the following format
+
+     0       1       2       3       4       5       6       7
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |   R   |   R   |   R   |   R   | F(U2) | F(H2) | F(U1) | F(H1) |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 */
@@ -158,6 +180,7 @@ struct signaling_param_connection_identifier {
     uint32_t id;
     uint16_t src_port;
     uint16_t dst_port;
+    uint8_t flags;
 } __attribute__ ((packed));
 
 /*
@@ -305,9 +328,10 @@ struct signaling_connection_context {
  */
 struct signaling_connection {
     uint32_t id;
-    uint16_t status;
     uint16_t src_port;
     uint16_t dst_port;
+    int status;
+    int side;
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
 };
@@ -345,15 +369,19 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
 int signaling_init_connection(struct signaling_connection *const conn);
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const hip_common_t * const msg);
+int signaling_update_connection_from_msg(struct signaling_connection *const conn,
+                                         const hip_common_t * const msg);
 int signaling_copy_connection(struct signaling_connection * const dst,
                               const struct signaling_connection * const src);
 
 /* Flag handling */
-void signaling_flags_print(uint8_t flags, const char *const prefix);
+int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
+                                              struct signaling_connection *const conn);
 int signaling_flag_check_auth_complete(uint8_t flags);
-int signaling_flag_check(uint8_t flags, enum flag f);
-void signaling_flag_set(uint8_t *flags, enum flag f);
-void signaling_flag_unset(uint8_t *flags, enum flag f);
+void signaling_flags_print(uint8_t flags, const char *const prefix);
+int signaling_flag_check(uint8_t flags, int f);
+void signaling_flag_set(uint8_t *flags, int f);
+void signaling_flag_unset(uint8_t *flags, int f);
 
 /* Misc */
 const char *signaling_connection_status_name(int status);

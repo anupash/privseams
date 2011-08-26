@@ -77,13 +77,14 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
              -1, "Could not init connection context\n");
     new_conn.status            = SIGNALING_CONN_NEW;
     new_conn.id                = signaling_cdb_get_next_connection_id();
-    new_conn.src_port = src_port;
-    new_conn.dst_port = dst_port;
+    new_conn.src_port          = src_port;
+    new_conn.dst_port          = dst_port;
+    new_conn.side              = INITIATOR;
 
+    /* Look up the local connection context */
     if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
         HIP_DEBUG("Application lookup/verification failed.\n");
     }
-
     if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
         HIP_DEBUG("Could not get user name \n");
     }
@@ -223,24 +224,14 @@ int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
     recv_conn = (const struct signaling_connection *) (param + 1);
     HIP_DEBUG("Received connection request from HIPD\n");
     signaling_connection_print(recv_conn, "\t");
-    signaling_copy_connection(&new_conn, recv_conn);
-
-    /* Check the remote context against out local policy,
-     * block this connection if context is rejected */
-    if (!signaling_policy_check(hits, &new_conn.ctx_in)) {
-        HIP_DEBUG("Received connection request has been rejected by local policy (incoming context rejected) \n");
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        HIP_IFEL(signaling_cdb_add(hits, hitr, &new_conn), -1, "Could not insert connection into cdb\n");
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
-        return 0;
-    }
 
     /* Check if this is a first time connection request.
      * In this case we need to build the local connection context.
      * If not we update our incoming connection context. */
     existing_conn = signaling_cdb_entry_get_connection(hits, hitr, recv_conn->id);
     if(!existing_conn) {
+        /* Add a new empty entry to the scdb */
+        signaling_copy_connection(&new_conn, recv_conn);
         if (signaling_get_verified_application_context_by_ports(recv_conn->src_port, recv_conn->dst_port, &new_conn.ctx_out)) {
             HIP_DEBUG("Application lookup/verification failed.\n");
         }
@@ -252,15 +243,29 @@ int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
         HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, new_conn.id)),
                  -1, "Could not retrieve cdb entry \n");
     } else {
-        signaling_copy_connection_context(&existing_conn->ctx_in, &recv_conn->ctx_in);
+        existing_conn->status = recv_conn->status;
     }
 
-    /* todo: [AUTH] for now, we dont care for user auth at the local side */
-    signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
-    signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
-
     /* Now, we have handled the differences between an initial connection request and an update request.
-     * We now need to check the local context against our local policy,
+       We can now update the existing entry with the incoming context. */
+    signaling_copy_connection_context(&existing_conn->ctx_in, &recv_conn->ctx_in);
+
+    /* Check the remote context against out local policy,
+     * block this connection if context is rejected */
+    if (!signaling_policy_check(hits, &recv_conn->ctx_in)) {
+        HIP_DEBUG("Received connection request has been rejected by local policy (incoming context rejected) \n");
+        new_conn.status = SIGNALING_CONN_BLOCKED;
+        HIP_IFEL(signaling_cdb_add(hits, hitr, &new_conn), -1, "Could not insert connection into cdb\n");
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+        return 0;
+    } else {
+        // todo: [AUTH] policy engine needs to return whether auth is requested or not
+        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
+        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
+    }
+
+    /* Check the local context against our local policy,
      * block the connection if the context is rejected */
     if (!signaling_policy_check(hits, &existing_conn->ctx_out)) {
         HIP_DEBUG("Received connection request has been rejected by local policy (outgoing context rejected) \n");
@@ -268,21 +273,27 @@ int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
         signaling_cdb_print();
         signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
         return 0;
+    } else {
+        // todo: [AUTH] set these at the right place
+        signaling_flag_set(&existing_conn->ctx_out.flags, HOST_AUTHED);
+        signaling_flag_set(&existing_conn->ctx_out.flags, USER_AUTHED);
     }
 
     /* Both the incoming and outgoing contexts have passed local policy checks.
      * Now, we need to determine the state transition for the connection. */
     switch (existing_conn->status) {
     case SIGNALING_CONN_NEW:
+        HIP_DEBUG("Moved connection state to PROCESSING, waiting for ACK after R2/I3 now\n");
         existing_conn->status = SIGNALING_CONN_PROCESSING;
-        /* todo: [AUTH] just set the flags, since they are not significatn for the outgoing context */
-        signaling_flag_set(&existing_conn->ctx_out.flags, HOST_AUTHED);
-        signaling_flag_set(&existing_conn->ctx_out.flags, USER_AUTHED);
         break;
     case SIGNALING_CONN_PROCESSING:
         if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
             signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
             existing_conn->status = SIGNALING_CONN_ALLOWED;
+        } else {
+            HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
+            signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
+            signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
         }
         break;
     default:

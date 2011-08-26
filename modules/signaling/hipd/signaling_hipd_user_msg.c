@@ -150,7 +150,7 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
 
     existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id);
     if (!existing_conn) {
-        HIP_IFEL(signaling_hipd_state_add_connection(sig_state, recv_conn),
+        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, recv_conn),
                  -1, "Could save connection in local state\n");
     } else {
         HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
@@ -261,7 +261,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         }
 
         /* save application context to our local state */
-        HIP_IFEL(signaling_hipd_state_add_connection(sig_state, &conn),
+        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, &conn),
                  -1, "Could save connection in local state\n");
 
         /* now trigger the UPDATE */

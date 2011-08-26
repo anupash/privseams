@@ -89,23 +89,18 @@ struct signaling_connection *signaling_hipd_state_get_connection(struct signalin
     return hip_ht_find(state->connections, &search_entry);
 }
 
-int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, const struct signaling_connection *const conn) {
+struct signaling_connection * signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
+                                                                  const struct signaling_connection *const conn) {
     struct signaling_connection *new_entry;
-
-    /* reject new entry if one already exists */
-    if ((new_entry = hip_ht_find(state->connections, conn)) != NULL) {
-        HIP_ERROR("Connection with same hash already exists. Free it before you add a new one:\n");
-        signaling_connection_print(new_entry, "\t");
-        return -1;
-    }
 
     /* allocate new entry and copy contents */
     if (!(new_entry = malloc(sizeof(struct signaling_connection)))) {
         HIP_ERROR("Could not allocate enough memory for new connection context\n");
-        return -1;
-    } else {
-        signaling_copy_connection(new_entry, conn);
+        return NULL;
     }
+
+    signaling_copy_connection(new_entry, conn);
+    hip_ht_add(state->connections, new_entry);
 
     /* Remember this for BEX */
     if (!state->pending_conn) {
@@ -113,7 +108,7 @@ int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, cons
         HIP_DEBUG("Set pending context.. \n");
     }
 
-    return hip_ht_add(state->connections, new_entry);
+    return new_entry;
 }
 
 
