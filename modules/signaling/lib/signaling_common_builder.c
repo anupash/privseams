@@ -48,7 +48,9 @@
 /*
  * Allocate an appinfo parameter and initialize to standard values.
  *
- * @param length The total maximum length of the new parameter (including type and length field).
+ * @param length  The total maximum length of the new parameter (including type and length field).
+ * @return        A application context parameter initialized to 0 values on success, which
+ *                the caller needs to deallocate. NULL on error.
  */
 static struct signaling_param_app_context * signaling_param_appinfo_init(unsigned int length) {
     int err = 0;
@@ -148,19 +150,15 @@ int signaling_build_param_application_context(hip_common_t *msg, const struct si
     int length_contents = 0;
 
     /* Sanity checks */
-    HIP_IFEL(msg == NULL,
-            -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(ctx == NULL,
-            -1, "Got no context to built the parameter from.\n");
+    HIP_IFEL(msg == NULL, -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(ctx == NULL, -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE PARAMETER */
     length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx);
-    appinfo = signaling_param_appinfo_init(sizeof(hip_tlv_common_t) + length_contents);
-
-    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx),
+    appinfo         = signaling_param_appinfo_init(sizeof(struct hip_tlv_common) + length_contents);
+    HIP_IFEL(siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx),
             -1, "Failed to build appinfo parameter.\n");
-
-    HIP_IFEL(0 > hip_build_param(msg, appinfo),
+    HIP_IFEL(hip_build_param(msg, appinfo),
             -1, "Failed to append appinfo parameter to message.\n");
 
 out_err:
@@ -201,7 +199,12 @@ out_err:
 }
 
 /**
- * @return zero for success, or non-zero on error
+ * Build a user context parameter from the given internal user context into msg.
+ *
+ * @param msg       the message where to put the parameter
+ * @param user_ctx  the user context from which the parameter is built
+ *
+ * @return          zero for success, or non-zero on error
  */
 int signaling_build_param_user_context(hip_common_t *msg,
                                        struct signaling_user_context *user_ctx)
@@ -214,11 +217,13 @@ int signaling_build_param_user_context(hip_common_t *msg,
     int par_contents_len;
     EVP_PKEY *user_pkey  = NULL;
     unsigned char *key_rr;
-    /* Sanity checks */
-    HIP_IFEL(!msg,
-             -1, "Got no msg context. (msg == NULL)\n");
 
-    /* Check for users public key */
+    /* Sanity checks */
+    HIP_IFEL(!msg, -1, "Got no msg context. (msg == NULL)\n");
+
+    /* Check for users public key.
+     *   a) We already have it in the user_ctx (send by the firewall).
+     *   b) We need to load it from the users certificate. */
     if (user_ctx->key_rr_len <= 0) {
         HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(user_ctx->euid)),
                  -1, "Could not obtain users public key \n");
@@ -232,21 +237,15 @@ int signaling_build_param_user_context(hip_common_t *msg,
         free(key_rr);
     }
 
-    HIP_DEBUG("Building user info parameter for: \n");
-    signaling_user_context_print(user_ctx, "\t", 1);
-
     /* calculate lengths */
     header_len        = sizeof(struct signaling_param_user_context) - sizeof(struct hip_host_id_key_rdata);
     pkey_rr_len       = user_ctx->key_rr_len;
     username_len      = user_ctx->subject_name_len;
     par_contents_len  = header_len - sizeof(struct hip_tlv_common) + pkey_rr_len + username_len;
 
-    HIP_DEBUG("Building user info parameter of length %d\n", par_contents_len);
-
     /* BUILD THE PARAMETER */
     param_userinfo = malloc(sizeof(struct hip_tlv_common) + par_contents_len);
-    HIP_IFEL(!param_userinfo,
-             -1, "Could not allocate user signature parameter. \n");
+    HIP_IFEL(!param_userinfo, -1, "Could not allocate user signature parameter. \n");
 
     /* Set user identity (public key) */
     param_userinfo->pkey_rr_length   = htons(pkey_rr_len);
@@ -261,7 +260,7 @@ int signaling_build_param_user_context(hip_common_t *msg,
     param_userinfo->un_length = htons(username_len);
     memcpy((uint8_t *)param_userinfo + header_len + pkey_rr_len, user_ctx->subject_name, username_len);
 
-    /* Set type and lenght */
+    /* Set type and length */
     hip_set_param_type((struct hip_tlv_common *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
     hip_set_param_contents_len((struct hip_tlv_common *) param_userinfo, par_contents_len);
 
@@ -271,7 +270,15 @@ int signaling_build_param_user_context(hip_common_t *msg,
     return err;
 }
 
-int signaling_build_param_user_signature(hip_common_t *msg, const struct signaling_user_context *user_ctx) {
+/**
+ *  Build a user signature from the given user context into the given message.
+ *
+ *  @param msg  the message, to sign
+ *  @param uid  the id of the user, which will be prompted for his signature
+ *
+ *  @return         0 on success, negative otherwise
+ */
+int signaling_build_param_user_signature(hip_common_t *msg, const uid_t uid) {
     int err = 0;
     struct hip_sig sig;
     unsigned char signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
@@ -281,11 +288,10 @@ int signaling_build_param_user_signature(hip_common_t *msg, const struct signali
 
     /* sanity checks */
     HIP_IFEL(!msg,       -1, "Cannot sign NULL-message\n");
-    HIP_IFEL(!user_ctx,  -1, "Cannot sign without user context\n");
 
     /* calculate the signature */
     in_len = hip_get_msg_total_len(msg);
-    HIP_IFEL((sig_len = signaling_user_api_sign(user_ctx->euid, msg, in_len, signature_buf, &sig_type)) < 0,
+    HIP_IFEL((sig_len = signaling_user_api_sign(uid, msg, in_len, signature_buf, &sig_type)) < 0,
              -1, "Could not get user's signature \n");
     HIP_IFEL(sig_type != HIP_HI_RSA && sig_type != HIP_HI_RSA && sig_type != HIP_HI_ECDSA,
              -1, "Unsupported signature type: %d\n", sig_type);

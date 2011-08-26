@@ -134,7 +134,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct s
             -EINVAL, "Could not sign UPDATE. Failing\n");
 
     /* Add user authentication */
-    HIP_IFEL(signaling_build_param_user_signature(msg_buf, &ctx->user_ctx),
+    HIP_IFEL(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.euid),
              -1, "User failed to sign UPDATE.\n");
 
 out_err:
@@ -581,7 +581,7 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
                  -1, "failed to retrieve state for signaling\n");
 
     /* Add user authentication */
-    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, &sig_state->ctx.user_ctx),
+    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->ctx.user_ctx.euid),
              -1, "User failed to sign I2 packet.\n");
 out_err:
     return err;
