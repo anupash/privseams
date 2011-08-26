@@ -63,7 +63,7 @@ int signaling_hipfw_oslayer_init(void) {
     new_connection_wait_timeout.tv_sec = 0;
     new_connection_wait_timeout.tv_usec = 0;
 
-    if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_local_firewall_policy.cfg")) {
+    if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_firewall_policy.cfg")) {
             HIP_ERROR("Could not init connection tracking database \n");
             return -1;
         }
@@ -214,11 +214,19 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_REQUEST);
-    hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
 #endif
 
     /* check if this can be sent right away */
     check_timeout_wait_for_new_connections();
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Write PERF_CONN_REQUEST, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+    hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
+    hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
+    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+#endif
 
 out_err:
     return err;

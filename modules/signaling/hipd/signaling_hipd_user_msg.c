@@ -218,7 +218,17 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
     /* Print and send */
     HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
     signaling_connection_print(conn, "");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_HIPD_R2_FINISH\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+    HIP_DEBUG("Start PERF_USER_COMM\n");
+    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+#endif
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_USER_COMM\n");
+    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
+#endif
 
     /* We expect the corresponding local application context in the response. */
     HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL),

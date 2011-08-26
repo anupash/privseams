@@ -722,11 +722,9 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
+    hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
-    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n");              // test 2.1.2
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
-
 
 out_err:
     hip_set_msg_total_len(msg, orig_len);

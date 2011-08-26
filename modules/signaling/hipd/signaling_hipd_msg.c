@@ -598,11 +598,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection *conn;
     struct userdb_user_entry *db_entry = NULL;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HANDLE_I2\n");
-    hip_perf_start_benchmark(perf_set, PERF_HANDLE_I2);
-#endif
-
     /* Sanity checks */
     if (packet_type == HIP_I2) {
         HIP_DEBUG("Handling an I2\n");
@@ -635,18 +630,11 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
 
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_USER_COMM\n");
-    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
-#endif
+
     /* Tell the firewall/oslayer about the new connection and await it's decision */
     HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_USER_COMM\n");
-    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
-    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-#endif
+
     /* If connection has been blocked by the oslayer.
      * send an error notification with the reason and discard the i2. */
     if (conn->status == SIGNALING_CONN_BLOCKED) {
@@ -654,11 +642,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
         // todo: send error notification
         return -1;
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_HANDLE_I2\n");
-        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_I2);
-#endif
 
 out_err:
     return err;
@@ -678,12 +661,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection *conn               = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
     struct userdb_user_entry *db_entry = NULL;
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HANDLE_R2\n");
-    hip_perf_start_benchmark(perf_set, PERF_HANDLE_R2);
-#endif
-
 
     /* sanity checks */
     if (packet_type == HIP_R2) {
@@ -720,20 +697,9 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HANDLE_R2\n");
-    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_R2);
-    HIP_DEBUG("Start PERF_USER_COMM\n");
-    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
-#endif
     /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_USER_COMM\n");
-    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
-    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-#endif
 
     /* Send an I3 if connection has not been blocked by the oslayer.
      * otherwise send an error notification with the reason and discard the R2. */
@@ -750,9 +716,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R2\n");
+    HIP_DEBUG("Stop PERF_R2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
-    hip_perf_write_benchmark(perf_set, PERF_R2);
 #endif
 
     /* Check if authentication of initiator user was requested,
@@ -766,6 +731,14 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
             goto out_err;
         }
     }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Write PERF_R2, PERF_USER_COMM, PERF_I2_R2, PERF_HIPD_R2_FINISH\n");
+    hip_perf_write_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_I2_R2);
+    hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+#endif
 
 out_err:
     return err;
@@ -788,7 +761,6 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R2_I3\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_I3);
-    hip_perf_write_benchmark(perf_set, PERF_R2_I3);
 #endif
 
     /* sanity checks */
@@ -831,20 +803,16 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 
     if (!wait_auth) {
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
-    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-#endif
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_USER_COMM\n");
-    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+        HIP_DEBUG("Stop PERF_NEW_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
 #endif
         HIP_DEBUG("Auth completed after I3/U3 \n");
         signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_USER_COMM\n");
-    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
-    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN\n");
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+        hip_perf_write_benchmark(perf_set, PERF_R2_I3);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
 #endif
     }
 

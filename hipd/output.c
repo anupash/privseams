@@ -581,9 +581,12 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R1\n");
+    HIP_DEBUG("Stop PERF_R1\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1);
+
+    HIP_DEBUG("Write PERF_R1, PERF_I1_R1\n");
     hip_perf_write_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_I1_R1);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1102,9 +1105,13 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_I2\n");
+    HIP_DEBUG("Stop PERF_I2\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2);
+
+    HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2\n");
     hip_perf_write_benchmark(perf_set, PERF_I2);
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_R1_I2);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE

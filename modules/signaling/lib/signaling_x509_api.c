@@ -326,6 +326,8 @@ int verify_ac_certificate_chain(X509AC *leaf_cert, const char *trusted_lookup_di
         X509_STORE_CTX_trusted_stack(verify_ctx, trusted_chain);
     }
 
+    OpenSSL_add_all_algorithms();
+
     /* Finally do the verification and output some info */
     err = X509AC_verify_cert(verify_ctx, leaf_cert);
     if (err) {

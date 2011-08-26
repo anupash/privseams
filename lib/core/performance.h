@@ -87,15 +87,19 @@ enum perf_sensor {
     PERF_NEW_CONN,           // test 0
     PERF_CONN_REQUEST,       // test 1
     PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
+    PERF_NETSTAT_LOOKUP,     // tests 1.1.1
+    PERF_VERIFY_APPLICATION, // tests 1.1.2
     PERF_SEND_CONN_REQUEST,  // test 1.2
-    PERF_HANDLE_I2,          // test 2
-    PERF_HANDLE_R2,          // test 3
+    //PERF_HANDLE_I2,          // test 2
+    //PERF_HANDLE_R2,          // test 3
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
     PERF_HIPFW_REQ0,
     PERF_HIPFW_REQ1,         // test 2.2
     PERF_HIPFW_REQ2,         // test 3.2
     PERF_HIPFW_REQ3,         // test 4.3
-    PERF_IP6TABLES,          // test
+    PERF_HIPD_R2_FINISH,     // time from receiving R2 until sending request to hipfw
+    PERF_HIPFW_R2_FINISH,    // time from receiving final request until acceptance of connection
+    PERF_IP6TABLES,          // time for setting up ip6table rules
     PERF_X509AC_VERIFY_CERT_CHAIN,
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
     /* The firewall only uses the sensors given above, hence it
@@ -107,7 +111,6 @@ enum perf_sensor {
     PERF_I1_SEND,
     PERF_RSA_SIGN_IMPL,
     PERF_STARTUP,
-
     PERF_ECDSA_SIGN_IMPL,
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
 

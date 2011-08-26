@@ -583,13 +583,10 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     hip_perf_write_benchmark(perf_set, PERF_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
-    hip_perf_write_benchmark(perf_set, PERF_ECDSA_SIGN_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY);
     hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
-    hip_perf_write_benchmark(perf_set, PERF_HANDLE_I2);
-    hip_perf_write_benchmark(perf_set, PERF_HANDLE_R2);
 #endif
 
     return 0;
@@ -670,9 +667,8 @@ int hip_check_r1(RVS const uint8_t packet_type,
     const char                  *str   = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_I1_R1\n");
+    HIP_DEBUG("Stop PERF_I1_R1\n");
     hip_perf_stop_benchmark(perf_set, PERF_I1_R1);
-    hip_perf_write_benchmark(perf_set, PERF_I1_R1);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -995,14 +991,14 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
     uint16_t mask = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_I2_R2\n");
+    HIP_DEBUG("Stop PERF_I2_R2\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_R2);
-    hip_perf_write_benchmark(perf_set, PERF_I2_R2);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_R2);
+    hip_perf_start_benchmark(perf_set, PERF_HIPD_R2_FINISH);
 #endif
 
     if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
@@ -1336,7 +1332,6 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1_I2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1_I2);
-    hip_perf_write_benchmark(perf_set, PERF_R1_I2);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
