@@ -12,6 +12,7 @@
 #include "signaling_hipd_user_msg.h"
 #include "signaling_hipd_state.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/lib/signaling_user_management.h"
 
 #define INBOUND_CHECK_APPINFO_PRIO              29000
 #define INBOUND_CHECK_USERINFO_PRIO             29100
@@ -34,6 +35,8 @@ int hip_signaling_init(void)
 {
 	int err = 0;
 
+	HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not init user management\n");
+
 	// register I3
     lmod_register_packet_type(HIP_I3, "HIP_I3");
 
@@ -44,6 +47,7 @@ int hip_signaling_init(void)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,     "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_U,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_U");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_S,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_S");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CERT_CHAIN_ID,      "HIP_PARAM_SIGNALING_CERT_CHAIN_ID");
 
     // register internal parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");

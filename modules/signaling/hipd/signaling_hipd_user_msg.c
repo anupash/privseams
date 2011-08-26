@@ -20,6 +20,7 @@
 #include "hipd/user.h"
 
 #include "modules/signaling/lib/signaling_common_builder.h"
+#include "modules/signaling/lib/signaling_user_management.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
@@ -137,6 +138,7 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     hip_ha_t *entry                         = NULL;
     const struct signaling_connection *recv_conn  = NULL;
     struct signaling_connection *existing_conn = NULL;
+    struct userdb_user_entry *db_entry = NULL;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
@@ -148,7 +150,6 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
     recv_conn = (const struct signaling_connection *) (param + 1);
 
-    signaling_hipd_state_print(sig_state);
     existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id);
     if (!existing_conn) {
         HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, recv_conn)),
@@ -156,6 +157,12 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     } else {
         HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
                  -1, "Could not copy connection context to state \n");
+    }
+
+    /* add/update user in user db */
+    if ((db_entry = userdb_add_user_from_msg(msg, 0))) {
+        HIP_ERROR("Added new user from message\n");
+        existing_conn->ctx_out.userdb_entry = db_entry;
     }
 
     HIP_DEBUG("Saved/updated state for connection received from hipfw:\n");
@@ -260,8 +267,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
     const struct hip_tlv_common *param;
     hip_ha_t *entry = NULL;
     struct signaling_hipd_state *sig_state = NULL;
-    struct signaling_connection conn;
+    struct signaling_connection *conn = NULL;
+    struct signaling_connection new_conn;
     int err = 0;
+    struct userdb_user_entry *db_entry = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
@@ -281,29 +290,35 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "failed to retrieve state for signaling module\n");
 
         /* get a local copy of the connection context */
-        HIP_IFEL(signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1)),
+        HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
                  -1, "Could not copy connection context\n");
 
         /* check if previous BEX has been completed */
         if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT)) {
-            conn.status         = SIGNALING_CONN_WAITING;
+            new_conn.status         = SIGNALING_CONN_WAITING;
         } else {
-            conn.status         = SIGNALING_CONN_PROCESSING;
+            new_conn.status         = SIGNALING_CONN_PROCESSING;
         }
 
         /* save application context to our local state */
-        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, &conn),
+        HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could save connection in local state\n");
 
+        /* add/update user in user db */
+        if (!(db_entry = userdb_add_user_from_msg(msg, 0))) {
+            HIP_ERROR("Could not add user from message\n");
+        }
+        conn->ctx_out.userdb_entry = db_entry;
+
         /* now trigger the UPDATE */
-        if (conn.status == SIGNALING_CONN_PROCESSING) {
-            HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, &conn),
+        if (conn->status == SIGNALING_CONN_PROCESSING) {
+            HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, conn),
                      -1, "Failed triggering first bex update.\n");
             HIP_DEBUG("Triggered UPDATE for following connection context:\n");
-            signaling_connection_print(&conn, "");
+            signaling_connection_print(conn, "");
         } else {
             HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
-            signaling_connection_print(&conn, "");
+            signaling_connection_print(conn, "");
         }
 
     } else {       // BEX
@@ -319,24 +334,27 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
                  -1, "Missing application_context parameter\n");
         // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-        HIP_IFEL(signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1)),
+        HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
                  -1, "Could not copy connection\n");
-        conn.status         = SIGNALING_CONN_PROCESSING;
+        new_conn.status         = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
-        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, &conn),
+        HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not save connection in local state\n");
 
-        HIP_DEBUG("HIPD STATE \n");
-        signaling_hipd_state_print(sig_state);
+        /* add/update user in user db */
+        if (!(db_entry = userdb_add_user_from_msg(msg, 0))) {
+            HIP_ERROR("Could not add user from message\n");
+        }
+        conn->ctx_out.userdb_entry = db_entry;
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
-        signaling_connection_print(&conn, "");
+        signaling_connection_print(conn, "");
     }
 
 
     /* send status for new connection to os layer */
-    signaling_send_connection_confirmation(our_hit, peer_hit, &conn);
+    signaling_send_connection_confirmation(our_hit, peer_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");

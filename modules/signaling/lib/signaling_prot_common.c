@@ -14,6 +14,7 @@
 #include "signaling_prot_common.h"
 #include "signaling_common_builder.h"
 #include "signaling_x509_api.h"
+#include "signaling_user_management.h"
 
 
 const char *signaling_connection_status_name(int status) {
@@ -173,6 +174,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
     signaling_flags_print(ctx->flags, prefix);
     signaling_user_context_print(&ctx->user, prefix, 0);
+    HIP_DEBUG("%sUser DB Entry at:\t %p\n", prefix, ctx->userdb_entry);
     signaling_application_context_print(&ctx->app, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
@@ -465,6 +467,7 @@ int signaling_init_connection_context(struct signaling_connection_context *const
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
     ctx->direction          = dir;
     ctx->flags              = 0;
+    ctx->userdb_entry       = NULL;
     HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
     HIP_IFEL(signaling_init_user_context(&ctx->user),

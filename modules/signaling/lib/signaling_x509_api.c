@@ -224,6 +224,20 @@ int certificate_chain_cmp(STACK_OF(X509) *c1, STACK_OF(X509) *c2) {
 }
 
 /**
+ * @return 1 if match, 0 otherwise
+ */
+int match_public_key(X509 *cert, const EVP_PKEY *pkey)
+{
+    EVP_PKEY *pkey2 = NULL;
+
+    if (!cert) {
+        return 0;
+    }
+    pkey2 = X509_get_pubkey(cert);
+    return EVP_PKEY_cmp(pkey2, pkey);
+}
+
+/**
  * Build and verify a certificate chain.
  *
  * @param leaf_cert             the certificate to verify

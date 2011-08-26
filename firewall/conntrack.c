@@ -76,6 +76,7 @@
 
 #include "modules/signaling/firewall/signaling_hipfw.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
 
 
 static struct dlist *hip_list  = NULL;
@@ -1728,7 +1729,11 @@ static int check_packet(struct hip_common *common,
     } else if (common->type_hdr == HIP_R2) {
         err = handle_r2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_UPDATE) {
-        err = handle_update(common, &tuple, ctx);
+        if (signaling_get_update_type(common)) {
+            err = signaling_hipfw_handle_update(common, tuple, ctx);
+        } else  if (err) {
+            err = handle_update(common, tuple, ctx);
+        }
     } else if (common->type_hdr == HIP_NOTIFY) {
         err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {

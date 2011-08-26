@@ -146,8 +146,16 @@ static hip_common_t *build_update_message(hip_ha_t *ha,
         if(signaling_build_param_application_context(msg_buf, conn->sockets, &conn->ctx_out.app)) {
             HIP_DEBUG("Building of application context parameter failed\n");
         }
-        if(signaling_build_param_user_context(msg_buf, &conn->ctx_out.user)) {
+        if(signaling_build_param_user_context(msg_buf, &conn->ctx_out.user, conn->ctx_out.userdb_entry)) {
             HIP_DEBUG("Building of user conext parameter failed.\n");
+        }
+    }
+
+    /* check if we have to include a user auth req_s parameter */
+    if (type == SIGNALING_SECOND_BEX_UPDATE || type == SIGNALING_THIRD_BEX_UPDATE) {
+        if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+            HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
+                     -1, "Building of user context parameter failed.\n");
         }
     }
 
@@ -461,12 +469,8 @@ int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
             -1, "Building of ACK parameter failed\n");
 
     /* Add connection id */
-    HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
+    HIP_IFEL(signaling_build_param_certificate_chain_identifier(msg_buf, conn->id, network_id),
              -1, "Building of connection identifier parameter failed\n");
-
-    /* Add original auth request */
-    HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, network_id),
-             -1, "Could not build a copy of the user auth request into certificate ack packet \n");
 
         /* Add host authentication */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -545,12 +549,8 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
         }
 
         /* Add the connection identifier */
-        HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
-                 -1, "Could not build connection identifier for certificate update packet \n");
-
-        /* Add the network identifier */
-        HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, network_id),
-                 -1, "Could not build a copy of the user auth request into certificate update packet \n");
+        HIP_IFEL(signaling_build_param_certificate_chain_identifier(msg_buf, conn->id, network_id),
+                 -1, "Could not build certificate chain identifier for certificate update packet \n");
 
         /* Mac and sign the packet */
         HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -596,6 +596,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state * sig_state = NULL;
     struct signaling_connection new_conn;
     struct signaling_connection *conn;
+    struct userdb_user_entry *db_entry = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_I2\n");
@@ -613,6 +614,11 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
         goto out_err;
     }
 
+    /* add/update user in user db */
+    if (!(db_entry = userdb_add_user_from_msg(ctx->input_msg, 0))) {
+        HIP_ERROR("Could not add user from message\n");
+    }
+
     /* Since this is a new connection, we have to setup new state as a responder
      * and fill the new state with the information in the I2 */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -620,13 +626,12 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I2 \n");
     new_conn.side = RESPONDER;
+    new_conn.ctx_in.userdb_entry = db_entry;
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
-    HIP_DEBUG("HIPD state after receiving I2 \n");
-    signaling_hipd_state_print(sig_state);
 
     /* Try to authenticate the user and set flags accordingly */
-    signaling_handle_user_signature(ctx->input_msg, conn, IN);
+    userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
@@ -672,6 +677,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection recv_conn;
     struct signaling_connection *conn               = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
+    struct userdb_user_entry *db_entry = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_R2\n");
@@ -690,6 +696,11 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         goto out_err;
     }
 
+    /* add/update user in user db */
+    if (!(db_entry = userdb_add_user_from_msg(ctx->input_msg, 0))) {
+        HIP_ERROR("Could not add user from message\n");
+    }
+
     /* Get the connection from state and update it with the information in the R2. */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
@@ -699,11 +710,10 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get connection state for connection in R2\n");
     HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg, IN),
              -1, "Could not update connection state with information from R2\n", IN);
-    HIP_DEBUG("HIPD state after receiving R2/U2 \n");
-    signaling_hipd_state_print(sig_state);
+    conn->ctx_in.userdb_entry = db_entry;
 
     /* Try to authenticate the user and set flags accordingly */
-    signaling_handle_user_signature(ctx->input_msg, conn, IN);
+    userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
     /* The initiator and responder hosts are authed,
      * because this packet went through all the default hip checking functions. */
@@ -836,117 +846,81 @@ out_err:
  */
 static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err = 0;
-    const struct hip_cert *param_cert = NULL;
-    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+    const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     X509 *cert = NULL;
-    STACK_OF(X509) *cert_chain = NULL;
     struct signaling_hipd_state *sig_state = NULL;
-    struct hip_host_id pseudo_ui;
-    EVP_PKEY *pkey = NULL;
-    X509_NAME *subject_name = NULL;
-    uint32_t conn_id;
     struct signaling_connection *conn = NULL;
     const struct hip_seq *param_seq = NULL;
-    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
+    struct userdb_certificate_context *cert_ctx = NULL;
+    uint32_t network_id;
+    uint32_t conn_id;
 
     /* sanity checks */
     HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
 
-    /* get connection identifier and context */
+    /* Get connection identifier and context */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state\n");
-    HIP_IFEL(!(param_conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
+    HIP_IFEL(!(param_cert_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
-    conn_id = ntohl(param_conn_id->id);
+    conn_id    =  ntohl(param_cert_id->connection_id);
+    network_id = ntohl(param_cert_id->network_id);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
              -1, "No connection context for connection id \n");
 
-    /* process certificates */
-    HIP_IFEL(!(param_cert = hip_get_param(ctx->input_msg, HIP_PARAM_CERT)),
-             -1, "Message contains no certificate. \n");
-    if (!sig_state->user_cert_ctx.cert_chain) {;
-        HIP_IFEL(!(sig_state->user_cert_ctx.cert_chain = sk_X509_new_null()),
-                 -1, "memory allocation failure\n");
+    /* Process certificates and check completeness*/
+    err = userdb_add_certificates_from_msg(ctx->input_msg, conn->ctx_in.userdb_entry);
+    if (err < 0) {
+        HIP_ERROR("Internal error while processing certificates \n");
+        err = -1;
+        goto out_err;
+    } else if (err > 0) {
+        HIP_DEBUG("Waiting for further certificate updates because chain is incomplete. \n");
+        userdb_entry_print(conn->ctx_in.userdb_entry);
+        return 0;
     }
-    cert_chain = sig_state->user_cert_ctx.cert_chain;
-    while(param_cert != NULL && hip_get_param_type((const struct hip_tlv_common *) param_cert) == HIP_PARAM_CERT) {
-        HIP_DEBUG("Got certificate %d from a group of %d certificates \n", param_cert->cert_id, param_cert->cert_count);
-        HIP_IFEL(signaling_DER_to_X509((const unsigned char *) (param_cert + 1), ntohs(param_cert->length) - sizeof(struct hip_cert) + sizeof(struct hip_tlv_common), &cert),
-                 -1, "Could not decode certificate");
-        /* set group if this is the beginning of a cert exchange */
-        if (sig_state->user_cert_ctx.group == -1) {
-            sig_state->user_cert_ctx.group = param_cert->cert_group;
-        }
-        /* check cert belongs to the group we're currently receiving */
-        if (sig_state->user_cert_ctx.group != param_cert->cert_group) {
-            HIP_DEBUG("Received certificate from wrong group, discarding... \n");
-            continue;
-        }
-        sk_X509_push(cert_chain, cert);
-        //HIP_DEBUG("Recevied and pushed:\n");
-        //X509_print_fp(stderr, cert);
 
-        /* check if we have received the last cert */
-        if (sk_X509_num(cert_chain) == param_cert->cert_count) {
-            HIP_DEBUG("received complete certificate, now saving %d certs \n", sk_X509_num(cert_chain));
-            /* we have to reorder the stack one time... */
-            stack_reverse(&cert_chain);
+    /* We have received a complete chain */
+    HIP_DEBUG("Received complete certificate chain.\n");
+    HIP_IFEL(!(cert_ctx = userdb_get_certificate_context(conn->ctx_in.userdb_entry,
+                                                         &ctx->input_msg->hits,
+                                                         &ctx->input_msg->hitr,
+                                                         network_id)),
+             -1, "Could not retrieve users certificate chain\n");
+    stack_reverse(&cert_ctx->cert_chain);
+    userdb_entry_print(conn->ctx_in.userdb_entry);
 
-            /* Now verify the user identity with the certificate chain
-             * We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
-             * However, we need only to fill in hi_length, algorithm and the key rr. */
-            pseudo_ui.hi_length       = conn->ctx_in.user.key_rr_len;
-            pseudo_ui.rdata.algorithm = conn->ctx_in.user.rdata.algorithm;
-            memcpy(pseudo_ui.key,
-                   conn->ctx_in.user.pkey,
-                   conn->ctx_in.user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
-            HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&pseudo_ui, 0)), -1, "Could not deserialize users public key\n");
-            cert = sk_X509_pop(cert_chain);
-            HIP_IFEL(signaling_DER_to_X509_NAME(conn->ctx_in.user.subject_name, conn->ctx_in.user.subject_name_len, &subject_name),
-                     -1, "Could not get users X509 name");
+    /* Match the public key */
+    cert = sk_X509_pop(cert_ctx->cert_chain);
+    HIP_IFEL(!match_public_key(cert, conn->ctx_in.userdb_entry->pub_key),
+             -1, "Users public key does not match with the key in the received certificate chain\n");
 
-            HIP_IFEL(signaling_user_api_verify_pubkey(subject_name, pkey, cert, 1),
-                     -1, "Could not verify users public key with received certificate chain\n");
-            if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain)) {
-                /* Public key verification was successful, so we save the chain */
-                sk_X509_push(cert_chain, cert);
-                signaling_add_user_certificate_chain(cert_chain);
-                signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
-                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+    /* Verify the certificate chain */
+    if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_ctx->cert_chain)) {
+        /* Public key verification was successful, so we save the chain */
+        sk_X509_push(cert_ctx->cert_chain, cert);
+        userdb_save_user_certificate_chain(cert_ctx->cert_chain);
+        signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
+        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
 
-                /* We send an ack */
-                HIP_IFEL(!(param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S)),
-                         -1, "Could not get auth request from certificate update \n");
-                HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
-                         -1, "Cannot build ack for last certificate update, because corresponding UPDATE has no sequence number \n");
-                signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn, ntohl(param_usr_auth->network_id));
+        /* We send an ack */
+        HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
+                 -1, "Cannot build ack for last certificate update, because corresponding UPDATE has no sequence number \n");
+        signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn, network_id);
 
-                /* We confirm to the firewall if we're done.
-                 * If not, we'll confirm when we receive our own certifiate ack. */
-                if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-                    HIP_DEBUG("Confirming user authentication to OSLAYER\n");
-                    signaling_connection_print(conn, "");
-                    signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+        /* We confirm to the firewall if we're done, i.e. if the authentication of
+         * our local user has not been requested or is already completed.
+         * If not, we'll confirm when we receive our own certifiate ack. */
+        if (!signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+            signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
-                    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-                    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+            HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+            hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
 #endif
-                }
-            } else {
-                HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
-                free(cert);
-            }
-
-            /* Reset the certificate context for this HA */
-            sig_state->user_cert_ctx.group = -1;
-            sig_state->user_cert_ctx.user_certificate_required = 0;
-            sig_state->user_cert_ctx.cert_chain = NULL;
-            sk_X509_free(cert_chain);
-            cert_chain = NULL;
         }
-
-        param_cert = (const struct hip_cert *) hip_get_next_param(ctx->input_msg, (const struct hip_tlv_common *) param_cert);
+    } else {
+        HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
     }
 
 out_err:
@@ -955,7 +929,7 @@ out_err:
 
 static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err = 0;
-    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+    const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     struct signaling_hipd_state *sig_state = NULL;
     struct signaling_connection *existing_conn = NULL;
     uint32_t conn_id;
@@ -966,9 +940,9 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     /* get connection identifier and context */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state\n");
-    HIP_IFEL(!(param_conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
-             -1, "No connection identifier found in the message, cannot handle certificates.\n");
-    conn_id = ntohl(param_conn_id->id);
+    HIP_IFEL(!(param_cert_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
+             0, "No connection identifier found in the message, cannot handle certificates.\n");
+    conn_id    =  ntohl(param_cert_id->connection_id);
     HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
              -1, "No connection context for connection id \n");
 
@@ -1054,7 +1028,6 @@ int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNU
     ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling module \n");
-    sig_state->user_cert_ctx.user_certificate_required = 1;
 
 out_err:
     return err;
@@ -1110,7 +1083,7 @@ int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
-    HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user),
+    HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry),
             -1, "Building of user context parameter failed.\n");
 
 out_err:

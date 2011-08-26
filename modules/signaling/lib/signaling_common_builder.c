@@ -45,6 +45,7 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 #include "signaling_x509_api.h"
+#include "signaling_user_management.h"
 
 /**
  * Builds a hip_param_connection_identifier parameter into msg,
@@ -199,8 +200,9 @@ out_err:
  *
  * @return          zero for success, or non-zero on error
  */
-int signaling_build_param_user_context(struct hip_common *msg,
-                                       struct signaling_user_context *user_ctx)
+int signaling_build_param_user_context(hip_common_t *msg,
+                                       struct signaling_user_context *user_ctx,
+                                       struct userdb_user_entry *db_entry)
 {
     struct signaling_param_user_context *param_userinfo = NULL;
     int err = 0;
@@ -225,6 +227,9 @@ int signaling_build_param_user_context(struct hip_common *msg,
                  -1, "Could not serialize key \n");
         HIP_DEBUG("GOT keyy rr of length %d\n", user_ctx->key_rr_len);
         memcpy(user_ctx->pkey, key_rr, user_ctx->key_rr_len);
+        // set key in userdb
+        userdb_add_key(db_entry, &user_ctx->rdata, user_ctx->key_rr_len, key_rr);
+
         // necessary because any_key_to_rr returns only the length of the key rrwithout the header
         user_ctx->key_rr_len += sizeof(struct hip_host_id_key_rdata);
         free(key_rr);
@@ -390,6 +395,30 @@ out_err:
     return err;
 }
 
+int signaling_build_param_certificate_chain_identifier(hip_common_t *const msg,
+                                                       const uint32_t connection_id,
+                                                       const uint32_t network_id)
+{
+    int err = 0;
+    int len;
+    struct signaling_param_cert_chain_id ccid;
+
+    /* sanity checks*/
+    HIP_IFEL(!msg, -1, "Cannot append cert chain id parameter to NULL message \n");
+
+    /* build and append parameter */
+    hip_set_param_type((struct hip_tlv_common *) &ccid, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
+    len = sizeof(struct signaling_param_cert_chain_id) - sizeof(struct hip_tlv_common);
+    hip_set_param_contents_len((struct hip_tlv_common *) &ccid, len);
+    ccid.connection_id = htonl(connection_id);
+    ccid.network_id = htonl(network_id);
+    HIP_IFEL(hip_build_param(msg, &ccid),
+             -1, "Could not build cert chain id parameter into message \n");
+
+out_err:
+    return err;
+}
+
 static int build_param_user_auth(hip_common_t *msg,
                                  uint32_t network_id,
                                  uint16_t type)
@@ -550,29 +579,31 @@ void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits
  *
  * @return the signaling update type, or negative if this is no siganling update message
  */
-int signaling_get_update_type(hip_common_t *msg) {
+int signaling_get_update_type(const hip_common_t *msg) {
     int err = -1;
     const struct signaling_param_app_context *param_app_ctx     = NULL;
     const struct hip_seq *param_seq                             = NULL;
     const struct hip_ack *param_ack                             = NULL;
     const struct hip_cert *param_cert                           = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
+    const struct signaling_param_cert_chain_id *param_cer_chain_id = NULL;
 
-    param_app_ctx   = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    param_seq       = hip_get_param(msg, HIP_PARAM_SEQ);
-    param_ack       = hip_get_param(msg, HIP_PARAM_ACK);
-    param_cert      = hip_get_param(msg, HIP_PARAM_CERT);
+    param_app_ctx      = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    param_seq          = hip_get_param(msg, HIP_PARAM_SEQ);
+    param_ack          = hip_get_param(msg, HIP_PARAM_ACK);
+    param_cert         = hip_get_param(msg, HIP_PARAM_CERT);
     param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S);
+    param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
 
     if (param_app_ctx && param_seq && !param_ack) {
         return SIGNALING_FIRST_BEX_UPDATE;
     } else if (param_app_ctx && param_seq && param_ack) {
         return SIGNALING_SECOND_BEX_UPDATE;
-    } else if (param_ack && !param_seq && !param_usr_auth_req) {
+    } else if (param_ack && !param_seq && !param_cer_chain_id) {
         return SIGNALING_THIRD_BEX_UPDATE;
-    } else if (param_cert && param_seq && !param_ack) {
+    } else if (param_cert && param_seq && !param_ack && param_cer_chain_id) {
         return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
-    } else if (param_ack && param_usr_auth_req) {
+    } else if (param_ack && param_cer_chain_id) {
         return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
     }
 

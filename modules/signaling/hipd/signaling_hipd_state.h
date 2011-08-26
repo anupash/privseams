@@ -17,9 +17,9 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 struct user_certificate_context {
-    /* Flag to save whether we need to send our user certificate after BEX or UPDATE is completed */
-    int user_certificate_required;
+    uint32_t network_id;
     int group;
+    int count;
     int next_cert_id;
     STACK_OF(X509) *cert_chain;
 };

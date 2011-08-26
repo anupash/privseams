@@ -68,7 +68,10 @@ struct signaling_connection *signaling_cdb_entry_find_connection_by_dst_port(con
                                                                              const uint16_t dest_port);
 
 struct signaling_connection *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
-                                                               const struct in6_addr *dst_hit);
+                                                       const struct in6_addr *dst_hit);
+
+int signaling_cdb_direction(const struct in6_addr *src_hit,
+                            const struct in6_addr *dst_hit);
 
 int signaling_cdb_entry_print(signaling_cdb_entry_t * entry);
 

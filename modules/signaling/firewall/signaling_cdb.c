@@ -304,9 +304,21 @@ out_err:
     return NULL;
 }
 
+/**
+ * @return 0 if a message with src and dsthit is in direction initiatior responder, 1 otherwise, -1 if no entry
+ */
+int signaling_cdb_direction(const struct in6_addr *src_hit,
+                            const struct in6_addr *dst_hit) {
+    signaling_cdb_entry_t *entry = NULL;
+    if ((entry = signaling_cdb_entry_find(src_hit, dst_hit))) {
+        return IN6_ARE_ADDR_EQUAL(&entry->local_hit, src_hit) ? 0 : 1;
+    }
+    return -1;
+}
+
 struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
-                                                     const struct in6_addr *remote_hit,
-                                                     const uint32_t id)
+                                                                const struct in6_addr *remote_hit,
+                                                                const uint32_t id)
 {
     struct slist *listitem;
     struct signaling_connection *conn = NULL;

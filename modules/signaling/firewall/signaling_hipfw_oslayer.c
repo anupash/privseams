@@ -211,14 +211,14 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     signaling_cdb_print();
     waiting_connections++;
 
-    /* check if this can be sent right away */
-    check_timeout_wait_for_new_connections();
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_REQUEST);
     hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
 #endif
+
+    /* check if this can be sent right away */
+    check_timeout_wait_for_new_connections();
 
 out_err:
     return err;

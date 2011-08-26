@@ -48,12 +48,14 @@ typedef struct {
 
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
+#include "lib/core/hostid.h"
 
 #include "firewall/hslist.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_user_management.h"
+#include "modules/signaling/lib/signaling_x509_api.h"
 
 #include "signaling_policy_engine.h"
 #include "signaling_cdb.h"
@@ -142,6 +144,7 @@ int signaling_hipfw_init(const char *policy_file) {
 
     // init cdb
     HIP_IFEL(signaling_cdb_init(), -1, "Could not initialize conntracking database. \n");
+    HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
 
     // read and process policy
     if (!policy_file) {
@@ -226,6 +229,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 {
     int err = 0;
     struct signaling_connection new_conn;
+    struct userdb_user_entry *db_entry = NULL;
 
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
@@ -238,9 +242,15 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     new_conn.ctx_in.direction = FWD;
     new_conn.side = MIDDLEBOX;
     /* Try to auth the user and set flags accordingly */
-    signaling_handle_user_signature(common, &new_conn, IN);
+    userdb_handle_user_signature(common, &new_conn, IN);
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
+
+    /* add/update user in user db */
+    if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+        HIP_ERROR("Could not add user from message\n");
+    }
+    new_conn.ctx_in.userdb_entry = db_entry;
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of i2\n");
@@ -293,6 +303,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection recv_conn;
     struct signaling_connection *conn = NULL;
     const struct signaling_param_user_auth_request *auth_req = NULL;
+    struct userdb_user_entry *db_entry = NULL;
 
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
@@ -306,9 +317,15 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
              0, "Could not update connection state with information from R2\n");
     conn->ctx_out.direction = FWD;
     /* Try to auth the user and set flags accordingly */
-    signaling_handle_user_signature(common, conn, OUT);
+    userdb_handle_user_signature(common, conn, OUT);
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
+
+    /* add/update user in user db */
+    if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+        HIP_ERROR("Could not add user from message\n");
+    }
+    conn->ctx_out.userdb_entry = db_entry;
 
     /* Step b) */
     if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
@@ -403,6 +420,134 @@ out_err:
     return err;
 }
 
+/**
+ * Handle an UPDATE message that contains (parts from) a user certificate chain.
+ *
+ * @return 0 on success
+ */
+static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_common *common,
+                                                              UNUSED struct tuple *tuple,
+                                                              UNUSED hip_fw_context_t *ctx) {
+    int err = 0;
+    const struct signaling_param_cert_chain_id *param_cert_id = NULL;
+    X509 *cert = NULL;
+    struct signaling_connection *conn = NULL;
+    struct userdb_certificate_context *cert_ctx = NULL;
+    uint32_t network_id;
+    uint32_t conn_id;
+    const struct hip_cert *param_cert = NULL;
+    struct signaling_connection_context *conn_ctx = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!common,  0, "Message is NULL\n");
+
+    /* get connection identifier and context */
+    HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
+             -1, "No connection identifier found in the message, cannot handle certificates.\n");
+    conn_id    =  ntohl(param_cert_id->connection_id);
+    network_id = ntohl(param_cert_id->network_id);
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, conn_id)),
+             -1, "No connection context for connection id \n");
+    HIP_IFEL(!(param_cert = hip_get_param(common, HIP_PARAM_CERT)),
+             -1, "Message contains no certificates.\n");
+    switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
+    case 0:
+        conn_ctx = &conn->ctx_in;
+        break;
+    case 1:
+        conn_ctx = &conn->ctx_out;
+        break;
+    default:
+        HIP_DEBUG("Connection is not conntracked \n");
+        return 0;
+    }
+
+    /* process certificates and check completeness*/
+    err = userdb_add_certificates_from_msg(common, conn_ctx->userdb_entry);
+    if (err < 0) {
+        HIP_ERROR("Internal error while processing certificates \n");
+        return 0;
+    } else if (err > 0) {
+        HIP_DEBUG("Waiting for further certificate updates because chain is incomplete. \n");
+        userdb_entry_print(conn_ctx->userdb_entry);
+        return 1;
+    }
+
+    /* We have received a complete chain */
+    HIP_DEBUG("Received complete certificate chain.\n");
+    HIP_IFEL(!(cert_ctx = userdb_get_certificate_context(conn_ctx->userdb_entry,
+                                                         &common->hits,
+                                                         &common->hitr,
+                                                         network_id)),
+             -1, "Could not retrieve users certificate chain\n");
+    stack_reverse(&cert_ctx->cert_chain);
+    userdb_entry_print(conn_ctx->userdb_entry);
+
+    /* Verify the public key */
+    cert = sk_X509_pop(cert_ctx->cert_chain);
+    HIP_IFEL(!match_public_key(cert, conn_ctx->userdb_entry->pub_key),
+             -1, "Users public key does not match with the key in the received certificate chain\n");
+
+    /* Verify the public key and the certificate chain */
+    if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_ctx->cert_chain)) {
+        /* Public key verification was successful, so we save the chain */
+        sk_X509_push(cert_ctx->cert_chain, cert);
+        userdb_save_user_certificate_chain(cert_ctx->cert_chain);
+        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        signaling_flag_unset(&conn_ctx->flags, USER_AUTH_REQUEST);
+    } else {
+        HIP_DEBUG("Rejecting certificate chain. Chain will not be saved, update will be dropped. \n");
+        // todo: send a notification to the peers
+        return 0;
+    }
+
+    return 1;
+
+out_err:
+    return err;
+}
+
+static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct hip_common *common,
+                                                           UNUSED struct tuple *tuple,
+                                                           UNUSED hip_fw_context_t *ctx)
+{
+    int err = 1;
+    const struct signaling_param_cert_chain_id *param_cert_id = NULL;
+    struct signaling_connection *conn = NULL;
+    uint32_t network_id;
+    uint32_t conn_id;
+    struct signaling_connection_context *conn_ctx = NULL;
+
+    /* get connection identifier and context */
+    HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
+             0, "No connection identifier found in the message, cannot handle certificates.\n");
+    conn_id    =  ntohl(param_cert_id->connection_id);
+    network_id = ntohl(param_cert_id->network_id);
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, conn_id)),
+             0, "No connection context for connection id \n");
+    switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
+    case 0:
+        conn_ctx = &conn->ctx_in;
+        break;
+    case 1:
+        conn_ctx = &conn->ctx_out;
+        break;
+    default:
+        HIP_DEBUG("Connection is not conntracked \n");
+        return 0;
+    }
+
+    /* check if we authed the user too */
+    if (!signaling_flag_check(conn_ctx->flags, USER_AUTHED)) {
+        HIP_DEBUG("Received auth ack for user auth that hasn't been successful at the firewall \n");
+        return 0;
+    }
+
+    return 1;
+out_err:
+    return err;
+}
+
 /*
  * Handles an UPDATE packet observed by the firewall.
  * This includes adding connection context information to the conntracking table
@@ -410,9 +555,42 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_update(UNUSED const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
+int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
 {
-    HIP_DEBUG("WARNING: unimplemented function \n");
-    return 1;
+    int err = 0;
+    int update_type;
+
+    /* Sanity checks */
+    HIP_IFEL((update_type = signaling_get_update_type(common)) < 0,
+             1, "This is no signaling update packet\n");
+
+    /* Handle the different update types */
+    switch (update_type) {
+    case SIGNALING_FIRST_BEX_UPDATE:
+        HIP_DEBUG("Received FIRST BEX Update... \n");
+        return 1;
+        break;
+    case SIGNALING_SECOND_BEX_UPDATE:
+        HIP_DEBUG("Received SECOND BEX Update... \n");
+        return 1;
+        break;
+    case SIGNALING_THIRD_BEX_UPDATE:
+        HIP_DEBUG("Received THIRD BEX Update... \n");
+        return 1;
+        break;
+    case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:
+        HIP_DEBUG("Received certificate Update... \n");
+        return signaling_hipfw_handle_incoming_certificate_udpate(common, tuple, ctx);
+        break;
+    case SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE:
+        HIP_DEBUG("Received certificate Update Ack... \n");
+        return signaling_hipfw_handle_incoming_certificate_update_ack(common, tuple, ctx);
+        break;
+    default:
+        HIP_DEBUG("Received unknown UPDATE type. \n");
+    }
+
+out_err:
+    return err;
 }
 
