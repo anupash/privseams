@@ -125,21 +125,16 @@ out_err:
  * @param data the data to be signed
  * @return zero on success and negative on error
  */
-static int ecdsa_sign(EC_KEY *const priv_key, const void *const data, const int in_len, uint8_t *const out)
+static int ecdsa_sign(EC_KEY *const priv_key, const void *const data, const int in_len, unsigned char *const out)
 {
     int err = 0;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
-
-    HIP_IFEL(!priv_key,
-            -1, "No private key given.\n");
-
+     HIP_IFEL(!priv_key,
+             -1, "No private key given.\n");
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
-
-    /* RSA_sign returns 0 on failure */
     HIP_IFEL(impl_ecdsa_sign(sha1_digest, priv_key, out),
              -1, "Signing error\n");
-
 out_err:
     return err;
 }
@@ -170,34 +165,32 @@ out_err:
 /*
  * @return < 0 on error, size of computed signature on success
  */
-int signaling_user_api_get_signature(const uid_t uid, const void *const data, const int in_len, unsigned char *const outbuf) {
+int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type) {
     int err = 0;
-    EC_KEY *priv_key = NULL;
-    unsigned int sig_len;
-    char *homedir = NULL;
+    int sig_len;
     char filebuf[SIGNALING_PATH_MAX_LEN];
+    char *homedir;
+    EC_KEY *ecdsa = NULL;
 
-    // sanity checks
-    HIP_IFEL(!data,
-             -1, "Data to sign is NULL \n");
-    HIP_IFEL(in_len < 0,
-             -1, "Got bad in length \n");
-    HIP_IFEL(!outbuf,
-             -1, "Output buffer is NULL \n");
+    /* sanity checks */
+    HIP_IFEL(!data,         -1, "Data to sign is NULL \n");
+    HIP_IFEL(in_len < 0,    -1, "Invalid in length \n");
+    HIP_IFEL(!out_buf,      -1, "Cannot write to NULL-buffer\n");
+    HIP_IFEL(!sig_type,     -1, "Cannot write signature type to NULL pointer\n");
 
-    // get users homedir, private key and certificate
+    // get users private key
     HIP_IFEL(!(homedir = get_user_homedir(uid)),
              -1, "Could not get homedir for user %d.\n", uid);
-
     sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
-    HIP_DEBUG("Looking for certificate at: %s \n", filebuf);
-    HIP_IFEL(load_ecdsa_private_key(filebuf, &priv_key),
+    HIP_IFEL(load_ecdsa_private_key(filebuf, &ecdsa),
              -1, "Could not get private key for signing \n");
+    EC_KEY_print_fp(stdout, ecdsa, 0);
 
     // sign using ECDSA
-    // TODO: support for rsa, dsa...
-    sig_len = ECDSA_size(priv_key);
-    ecdsa_sign(priv_key, data, in_len, outbuf);
+    sig_len     = ECDSA_size(ecdsa);
+    *sig_type   = HIP_SIG_ECDSA;
+    HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf),
+             -1, "Signature function failed \n");
 
 out_err:
     if (err) {
@@ -218,7 +211,7 @@ static X509 *signaling_user_api_certificate_lookup(UNUSED const char *const user
  * @param signature a pointer the the user's signature
  * @param sig_len   the length of the signature
  */
-int signaling_user_api_verify(UNUSED const struct signaling_user_context *usr_ctx, UNUSED const unsigned char *signature, UNUSED uint16_t sig_len) {
+int signaling_user_api_verify_pubkey(UNUSED const struct signaling_user_context *usr_ctx) {
     int err = 0;
     char *username = NULL;
     X509 *user_cert;
@@ -231,4 +224,22 @@ int signaling_user_api_verify(UNUSED const struct signaling_user_context *usr_ct
 
 out_err:
     return err;
+}
+
+EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid) {
+    int err         = 0;
+    X509 *user_cert = NULL;
+    EVP_PKEY *pkey  = NULL;
+
+    HIP_IFEL(!(user_cert = signaling_user_api_get_user_certificate(uid)),
+             -1, "Could not find user's certificate \n");
+
+    HIP_IFEL(!(pkey=X509_get_pubkey(user_cert)),
+             -1, "Error getting public key from users certificate \n");
+
+out_err:
+    if (err) {
+        return NULL;
+    }
+    return pkey;
 }

@@ -47,7 +47,8 @@
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO             5000
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5002
-#define HIP_PARAM_SIGNALING_USERINFO            62500
+#define HIP_PARAM_SIGNALING_USERINFO            5004
+#define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
 
 
 /* User message types (adds to icomm.h)*/
@@ -108,16 +109,17 @@ struct signaling_ntf_user_auth_failed_data {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |             Type              |             Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |          UI Length            |           SIG Length          |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |          User ID                                              /
-     /                                                               /
-     /                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |   Signature                                                   /
-     /                                                               /
-     /                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                               |            PADDING            |
+     |          UN Length            |         PKEY RR Length        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
+     |          Flags                |    Protocol   |   Algorithm   |    |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+     |                                                               |    +--- Comprises the public key rr
+     |                 Public Key Resource Record                    |    |
+     |                                                               |    |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
+     |                                                               |
+     |          User Name            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                               |            PADDING            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 */
@@ -125,8 +127,13 @@ struct signaling_ntf_user_auth_failed_data {
 struct signaling_param_user_context {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
-    hip_tlv_len_t  ui_length;
-    hip_tlv_len_t  sig_length;
+    hip_tlv_len_t  un_length;
+    hip_tlv_len_t  pkey_rr_length;
+    /** ---- end of header ---- */
+
+    /* The public key is in dns key rr format.
+     * It is comprised of the rrdata and the actual key */
+    struct hip_host_id_key_rdata rdata;
 } __attribute__ ((packed));
 
 /*
@@ -208,6 +215,11 @@ struct signaling_application_context {
 struct signaling_user_context {
     long int euid;
     char username[SIGNALING_USER_ID_MAX_LEN];
+    int key_rr_len;
+
+    /* The key_rr is comprised of the rrdata and the actual key */
+    struct hip_host_id_key_rdata rdata;
+    unsigned char pkey[HIP_MAX_RSA_KEY_LEN / 8 + 4 ];
 };
 
 /*

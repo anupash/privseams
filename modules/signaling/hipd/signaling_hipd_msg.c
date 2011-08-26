@@ -42,6 +42,8 @@
 #include "lib/core/prefix.h"
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/crypto.h"
+#include "lib/core/hostid.h"
 
 #include "hipd/hadb.h"
 #include "hipd/user.h"
@@ -99,9 +101,6 @@ static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct s
     int err                 = 0;
     uint16_t mask           = 0;
     hip_common_t *msg_buf   = NULL;
-    int sig_len             = 0;
-    unsigned char sig_buf[1000];
-
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
@@ -122,23 +121,19 @@ static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct s
     HIP_IFEL(signaling_build_param_application_context(msg_buf, ctx),
             -1, "Building of APPInfo parameter failed\n");
 
-    /* Add authentication */
+    /* Add Userinfo */
+    HIP_IFEL(signaling_build_param_user_context(msg_buf, &ctx->user_ctx),
+            -1, "Building of userinfo parameter for I2 failed.\n");
+
+    /* Add host authentication */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
             -1, "Building of HMAC failed\n");
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
             -EINVAL, "Could not sign UPDATE. Failing\n");
 
-    /* Add user auth */
-    sig_len = signaling_user_api_get_signature(ctx->user_ctx.euid,
-                                               ctx->user_ctx.username,
-                                               strlen(ctx->user_ctx.username),
-                                               sig_buf);
-    if(sig_len < 0) {
-        HIP_DEBUG("Could not build user signature \n");
-    } else {
-        HIP_IFEL(signaling_build_param_user_context(msg_buf, &ctx->user_ctx, sig_buf, sig_len),
-                 -1, "Building of param user_sig for I2 failed.\n");
-    }
+    /* Add user authentication */
+    HIP_IFEL(signaling_build_param_user_signature(msg_buf, &ctx->user_ctx),
+             -1, "User failed to sign UPDATE.\n");
 
 out_err:
     if(err) {
@@ -387,31 +382,65 @@ out_err:
     return err;
 }
 
+
 /*
  * Process user context information in an I2 packet.
  */
 static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
+    int hash_range_len;
+    int orig_len;
     struct signaling_user_context usr_ctx;
     const struct signaling_param_user_context *param_usr_ctx;
-    const unsigned char *signature;
+    const struct hip_sig *param_user_signature;
+    unsigned char sha1_digest[HIP_AH_SHA_LEN];
+    EVP_PKEY *pkey;
+    struct hip_host_id user_hi;
 
-    HIP_IFEL(signaling_init_user_context(&usr_ctx), -1, "Could not init user context\n");
-    param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO);
+    orig_len = hip_get_msg_total_len(ctx->input_msg);
+
+    /* Init the user context */
+    HIP_IFEL(signaling_init_user_context(&usr_ctx),
+             -1, "Could not init user context\n");
+    HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
+             -1, "Message contains no user context \n");
     HIP_IFEL(signaling_build_user_context(param_usr_ctx, &usr_ctx),
              -1, "Could not build user context from user context parameter\n");
     signaling_user_context_print(&usr_ctx, "", 1);
 
-    signature = (const unsigned char *) param_usr_ctx + sizeof(struct signaling_user_context) + ntohs(param_usr_ctx->ui_length);
-    err = signaling_user_api_verify(&usr_ctx, signature, ntohs(param_usr_ctx->sig_length));
+    /* Init the users identity and verify his signature */
 
+    /* We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
+     * However, we need only to fill in hi_length, algorithm and the key rr. */
+    user_hi.hi_length = htons(usr_ctx.key_rr_len);
+    user_hi.rdata.algorithm = usr_ctx.rdata.algorithm;
+    memcpy(user_hi.key, usr_ctx.pkey, usr_ctx.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+    HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&user_hi, 0)),
+             -1, "Could not deserialize users public key\n");
+
+    /* No modify the packet to verify signature */
+    HIP_IFEL(!(param_user_signature = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
+             -1, "I2 contains no user signature\n");
+    hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) ctx->input_msg);
+    hip_zero_msg_checksum(ctx->input_msg);
+    HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
+    hip_set_msg_total_len(ctx->input_msg, hash_range_len);
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, ctx->input_msg, hash_range_len, sha1_digest),
+             -1, "Could not build message digest \n");
+    HIP_IFEL(impl_ecdsa_verify(sha1_digest, EVP_PKEY_get1_EC_KEY(pkey), param_user_signature->signature),
+             -1, "I2 User Signature did not verify correctly\n");
+
+    HIP_DEBUG("Correctly verified users signature\n");
+
+    /* Now verify users public key against his certificate */
+    err = signaling_user_api_verify_pubkey(&usr_ctx);
     if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
-        HIP_DEBUG("still there 1\n");
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
 out_err:
+    hip_set_msg_total_len(ctx->input_msg, orig_len);
     return err;
 }
 
@@ -512,27 +541,15 @@ out_err:
 int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    unsigned char sig_buf[1000];
-    int sig_len = 10;
     struct signaling_hipd_state *sig_state;
 
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
 
-    HIP_IFEL(signaling_user_api_get_uname(sig_state->ctx.user_ctx.euid, &sig_state->ctx.user_ctx),
-             -1, "Could not get user name \n");
-    sig_len = signaling_user_api_get_signature(sig_state->ctx.user_ctx.euid,
-                                               sig_state->ctx.user_ctx.username,
-                                               strlen(sig_state->ctx.user_ctx.username),
-                                               sig_buf);
-
-    HIP_IFEL(sig_len < 0,
-             -1, "Could not build user signature \n");
-
-    HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->ctx.user_ctx, sig_buf, sig_len),
-            -1, "Building of param user_sig for I2 failed.\n");
-
+    /* Add user authentication */
+    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, &sig_state->ctx.user_ctx),
+             -1, "User failed to sign I2 packet.\n");
 out_err:
     return err;
 }
@@ -545,8 +562,13 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
+
     HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for I2 failed.\n");
+
+    HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->ctx.user_ctx),
+            -1, "Building of param user_sig for I2 failed.\n");
+
     HIP_DEBUG("Building application context for I2 successful.\n");
 
 out_err:

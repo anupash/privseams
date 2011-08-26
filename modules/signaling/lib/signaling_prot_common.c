@@ -31,6 +31,19 @@ static const char *signaling_connection_status_name(int status) {
     }
 }
 
+static const char *signaling_user_key_name(int key_type) {
+    switch (key_type) {
+    case HIP_HI_RSA:
+        return "RSA";
+    case HIP_HI_DSA:
+        return "DSA";
+    case HIP_HI_ECDSA:
+        return "ECDSA";
+    default:
+        return "UNKOWN";
+    }
+}
+
 static void signaling_param_print_field(const char *prefix, const uint16_t length, const unsigned char *p_content) {
     char buf[length+1];
 
@@ -109,8 +122,12 @@ void signaling_user_context_print(const struct signaling_user_context * const us
     if (header)
         HIP_DEBUG("%s+------------ -USER CONTEXT START ----------------------\n", prefix);
     HIP_DEBUG("%s  User context \n", prefix);
-    HIP_DEBUG("%s  \tUser Id:\t %d\n", prefix, user_ctx->euid);
+    HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->euid);
     HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, user_ctx->username);
+    HIP_DEBUG("%s  \tUser Key:\t %s\n", prefix, signaling_user_key_name(user_ctx->rdata.algorithm));
+    HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len != -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
+    //if (user_ctx->key_rr_len > 0)
+    //    HIP_HEXDUMP(prefix, user_ctx->pkey, user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     if (header)
         HIP_DEBUG("%s+------------ USER CONTEXT END   ----------------------\n", prefix);
 }
@@ -149,11 +166,13 @@ void signaling_param_user_context_print(const struct signaling_param_user_contex
         HIP_DEBUG("No userinfo parameter given.\n");
         return;
     }
-    p_content = (const uint8_t *) userinfo + sizeof(struct signaling_param_user_context);
     HIP_DEBUG("+------------ USER INFO START ----------------------\n");
-    signaling_param_print_field("User Name:", ntohs(userinfo->ui_length), p_content);
-    p_content += ntohs(userinfo->ui_length);
-    HIP_HEXDUMP("Signature: ", p_content, ntohs(userinfo->sig_length));
+    p_content = (const uint8_t *) userinfo + sizeof(struct signaling_param_user_context)
+                + (ntohs(userinfo->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata));
+    signaling_param_print_field("User Name:", ntohs(userinfo->un_length), p_content);
+    HIP_DEBUG("User Key Type: %s", signaling_user_key_name(userinfo->rdata.algorithm));
+    p_content = (const uint8_t *) userinfo + sizeof(struct signaling_param_user_context);
+    HIP_HEXDUMP("User Key Data: ", p_content, ntohs(userinfo->pkey_rr_length));
     HIP_DEBUG("+------------ USER INFO END   ----------------------\n");
 }
 
@@ -194,8 +213,12 @@ int signaling_init_user_context(struct signaling_user_context * const user_ctx) 
 
     HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
 
-    user_ctx->euid = -1;
-    user_ctx->username[0] = '\0';
+    user_ctx->euid              = -1;    // no user id
+    user_ctx->username[0]       = '\0';  // no user name
+    user_ctx->key_rr_len        = -1;     // no user public key (but key_rdata still has size 4)
+    user_ctx->rdata.algorithm   = 0;     // no user public key algorithm
+    user_ctx->rdata.flags       = 0;     // unused
+    user_ctx->rdata.protocol    = 0;     // unused
 
 out_err:
     return err;

@@ -16,6 +16,7 @@ int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **
 X509 *signaling_user_api_get_user_certificate(const uid_t uid);
 int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx);
 int signaling_user_api_get_signature(const uid_t uid, const void *const data, const int in_len, unsigned char *const outbuf);
-int signaling_user_api_verify(const struct signaling_user_context *usr_ctx, const unsigned char *signature, uint16_t sig_len);
-
+int signaling_user_api_verify_pubkey(const struct signaling_user_context *usr_ctx);
+EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid);
+int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type);
 #endif /* HIP_HIPD_SIGNALING_USER_API_H */

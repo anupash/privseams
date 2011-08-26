@@ -30,6 +30,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <openssl/pem.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -37,10 +38,12 @@
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
+#include "lib/core/hostid.h"
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
+#include "signaling_user_api.h"
 
 /*
  * Allocate an appinfo parameter and initialize to standard values.
@@ -166,49 +169,136 @@ out_err:
     return err;
 }
 
+
+static int any_key_to_key_rr(EVP_PKEY *key, uint8_t *algorithm, unsigned char **key_rr_out) {
+    int err = 0;
+    int type;
+
+    HIP_IFEL(!key,          -1, "Cannot serialize NULL-key \n");
+    HIP_IFEL(!algorithm,    -1, "Cannot write algorithm to NULL field \n");
+    HIP_IFEL(!*key_rr_out,  -1, "Cannot write to NULL-buffer \n");
+
+    type = EVP_PKEY_type(key->type);
+
+    switch (type) {
+    case EVP_PKEY_RSA:
+        *algorithm = HIP_HI_RSA;
+        return rsa_to_dns_key_rr(EVP_PKEY_get1_RSA(key), key_rr_out);
+    case EVP_PKEY_DSA:
+        *algorithm = HIP_HI_DSA;
+        return dsa_to_dns_key_rr(EVP_PKEY_get1_DSA(key), key_rr_out);
+    case EVP_PKEY_EC:
+        *algorithm = HIP_HI_ECDSA;
+        return ecdsa_to_key_rr(EVP_PKEY_get1_EC_KEY(key), key_rr_out);
+    default:
+        HIP_ERROR("Cannot handle unknown key type %d. \n", type);
+        *algorithm = 0;
+        *key_rr_out = NULL;
+        err = -1;
+    }
+
+out_err:
+    return err;
+}
+
 /**
  * @return zero for success, or non-zero on error
  */
 int signaling_build_param_user_context(hip_common_t *msg,
-                                    const struct signaling_user_context *user_ctx,
-                                    const unsigned char *signature, const int sig_len)
+                                       struct signaling_user_context *user_ctx)
 {
     struct signaling_param_user_context *param_userinfo = NULL;
     int err = 0;
     int username_len;
     int header_len;
-    int par_len;
-
+    int pkey_rr_len;
+    int par_contents_len;
+    EVP_PKEY *user_pkey  = NULL;
+    unsigned char *key_rr;
     /* Sanity checks */
     HIP_IFEL(!msg,
              -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(!signature,
-             -1, "Got no signature to build the parameter from.\n");
+
+    /* Check for users public key */
+    if (user_ctx->key_rr_len <= 0) {
+        HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(user_ctx->euid)),
+                 -1, "Could not obtain users public key \n");
+        PEM_write_PUBKEY(stdout, user_pkey);
+        HIP_IFEL((user_ctx->key_rr_len = any_key_to_key_rr(user_pkey, &user_ctx->rdata.algorithm, &key_rr)) < 0,
+                 -1, "Could not serialize key \n");
+        HIP_DEBUG("GOT keyy rr of length %d\n", user_ctx->key_rr_len);
+        memcpy(user_ctx->pkey, key_rr, user_ctx->key_rr_len);
+        // necessary because any_key_to_rr returns only the length of the key rrwithout the header
+        user_ctx->key_rr_len += sizeof(struct hip_host_id_key_rdata);
+        free(key_rr);
+    }
+
+    HIP_DEBUG("Building user info parameter for: \n");
+    signaling_user_context_print(user_ctx, "\t", 1);
 
     /* calculate lengths */
-    header_len      = sizeof(struct signaling_param_user_context);
-    username_len     = strlen(user_ctx->username);
-    par_len         = header_len - sizeof(struct hip_tlv_common) + username_len + sig_len;
+    header_len        = sizeof(struct signaling_param_user_context) - sizeof(struct hip_host_id_key_rdata);
+    pkey_rr_len       = user_ctx->key_rr_len;
+    username_len      = strlen(user_ctx->username);
+    par_contents_len  = header_len - sizeof(struct hip_tlv_common) + pkey_rr_len + username_len;
 
-    HIP_DEBUG("Building user info parameter of length %d\n", par_len);
+    HIP_DEBUG("Building user info parameter of length %d\n", par_contents_len);
 
     /* BUILD THE PARAMETER */
-    param_userinfo = malloc(sizeof(hip_tlv_common_t) + par_len);
+    param_userinfo = malloc(sizeof(struct hip_tlv_common) + par_contents_len);
     HIP_IFEL(!param_userinfo,
              -1, "Could not allocate user signature parameter. \n");
 
-    hip_set_param_type((hip_tlv_common_t *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
-    hip_set_param_contents_len((hip_tlv_common_t *) param_userinfo, par_len);
-    param_userinfo->ui_length = htons(username_len);
-    memcpy((uint8_t *)param_userinfo + header_len, user_ctx->username, username_len);
-    param_userinfo->sig_length = htons(sig_len);
-    memcpy((uint8_t *)param_userinfo + header_len + username_len, signature, sig_len);
+    /* Set user identity (public key) */
+    param_userinfo->pkey_rr_length   = htons(pkey_rr_len);
+    param_userinfo->rdata.algorithm  = user_ctx->rdata.algorithm;
+    param_userinfo->rdata.flags      = htons(user_ctx->rdata.flags);
+    param_userinfo->rdata.protocol   = user_ctx->rdata.protocol;
+    memcpy((uint8_t *)param_userinfo + header_len + sizeof(struct hip_host_id_key_rdata),
+           user_ctx->pkey,
+           pkey_rr_len - sizeof(struct hip_host_id_key_rdata));
+
+    /* Set user name */
+    param_userinfo->un_length = htons(username_len);
+    memcpy((uint8_t *)param_userinfo + header_len + pkey_rr_len, user_ctx->username, username_len);
+
+    /* Set type and lenght */
+    hip_set_param_type((struct hip_tlv_common *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
+    hip_set_param_contents_len((struct hip_tlv_common *) param_userinfo, par_contents_len);
 
     HIP_IFEL(hip_build_param(msg, param_userinfo),
              -1, "Failed to append appinfo parameter to message.\n");
 
+    return err;
+}
+
+int signaling_build_param_user_signature(hip_common_t *msg, const struct signaling_user_context *user_ctx) {
+    int err = 0;
+    struct hip_sig sig;
+    unsigned char signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
+    int in_len;
+    int sig_len = 0;
+    uint8_t sig_type = 0;
+
+    /* sanity checks */
+    HIP_IFEL(!msg,       -1, "Cannot sign NULL-message\n");
+    HIP_IFEL(!user_ctx,  -1, "Cannot sign without user context\n");
+
+    /* calculate the signature */
+    in_len = hip_get_msg_total_len(msg);
+    HIP_IFEL((sig_len = signaling_user_api_sign(user_ctx->euid, msg, in_len, signature_buf, &sig_type)) < 0,
+             -1, "Could not get user's signature \n");
+    HIP_IFEL(sig_type != HIP_HI_RSA && sig_type != HIP_HI_RSA && sig_type != HIP_HI_ECDSA,
+             -1, "Unsupported signature type: %d\n", sig_type);
+
+    /* build the signature parameter */
+    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_SIGNATURE);
+    hip_calc_generic_param_len((struct hip_tlv_common *) &sig, sizeof(struct hip_sig), sig_len);
+    sig.algorithm = sig_type;     // algo is 8 bits, no htons necessary
+    HIP_IFEL(hip_build_generic_param(msg, &sig, sizeof(struct hip_sig), signature_buf),
+             -1, "Failed to build signature parameter\n");
+
 out_err:
-    free(param_userinfo);
     return err;
 }
 
@@ -299,9 +389,18 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
             -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
 
     /* copy contents */
-    memcpy(usr_ctx->username, (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
-           ntohs(param_usr_ctx->ui_length));
-    usr_ctx->username[ntohs(param_usr_ctx->ui_length)] = '\0';
+    usr_ctx->key_rr_len = ntohs(param_usr_ctx->pkey_rr_length);
+    memcpy(usr_ctx->pkey,
+           (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
+           ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata));
+    usr_ctx->rdata.algorithm = param_usr_ctx->rdata.algorithm;
+    usr_ctx->rdata.protocol = param_usr_ctx->rdata.protocol;
+    usr_ctx->rdata.flags = ntohs(param_usr_ctx->rdata.flags);
+
+    memcpy(usr_ctx->username,
+           (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context) + ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata),
+           ntohs(param_usr_ctx->un_length));
+    usr_ctx->username[ntohs(param_usr_ctx->un_length)] = '\0';
 
 out_err:
     return err;
@@ -329,3 +428,4 @@ void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits
         }
     }
 }
+

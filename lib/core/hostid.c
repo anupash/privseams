@@ -639,7 +639,7 @@ EVP_PKEY *hip_key_rr_to_evp_key(const void *const host_id, const int is_priv) {
     int err = 0;
     int algo;
     void *key;
-    EVP_PKEY *ret;
+    EVP_PKEY *ret = NULL;
 
     HIP_IFEL(!host_id,                  -1, "Given host id is NULL\n");
     HIP_IFEL(!(ret = EVP_PKEY_new()),   -1, "Could not init EVP_PKEY wrapper\n");
@@ -662,9 +662,7 @@ EVP_PKEY *hip_key_rr_to_evp_key(const void *const host_id, const int is_priv) {
         HIP_DEBUG("Unknown algorithm \n");
     }
 
-    if (err == 0) {
-        HIP_DEBUG("Could not assign key to EVP_PKEY.\n");
-    }
+    HIP_IFEL(err == 0, -1, "Could not assign key to EVP_PKEY.\n");
 
     return ret;
 
