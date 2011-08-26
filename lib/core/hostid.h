@@ -68,6 +68,8 @@ int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **const buf);
 int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **const rsa_key_rr);
 int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr);
 
+EVP_PKEY *hip_key_rr_to_evp_key(const void *const host_id, const int is_priv);
+
 int hip_serialize_host_id_action(struct hip_common *msg,
                                  const int action,
                                  const int anon,

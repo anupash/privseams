@@ -635,6 +635,45 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id,
     return ret;
 }
 
+EVP_PKEY *hip_key_rr_to_evp_key(const void *const host_id, const int is_priv) {
+    int err = 0;
+    int algo;
+    void *key;
+    EVP_PKEY *ret;
+
+    HIP_IFEL(!host_id,                  -1, "Given host id is NULL\n");
+    HIP_IFEL(!(ret = EVP_PKEY_new()),   -1, "Could not init EVP_PKEY wrapper\n");
+
+    algo = hip_get_host_id_algo(host_id);
+    switch (algo) {
+    case HIP_HI_RSA:
+        key = hip_key_rr_to_rsa(host_id, is_priv);
+        err = EVP_PKEY_assign_RSA(ret, key);
+        break;
+    case HIP_HI_DSA:
+        key = hip_key_rr_to_dsa(host_id, is_priv);
+        err = EVP_PKEY_assign_DSA(ret, key);
+        break;
+    case HIP_HI_ECDSA:
+        key = hip_key_rr_to_ecdsa(host_id, is_priv);
+        err = EVP_PKEY_set1_EC_KEY(ret, key);
+        break;
+    default:
+        HIP_DEBUG("Unknown algorithm \n");
+    }
+
+    if (err == 0) {
+        HIP_DEBUG("Could not assign key to EVP_PKEY.\n");
+    }
+
+    return ret;
+
+out_err:
+    EVP_PKEY_free(ret);
+    return NULL;
+}
+
+
 /**
  * (Re)create new host identities or load existing ones, and append the
  * private identities into a message. This functionality is used by hipd
