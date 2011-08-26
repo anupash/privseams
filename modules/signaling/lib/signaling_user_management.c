@@ -282,8 +282,6 @@ int signaling_verify_user_signature(struct hip_common *msg) {
     // note: the + 1 moves the pointer behind the parameter, where the key rr begins
     memcpy(pseudo_ui.key, param_usr_ctx + 1, pseudo_ui.hi_length - sizeof(struct hip_host_id_key_rdata));
     HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&pseudo_ui, 0)), -1, "Could not deserialize users public key\n");
-    HIP_DEBUG("Verifying signature using following public key: \n");
-    PEM_write_PUBKEY(stderr, pkey);
 
     /* Now modify the packet to verify signature */
     hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) msg);
@@ -299,8 +297,17 @@ int signaling_verify_user_signature(struct hip_common *msg) {
         ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
         HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
                      -1, "ECDSA user signature did not verify correctly\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+    hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
         break;
     case HIP_HI_RSA:
         rsa = EVP_PKEY_get1_RSA(pkey);

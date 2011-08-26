@@ -571,15 +571,7 @@ int impl_ecdsa_verify(const unsigned char *const digest,
     HIP_IFEL(!ecdsa_sig, 1, "Failed to allocate ECDSA_SIG\n");
     ecdsa_sig->r = BN_bin2bn(signature, sig_size / 2, NULL);
     ecdsa_sig->s = BN_bin2bn(signature + sig_size / 2, sig_size / 2, NULL);
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
-#endif
-    err          = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
-#endif
+    err = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);

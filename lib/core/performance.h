@@ -77,7 +77,7 @@ enum perf_sensor {
     PERF_CLOSE_COMPLETE,
     PERF_DSA_VERIFY_IMPL,
     PERF_RSA_VERIFY_IMPL,
-    PERF_ECDSA_VERIFY_IMPL,
+    PERF_ECDSA_VERIFY_IMPL,  // test 2.1.1
 
     PERF_NEW_CONN,           // test 0
     PERF_CONN_REQUEST,       // test 1

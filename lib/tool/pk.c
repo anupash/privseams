@@ -226,7 +226,16 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
         err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
                           sig->signature, RSA_size(peer_pub), peer_pub);
     } else if (type == HIP_HI_ECDSA) {
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
         err = impl_ecdsa_verify(sha1_digest, peer_pub, sig->signature);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+    hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
     } else {
         err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
     }
