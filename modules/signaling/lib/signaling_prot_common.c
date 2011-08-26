@@ -349,6 +349,8 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
         conn->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
+    signaling_update_flags_from_connection_id(msg, conn);
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         signaling_build_application_context((const struct signaling_param_app_context *) param, &conn->ctx_in.app);

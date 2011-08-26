@@ -148,10 +148,11 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
     recv_conn = (const struct signaling_connection *) (param + 1);
 
+    signaling_hipd_state_print(sig_state);
     existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id);
     if (!existing_conn) {
-        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, recv_conn),
-                 -1, "Could save connection in local state\n");
+        HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, recv_conn)),
+                 -1, "Could not save connection in local state\n");
     } else {
         HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
                  -1, "Could not copy connection context to state \n");

@@ -21,8 +21,6 @@ struct user_certificate_context {
     int user_certificate_required;
     int group;
     STACK_OF(X509) *cert_chain;
-    /* Holds the user context for which the certificates are received */
-    struct signaling_user_context user_ctx;
 };
 
 /**

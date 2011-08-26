@@ -503,11 +503,13 @@ int signaling_get_update_type(hip_common_t *msg) {
     param_ack       = hip_get_param(msg, HIP_PARAM_ACK);
     param_cert      = hip_get_param(msg, HIP_PARAM_CERT);
 
-    if (param_app_ctx && param_seq) {
+    if (param_app_ctx && param_seq && !param_ack) {
         return SIGNALING_FIRST_BEX_UPDATE;
-    } else if (param_app_ctx && param_ack) {
+    } else if (param_app_ctx && param_seq && param_ack) {
         return SIGNALING_SECOND_BEX_UPDATE;
-    } else if (param_cert && param_seq) {
+    } else if (param_ack && !param_seq) {
+        return SIGNALING_THIRD_BEX_UPDATE;
+    } else if (param_cert && param_seq && !param_ack) {
         return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
     } else if (param_ack) {
         return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
