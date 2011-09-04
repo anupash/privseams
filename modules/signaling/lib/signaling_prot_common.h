@@ -212,8 +212,8 @@ struct signaling_ntf_user_auth_failed_data {
 
 */
 struct signaling_param_user_auth_request {
-    struct hip_tlv_type type;
-    struct hip_tlv_len  length;
+    hip_tlv type;
+    hip_tlv_len  length;
     uint32_t network_id;
 } __attribute__ ((packed));
 
@@ -236,8 +236,8 @@ struct signaling_param_user_auth_request {
 
 */
 struct signaling_param_cert_chain_id {
-    struct hip_tlv_type type;
-    struct hip_tlv_len  length;
+    hip_tlv type;
+    hip_tlv_len  length;
     uint32_t connection_id;
     uint32_t network_id;
 } __attribute__ ((packed));
@@ -259,8 +259,8 @@ struct signaling_param_cert_chain_id {
 
 */
 struct signaling_param_connection_identifier {
-    struct hip_tlv_type type;
-    struct hip_tlv_len  length;
+    hip_tlv type;
+    hip_tlv_len  length;
     uint32_t id;
 } __attribute__ ((packed));
 
@@ -290,10 +290,10 @@ struct signaling_param_connection_identifier {
 */
 
 struct signaling_param_user_context {
-    struct hip_tlv_type type;
-    struct hip_tlv_len  length;
-    struct hip_tlv_len  un_length;
-    struct hip_tlv_len  pkey_rr_length;
+    hip_tlv type;
+    hip_tlv_len  length;
+    hip_tlv_len  un_length;
+    hip_tlv_len  pkey_rr_length;
     /** ---- end of header ---- */
 
     /* The public key is in dns key rr format.
@@ -348,12 +348,12 @@ struct signaling_param_user_context {
 */
 
 struct signaling_param_app_context {
-    struct hip_tlv_type type;
-    struct hip_tlv_len  length;
-    struct hip_tlv_len app_dn_length;
-    struct hip_tlv_len iss_dn_length;
-    struct hip_tlv_len req_length;
-    struct hip_tlv_len grp_length;
+    hip_tlv type;
+    hip_tlv_len  length;
+    hip_tlv_len app_dn_length;
+    hip_tlv_len iss_dn_length;
+    hip_tlv_len req_length;
+    hip_tlv_len grp_length;
     uint16_t port_count;
     uint16_t reserved;
 } __attribute__ ((packed));
