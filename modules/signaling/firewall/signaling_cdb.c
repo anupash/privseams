@@ -35,6 +35,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/common.h"
+#include "lib/core/list.h"
 
 #include "firewall/hslist.h"
 
@@ -186,7 +187,7 @@ out_err:
 int signaling_cdb_uninit(void)
 {
     int err = 0;
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct signaling_cdb_entry *tmp;
     int count;
 

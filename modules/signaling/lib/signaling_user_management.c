@@ -91,7 +91,7 @@ static void userdb_certificate_context_print(struct userdb_certificate_context *
 
 
 int userdb_entry_print(struct userdb_user_entry *e) {
-    struct hip_ll_node *listentry = NULL;
+    const struct hip_ll_node *listentry = NULL;
     struct userdb_certificate_context *cert_ctx = NULL;
     char subj_name[SIGNALING_USER_ID_MAX_LEN];
 
@@ -163,7 +163,7 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
                                                                   const struct in6_addr *const src_hit,
                                                                   const struct in6_addr *const dst_hit,
                                                                   const uint32_t network_id) {
-    struct hip_ll_node *listentry = NULL;
+    const struct hip_ll_node *listentry = NULL;
     struct userdb_certificate_context *cert_ctx = NULL;
 
     if (!user) {
@@ -314,7 +314,7 @@ out_err:
 
 struct userdb_certificate_context *userdb_get_certificate_context_by_key(const struct userdb_user_entry *const user,
                                                                          const EVP_PKEY *pubkey) {
-    struct hip_ll_node *listentry = NULL;
+    const struct hip_ll_node *listentry = NULL;
     struct userdb_certificate_context *cert_ctx = NULL;
     X509 *leafcert = NULL;
 
