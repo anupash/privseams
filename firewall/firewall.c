@@ -110,7 +110,6 @@
 int accept_normal_traffic_by_default  = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
 int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int log_level                         = LOGDEBUG_NONE;
-
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 static hip_hit_t default_hit;
 /* Default LSI - do not access this directly, call hip_fw_get_default_lsi() */
@@ -159,7 +158,6 @@ int hip_fw_sock = 0;
  * @todo make static, no-one should read on that
  */
 static int hip_fw_async_sock = 0;
-
 
 /*----------------INIT FUNCTIONS------------------*/
 
@@ -700,7 +698,7 @@ static void firewall_exit(void)
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
-    //hip_perf_destroy(perf_set);
+    hip_perf_destroy(perf_set);
 #endif
 
     hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);

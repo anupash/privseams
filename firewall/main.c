@@ -72,10 +72,10 @@ static void hipfw_usage(void)
     puts("      -e = use esp protection extension (also sets -i)");
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
-    puts("      -T <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
+    puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
-    puts("      -t = timeout in microseconds to wait for new connections before triggering bex/update\n");
+    puts("      -T = timeout in microseconds to wait for new connections before triggering bex/update\n");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
     puts("      -w = IP address of web-based authentication server");

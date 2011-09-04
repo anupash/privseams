@@ -48,7 +48,7 @@ enum hipfw_pkt_type {
     HIP_PACKET,
     ESP_PACKET,
     TCP_PACKET,
-    FW_PROTO_NUM,
+    FW_PROTO_NUM
 };
 
 struct hip_fw_context {
