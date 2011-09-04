@@ -40,8 +40,7 @@ EXTRA_DIST += $(HIPL_HEADER_LIST)
 ### user programs ###
 bin_PROGRAMS = test/auth_performance    \
                test/certteststub        \
-               test/hc_performance 	\
-               test/user_sock_performance
+               test/hc_performance
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
@@ -90,7 +89,6 @@ test_fw_port_bindings_performance_SOURCES   = test/fw_port_bindings_performance.
                                               firewall/line_parser.c              \
                                               firewall/port_bindings.c
 test_hc_performance_SOURCES                 = test/hc_performance.c
-test_user_sock_performance_SOURCES = test/user_sock_performance.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
@@ -261,9 +259,6 @@ tools_accert_LDADD                      += -L/home/ziegeldorf/thesisrepository/c
 test_check_firewall_LDFLAGS              = -ldl
 
 include modules/signaling/Makefile.am
-
-test_user_sock_performance_LDADD    = lib/core/libhipcore.la
-test_user_sock_performance_LDADD    += modules/signaling/lib/libhipsignaling_common.la
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
