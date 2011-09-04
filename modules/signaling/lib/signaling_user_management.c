@@ -771,8 +771,7 @@ int userdb_handle_user_signature(struct hip_common *const msg,
 
     /* check if we have a user */
     if (!conn_ctx->userdb_entry) {
-        HIP_DEBUG("Cannot verify signature, because user is not known.");
-        printf("\033[01;31mUser signature is missing.\n\033[22;37m");
+        HIP_DEBUG("Cannot verify signature, because user is not known.\n");
         return 0;
     }
 
@@ -782,7 +781,6 @@ int userdb_handle_user_signature(struct hip_common *const msg,
         return -1;
     }
     HIP_DEBUG("Verified user's signature.\n");
-    printf("\033[22;32mVerified user's signature.\n");
 
     if (msg->type_hdr == HIP_I3) {
         HIP_DEBUG("Not verifying users public key again in I3.\n");
@@ -816,7 +814,6 @@ int userdb_handle_user_signature(struct hip_common *const msg,
     case X509_V_OK:
         /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
         HIP_DEBUG("User's public key has been authenticated successfully.\n");
-        printf("\033[22;32mUser's public key has been authenticated successfully.\n");
         signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
         conn_ctx->userdb_entry->flags |= USER_IS_AUTHED;
         return 0;

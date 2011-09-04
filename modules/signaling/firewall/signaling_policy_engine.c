@@ -381,7 +381,7 @@ int signaling_policy_check(const struct in6_addr *const hit,
 
     /* Find a match for authed tuple */
     if ((tuple_match = match_tuple_list(&tuple_for_conn_authed, rule_list))) {
-        printf("\033[22;32mConnection could be matched to firewall rules:\n\033[22;37m");
+        printf("\033[22;32mConnection could be matched to firewall rules:\033[22;37m\n");
         printf("Connection tuple:\n");
         printf_policy_tuple(&tuple_for_conn_authed, "\t");
         printf("is matched by rule tuple:\n");
@@ -399,7 +399,7 @@ int signaling_policy_check(const struct in6_addr *const hit,
     /* If we wouldn't have a match for the unauthed tuple, reject. */
     if (!(tuple_match = match_tuple_list(&tuple_for_conn_unauthed, rule_list))) {
         HIP_DEBUG("Rejected because no match for unauthed tuple.\n");
-        printf("\033[22;32mRejected because no match for unauthed tuple.\n\033[22;37m");
+        printf("\033[22;32mRejected because no match for unauthed tuple.\033[22;37m\n\033[22;37m");
         printf("Rejected tuple:\n");
         printf_policy_tuple(&tuple_for_conn_authed, "\t");
         return POLICY_REJECT;
