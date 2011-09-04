@@ -1153,20 +1153,6 @@ static int hip_fw_handle_esp_output(struct hip_fw_context *ctx)
 }
 
 /**
- * Process a TCP packet from the outbound packet capture queue
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
-{
-    HIP_DEBUG("\n");
-
-    return hip_fw_handle_other_output(ctx);
-}
-
-/**
  * Process a TCP packet from the inbound packet capture queue
  *
  * @param ctx the packet context
@@ -1238,6 +1224,20 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
     /* No need to check default rules as it is handled by the
      * iptables rules */
     return verdict;
+}
+
+/**
+ * Process a TCP packet from the outbound packet capture queue
+ *
+ * @param ctx the packet context
+ *
+ * @return the verdict (1 for pass and 0 for drop)
+ */
+static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
+{
+    HIP_DEBUG("\n");
+
+    return hip_fw_handle_other_output(ctx);
 }
 
 /**
