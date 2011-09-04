@@ -327,8 +327,6 @@ int signaling_send_second_update(const struct hip_common *first_update) {
     struct signaling_hipd_state * sig_state         = NULL;
     struct update_state * updatestate               = NULL;
     struct hip_common * update_packet_to_send       = NULL;
-    struct signaling_connection_context *local_conn_ctx = NULL;
-    struct signaling_connection_context remote_conn_ctx;
     struct signaling_connection *conn               = NULL;
     struct signaling_connection conn_tmp;
 
