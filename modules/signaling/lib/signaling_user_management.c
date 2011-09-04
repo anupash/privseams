@@ -211,7 +211,7 @@ struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *u
     /* Now build and add */
     HIP_IFEL(!(new = malloc(sizeof(struct userdb_user_entry))),
              -1, "Could not allocate memory for new userdb entry \n");
-    HIP_IFEL(!(new->cert_contexts = malloc(sizeof(hip_ll_t))),
+    HIP_IFEL(!(new->cert_contexts = malloc(sizeof(struct hip_ll))),
              -1, "Could not allocate empty new list\n");
     hip_ll_init(new->cert_contexts);
     new->uname = uname;

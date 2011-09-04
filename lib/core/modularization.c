@@ -108,7 +108,7 @@ static struct hip_ll parameter_types;
  * for different purposes.
  *
  */
-static hip_ll_t parameter_types;
+static struct hip_ll parameter_types;
 
 /**
  * Number of enabled modules.

@@ -41,7 +41,7 @@ struct userdb_user_entry {
     X509_NAME *uname;
     uint8_t flags;
     EVP_PKEY *pub_key;
-    hip_ll_t *cert_contexts;
+    struct hip_ll *cert_contexts;
 };
 
 /* Init and uninit functions. */
