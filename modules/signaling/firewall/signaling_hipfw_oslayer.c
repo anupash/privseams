@@ -245,7 +245,7 @@ out_err:
 /*
  * Returns a verdict 1 for pass, 0 for drop.
  */
-int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
+int signaling_hipfw_conntrack(struct hip_fw_context *ctx) {
     int err = 0;
     int verdict = VERDICT_DEFAULT;
     int found = 0;

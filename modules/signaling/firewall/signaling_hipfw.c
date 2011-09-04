@@ -234,7 +234,7 @@ out_err:
  *
  * @return          the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, hip_fw_context_t *ctx)
+int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
     int err = 0;
     struct signaling_connection new_conn;
@@ -311,7 +311,7 @@ out_err:
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
 
-int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, hip_fw_context_t *ctx)
+int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
     int err = 0;
     struct signaling_connection recv_conn;
@@ -394,7 +394,7 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
+int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const struct hip_fw_context *ctx)
 {
     int err = 0;
     struct signaling_connection recv_conn;
@@ -453,7 +453,7 @@ out_err:
  */
 static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_common *common,
                                                               UNUSED struct tuple *tuple,
-                                                              UNUSED hip_fw_context_t *ctx) {
+                                                              UNUSED struct hip_fw_context *ctx) {
     int err = 0;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     X509 *cert = NULL;
@@ -535,7 +535,7 @@ out_err:
 
 static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct hip_common *common,
                                                            UNUSED struct tuple *tuple,
-                                                           UNUSED hip_fw_context_t *ctx)
+                                                           UNUSED struct hip_fw_context *ctx)
 {
     int err = 1;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
@@ -581,7 +581,7 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
+int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
     int err = 0;
     int update_type;
@@ -620,7 +620,7 @@ out_err:
     return err;
 }
 
-static int signaling_handle_notify_connection_failed(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx) {
+static int signaling_handle_notify_connection_failed(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx) {
     struct signaling_connection *conn = NULL;
     const struct signaling_param_connection_identifier *conn_id = NULL;
     const struct hip_notification *notification = NULL;
@@ -672,7 +672,7 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
+int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
     int err = 1;
     const struct hip_notification *notification = NULL;

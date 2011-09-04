@@ -49,7 +49,7 @@ int signaling_hipfw_feedback_uninit(void);
 
 int signaling_hipfw_send_connection_failed_ntf(UNUSED struct hip_common *common,
                                               UNUSED struct tuple *tuple,
-                                              UNUSED const hip_fw_context_t *ctx,
+                                              UNUSED const struct hip_fw_context *ctx,
                                               const int reason,
                                               const struct signaling_connection *conn);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_FEEDBACK_H*/

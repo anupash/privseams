@@ -1229,7 +1229,7 @@ static int handle_r1(struct hip_common *const common,
  */
 static int handle_i2(struct hip_common *const common,
                      struct tuple *const tuple,
-                     hip_fw_context_t *ctx)
+                     struct hip_fw_context *ctx)
 {
     struct tuple                    *other_dir = NULL;
     const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);

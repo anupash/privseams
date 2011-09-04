@@ -400,7 +400,7 @@ static int send_pkt(const struct in6_addr *local_addr,
  */
 int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
                                                UNUSED struct tuple *tuple,
-                                               const hip_fw_context_t *ctx,
+                                               const struct hip_fw_context *ctx,
                                                const int reason,
                                                const struct signaling_connection *conn) {
     int err                 = 0;
