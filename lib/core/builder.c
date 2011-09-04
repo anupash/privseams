@@ -1424,7 +1424,7 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
-static int hip_build_generic_param(struct hip_common *msg,
+int hip_build_generic_param(struct hip_common *msg,
                                    const void *parameter_hdr,
                                    hip_tlv_len param_hdr_size,
                                    const void *contents)

@@ -64,6 +64,10 @@ void hip_build_network_hdr(struct hip_common *,
                            const struct in6_addr *,
                            const struct in6_addr *);
 int hip_host_id_hits(struct hip_hadb_state *entry, struct hip_common *msg);
+int hip_build_generic_param(struct hip_common *msg,
+                                   const void *parameter_hdr,
+                                   hip_tlv_len param_hdr_size,
+                                   const void *contents);
 int hip_build_param_contents(struct hip_common *,
                              const void *,
                              hip_tlv,
