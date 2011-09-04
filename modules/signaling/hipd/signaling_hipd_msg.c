@@ -55,8 +55,9 @@
 
 
 #include "modules/update/hipd/update.h"
-#include "modules/signaling/lib/signaling_common_builder.h"
+#include "modules/update/hipd/update_builder.h"
 
+#include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
 #include "modules/signaling/lib/signaling_x509_api.h"
