@@ -479,10 +479,10 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
 
 int signaling_init_connection(struct signaling_connection *const conn);
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
-                                       const hip_common_t * const msg,
+                                       const struct hip_common * const msg,
                                        enum direction dir);
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
-                                         const hip_common_t * const msg,
+                                         const struct hip_common * const msg,
                                          enum direction dir);
 int signaling_copy_connection(struct signaling_connection * const dst,
                               const struct signaling_connection * const src);

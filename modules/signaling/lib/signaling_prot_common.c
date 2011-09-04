@@ -351,7 +351,7 @@ out_err:
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
-                                       const hip_common_t * const msg,
+                                       const struct hip_common * const msg,
                                        enum direction dir) {
     int err                     = 0;
     const struct hip_tlv_common *param     = NULL;
@@ -393,7 +393,7 @@ out_err:
 }
 
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
-                                         const hip_common_t * const msg,
+                                         const struct hip_common * const msg,
                                          enum direction dir)
 {
     int err                     = 0;

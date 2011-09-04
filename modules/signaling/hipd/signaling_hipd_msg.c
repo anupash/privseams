@@ -104,7 +104,7 @@ int signaling_get_update_type(struct hip_common *msg) {
 static int signaling_close_peer(hip_hit_t *peer_hit) {
     int err                 = 0;
     uint16_t mask           = 0;
-    hip_common_t *msg_buf   = NULL;
+    struct hip_common *msg_buf   = NULL;
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
@@ -135,7 +135,7 @@ out_err:
  *
  * @return      the update message
  */
-static hip_common_t *build_update_message(hip_ha_t *ha,
+static struct hip_common *build_update_message(hip_ha_t *ha,
                                           const int type,
                                           struct signaling_connection *conn,
                                           const uint32_t seq,
@@ -241,7 +241,7 @@ out_err:
 int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
     int err                    = 0;
     uint16_t mask              = 0;
-    hip_common_t * msg_buf     = NULL;
+    struct hip_common * msg_buf     = NULL;
 
     /* sanity tests */
     HIP_IFEL(!ha,       -1, "No host association given \n");
@@ -420,7 +420,7 @@ int signaling_send_third_update(UNUSED const struct hip_common *second_update) {
     hip_ha_t *ha                                    = NULL;
     struct signaling_hipd_state * sig_state         = NULL;
     struct update_state * updatestate               = NULL;
-    hip_common_t * update_packet_to_send            = NULL;
+    struct hip_common * update_packet_to_send            = NULL;
     struct signaling_connection *conn               = NULL;
     struct signaling_connection conn_tmp;
 
@@ -477,7 +477,7 @@ int signaling_send_connection_failed_ntf(hip_ha_t *ha,
                                          const struct signaling_connection *conn) {
     int err                 = 0;
     uint16_t mask           = 0;
-    hip_common_t *msg_buf   = NULL;
+    struct hip_common *msg_buf   = NULL;
 
     /* Sanity checks */
     HIP_IFEL(!ha, -1, "Given host association is NULL \n");
@@ -551,7 +551,7 @@ int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
                                               uint32_t network_id) {
     int err = 0;
     uint32_t mask = 0;
-    hip_common_t *msg_buf = NULL;
+    struct hip_common *msg_buf = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Need connection state to build connection identifier from\n");

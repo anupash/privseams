@@ -56,7 +56,7 @@
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_connection_identifier(hip_common_t *msg, const struct signaling_connection *conn)
+int signaling_build_param_connection_identifier(struct hip_common *msg, const struct signaling_connection *conn)
 {
     int err = 0;
     struct signaling_param_connection_identifier conn_id;
@@ -88,7 +88,7 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_application_context(hip_common_t *msg,
+int signaling_build_param_application_context(struct hip_common *msg,
                                               const struct signaling_port_pair *port_list,
                                               const struct signaling_application_context *app_ctx)
 {
@@ -202,7 +202,7 @@ out_err:
  *
  * @return          zero for success, or non-zero on error
  */
-int signaling_build_param_user_context(hip_common_t *msg,
+int signaling_build_param_user_context(struct hip_common *msg,
                                        struct signaling_user_context *user_ctx,
                                        struct userdb_user_entry *db_entry)
 {
@@ -324,7 +324,7 @@ out_err:
  *
  * @return          0 on sucess, negative if paramater building failed
  */
-int signaling_build_param_connection_fail(hip_common_t *msg, const uint16_t reason) {
+int signaling_build_param_connection_fail(struct hip_common *msg, const uint16_t reason) {
     int err = 0;
     int len;
     struct hip_notification ntf;
@@ -392,7 +392,7 @@ out_err:
  *
  * @return          -1 on error, otherwise the number of certificates included in the message
  */
-int signaling_build_param_cert_chain(hip_common_t *msg,
+int signaling_build_param_cert_chain(struct hip_common *msg,
                                      STACK_OF(X509) *cert_chain,
                                      int start,
                                      int count,
@@ -437,7 +437,7 @@ out_err:
     return err;
 }
 
-int signaling_build_param_certificate_chain_identifier(hip_common_t *const msg,
+int signaling_build_param_certificate_chain_identifier(struct hip_common *const msg,
                                                        const uint32_t connection_id,
                                                        const uint32_t network_id)
 {
@@ -461,7 +461,7 @@ out_err:
     return err;
 }
 
-static int build_param_user_auth(hip_common_t *msg,
+static int build_param_user_auth(struct hip_common *msg,
                                  uint32_t network_id,
                                  uint16_t type)
 {
@@ -485,12 +485,12 @@ out_err:
     return err;
 }
 
-int signaling_build_param_user_auth_req_u(hip_common_t *msg,
+int signaling_build_param_user_auth_req_u(struct hip_common *msg,
                                           uint32_t network_id) {
     return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ_U);
 }
 
-int signaling_build_param_user_auth_req_s(hip_common_t *msg,
+int signaling_build_param_user_auth_req_s(struct hip_common *msg,
                                           uint32_t network_id) {
     return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ_S);
 }
@@ -591,7 +591,7 @@ out_err:
     return err;
 }
 
-void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
+void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
     const hip_tlv_common_t *param = NULL;
 
@@ -621,7 +621,7 @@ void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits
  *
  * @return the signaling update type, or negative if this is no siganling update message
  */
-int signaling_get_update_type(const hip_common_t *msg) {
+int signaling_get_update_type(const struct hip_common *msg) {
     int err = -1;
     const struct signaling_param_app_context *param_app_ctx     = NULL;
     const struct hip_seq *param_seq                             = NULL;
@@ -663,7 +663,7 @@ int signaling_get_update_type(const hip_common_t *msg) {
  * @return      the free space left in the message, excluding space for
  *              MAC and signature
  */
-int signaling_get_free_message_space(const hip_common_t *msg, hip_ha_t *ha) {
+int signaling_get_free_message_space(const struct hip_common *msg, hip_ha_t *ha) {
     uint8_t *dst;
     const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
     const int param_mac_length = 24;
