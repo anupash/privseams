@@ -1153,30 +1153,6 @@ static int hip_fw_handle_esp_output(struct hip_fw_context *ctx)
 }
 
 /**
- * Process a TCP packet from the inbound packet capture queue
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_tcp_input(struct hip_fw_context *ctx)
-{
-    int verdict = accept_normal_traffic_by_default;
-
-    HIP_DEBUG("\n");
-
-    // any incoming plain TCP packet might be an opportunistic I1
-    HIP_DEBUG_HIT("hit src", &ctx->src);
-    HIP_DEBUG_HIT("hit dst", &ctx->dst);
-
-    // as we should never receive TCP with HITs, this will only apply
-    // to IPv4 TCP
-    verdict = hip_fw_handle_other_input(ctx);
-
-    return verdict;
-}
-
-/**
  * Process any other packet from the outbound packet capture queue
  *
  * @note hooks userspace IPsec and LSI
@@ -1331,6 +1307,30 @@ static int hip_fw_handle_other_input(struct hip_fw_context *ctx)
 
     /* No need to check default rules as it is handled by the
      * iptables rules */
+    return verdict;
+}
+
+/**
+ * Process a TCP packet from the inbound packet capture queue
+ *
+ * @param ctx the packet context
+ *
+ * @return the verdict (1 for pass and 0 for drop)
+ */
+static int hip_fw_handle_tcp_input(struct hip_fw_context *ctx)
+{
+    int verdict = accept_normal_traffic_by_default;
+
+    HIP_DEBUG("\n");
+
+    // any incoming plain TCP packet might be an opportunistic I1
+    HIP_DEBUG_HIT("hit src", &ctx->src);
+    HIP_DEBUG_HIT("hit dst", &ctx->dst);
+
+    // as we should never receive TCP with HITs, this will only apply
+    // to IPv4 TCP
+    verdict = hip_fw_handle_other_input(ctx);
+
     return verdict;
 }
 
