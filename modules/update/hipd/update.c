@@ -455,7 +455,7 @@ static int hip_set_active_addresses(UNUSED const uint8_t packet_type,
  *
  * @return zero on success, or negative error value on error.
  */
-static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
+UNUSED static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
                                UNUSED const uint32_t ha_state,
                                struct hip_packet_context *ctx)
 {
