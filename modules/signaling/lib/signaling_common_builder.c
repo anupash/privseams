@@ -595,7 +595,7 @@ out_err:
 
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
-    struct hip_tlv_common *param = NULL;
+    const struct hip_tlv_common *param = NULL;
 
     param = hip_get_param(msg, HIP_PARAM_HIT);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
@@ -666,8 +666,8 @@ int signaling_get_update_type(const struct hip_common *msg) {
  *              MAC and signature
  */
 int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha) {
-    uint8_t *dst;
-    const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
+    const uint8_t *dst;
+    const uint8_t *max_dst = ((const uint8_t *) msg) + 1400;
     const int param_mac_length = 24;
     int param_signature_length;
 
@@ -675,7 +675,7 @@ int signaling_get_free_message_space(const struct hip_common *msg, struct hip_ha
         return -1;
     }
 
-    dst = (uint8_t *) msg + hip_get_msg_total_len(msg);
+    dst = (const uint8_t *) msg + hip_get_msg_total_len(msg);
     switch (hip_get_host_id_algo(ha->our_pub)) {
     case HIP_HI_ECDSA:
         param_signature_length = ECDSA_size(ha->our_priv_key);
