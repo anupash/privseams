@@ -102,8 +102,14 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
         return -1;
     }
 
-    HIP_IFEL(!priv_key, -1, "Need key for signing \n");
-    HIP_IFEL(!msg,      -1, "Need message to sign \n");
+    if (!priv_key) {
+        HIP_ERROR("Need key for signing \n");
+        return -1;
+    }
+    if (!msg) {
+        HIP_ERROR("Need message to sign \n");
+        return -1;
+    }
 
     len = hip_get_msg_total_len(msg);
     if (hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0) {
