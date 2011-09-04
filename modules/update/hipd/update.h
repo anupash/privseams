@@ -164,7 +164,6 @@ struct update_state {
 
 int hip_update_init(void);
 
-uint32_t hip_update_get_out_id(struct update_state *state);
 
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */
 
