@@ -67,34 +67,6 @@
 
 int update_sent = 0;
 
-/**
- * Determine the type of a signaling UPDATE message.
- *
- * @param msg   the UPDATE message
- *
- * @return the signaling update type, or negative if this is no siganling update message
- */
-int signaling_get_update_type(struct hip_common *msg) {
-    int err = -1;
-    const struct signaling_param_app_context *param_app_ctx     = NULL;
-    const struct hip_seq *param_seq                             = NULL;
-    const struct hip_ack *param_ack                             = NULL;
-    const struct hip_cert *param_cert                           = NULL;
-
-    param_app_ctx   = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    param_seq       = hip_get_param(msg, HIP_PARAM_SEQ);
-    param_ack       = hip_get_param(msg, HIP_PARAM_ACK);
-    param_cert      = hip_get_param(msg, HIP_PARAM_CERT);
-
-    if (param_app_ctx && param_seq) {
-        return SIGNALING_FIRST_BEX_UPDATE;
-    } else if (param_app_ctx && param_ack) {
-        return SIGNALING_SECOND_BEX_UPDATE;
-    } else if (param_cert && param_seq) {
-        return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
-    } else if (param_cert && param_ack) {
-        return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
-    }
 /*
  *   Wrapper for hip_send_close(...).
  *
