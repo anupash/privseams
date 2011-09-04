@@ -77,7 +77,4 @@ int signaling_send_user_certificate_chain_ack(struct hip_hadb_state *ha,
                                               const struct signaling_connection *const conn,
                                               uint32_t network_id);
 
-/* Classification of signaling update messages */
-int signaling_get_update_type(struct hip_common *msg);
-
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/
