@@ -129,7 +129,11 @@ hipd_hipd_sources = hipd/accessor.c              \
                     modules/update/hipd/update.c                \
                     modules/update/hipd/update_builder.c        \
                     modules/update/hipd/update_locator.c        \
-                    modules/update/hipd/update_param_handling.c
+                    modules/update/hipd/update_param_handling.c \
+                    modules/signaling/hipd/signaling.c \
+                    modules/signaling/hipd/signaling_hipd_msg.c \
+                    modules/signaling/hipd/signaling_hipd_state.c \
+                    modules/signaling/hipd/signaling_hipd_user_msg.c
 
 if HIP_MIDAUTH
 hipd_hipd_sources += hipd/pisa.c
@@ -159,7 +163,13 @@ firewall_hipfw_sources = firewall/cache.c               \
                          firewall/user_ipsec_esp.c      \
                          firewall/user_ipsec_fw_msg.c   \
                          firewall/user_ipsec_sadb.c     \
-                         modules/midauth/lib/midauth_builder.c
+                         modules/midauth/lib/midauth_builder.c \
+                         modules/signaling/firewall/signaling_hipfw.c \
+                         modules/signaling/firewall/signaling_cdb.c \
+                         modules/signaling/firewall/signaling_hipfw_oslayer.c \
+                         modules/signaling/firewall/signaling_hipfw_user_msg.c \
+                         modules/signaling/firewall/signaling_policy_engine.c \
+                         modules/signaling/firewall/signaling_hipfw_feedback.c
 
 if HIP_MIDAUTH
 firewall_hipfw_sources += firewall/midauth.c   \
@@ -202,7 +212,13 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/tool/checksum.c        \
                                  lib/tool/nlink.c           \
                                  lib/tool/pk.c              \
-                                 lib/tool/xfrmapi.c
+                                 lib/tool/xfrmapi.c         \
+                                 modules/signaling/lib/signaling_common_builder.c \
+                                 modules/signaling/lib/signaling_prot_common.c \
+                                 modules/signaling/lib/signaling_oslayer.c \
+                                 modules/signaling/lib/signaling_user_api.c \
+                                 modules/signaling/lib/signaling_user_management.c \
+                                 modules/signaling/lib/signaling_x509_api.c
 
 
 if HIP_PERFORMANCE
@@ -239,7 +255,9 @@ test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               
 ### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
+firewall_hipfw_LDADD                    +=-L/home/ziegeldorf/thesisrepository/code/x509ac -lx509ac -lssl
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
+hipd_hipd_LDADD                         +=-L/home/ziegeldorf/thesisrepository/code/x509ac -lx509ac -lssl
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
@@ -258,7 +276,7 @@ tools_accert_LDADD                      += -L/home/ziegeldorf/thesisrepository/c
 
 test_check_firewall_LDFLAGS              = -ldl
 
-include modules/signaling/Makefile.am
+#include modules/signaling/Makefile.am
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
