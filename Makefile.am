@@ -201,7 +201,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
-                                 lib/core/lmod.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/nlink.c           \
                                  lib/tool/pk.c              \
