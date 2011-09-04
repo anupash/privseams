@@ -1192,11 +1192,8 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     int mask = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_NEW_CONN\n");
+    HIP_DEBUG("Start PERF_NEW_CONN, PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
-    HIP_DEBUG("Start PERF_BASE\n");
-    hip_perf_start_benchmark(perf_set, PERF_BASE);
-    HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
 

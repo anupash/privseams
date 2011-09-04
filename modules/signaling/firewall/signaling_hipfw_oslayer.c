@@ -253,11 +253,6 @@ int signaling_hipfw_conntrack(struct hip_fw_context *ctx) {
     signaling_cdb_entry_t *entry = NULL;
     struct signaling_connection *conn = NULL;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_NEW_CONN\n");
-    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
-#endif
-
     /* Get ports from tcp header */
     src_port    = ntohs(ctx->transport_hdr.tcp->source);
     dest_port   = ntohs(ctx->transport_hdr.tcp->dest);

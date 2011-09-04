@@ -57,7 +57,8 @@ struct perf_set *hip_perf_create(int num)
 {
     /* create the perf set struct*/
     struct perf_set *set;
-    set = calloc(1, sizeof(struct perf_set));
+    set            = malloc(sizeof(struct perf_set));
+    memset(set, 0, sizeof(struct perf_set));
 
     set->num_files = num;
 

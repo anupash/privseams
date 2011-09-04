@@ -403,7 +403,7 @@ out_err:
  *
  * @return zero on success and non-zero on failure
  */
-static int hip_fw_uninit_signaling_extensions(void)
+UNUSED static int hip_fw_uninit_signaling_extensions(void)
 {
     int err = 0;
 
@@ -1996,7 +1996,7 @@ int hipfw_main(const char *const rule_file,
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
-    perf_set = hip_perf_create(PERF_MAX_FIREWALL);
+    perf_set = hip_perf_create(PERF_MAX);
 
     check_and_create_dir("results", HIP_DIR_MODE);
 
