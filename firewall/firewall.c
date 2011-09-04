@@ -1211,6 +1211,12 @@ static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
 {
     HIP_DEBUG("\n");
 
+    /* Check with signaling module */
+    if (!signaling_hipfw_conntrack(ctx)) {
+        HIP_ERROR("Packet not conntracked, new BEX triggered.\n");
+        return 0;
+    }
+
     return hip_fw_handle_other_output(ctx);
 }
 
@@ -1225,11 +1231,7 @@ static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
  */
 static int hip_fw_handle_hip_forward(struct hip_fw_context *ctx)
 {
-    /* Check with signaling module */
-    if (!signaling_hipfw_conntrack(ctx)) {
-        HIP_ERROR("Packet not conntracked, new BEX triggered.\n");
-        return 0;
-    }
+    HIP_DEBUG("\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
     if (use_midauth) {
