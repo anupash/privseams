@@ -663,7 +663,7 @@ int signaling_get_update_type(const struct hip_common *msg) {
  * @return      the free space left in the message, excluding space for
  *              MAC and signature
  */
-int signaling_get_free_message_space(const struct hip_common *msg, hip_ha_t *ha) {
+int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha) {
     uint8_t *dst;
     const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
     const int param_mac_length = 24;

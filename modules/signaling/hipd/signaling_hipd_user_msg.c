@@ -135,7 +135,7 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     const hip_hit_t *peer_hit               = NULL;
     struct signaling_hipd_state *sig_state  = NULL;
     const struct hip_tlv_common *param      = NULL;
-    hip_ha_t *entry                         = NULL;
+    struct hip_hadb_state *entry                         = NULL;
     const struct signaling_connection *recv_conn  = NULL;
     struct signaling_connection *existing_conn = NULL;
     struct userdb_user_entry *db_entry = NULL;
@@ -279,7 +279,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     const hip_hit_t *our_hit    = NULL;
     const hip_hit_t *peer_hit   = NULL;
     const struct hip_tlv_common *param;
-    hip_ha_t *entry = NULL;
+    struct hip_hadb_state *entry = NULL;
     struct signaling_hipd_state *sig_state = NULL;
     struct signaling_connection *conn = NULL;
     struct signaling_connection new_conn;

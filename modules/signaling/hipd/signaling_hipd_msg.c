@@ -135,7 +135,7 @@ out_err:
  *
  * @return      the update message
  */
-static struct hip_common *build_update_message(hip_ha_t *ha,
+static struct hip_common *build_update_message(struct hip_hadb_state *ha,
                                           const int type,
                                           struct signaling_connection *conn,
                                           const uint32_t seq,
@@ -238,7 +238,7 @@ out_err:
  *
  * @return 0 on success, negative on error
  */
-int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
+int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *conn) {
     int err                    = 0;
     uint16_t mask              = 0;
     struct hip_common * msg_buf     = NULL;
@@ -304,7 +304,7 @@ int signaling_send_first_update(const struct in6_addr *src_hit,
                                 struct signaling_connection *conn) {
     int err                                 = 0;
     uint32_t seq_id                         = 0;
-    hip_ha_t *ha                            = NULL;
+    struct hip_hadb_state *ha                            = NULL;
     struct update_state * updatestate       = NULL;
     struct hip_common * update_packet_to_send    = NULL;
 
@@ -350,7 +350,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
     const struct in6_addr *src_hit                  = NULL;
     const struct in6_addr *dst_hit                  = NULL;
     const struct hip_seq * par_seq                  = NULL;
-    hip_ha_t *ha                                    = NULL;
+    struct hip_hadb_state *ha                                    = NULL;
     struct signaling_hipd_state * sig_state         = NULL;
     struct update_state * updatestate               = NULL;
     struct hip_common * update_packet_to_send       = NULL;
@@ -417,7 +417,7 @@ int signaling_send_third_update(UNUSED const struct hip_common *second_update) {
     const struct in6_addr *src_hit                  = NULL;
     const struct in6_addr *dst_hit                  = NULL;
     const struct hip_seq * par_seq                  = NULL;
-    hip_ha_t *ha                                    = NULL;
+    struct hip_hadb_state *ha                                    = NULL;
     struct signaling_hipd_state * sig_state         = NULL;
     struct update_state * updatestate               = NULL;
     struct hip_common * update_packet_to_send            = NULL;
@@ -472,7 +472,7 @@ out_err:
  *
  * @param reason    the reason why the authentication failed
  */
-int signaling_send_connection_failed_ntf(hip_ha_t *ha,
+int signaling_send_connection_failed_ntf(struct hip_hadb_state *ha,
                                          const int reason,
                                          const struct signaling_connection *conn) {
     int err                 = 0;
@@ -513,7 +513,7 @@ out_err:
  *
  * @param reason    the reason why the authentication failed
  */
-int signaling_send_user_auth_failed_ntf(hip_ha_t *ha,
+int signaling_send_user_auth_failed_ntf(struct hip_hadb_state *ha,
                                         const int reason) {
     int err                 = 0;
     uint16_t mask           = 0;
@@ -545,7 +545,7 @@ out_err:
     return err;
 }
 
-int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
+int signaling_send_user_certificate_chain_ack(struct hip_hadb_state *ha,
                                               const uint32_t seq,
                                               const struct signaling_connection *const conn,
                                               uint32_t network_id) {
@@ -597,7 +597,7 @@ out_err:
  * @param uid  the id of the user, whose certificate chain is sent
  * @return  0 on success, negative on error
  */
-int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection *conn, uint32_t network_id) {
+int signaling_send_user_certificate_chain(struct hip_hadb_state *ha, struct signaling_connection *conn, uint32_t network_id) {
     int err = 0;
     uint16_t mask           = 0;
     struct hip_common *msg_buf = NULL;
@@ -1297,7 +1297,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
     const struct in6_addr *our_hit  = NULL;
     const struct in6_addr *src_hit  = NULL;
     int origin = 0;
-    hip_ha_t *ha   = NULL;
+    struct hip_hadb_state *ha   = NULL;
 
     /* Get connection context */
     HIP_IFEL(!(notification = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
