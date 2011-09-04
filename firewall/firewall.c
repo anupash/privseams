@@ -1227,7 +1227,6 @@ static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
  */
 static int hip_fw_handle_hip_forward(struct hip_fw_context *ctx)
 {
-    int err = 1;
     /* Check with signaling module */
     if (!signaling_hipfw_conntrack(ctx)) {
         HIP_ERROR("Packet not conntracked, new BEX triggered.\n");
