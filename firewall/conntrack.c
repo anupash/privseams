@@ -1251,9 +1251,8 @@ static int handle_i2(struct hip_common *const common,
     }
 
     /* handle signaling_appinfo parameter */
-    err = signaling_hipfw_handle_i2(common, tuple, ctx);
-    if (err == 0) {
-        return err;
+    if (!signaling_hipfw_handle_i2(common, tuple, ctx)) {
+        return 0;
     }
 
 
