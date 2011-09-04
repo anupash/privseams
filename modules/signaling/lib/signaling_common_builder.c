@@ -155,8 +155,10 @@ int signaling_build_param_application_context(struct hip_common *msg,
     hip_set_param_type((struct hip_tlv_common *) &appinfo, HIP_PARAM_SIGNALING_APPINFO);
 
     /* Append the parameter to the message */
-    HIP_IFEL(hip_build_generic_param(msg, &appinfo, sizeof(struct signaling_param_app_context), param_buf),
-             -1, "Failed to append appinfo parameter to message.\n");
+    if (hip_build_generic_param(msg, &appinfo, sizeof(struct signaling_param_app_context), param_buf)) {
+        HIP_ERROR("Failed to append appinfo parameter to message.\n");
+        return -1;
+    }
 
 out_err:
     return err;
