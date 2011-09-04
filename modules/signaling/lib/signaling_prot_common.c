@@ -515,7 +515,7 @@ out_err:
 int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
                                                const struct hip_common * const msg) {
     int err                     = 0;
-    const hip_tlv_common_t *param     = NULL;
+    const struct hip_tlv_common *param     = NULL;
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");

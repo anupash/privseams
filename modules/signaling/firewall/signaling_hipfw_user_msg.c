@@ -191,7 +191,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
             -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
-    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
     signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
     signaling_cdb_add(src_hit, dst_hit, &conn);

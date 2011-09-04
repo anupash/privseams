@@ -593,7 +593,7 @@ out_err:
 
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
-    const hip_tlv_common_t *param = NULL;
+    struct hip_tlv_common *param = NULL;
 
     param = hip_get_param(msg, HIP_PARAM_HIT);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
