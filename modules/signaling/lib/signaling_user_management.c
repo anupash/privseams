@@ -696,38 +696,26 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
              -1, "Could not build message digest \n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
+#endif
     switch (EVP_PKEY_type(pkey->type)) {
     case EVP_PKEY_EC:
         // - 1 is the algorithm field
         ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
         HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-#endif
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
                      -1, "ECDSA user signature did not verify correctly\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-#endif
         break;
     case EVP_PKEY_RSA:
         rsa = EVP_PKEY_get1_RSA(pkey);
@@ -739,8 +727,17 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
     default:
         HIP_IFEL(1, -1, "Unknown algorithm\n");
     }
-
 #ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
 
