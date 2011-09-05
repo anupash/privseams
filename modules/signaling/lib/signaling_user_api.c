@@ -97,7 +97,7 @@ static int ecdsa_sign(EC_KEY *const priv_key, const void *const data, const int 
 {
     int err = 0;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
-     HIP_IFEL(!priv_key,
+    HIP_IFEL(!priv_key,
              -1, "No private key given.\n");
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
@@ -154,9 +154,10 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
     /* Check if there is a preferred signature type */
     switch (*sig_type) {
     case HIP_HI_RSA:
+        HIP_DEBUG("Computing user signature using RSA key\n");
         HIP_IFEL(!(homedir = get_user_homedir(uid)),
                  -1, "Could not get homedir for user %d.\n", uid);
-        sprintf(filebuf, "%s/.signaling/user-rsa-key.pem", homedir);
+        sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
         HIP_IFEL(load_rsa_private_key(filebuf, &rsa),
                  -1, "Could not get private key for signing \n");
         sig_len     = RSA_size(rsa);
@@ -165,10 +166,11 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
                  -1, "Signature function failed \n");
         break;
     case HIP_HI_ECDSA:
+        HIP_DEBUG("Computing user signature using ECDSA key\n");
     default:
         HIP_IFEL(!(homedir = get_user_homedir(uid)),
                  -1, "Could not get homedir for user %d.\n", uid);
-        sprintf(filebuf, "%s/.signaling/user-ecdsa-key.pem", homedir);
+        sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_LOAD_USER_KEY\n");
         hip_perf_start_benchmark(perf_set, PERF_LOAD_USER_KEY);

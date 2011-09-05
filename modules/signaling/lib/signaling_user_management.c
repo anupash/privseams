@@ -352,7 +352,7 @@ int userdb_add_key_from_rr(struct userdb_user_entry *user,
     HIP_IFEL(!key_rr, -1, "Key rr is NULL.\n");
     HIP_IFEL(user->pub_key, -1, "Key is already set, no support for multiple keys. \n");
 
-    pseudo_ui.hi_length       = key_rr_len + sizeof(struct hip_host_id_key_rdata);
+    pseudo_ui.hi_length       = htons(key_rr_len + sizeof(struct hip_host_id_key_rdata));
     pseudo_ui.rdata.algorithm = key_rr_header->algorithm;
     memcpy(pseudo_ui.key, key_rr, key_rr_len);
     HIP_IFEL(!(user->pub_key = hip_key_rr_to_evp_key(&pseudo_ui, 0)), -1, "Could not deserialize users public key\n");
