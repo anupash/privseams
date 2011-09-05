@@ -67,22 +67,10 @@ enum perf_sensor {
     PERF_I1,
     PERF_I1_R1,             // time at initiator between sending I1 and receiving R1
     PERF_R1,
-    PERF_R1x1,
-    PERF_R1x2,
-    PERF_R1x3,
-    PERF_R1x4,
-    PERF_R1x4x1,
-    PERF_R1x4x2,
-    PERF_R1x4x3,
-    PERF_R1x5,
     PERF_R1_I2,             // time at responder between sending R1 and receiving I2
     PERF_I2,
     PERF_I2_R2,             // time at initiator between sending I2 and receiving R2
     PERF_R2,
-    PERF_R2x1,
-    PERF_R2x2,
-    PERF_R2x3,
-    PERF_R2x4,
     PERF_R2_I3,             // time at responder between sending R2 and receiving I3
     PERF_I3,
     PERF_CONN_U1,
@@ -187,8 +175,6 @@ enum perf_sensor {
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
-    PERF_TEST1,              // variable test
-    PERF_TEST2,              // variable test
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

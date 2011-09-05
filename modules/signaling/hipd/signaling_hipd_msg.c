@@ -752,10 +752,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     /* sanity checks */
     if (packet_type == HIP_R2) {
         HIP_DEBUG("Handling an R2\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2x3\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2x3);
-#endif
     } else if (packet_type == HIP_UPDATE) {
         HIP_DEBUG("Handling a second bex update like R2\n");
     } else {
@@ -811,9 +807,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         return -1;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R2, PERF_R2x3, PERF_CONN_U2\n");
+    HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
-    hip_perf_stop_benchmark(perf_set, PERF_R2x3);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U2);
 #endif
 
@@ -850,9 +845,6 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_I3_USER_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_R2);
-        hip_perf_write_benchmark(perf_set, PERF_R2x1);
-        hip_perf_write_benchmark(perf_set, PERF_R2x2);
-        hip_perf_write_benchmark(perf_set, PERF_R2x3);
         hip_perf_write_benchmark(perf_set, PERF_I2_R2);
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
@@ -1410,10 +1402,6 @@ int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSE
     int err = 0;
     struct signaling_hipd_state *sig_state = NULL;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R1x3\n");
-    hip_perf_start_benchmark(perf_set, PERF_R1x3);
-#endif
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
@@ -1441,20 +1429,13 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
 {
     int err = 0;
     struct signaling_hipd_state *sig_state;
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R1x4x3\n");
-    hip_perf_start_benchmark(perf_set, PERF_R1x4x3);
-#endif
+
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
              0, "User failed to sign packet.\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R1x4, PERF_R1x4x3\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1x4);
-    hip_perf_stop_benchmark(perf_set, PERF_R1x4x3);
-#endif
+
 out_err:
     return err;
 }
@@ -1470,11 +1451,6 @@ int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const
     if (signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry)) {
         HIP_ERROR("Building of user context parameter failed.\n");
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R1x3\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1x3);
-#endif
 
 out_err:
     return err;

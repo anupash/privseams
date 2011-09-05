@@ -169,9 +169,8 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
     struct in6_addr                 peer_addr;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I1_SEND, PERF_BASE\n");
+    HIP_DEBUG("Start PERF_I1_SEND\n");
     hip_perf_start_benchmark(perf_set, PERF_I1_SEND);
-    hip_perf_start_benchmark(perf_set, PERF_BASE);
 #endif
 
     HIP_IFEL(entry->state == HIP_STATE_ESTABLISHED, 0,
@@ -232,12 +231,9 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_I1_SEND\n");
     hip_perf_stop_benchmark(perf_set, PERF_I1_SEND);
-    hip_perf_write_benchmark(perf_set, PERF_I1_SEND);
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I1_R1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1_R1);
+    hip_perf_write_benchmark(perf_set, PERF_I1_SEND);
 #endif
 
 out_err:
@@ -267,11 +263,6 @@ static int hip_add_echo_response(struct hip_packet_context *ctx, int sign)
         HIP_ERROR("Error while creating echo reply parameter\n");
         return -1;
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R1x2\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1x2);
-#endif
 
     return 0;
 }
@@ -324,11 +315,6 @@ int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
 int hip_mac_and_sign_packet(struct hip_common *msg,
                             const struct hip_hadb_state *const hadb_entry)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R1x4, PERF_R1x4x1\n");
-    hip_perf_start_benchmark(perf_set, PERF_R1x4);
-    hip_perf_start_benchmark(perf_set, PERF_R1x4x1);
-#endif
     if (hip_build_param_hmac_contents(msg, &hadb_entry->hip_hmac_out)) {
         HIP_ERROR("Building of HMAC failed\n");
         return -1;
@@ -369,15 +355,6 @@ int hip_mac_and_sign_handler(UNUSED const uint8_t packet_type,
         return -1;
     }
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R1x4x1\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1x4x1);
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R1x5\n");
-    hip_perf_start_benchmark(perf_set, PERF_R1x5);
-#endif
     return 0;
 }
 
@@ -610,10 +587,6 @@ out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R1\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1);
-    HIP_DEBUG("Start PERF_I2_R2\n");
-    hip_perf_start_benchmark(perf_set, PERF_I2_R2);
-    HIP_DEBUG("Stop PERF_R1x5\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1x5);
 
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_LOAD_USER_PUBKEY\n");
@@ -624,15 +597,6 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_I2_USER_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_KEY);
     hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
-    hip_perf_write_benchmark(perf_set, PERF_R1x1);
-    hip_perf_write_benchmark(perf_set, PERF_R1x2);
-    hip_perf_write_benchmark(perf_set, PERF_R1x3);
-    hip_perf_write_benchmark(perf_set, PERF_R1x4);
-    hip_perf_write_benchmark(perf_set, PERF_R1x5);
-    hip_perf_write_benchmark(perf_set, PERF_R1x4x1);
-    hip_perf_write_benchmark(perf_set, PERF_R1x4x2);
-    hip_perf_write_benchmark(perf_set, PERF_R1x4x3);
-
 #endif
     return err;
 }

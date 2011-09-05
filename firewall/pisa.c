@@ -355,18 +355,6 @@ static void pisa_reject_connection(const struct hip_fw_context *ctx)
  */
 static int pisa_handler_i1(UNUSED struct hip_fw_context *ctx)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
-    hip_perf_start_benchmark(perf_set, PERF_BASE);
-    hip_perf_start_benchmark(perf_set, PERF_I1);
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_I1\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I1);
-    hip_perf_write_benchmark(perf_set, PERF_I1);
-#endif
-
     return NF_ACCEPT;
 }
 
@@ -416,11 +404,6 @@ static int pisa_handler_r2(struct hip_fw_context *ctx)
     int                            verdict  = NF_DROP, sig = 0, cert = 0;
     struct hip_challenge_response *solution = NULL;
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2\n");
-    hip_perf_start_benchmark(perf_set, PERF_R2);
-#endif
-
     solution = pisa_check_challenge_response(ctx);
     cert     = pisa_check_certificate(ctx);
 
@@ -434,14 +417,6 @@ static int pisa_handler_r2(struct hip_fw_context *ctx)
         pisa_accept_connection(ctx);
         verdict = NF_ACCEPT;
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R2, PERF_BASE\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R2);
-    hip_perf_stop_benchmark(perf_set, PERF_BASE);
-    hip_perf_write_benchmark(perf_set, PERF_R2);
-    hip_perf_write_benchmark(perf_set, PERF_BASE);
-#endif
 
     return verdict;
 }
