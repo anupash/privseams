@@ -299,7 +299,9 @@ int signaling_verify_application(const char *app_path)
     HIP_IFEL(!(app_cert = get_application_attribute_certificate_chain(app_path, &untrusted_chain)),
              -1, "No application certificate found for application: %s.\n", app_path);
 
-    HIP_DEBUG("Found chain of size %d \n", sk_X509_num(untrusted_chain));
+    if (untrusted_chain) {
+        HIP_DEBUG("Found chain of size %d \n", sk_X509_num(untrusted_chain));
+    }
     //HIP_DEBUG("Application certificate: \n");
     //X509AC_print(app_cert);
     /* Before we do any verifying, check that hashes match */
