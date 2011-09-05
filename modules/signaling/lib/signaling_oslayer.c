@@ -358,12 +358,11 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     ctx->user.uid = sys_ctx.uid;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY_APPLICATION\n");   // test 1.1.2
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY_APPLICATION);
     HIP_DEBUG("Stop PERF_NETSTAT_LOOKUP\n");
     hip_perf_stop_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
+    HIP_DEBUG("Start PERF_VERIFY_APPLICATION\n");   // test 1.1.2
+    hip_perf_start_benchmark(perf_set, PERF_VERIFY_APPLICATION);
 #endif
-
     HIP_IFEL(signaling_verify_application(sys_ctx.path),
              -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
 

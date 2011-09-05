@@ -54,11 +54,23 @@ int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
     len       = RSA_size(rsa);
     signature = calloc(1, len);
     HIP_IFEL(!signature, -1, "Malloc for signature failed.");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_HOST_SIGN, PERF_R2_HOST_SIGN, PERF_I3_HOST_SIGN, PERF_UPDATE_HOST_SIGN\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_I3_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_UPDATE_HOST_SIGN);
+#endif
     /* RSA_sign returns 0 on failure */
     HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
                        &sig_len, rsa), -1, "Signing error\n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_HOST_SIGN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_UPDATE_HOST_SIGN);
+#endif
 
     if (hip_get_msg_type(msg) == HIP_R1) {
         HIP_IFEL(hip_build_param_signature2_contents(msg, signature,

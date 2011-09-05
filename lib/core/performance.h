@@ -112,8 +112,6 @@ enum perf_sensor {
     PERF_VERIFY_APPLICATION, // tests 1.1.2
     PERF_HASH,
     PERF_SEND_CONN_REQUEST,  // test 1.2
-    //PERF_HANDLE_I2,          // test 2
-    //PERF_HANDLE_R2,          // test 3
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
     PERF_HIPFW_REQ0,
     PERF_HIPFW_REQ1,         // test 2.2
