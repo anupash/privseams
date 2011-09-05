@@ -143,7 +143,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
 
-        HIP_DEBUG("Write PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+        HIP_DEBUG("Write PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH\n");
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
         hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
@@ -151,6 +151,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
         hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
         hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
+        hip_perf_write_benchmark(perf_set, PERF_HASH);
         hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
         hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
