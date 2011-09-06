@@ -878,7 +878,7 @@ int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
  */
 int hip_get_default_hit(struct in6_addr *hit)
 {
-    return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
+    return hip_get_any_localhost_hit(hit, HIP_HI_ECDSA, 0);
 }
 
 /**

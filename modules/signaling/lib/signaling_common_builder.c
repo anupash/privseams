@@ -298,7 +298,7 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
     unsigned char signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
     int in_len;
     int sig_len = 0;
-    uint8_t sig_type = HIP_HI_RSA;
+    uint8_t sig_type = HIP_HI_ECDSA;
 
     /* sanity checks */
     HIP_IFEL(!msg,       -1, "Cannot sign NULL-message\n");
