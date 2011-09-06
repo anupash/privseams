@@ -1046,10 +1046,10 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     // Test necessary to catch keys that have only been initialized with EC_KEY_new()
     // but not properly generated. Such keys cause segmentation faults when
     // being passed into EC_KEY_get0_group()
-    if (!EC_KEY_check_key(ecdsa)) {
+    /*if (!EC_KEY_check_key(ecdsa)) {
         HIP_ERROR("Invalid key. \n");
         return -1;
-    }
+    }*/
 
     pubfilename_len = strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
     pubfilename     = malloc(pubfilename_len);
@@ -1163,10 +1163,10 @@ int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
         return -1;
     }
 
-    if (!EC_KEY_check_key(*ecdsa)) {
-        HIP_ERROR("Error during loading of ecdsa key.\n");
-        return -1;
-    }
+    //if (!EC_KEY_check_key(*ecdsa)) {
+    //    HIP_ERROR("Error during loading of ecdsa key.\n");
+    //    return -1;
+    //}
 
     return 0;
 }

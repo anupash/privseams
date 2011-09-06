@@ -1155,8 +1155,8 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
     const EC_GROUP *group = NULL;
 
     /* sanity check */
-    HIP_IFEL(!EC_KEY_check_key(ecdsa),
-             -1, "Invalid public key.\n");
+    //HIP_IFEL(!EC_KEY_check_key(ecdsa),
+    //         -1, "Invalid public key.\n");
     HIP_IFEL(!ec_key_rr, -1, "NULL output destination.\n");
 
     /* get sizes for public and private key, allocate memory for output */
