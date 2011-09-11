@@ -1034,9 +1034,10 @@ static int hip_fw_verify_packet(struct hip_common *const common,
      * 1.) HI -> HIT matching must be ensured when saving HI in this tuple
      * 2.) tuple is looked up corresponding to HITs */
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG\n");
+    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
     hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
 #endif
 
 
@@ -1047,9 +1048,10 @@ static int hip_fw_verify_packet(struct hip_common *const common,
         return 0;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG\n");
+    HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
 #endif
     HIP_INFO("Signature successfully verified\n");
 
