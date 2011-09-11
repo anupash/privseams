@@ -170,8 +170,20 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
 #endif
         sig_len     = RSA_size(rsa);
         *sig_type   = HIP_SIG_RSA;
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
+        hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
+        hip_perf_start_benchmark(perf_set, PERF_I3_USER_SIGN);
+#endif
         HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf),
                  -1, "Signature function failed \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
+        hip_perf_stop_benchmark(perf_set, PERF_I3_USER_SIGN);
+#endif
         break;
 
     case HIP_HI_ECDSA:
