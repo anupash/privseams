@@ -173,6 +173,7 @@ enum perf_sensor {
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
+    PERF_HMAC,               // HMAC
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

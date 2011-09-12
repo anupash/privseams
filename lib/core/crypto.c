@@ -349,6 +349,11 @@ static unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
  */
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_HMAC);
+#endif
+
     switch (type) {
     case HIP_DIGEST_SHA1_HMAC:
         HMAC(EVP_sha1(),
@@ -373,6 +378,11 @@ int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
     HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
     HIP_HEXDUMP("HMAC in:", in, in_len);
     HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HMAC);
+#endif
 
     return 0;
 }

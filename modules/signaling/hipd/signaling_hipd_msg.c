@@ -850,6 +850,7 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
         hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+        hip_perf_write_benchmark(perf_set, PERF_HMAC);
     }
 #endif
 

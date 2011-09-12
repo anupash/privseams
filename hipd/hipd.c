@@ -367,6 +367,8 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_LOAD_USER_KEY, "results/PERF_LOAD_USER_KEY.csv");
     hip_perf_set_name(perf_set, PERF_LOAD_USER_PUBKEY, "results/PERF_LOAD_USER_PUBKEY.csv");
 
+    hip_perf_set_name(perf_set, PERF_HMAC, "results/PERF_HMAC.csv");
+
     hip_perf_open(perf_set);
 
     HIP_DEBUG("Start PERF_STARTUP\n");
