@@ -350,8 +350,8 @@ static unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_HMAC\n");
-        hip_perf_start_benchmark(perf_set, PERF_HMAC);
+    HIP_DEBUG("Start PERF_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_HMAC);
 #endif
 
     switch (type) {
@@ -380,8 +380,8 @@ int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
     HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_HMAC\n");
-        hip_perf_stop_benchmark(perf_set, PERF_HMAC);
+    HIP_DEBUG("Stop PERF_HMAC\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HMAC);
 #endif
 
     return 0;
@@ -487,8 +487,8 @@ int impl_ecdsa_sign(const unsigned char *const digest,
 
     HIP_IFEL(!digest, -1, "NULL digest \n");
     HIP_IFEL(!signature, -1, "NULL signature output destination \n");
-    //HIP_IFEL(!EC_KEY_check_key(ecdsa),
-    //         -1, "Check of signing key failed. \n");
+    HIP_IFEL(!EC_KEY_check_key(ecdsa),
+             -1, "Check of signing key failed. \n");
 
     sig_size = ECDSA_size(ecdsa);
     memset(signature, 0, sig_size);
@@ -1057,9 +1057,9 @@ int save_ecdsa_private_key(const char *const filename, EC_KEY *const ecdsa)
     // but not properly generated. Such keys cause segmentation faults when
     // being passed into EC_KEY_get0_group()
     /*if (!EC_KEY_check_key(ecdsa)) {
-        HIP_ERROR("Invalid key. \n");
-        return -1;
-    }*/
+     *  HIP_ERROR("Invalid key. \n");
+     *  return -1;
+     * }*/
 
     pubfilename_len = strlen(filename) + sizeof(DEFAULT_PUB_FILE_SUFFIX);
     pubfilename     = malloc(pubfilename_len);
@@ -1163,8 +1163,9 @@ int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
 
     fp = fopen(filename, "rb");
     if (!fp) {
-        HIP_ERROR("Could not open private key file %s for reading\n", filename);
-        return -ENOMEM;
+        /*    HIP_ERROR("Could not open private key file %s for reading\n", filename);
+         *  return -ENOMEM;
+         */
     }
 
     *ecdsa = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
