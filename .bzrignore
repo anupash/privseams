@@ -1,4 +1,6 @@
 *.ho
+*.lo
+*.la
 .cproject
 .deps
 .dirstamp
@@ -39,9 +41,6 @@ hipd/hipd
 hipl-*.tar.gz
 hipl-[0-9].[0-9].[0-9]
 install-sh
-lib/core/*.lo
-lib/core/libhipcore.la
-lib/tool/*.lo
 libtool
 ltmain.sh
 m4/*.m4
