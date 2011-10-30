@@ -659,7 +659,7 @@ static int insert_new_connection(const struct hip_data *const data,
     connection->original.hip_tuple->data->dst_hit = data->dst_hit;
     connection->original.hip_tuple->data->src_hi  = NULL;
     connection->original.hip_tuple->data->verify  = NULL;
-    connection->original.connection_contexts     = NULL;
+    connection->original.connection_contexts      = NULL;
 
     //reply direction tuple
     connection->reply.state      = HIP_STATE_UNASSOCIATED;
@@ -677,7 +677,7 @@ static int insert_new_connection(const struct hip_data *const data,
     connection->reply.hip_tuple->data->dst_hit = data->src_hit;
     connection->reply.hip_tuple->data->src_hi  = NULL;
     connection->reply.hip_tuple->data->verify  = NULL;
-    connection->reply.connection_contexts        = NULL;
+    connection->reply.connection_contexts      = NULL;
 
     //add tuples to list
     hip_list  = append_to_list(hip_list, connection->original.hip_tuple);
@@ -1213,6 +1213,11 @@ static int handle_r1(struct hip_common *const common,
         return 0;
     }
 
+    /* handle signaling_appinfo parameter */
+    if (!signaling_hipfw_handle_r1(common, tuple, ctx)) {
+        return 0;
+    }
+
     return 1;
 }
 
@@ -1320,7 +1325,6 @@ static int handle_r2(struct hip_common *const common,
     }
 
     return 1;
-
 }
 
 /**
@@ -1742,7 +1746,7 @@ static int check_packet(struct hip_common *common,
     } else if (common->type_hdr == HIP_UPDATE) {
         if (signaling_get_update_type(common)) {
             err = signaling_hipfw_handle_update(common, tuple, ctx);
-        } else  if (err) {
+        } else if (err) {
             err = handle_update(common, &tuple, ctx);
         }
     } else if (common->type_hdr == HIP_NOTIFY) {

@@ -18,7 +18,8 @@
 #include "signaling_user_management.h"
 
 
-const char *signaling_connection_status_name(int status) {
+const char *signaling_connection_status_name(int status)
+{
     switch (status) {
     case SIGNALING_CONN_NEW:
         return "NEW";
@@ -35,7 +36,8 @@ const char *signaling_connection_status_name(int status) {
     }
 }
 
-UNUSED static const char *signaling_user_key_name(int key_type) {
+UNUSED static const char *signaling_user_key_name(int key_type)
+{
     switch (key_type) {
     case HIP_HI_RSA:
         return "RSA";
@@ -48,10 +50,11 @@ UNUSED static const char *signaling_user_key_name(int key_type) {
     }
 }
 
-static void signaling_param_print_field(UNUSED const char *prefix, const uint16_t length, const unsigned char *p_content) {
-    char buf[length+1];
+static void signaling_param_print_field(UNUSED const char *prefix, const uint16_t length, const unsigned char *p_content)
+{
+    char buf[length + 1];
 
-    if(length == 0) {
+    if (length == 0) {
         HIP_DEBUG("%s\t <empty>\n", prefix);
         return;
     }
@@ -66,12 +69,13 @@ static void signaling_param_print_field(UNUSED const char *prefix, const uint16_
  *
  * @param app the application context parameter to print
  */
-void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx) {
-    const uint8_t *p_content;
+void signaling_param_application_context_print(const struct signaling_param_app_context *const param_app_ctx)
+{
+    const uint8_t                    *p_content;
     const struct signaling_port_pair *pp;
-    int i;
+    int                               i;
 
-    if(param_app_ctx == NULL) {
+    if (param_app_ctx == NULL) {
         HIP_DEBUG("No appinfo parameter given.\n");
         return;
     }
@@ -108,21 +112,24 @@ void signaling_param_application_context_print(const struct signaling_param_app_
  * @param prefix    prefix is prepended to all output of this function
  * @param header    0 for no header, 1 to print a header
  */
-void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
-                                         UNUSED const char *prefix, const int header) {
-    if(app_ctx == NULL) {
+void signaling_application_context_print(const struct signaling_application_context *const app_ctx,
+                                         UNUSED const char *prefix, const int header)
+{
+    if (app_ctx == NULL) {
         HIP_DEBUG("%sNo application ctx parameter given.\n", prefix);
         return;
     }
-    if (header)
+    if (header) {
         HIP_DEBUG("%s+------------ APPLICATION CONTEXT START ----------------------\n", prefix);
+    }
     HIP_DEBUG("%s  Application context \n", prefix);
     HIP_DEBUG("%s  \tApplication DN:\t %s\n", prefix, app_ctx->application_dn);
     HIP_DEBUG("%s  \tAC Issuer DN:\t %s\n", prefix, app_ctx->issuer_dn);
     HIP_DEBUG("%s  \tRequirements:\t %s\n", prefix, app_ctx->requirements);
     HIP_DEBUG("%s  \tGroups:\t\t %s\n", prefix, app_ctx->groups);
-    if (header)
+    if (header) {
         HIP_DEBUG("%s+------------ APPLICATION CONTEXT END   ----------------------\n", prefix);
+    }
 }
 
 /**
@@ -132,23 +139,25 @@ void signaling_application_context_print(const struct signaling_application_cont
  * @param prefix    prefix is prepended to all output of this function
  * @param header    0 for no header, 1 to print a header
  */
-void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
-                                  UNUSED const char *prefix, const int header) {
+void signaling_user_context_print(const struct signaling_user_context *const user_ctx,
+                                  UNUSED const char *prefix, const int header)
+{
     X509_NAME *subj_name;
-    char subj_name_string[SIGNALING_USER_ID_MAX_LEN] = { "<decoding error>" };
+    char       subj_name_string[SIGNALING_USER_ID_MAX_LEN] = { "<decoding error>" };
 
-    if(user_ctx == NULL) {
+    if (user_ctx == NULL) {
         HIP_DEBUG("%sNo user ctx parameter given.\n", prefix);
         return;
     }
 
     /* Decode users name */
-    if(!signaling_DER_to_X509_NAME(user_ctx->subject_name, user_ctx->subject_name_len, &subj_name)) {
+    if (!signaling_DER_to_X509_NAME(user_ctx->subject_name, user_ctx->subject_name_len, &subj_name)) {
         X509_NAME_oneline(subj_name, subj_name_string, SIGNALING_USER_ID_MAX_LEN);
     }
 
-    if (header)
+    if (header) {
         HIP_DEBUG("%s+------------- USER CONTEXT START ----------------------\n", prefix);
+    }
     HIP_DEBUG("%s  User context \n", prefix);
     HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->uid);
     HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, subj_name_string);
@@ -156,8 +165,9 @@ void signaling_user_context_print(const struct signaling_user_context * const us
     HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len == -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     //if (user_ctx->key_rr_len > 0)
     //    HIP_HEXDUMP(prefix, user_ctx->pkey, user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
-    if (header)
+    if (header) {
         HIP_DEBUG("%s+------------ USER CONTEXT END   ----------------------\n", prefix);
+    }
 }
 
 /**
@@ -166,8 +176,9 @@ void signaling_user_context_print(const struct signaling_user_context * const us
  * @param ctx       the connection context to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_context_print(const struct signaling_connection_context * const ctx, UNUSED const char *prefix) {
-    if(ctx == NULL) {
+void signaling_connection_context_print(const struct signaling_connection_context *const ctx, UNUSED const char *prefix)
+{
+    if (ctx == NULL) {
         HIP_DEBUG("%sNo connection context struct given.\n", prefix);
         return;
     }
@@ -186,12 +197,13 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  * @param conn      the connection to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_print(const struct signaling_connection *const conn, UNUSED const char *const prefix) {
-    int i;
-    char prefix_buf[strlen(prefix)+2];
+void signaling_connection_print(const struct signaling_connection *const conn, UNUSED const char *const prefix)
+{
+    int  i;
+    char prefix_buf[strlen(prefix) + 2];
     sprintf(prefix_buf, "%s\t", prefix);
 
-    if(conn == NULL) {
+    if (conn == NULL) {
         HIP_DEBUG("%sNo connection struct given.\n", prefix);
         return;
     }
@@ -220,21 +232,21 @@ void signaling_connection_print(const struct signaling_connection *const conn, U
         fprintf(stderr, "[%d: %d -> %d]  ", i, conn->sockets[i].src_port, conn->sockets[i].dst_port);
     }
     fprintf(stderr, "\n");
-    HIP_DEBUG("%s  Outgoing connection context:\n",prefix);
+    HIP_DEBUG("%s  Outgoing connection context:\n", prefix);
     signaling_connection_context_print(&conn->ctx_out, prefix_buf);
-    HIP_DEBUG("%s  Incoming connection context:\n",prefix);
+    HIP_DEBUG("%s  Incoming connection context:\n", prefix);
     signaling_connection_context_print(&conn->ctx_in, prefix_buf);
     HIP_DEBUG("%s+------------ CONNECTION END   ----------------------\n", prefix);
 }
-
 
 /**
  * Prints the connection identifier parameter.
  *
  * @param conn_id the connection identifier parameter to print
  */
-void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id) {
-    if(conn_id == NULL) {
+void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id)
+{
+    if (conn_id == NULL) {
         HIP_DEBUG("No connection identifier parameter given.\n");
         return;
     }
@@ -248,10 +260,11 @@ void signaling_param_connection_identifier_print(const struct signaling_param_co
  *
  * @param app the user context parameter to print
  */
-void signaling_param_user_context_print(const struct signaling_param_user_context * const userinfo) {
+void signaling_param_user_context_print(const struct signaling_param_user_context *const userinfo)
+{
     const uint8_t *p_content;
 
-    if(userinfo == NULL) {
+    if (userinfo == NULL) {
         HIP_DEBUG("No userinfo parameter given.\n");
         return;
     }
@@ -273,15 +286,16 @@ void signaling_param_user_context_print(const struct signaling_param_user_contex
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_application_context(struct signaling_application_context * const app_ctx) {
+int signaling_init_application_context(struct signaling_application_context *const app_ctx)
+{
     int err = 0;
 
     HIP_IFEL(!app_ctx, -1, "Application context has to be allocated before initialization\n");
 
-    app_ctx->application_dn[0]  = '\0';
-    app_ctx->issuer_dn[0]       = '\0';
-    app_ctx->groups[0]          = '\0';
-    app_ctx->requirements[0]    = '\0';
+    app_ctx->application_dn[0] = '\0';
+    app_ctx->issuer_dn[0]      = '\0';
+    app_ctx->groups[0]         = '\0';
+    app_ctx->requirements[0]   = '\0';
 
 out_err:
     return err;
@@ -295,17 +309,18 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_user_context(struct signaling_user_context * const user_ctx) {
+int signaling_init_user_context(struct signaling_user_context *const user_ctx)
+{
     int err = 0;
 
     HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
 
     user_ctx->uid              = -1;    // no user id
-    user_ctx->subject_name_len  = -1;    // no subject name
-    user_ctx->key_rr_len        = -1;    // no user public key (but key_rdata still has size 4)
-    user_ctx->rdata.algorithm   = 0;     // no user public key algorithm
-    user_ctx->rdata.flags       = 0;     // unused
-    user_ctx->rdata.protocol    = 0;     // unused
+    user_ctx->subject_name_len = -1;     // no subject name
+    user_ctx->key_rr_len       = -1;     // no user public key (but key_rdata still has size 4)
+    user_ctx->rdata.algorithm  = 0;      // no user public key algorithm
+    user_ctx->rdata.flags      = 0;      // unused
+    user_ctx->rdata.protocol   = 0;      // unused
     memset(user_ctx->pkey,          0, sizeof(user_ctx->pkey));
     memset(user_ctx->subject_name,  0, sizeof(user_ctx->subject_name));
 
@@ -321,14 +336,15 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_connection(struct signaling_connection *const conn) {
+int signaling_init_connection(struct signaling_connection *const conn)
+{
     int err = 0;
 
     HIP_IFEL(!conn, -1, "Connection context has to be allocated before initialization\n");
-    conn->id                = 0;
-    conn->status            = SIGNALING_CONN_NEW;
-    conn->side              = INITIATOR;
-    conn->reason_reject     = 0;
+    conn->id            = 0;
+    conn->status        = SIGNALING_CONN_NEW;
+    conn->side          = INITIATOR;
+    conn->reason_reject = 0;
     memset(conn->sockets, 0, sizeof(conn->sockets));
     HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
              -1, "Could not init incoming connection context\n");
@@ -351,10 +367,11 @@ out_err:
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
-                                       const struct hip_common * const msg,
-                                       enum direction dir) {
-    int err                     = 0;
-    const struct hip_tlv_common *param     = NULL;
+                                       const struct hip_common *const msg,
+                                       enum direction dir)
+{
+    int                                  err         = 0;
+    const struct hip_tlv_common         *param       = NULL;
     struct signaling_connection_context *ctx_to_init = NULL;
 
     /* sanity checks */
@@ -365,7 +382,7 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        conn->id         = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+        conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
     signaling_update_flags_from_connection_id(msg, conn);
@@ -393,11 +410,11 @@ out_err:
 }
 
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
-                                         const struct hip_common * const msg,
+                                         const struct hip_common *const msg,
                                          enum direction dir)
 {
-    int err                     = 0;
-    const struct hip_tlv_common *param     = NULL;
+    int                                  err           = 0;
+    const struct hip_tlv_common         *param         = NULL;
     struct signaling_connection_context *ctx_to_update = NULL;
 
     /* sanity checks */
@@ -435,7 +452,6 @@ out_err:
     return err;
 }
 
-
 /**
  * Copies a complete connection structure from src to dst.
  *
@@ -444,8 +460,9 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_copy_connection(struct signaling_connection * const dst,
-                              const struct signaling_connection * const src) {
+int signaling_copy_connection(struct signaling_connection *const dst,
+                              const struct signaling_connection *const src)
+{
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;
@@ -463,13 +480,14 @@ int signaling_copy_connection(struct signaling_connection * const dst,
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_context(struct signaling_connection_context *const ctx,
-                                      enum direction dir) {
+                                      enum direction dir)
+{
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
-    ctx->direction          = dir;
-    ctx->flags              = 0;
-    ctx->userdb_entry       = NULL;
+    ctx->direction    = dir;
+    ctx->flags        = 0;
+    ctx->userdb_entry = NULL;
     HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
     HIP_IFEL(signaling_init_user_context(&ctx->user),
@@ -483,7 +501,8 @@ out_err:
  * @return -1 if the port list is full, other wise the position where the ports were added
  */
 int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
-                                       struct signaling_connection *const conn) {
+                                       struct signaling_connection *const conn)
+{
     int i;
     int err = -1;
 
@@ -512,10 +531,11 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
-                                               const struct hip_common * const msg) {
-    int err                     = 0;
-    const struct hip_tlv_common *param     = NULL;
+int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
+                                               const struct hip_common *const msg)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
@@ -549,8 +569,9 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_copy_connection_context(struct signaling_connection_context * const dst,
-                                      const struct signaling_connection_context * const src) {
+int signaling_copy_connection_context(struct signaling_connection_context *const dst,
+                                      const struct signaling_connection_context *const src)
+{
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;
@@ -559,11 +580,10 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
     return 0;
 }
 
-
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn)
 {
-    int err = 0;
+    int                                             err = 0;
     const struct signaling_param_user_auth_request *param_usr_auth;
 
     /* sanity checks */
@@ -575,14 +595,14 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
         signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
     } //else {
       //  signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-    //}
+      //}
 
     /* This flags the remote user */
     if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_U))) {
         signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
     } //else if (!signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
       //  signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-    //}
+      //}
 
 out_err:
     return err;
@@ -594,7 +614,8 @@ out_err:
  * @param conn      the connection to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_flags_print(uint8_t flags, UNUSED const char *const prefix) {
+void signaling_flags_print(struct flags_connection_context flags, UNUSED const char *const prefix)
+{
     char buf[100];
     memset(buf, 0, sizeof(buf));
 
@@ -608,16 +629,69 @@ void signaling_flags_print(uint8_t flags, UNUSED const char *const prefix) {
     HIP_DEBUG("%s  Flags: %s int = %d \n", prefix, buf, flags);
 }
 
-int signaling_flag_check_auth_complete(uint8_t flags) {
-    return (signaling_flag_check(flags, HOST_AUTHED) && !signaling_flag_check(flags, HOST_AUTH_REQUEST) &&
-            signaling_flag_check(flags, USER_AUTHED) && !signaling_flag_check(flags, USER_AUTH_REQUEST));
+int signaling_flag_check_auth_complete(struct flags_connection_context flags)
+{
+    return signaling_flag_check(flags, HOST_AUTHED) && !signaling_flag_check(flags, HOST_AUTH_REQUEST) &&
+           signaling_flag_check(flags, USER_AUTHED) && !signaling_flag_check(flags, USER_AUTH_REQUEST);
 }
 
 /**
  * @return 1 if flag is set, 0 otherwise
  */
-int signaling_flag_check(uint8_t flags, int f) {
-    return (flags & (1 << f)) > 0;
+/*int signaling_flag_check(uint8_t flags, int f) {
+ *  return (flags & (1 << f)) > 0;
+ * }*/
+int signaling_flag_check(struct flags_connection_context *flags, int f)
+{
+    switch (f) {
+    case USER_AUTH_REQUEST:
+        return (flags->USER_AUTH_REQUEST) ? 1 : 0;
+        break;
+    case USER_AUTHED:
+        return (flags->USER_AUTHED) ? 1 : 0;
+        break;
+    case HOST_AUTH_REQUEST: return (flags->HOST_AUTH_REQUEST) ? 1 : 0;
+        break;
+    case HOST_AUTHED:               return (flags->HOST_AUTHED) ? 1 : 0;
+        break;
+
+    case HOST_INFO_SHORT:           return (flags->HOST_INFO_SHORT) ? 1 : 0;
+        break;
+    case HOST_INFO_LONG:            return (flags->HOST_INFO_LONG) ? 1 : 0;
+        break;
+    case HOST_INFO_CERTS:           return (flags->HOST_INFO_CERTS) ? 1 : 0;
+        break;
+    case USER_SIGN:                         return (flags->USER_SIGN) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT:           return (flags->USER_INFO_SHORT) ? 1 : 0;
+        break;
+    case USER_INFO_LONG:            return (flags->USER_INFO_LONG) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT_SIGNED:    return (flags->USER_INFO_SHORT_SIGNED) ? 1 : 0;
+        break;
+    case USER_INFO_LONG_SIGNED:             return (flags->USER_INFO_LONG_SIGNED) ? 1 : 0;
+        break;
+
+    case HOST_INFO_SHORT_RECV:                      return (flags->HOST_INFO_SHORT_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_LONG_RECV:                       return (flags->HOST_INFO_LONG_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_CERTS_RECV:                      return (flags->HOST_INFO_CERTS_RECV) ? 1 : 0;
+        break;
+    case USER_SIGN_RECV:                            return (flags->USER_SIGN_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT_RECV:                      return (flags->USER_INFO_SHORT_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_LONG_RECV:                       return (flags->USER_INFO_LONG_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT_SIGNED_RECV:       return (flags->USER_INFO_SHORT_SIGNED_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_LONG_SIGNED_RECV:        return (flags->USER_INFO_LONG_SIGNED_RECV) ? 1 : 0;
+        break;
+
+    default:                                return 0;
+        break;
+    }
 }
 
 /**
@@ -625,8 +699,54 @@ int signaling_flag_check(uint8_t flags, int f) {
  *
  * @return flags with f set to 1
  */
-void signaling_flag_set(uint8_t *flags, int f) {
-    *flags |= 1 << (int) f;
+void signaling_flag_set(struct flags_connection_context *flags, int f)
+{
+    switch (f) {
+    case USER_AUTH_REQUEST:         flags->USER_AUTH_REQUEST = 1;
+        break;
+    case USER_AUTHED:                       flags->USER_AUTHED = 1;
+        break;
+    case HOST_AUTH_REQUEST:         flags->HOST_AUTH_REQUEST = 1;
+        break;
+    case HOST_AUTHED:                       flags->HOST_AUTHED = 1;
+        break;
+
+    case HOST_INFO_SHORT:           flags->HOST_INFO_SHORT = 1;
+        break;
+    case HOST_INFO_LONG:            flags->HOST_INFO_LONG = 1;
+        break;
+    case HOST_INFO_CERTS:           flags->HOST_INFO_CERTS = 1;
+        break;
+    case USER_SIGN:                         flags->USER_SIGN = 1;
+        break;
+    case USER_INFO_SHORT:           flags->USER_INFO_SHORT = 1;
+        break;
+    case USER_INFO_LONG:            flags->USER_INFO_LONG = 1;
+        break;
+    case USER_INFO_SHORT_SIGNED: flags->USER_INFO_SHORT = 1;
+        break;
+    case USER_INFO_LONG_SIGNED:     flags->USER_INFO_LONG = 1;
+        break;
+
+    case HOST_INFO_SHORT_RECV:      flags->HOST_INFO_SHORT_RECV = 1;
+        break;
+    case HOST_INFO_LONG_RECV:       flags->HOST_INFO_LONG_RECV = 1;
+        break;
+    case HOST_INFO_CERTS_RECV:      flags->HOST_INFO_CERTS_RECV = 1;
+        break;
+    case USER_SIGN_RECV:            flags->USER_SIGN_RECV = 1;
+        break;
+    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 1;
+        break;
+    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 1;
+        break;
+    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 1;
+        break;
+    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 1;
+        break;
+
+    default:                                                                                                                break;
+    }
 }
 
 /**
@@ -634,7 +754,54 @@ void signaling_flag_set(uint8_t *flags, int f) {
  *
  * @return flags with f set to 1
  */
-void signaling_flag_unset(uint8_t *flags, int f) {
-    *flags &= ~(1 << (int) f);
-}
+/*
+ * void signaling_flag_unset(uint8_t *flags, int f) {
+ * *flags &= ~(1 << (int) f);
+ * }
+ */
+void signaling_flag_unset(struct flags_connection_context *flags, int f)
+{
+    switch (f) {
+    case USER_AUTH_REQUEST: flags->USER_AUTH_REQUEST = 0;
+        break;
+    case USER_AUTHED:               flags->USER_AUTHED = 0;
+        break;
+    case HOST_AUTH_REQUEST: flags->HOST_AUTH_REQUEST = 0;
+        break;
+    case HOST_AUTHED:               flags->HOST_AUTHED = 0;
+        break;
 
+    case HOST_INFO_SHORT:   flags->HOST_INFO_SHORT = 0;
+        break;
+    case HOST_INFO_LONG:    flags->HOST_INFO_LONG = 0;
+        break;
+    case HOST_INFO_CERTS:   flags->HOST_INFO_CERTS = 0;
+        break;
+    case USER_SIGN:                 flags->USER_SIGN = 0;
+        break;
+    case USER_INFO_SHORT:   flags->USER_INFO_SHORT = 0;
+        break;
+    case USER_INFO_LONG:    flags->USER_INFO_LONG = 0;
+        break;
+
+    case HOST_INFO_SHORT_RECV:      flags->HOST_INFO_SHORT_RECV = 0;
+        break;
+    case HOST_INFO_LONG_RECV:       flags->HOST_INFO_LONG_RECV = 0;
+        break;
+    case HOST_INFO_CERTS_RECV:      flags->HOST_INFO_CERTS_RECV = 0;
+        break;
+    case USER_SIGN_RECV:            flags->USER_SIGN_RECV = 0;
+        break;
+    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 0;
+        break;
+    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 0;
+        break;
+    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 0;
+        break;
+    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 0;
+        break;
+
+    default:
+        break;
+    }
+}

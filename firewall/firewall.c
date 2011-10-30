@@ -136,7 +136,7 @@ int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
 int esp_speedup               = 0; /**< Enable esp speedup via dynamic iptables usage (-u option). */
-int sgnl_timeout                          = 0;
+int sgnl_timeout              = 0;
 
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
@@ -958,7 +958,7 @@ static int filter_hip(struct hip_common *const buf,
         print_addr = 1;
     } else if (buf->type_hdr == HIP_NOTIFY) {
         HIP_DEBUG("received packet type: NOTIFY\n");
-       // IPV6_TO_IPV4_MAP(&ctx->src, &in_addr);
+        // IPV6_TO_IPV4_MAP(&ctx->src, &in_addr);
         //inet_aton("10.0.3.2", &own_addr);
         //if (!memcmp(&in_addr, &own_addr, sizeof(in_addr))) {
         //   HIP_DEBUG("Got own notification \n");
@@ -1728,7 +1728,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 {
     // assume DROP
     int verdict = 0;
-    int ptype = 0;
+    //int ptype = 0;
 
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */
@@ -1789,7 +1789,7 @@ out_err:
 
 #ifdef CONFIG_HIP_PERFORMANCE
     if (ctx->packet_type == HIP_PACKET) {
-        ptype = ( (struct hip_common *) ctx->transport_hdr.hip)->type_hdr;
+        ptype = ((struct hip_common *) ctx->transport_hdr.hip)->type_hdr;
     }
     HIP_DEBUG("Packet type %d, hip type %d \n", ctx->packet_type, ptype);
     switch (ptype) {

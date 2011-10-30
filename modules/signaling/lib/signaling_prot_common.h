@@ -61,6 +61,9 @@
 #define HIP_PARAM_SIGNALING_CERT_CHAIN_ID       5008
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
 #define HIP_PARAM_SIGNALING_USER_REQ_U          62502
+#define HIP_PARAM_SIGNALING_HOST_INFO_REQ       62504
+#define HIP_PARAM_SIGNALING_USER_INFO_REQ       62506
+#define HIP_PARAM_SIGNALING_APP_INFO_REQ        62508
 
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
@@ -97,6 +100,11 @@
 #define SIGNALING_USER_KEY_MAX_LEN  HIP_MAX_RSA_KEY_LEN / 8 + 4 // see lib/core/protodefs.h
 #define SIGNALING_PATH_MAX_LEN      PATH_MAX
 
+#define SIGNALING_HOST_INFO_REQ_MAX_LEN 128
+#define SIGNALING_USER_INFO_REQ_MAX_LEN 128
+#define SIGNALING_APP_INFO_REQ_MAX_LEN  128
+
+
 /* Maximum of sockets per connection */
 #define SIGNALING_MAX_SOCKETS       50
 
@@ -109,6 +117,26 @@
 #define SIGNALING_USER_AUTH_FAILED                  124
 #define SIGNALING_CONNECTION_FAILED                 125
 
+/*
+ * // Request types/ Profiles for host information
+ * #define HOST_INFO_SHORT         30
+ * #define HOST_INFO_LONG          31
+ * #define HOST_INFO_CERTS         32
+ *
+ * // Request types/ Profiles for user information
+ * #define USER_SIGN               40
+ * #define USER_INFO_SHORT         41
+ * #define USER_INFO_LONG          42
+ * #define USER_INFO_CERTS         43
+ * #define USER_INFO_SHORT_SIGN    45
+ * #define USER_INFO_LONG_SIGN     46
+ *
+ * // Request types/ Profiles for application information
+ * #define APP_INFO_SHORT          50
+ * #define APP_INFO_LONG           51
+ */
+
+
 /* Direction for connections */
 enum direction {
     UNINIT, // for unassigned connection contexts
@@ -117,18 +145,48 @@ enum direction {
     FWD     // pass through traffic (routers)
 };
 
+/*
+ * enum flag_internal {
+ *  USER_AUTH_REQUEST,
+ *  USER_AUTHED,
+ *  HOST_AUTH_REQUEST,
+ *  HOST_AUTHED,
+ *  HOST_INFO_SHORT,
+ *  HOST_INFO_LONG,
+ *  HOST_INFO_CERTS,
+ * };
+ */
+
 enum flag_internal {
-    USER_AUTH_REQUEST,
-    USER_AUTHED,
-    HOST_AUTH_REQUEST,
-    HOST_AUTHED
+    USER_AUTH_REQUEST = 0,
+    USER_AUTHED       = 1,
+    HOST_AUTH_REQUEST = 2,
+    HOST_AUTHED       = 3,
+
+    HOST_INFO_SHORT        = 4,
+    HOST_INFO_LONG         = 5,
+    HOST_INFO_CERTS        = 6,
+    USER_SIGN              = 7,
+    USER_INFO_SHORT        = 8,
+    USER_INFO_LONG         = 9,
+    USER_INFO_SHORT_SIGNED = 10,
+    USER_INFO_LONG_SIGNED  = 11,
+
+    HOST_INFO_SHORT_RECV        = 12,
+    HOST_INFO_LONG_RECV         = 13,
+    HOST_INFO_CERTS_RECV        = 14,
+    USER_SIGN_RECV              = 15,
+    USER_INFO_SHORT_RECV        = 16,
+    USER_INFO_LONG_RECV         = 17,
+    USER_INFO_SHORT_SIGNED_RECV = 18,
+    USER_INFO_LONG_SIGNED_RECV  = 19
 };
 
 enum flag_connection_reject {
     APPLICATION_BLOCKED = 1,
-    USER_BLOCKED = 2,
-    HOST_BLOCKED = 4,
-    PRIVATE_REASON = 8
+    USER_BLOCKED        = 2,
+    HOST_BLOCKED        = 4,
+    PRIVATE_REASON      = 8
 };
 
 enum flag_conn_id {
@@ -152,211 +210,239 @@ enum side {
  * ------------------------------------------------------------------------------------ */
 
 /*
-     Format for the notification data, for the "connection failed" notification.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |           REASON              |                               /
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                            PADDING                            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+ *   Format for the notification data, for the "connection failed" notification.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           REASON              |                               /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                           PADDING                             |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
 struct signaling_ntf_connection_failed_data {
     uint16_t reason;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /*
-     Format for the notification data, for the "user authentication failed" notification.
-
-     REASON has the following format
-     0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                 RESERVED                          | H | U | A |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-     H = host blocked
-     U = user blocked
-     A = application blocked
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |           REASON              |                               /
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                            PADDING                            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+ *   Format for the notification data, for the "user authentication failed" notification.
+ *
+ *   REASON has the following format
+ *   0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                 RESERVED                          | H | U | A |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ * |   H = host blocked
+ * |   U = user blocked
+ * |   A = application blocked
+ * |
+ * |   0                   1                   2                   3
+ * |   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           REASON              |                               /
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                            PADDING                            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
  */
 
 struct signaling_ntf_user_auth_failed_data {
     uint16_t reason;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /*
-     Parameter for a connection identifier.
-     The parameter contains source and destination port numbers,
-     as well as a connection identifier, that is unique per host association.
-
-     All integers are in network byte order.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |             Type              |             Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                      Network Identifier                       |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-*/
+ *   Parameter for a connection identifier.
+ *   The parameter contains source and destination port numbers,
+ *   as well as a connection identifier, that is unique per host association.
+ *
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      Network Identifier                       |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
 struct signaling_param_user_auth_request {
-    hip_tlv type;
-    hip_tlv_len  length;
-    uint32_t network_id;
-} __attribute__ ((packed));
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    network_id;
+} __attribute__((packed));
 
 /*
-     Parameter certificate chain identifier.
-     This parameter contains all necessary information needed
-     to process the parts of a users certificate chain.
-
-     All integers are in network byte order.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |             Type              |             Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     Connection Identifier                     |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                      Network Identifier                       |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-*/
+ *   Parameter certificate chain identifier.
+ *   This parameter contains all necessary information needed
+ *   to process the parts of a users certificate chain.
+ *
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                     Connection Identifier                     |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      Network Identifier                       |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
 struct signaling_param_cert_chain_id {
-    hip_tlv type;
-    hip_tlv_len  length;
-    uint32_t connection_id;
-    uint32_t network_id;
-} __attribute__ ((packed));
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    connection_id;
+    uint32_t    network_id;
+} __attribute__((packed));
 
 /*
-     Parameter for a connection identifier.
-     The parameter contains source and destination port numbers,
-     as well as a connection identifier, that is unique per host association.
-
-     All integers are in network byte order.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |             Type              |             Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     Connection Identifier                     |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-*/
+ *   Parameter for a connection identifier.
+ *   The parameter contains source and destination port numbers,
+ *   as well as a connection identifier, that is unique per host association.
+ *
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                     Connection Identifier                     |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
 struct signaling_param_connection_identifier {
-    hip_tlv type;
-    hip_tlv_len  length;
-    uint32_t id;
-} __attribute__ ((packed));
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    id;
+} __attribute__((packed));
 
 /*
-     Parameter for a user signature.
-
-     All integers are in network byte order.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |             Type              |             Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |          UN Length            |         PKEY RR Length        |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
-     |          Flags                |    Protocol   |   Algorithm   |    |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-     |                                                               |    +--- Comprises the public key rr
-     |                 Public Key Resource Record                    |    |
-     |                                                               |    |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
-     |                                                               |
-     |    X509 Subject Name          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                               |            PADDING            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-*/
+ *   Parameter for a user context.
+ *
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          UN Length            |         PKEY RR Length        |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
+ * |          Flags                |    Protocol   |   Algorithm   |    |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+ * |                                                               |    +--- Comprises the public key rr
+ * |                 Public Key Resource Record                    |    |
+ * |                                                               |    |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
+ * |                                                               |
+ * |    X509 Subject Name          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                               |            PADDING            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
 
 struct signaling_param_user_context {
-    hip_tlv type;
-    hip_tlv_len  length;
-    hip_tlv_len  un_length;
-    hip_tlv_len  pkey_rr_length;
+    hip_tlv     type;
+    hip_tlv_len length;
+    hip_tlv_len un_length;
+    hip_tlv_len pkey_rr_length;
     /** ---- end of header ---- */
 
     /* The public key is in dns key rr format.
      * It is comprised of the rrdata and the actual key */
     struct hip_host_id_key_rdata rdata;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /*
-     Generic structure for the context of an application.
-     Structure is optimized for use on the wire,
-     but is used for inter process-communication, too.
-     Using only one structure simplifies handling.
-
-     All integers are in network byte order.
-
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |             Type              |             Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |    APP-DN  Length             |     ISS-DN  Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |    REQ     Length             |     GRP     Length            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |          CONN COUNT           |       RESERVED                |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                      PORT PARI <1>                            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                      PORT PARI <2>                            |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                      PORT PARI <CONN COUNT>                   |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                                                               /
-     /           Distinguished Name of Application                   /
-     /                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                                                               /
-     /           Distinguished Name of Issuer                        /
-     /                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                                                               /
-     /           Requirement Information                             /
-     /                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     /                                                               /
-     /           Group Information                                   /
-     /                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                    PADDING                                    |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-*/
+ *   Generic structure for the context of an application.
+ *   Structure is optimized for use on the wire,
+ *   but is used for inter process-communication, too.
+ *   Using only one structure simplifies handling.
+ *
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |    APP-DN  Length             |     ISS-DN  Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |    REQ     Length             |     GRP     Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          CONN COUNT           |       RESERVED                |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      PORT PARI <1>                            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      PORT PARI <2>                            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      PORT PARI <CONN COUNT>                   |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                                                               /
+ * |   /           Distinguished Name of Application                   /
+ * |   /                                                               |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                                                               /
+ * |   /           Distinguished Name of Issuer                        /
+ * |   /                                                               |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                                                               /
+ * |   /           Requirement Information                             /
+ * |   /                                                               |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                                                               /
+ * |   /           Group Information                                   /
+ * |   /                                                               |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    PADDING                                    |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
 
 struct signaling_param_app_context {
-    hip_tlv type;
-    hip_tlv_len  length;
+    hip_tlv     type;
+    hip_tlv_len length;
     hip_tlv_len app_dn_length;
     hip_tlv_len iss_dn_length;
     hip_tlv_len req_length;
     hip_tlv_len grp_length;
-    uint16_t port_count;
-    uint16_t reserved;
-} __attribute__ ((packed));
+    uint16_t    port_count;
+    uint16_t    reserved;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter to request for Host Information in brief.
+ *   The parameter contains Network Identifier and a profile type.
+ *   All integers are in network byte order.
+ *
+ *   0                   1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      Network Identifier                       |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                            PROFILE                            |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   /                                                               /
+ * |   /                Optional/Variable Parameters                   /
+ * |   /                                                               |
+ * |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |
+ */
+struct signaling_param_host_info_request {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    network_id;
+    uint32_t    profile;
+} __attribute__((packed));
+
 
 
 /* ------------------------------------------------------------------------------------
@@ -375,13 +461,13 @@ struct signaling_port_pair {
 };
 
 /*
-     Internal representation of context information for an application.
-     This structure should be used whenever state needs to be kept about a application.
-
-     Use signaling_init_application_context() to initialize this structure to standard values.
-
-     All integers are in host-byte-order.
-*/
+ *   Internal representation of context information for an application.
+ *   This structure should be used whenever state needs to be kept about a application.
+ *
+ *   Use signaling_init_application_context() to initialize this structure to standard values.
+ *
+ *   All integers are in host-byte-order.
+ */
 struct signaling_application_context {
     char application_dn[SIGNALING_APP_DN_MAX_LEN];
     char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
@@ -390,20 +476,20 @@ struct signaling_application_context {
 };
 
 /*
-     Internal representation of context information for a user.
-
-     Use signaling_init_user_context() to initialize this structure to standard values.
-
-     All integers are in host-byte-order.
-*/
+ *   Internal representation of context information for a user.
+ *
+ *   Use signaling_init_user_context() to initialize this structure to standard values.
+ *
+ *   All integers are in host-byte-order.
+ */
 struct signaling_user_context {
     long int uid;
-    int subject_name_len;
-    int key_rr_len;
+    int      subject_name_len;
+    int      key_rr_len;
 
     /* The key_rr is comprised of the rrdata and the actual key */
     struct hip_host_id_key_rdata rdata;
-    unsigned char pkey[SIGNALING_USER_KEY_MAX_LEN];
+    unsigned char                pkey[SIGNALING_USER_KEY_MAX_LEN];
 
     /* Subject name in DER encoding */
     unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
@@ -419,13 +505,13 @@ struct signaling_user_context {
  *
  *   @note: User and userdb_entry are redundant, but we keep the user context unitl it has been fully
  *          replaced by the new user database.
-*/
+ */
 struct signaling_connection_context {
-    uint8_t  flags;
-    uint8_t  direction;
+    struct flags_connection_context      flags;
+    uint8_t                              direction;
     struct signaling_application_context app;
-    struct signaling_user_context user;
-    struct userdb_user_entry *userdb_entry;
+    struct signaling_user_context        user;
+    struct userdb_user_entry            *userdb_entry;
 };
 
 /**
@@ -437,14 +523,54 @@ struct signaling_connection_context {
  *   All integers are in host-byte-order.
  */
 struct signaling_connection {
-    uint32_t id;
-    int status;
-    int side;
-    int reason_reject;
-    struct timeval timestamp;
-    struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
+    uint32_t                            id;
+    int                                 status;
+    int                                 side;
+    int                                 reason_reject;
+    struct timeval                      timestamp;
+    struct signaling_port_pair          sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
+};
+
+/*
+ * Moving on from bitwise representation and usage of flags to structures
+ * Structure to represent the new profiles / request types
+ */
+struct flags_connection_context{
+    uint8_t USER_AUTH_REQUEST;
+    uint8_t USER_AUTHED;
+    uint8_t HOST_AUTH_REQUEST;
+    uint8_t HOST_AUTHED;
+
+    uint8_t HOST_INFO_SHORT;
+    uint8_t HOST_INFO_SHORT_RECV;
+    uint8_t HOST_INFO_LONG;
+    uint8_t HOST_INFO_LONG_RECV;
+    uint8_t HOST_INFO_CERTS;
+    uint8_t HOST_INFO_CERTS_RECV;
+    uint8_t USER_SIGN;
+    uint8_t USER_SIGN_RECV;
+    uint8_t USER_INFO_SHORT;
+    uint8_t USER_INFO_SHORT_RECV;
+    uint8_t USER_INFO_LONG;
+    uint8_t USER_INFO_LONG_RECV;
+    uint8_t USER_INFO_CERTS;
+    uint8_t USER_INFO_CERTS_RECV;
+    uint8_t USER_INFO_SHORT_SIGNED;
+    uint8_t USER_INFO_SHORT_SIGNED_RECV;
+    uint8_t USER_INFO_LONG_SIGNED;
+    uint8_t USER_INFO_LONG_SIGNED_RECV;
+};
+
+
+/*
+ *  Internal representation of the optional fields of the host information in short.
+ */
+struct signaling_host_info_short {
+    uint16_t length;
+    uint8_t  priority;
+    char     req_info[SIGNALING_HOST_INFO_REQ_MAX_LEN];
 };
 
 /* ------------------------------------------------------------------------------------
@@ -454,53 +580,52 @@ struct signaling_connection {
  * ------------------------------------------------------------------------------------ */
 
 /* Printing of parameters and internal structures */
-void signaling_param_user_context_print(const struct signaling_param_user_context * const param_user_ctx);
-void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx);
+void signaling_param_user_context_print(const struct signaling_param_user_context *const param_user_ctx);
+void signaling_param_application_context_print(const struct signaling_param_app_context *const param_app_ctx);
 void signaling_param_connection_identifier_print(const struct signaling_param_connection_identifier *const conn_id);
 
 void signaling_application_context_print(const struct signaling_application_context *const app_ctx,
                                          const char *prefix, const int header);
 void signaling_user_context_print(const struct signaling_user_context *const user_ctx,
-                                  const char * prefix, const int header);
-void signaling_connection_context_print(const struct signaling_connection_context *const ctx, const char * prefix);
-void signaling_connection_print(const struct signaling_connection *const conn, const char * prefix);
+                                  const char *prefix, const int header);
+void signaling_connection_context_print(const struct signaling_connection_context *const ctx, const char *prefix);
+void signaling_connection_print(const struct signaling_connection *const conn, const char *prefix);
 
 /* Initalization of internal structures */
-int signaling_init_user_context(struct signaling_user_context * const user_ctx);
+int signaling_init_user_context(struct signaling_user_context *const user_ctx);
 
-int signaling_init_application_context(struct signaling_application_context * const app_ctx);
+int signaling_init_application_context(struct signaling_application_context *const app_ctx);
 
 int signaling_init_connection_context(struct signaling_connection_context *const ctx,
                                       enum direction dir);
-int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
-                                               const struct hip_common * const msg);
-int signaling_copy_connection_context(struct signaling_connection_context * const dst,
-                                      const struct signaling_connection_context * const src);
+int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
+                                               const struct hip_common *const msg);
+int signaling_copy_connection_context(struct signaling_connection_context *const dst,
+                                      const struct signaling_connection_context *const src);
 
 int signaling_init_connection(struct signaling_connection *const conn);
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
-                                       const struct hip_common * const msg,
+                                       const struct hip_common *const msg,
                                        enum direction dir);
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
-                                         const struct hip_common * const msg,
+                                         const struct hip_common *const msg,
                                          enum direction dir);
-int signaling_copy_connection(struct signaling_connection * const dst,
-                              const struct signaling_connection * const src);
+int signaling_copy_connection(struct signaling_connection *const dst,
+                              const struct signaling_connection *const src);
 int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
                                        struct signaling_connection *const conn);
 
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn);
-int signaling_flag_check_auth_complete(uint8_t flags);
-void signaling_flags_print(uint8_t flags, const char *const prefix);
-int signaling_flag_check(uint8_t flags, int f);
-void signaling_flag_set(uint8_t *flags, int f);
-void signaling_flag_unset(uint8_t *flags, int f);
+int signaling_flag_check_auth_complete(struct flags_connection_context flags);
+void signaling_flags_print(struct flags_connection_context flags, const char *const prefix);
+int signaling_flag_check(struct flags_connection_context flags, int f);
+void signaling_flag_set(struct flags_connection_context *flags, int f);
+void signaling_flag_unset(struct flags_connection_context *flags, int f);
 
 /* Misc */
 const char *signaling_connection_status_name(int status);
 
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
-

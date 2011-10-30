@@ -69,11 +69,11 @@ typedef struct {
 int do_conntrack = 0;
 
 /* Paths to configuration elements */
-const char *default_policy_file      = {"/usr/local/etc/hip/signaling_firewall_policy.cfg"};
+const char *default_policy_file = { "/usr/local/etc/hip/signaling_firewall_policy.cfg" };
 
-const char *path_do_conntracking     = {"do_conntracking"};
-const char *path_key_file            = {"/usr/local/etc/hip/mb-key.pem"};
-const char *path_cert_file           = {"/usr/local/etc/hip/mb-cert.pem"};
+const char *path_do_conntracking = { "do_conntracking" };
+const char *path_key_file = { "/usr/local/etc/hip/mb-key.pem" };
+const char *path_cert_file = { "/usr/local/etc/hip/mb-cert.pem" };
 
 /**
  * releases the configuration file and frees the configuration memory
@@ -108,7 +108,7 @@ static config_t *signaling_hipfw_read_config(const char *config_file)
  *
  * FIXME this should be removed once we go tiny */
 #ifdef HAVE_LIBCONFIG
-    int err       = 0;
+    int err = 0;
 
     HIP_IFEL(!(cfg = malloc(sizeof(config_t))), -1,
              "Unable to allocate memory!\n");
@@ -138,9 +138,10 @@ out_err:
  *
  * @return              0 on success, negative on error
  */
-int signaling_hipfw_init(const char *policy_file) {
-    int err         = 0;
-    config_t *cfg   = NULL;
+int signaling_hipfw_init(const char *policy_file)
+{
+    int       err = 0;
+    config_t *cfg = NULL;
 
     // register I3
     lmod_register_packet_type(HIP_I3, "HIP_I3");
@@ -182,7 +183,8 @@ out_err:
  *
  * @return 0 on success, negative on error
  */
-int signaling_hipfw_uninit(void) {
+int signaling_hipfw_uninit(void)
+{
     HIP_DEBUG("Uninit signaling firewall \n");
     signaling_cdb_uninit();
     signaling_policy_engine_uninit();
@@ -199,13 +201,13 @@ int signaling_hipfw_uninit(void) {
  *
  * @return 0 on success, negative on error
  */
-UNUSED static int signaling_hipfw_conntrack(struct tuple * const tuple,
-                                     struct signaling_connection_context * const conn_ctx)
+UNUSED static int signaling_hipfw_conntrack(struct tuple *const tuple,
+                                            struct signaling_connection_context *const conn_ctx)
 {
-    int err = 0;
+    int                                  err          = 0;
     struct signaling_connection_context *new_conn_ctx = NULL;
 
-    if(!do_conntrack) {
+    if (!do_conntrack) {
         return 0;
     }
     HIP_IFEL(!tuple, -1, "Connection tracking tuple is NULL \n");
@@ -217,6 +219,85 @@ UNUSED static int signaling_hipfw_conntrack(struct tuple * const tuple,
     return 0;
 out_err:
     free(new_conn_ctx);
+    return err;
+}
+
+/*
+ * Handles an R1 packet observed by the firewall.
+ * We have to
+ *   a) Build the connection state.
+ *   b) Check with local policy, whether to allow the connection context.
+ *   c) Append an host_info_req parameter, if the middlebox requests for more specific information process it
+ *
+ * @param common    the i2 message
+ * @param tuple
+ * @param ctx
+ *
+ * @return          the verdict, i.e. 1 for pass, 0 for drop
+ */
+int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
+{
+    int                         err = 0;
+    struct signaling_connection new_conn;
+    struct userdb_user_entry   *db_entry = NULL;
+
+    printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
+
+    /* sanity checks */
+    HIP_IFEL(!common, -1, "Message is NULL\n");
+
+    /* Step a) */
+    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+        HIP_ERROR("Could not init connection context from I2 \n");
+        return -1;
+    }
+    new_conn.ctx_in.direction = FWD;
+    new_conn.side             = MIDDLEBOX;
+
+    /* add/update user in user db */
+    if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+        HIP_ERROR("Could not add user from message\n");
+    }
+    new_conn.ctx_in.userdb_entry = db_entry;
+
+    /* Try to auth the user and set flags accordingly */
+    userdb_handle_user_signature(common, &new_conn, IN);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
+
+    /* Step b) */
+    HIP_DEBUG("Connection after receipt of R1 \n");
+    signaling_connection_print(&new_conn, "\t");
+    if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
+        new_conn.status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+        return 0;
+    }
+
+    /* Step c) */
+    // TODO Add more handlers for different types of requests
+    if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
+        if (signaling_build_param_user_auth_req_u(common, 0)) {
+            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+            return 0;
+        }
+        ctx->modified = 1;
+    }
+
+    /* Step d) */
+    new_conn.status = SIGNALING_CONN_PROCESSING;
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &new_conn),
+             -1, "Could not add new connection to conntracking table\n");
+    HIP_DEBUG("Connection tracking table after receipt of R1\n");
+    signaling_cdb_print();
+
+    /* Let packet pass */
+    printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+    return 1;
+
+out_err:
     return err;
 }
 
@@ -236,9 +317,9 @@ out_err:
  */
 int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
-    int err = 0;
+    int                         err = 0;
     struct signaling_connection new_conn;
-    struct userdb_user_entry *db_entry = NULL;
+    struct userdb_user_entry   *db_entry = NULL;
 
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
 
@@ -251,7 +332,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         return -1;
     }
     new_conn.ctx_in.direction = FWD;
-    new_conn.side = MIDDLEBOX;
+    new_conn.side             = MIDDLEBOX;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
@@ -310,14 +391,13 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-
 int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
-    int err = 0;
-    struct signaling_connection recv_conn;
-    struct signaling_connection *conn = NULL;
+    int                                             err = 0;
+    struct signaling_connection                     recv_conn;
+    struct signaling_connection                    *conn     = NULL;
     const struct signaling_param_user_auth_request *auth_req = NULL;
-    struct userdb_user_entry *db_entry = NULL;
+    struct userdb_user_entry                       *db_entry = NULL;
 
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
 
@@ -396,11 +476,11 @@ out_err:
  */
 int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const struct hip_fw_context *ctx)
 {
-    int err = 0;
-    struct signaling_connection recv_conn;
-    struct signaling_connection *existing_conn = NULL;
-    const struct signaling_param_user_auth_request *auth_req = NULL;
-    int wait_auth = 0;
+    int                                             err = 0;
+    struct signaling_connection                     recv_conn;
+    struct signaling_connection                    *existing_conn = NULL;
+    const struct signaling_param_user_auth_request *auth_req      = NULL;
+    int                                             wait_auth     = 0;
 
     printf("\033[22;34mReceived I3 packet\033[22;37m\n\033[01;37m");
 
@@ -425,7 +505,7 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     userdb_handle_user_signature(common, existing_conn, IN);
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
-    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
+    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
         HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
         wait_auth = 1;
     }
@@ -453,16 +533,17 @@ out_err:
  */
 static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_common *common,
                                                               UNUSED struct tuple *tuple,
-                                                              UNUSED struct hip_fw_context *ctx) {
-    int err = 0;
+                                                              UNUSED struct hip_fw_context *ctx)
+{
+    int                                         err           = 0;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
-    X509 *cert = NULL;
-    struct signaling_connection *conn = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
-    uint32_t network_id;
-    uint32_t conn_id;
-    const struct hip_cert *param_cert = NULL;
-    struct signaling_connection_context *conn_ctx = NULL;
+    X509                                       *cert          = NULL;
+    struct signaling_connection                *conn          = NULL;
+    struct userdb_certificate_context          *cert_ctx      = NULL;
+    uint32_t                                    network_id;
+    uint32_t                                    conn_id;
+    const struct hip_cert                      *param_cert = NULL;
+    struct signaling_connection_context        *conn_ctx   = NULL;
 
     /* sanity checks */
     HIP_IFEL(!common,  0, "Message is NULL\n");
@@ -534,15 +615,15 @@ out_err:
 }
 
 static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct hip_common *common,
-                                                           UNUSED struct tuple *tuple,
-                                                           UNUSED struct hip_fw_context *ctx)
+                                                                  UNUSED struct tuple *tuple,
+                                                                  UNUSED struct hip_fw_context *ctx)
 {
-    int err = 1;
+    int                                         err           = 1;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
-    struct signaling_connection *conn = NULL;
-    uint32_t network_id;
-    uint32_t conn_id;
-    struct signaling_connection_context *conn_ctx = NULL;
+    struct signaling_connection                *conn          = NULL;
+    uint32_t                                    network_id;
+    uint32_t                                    conn_id;
+    struct signaling_connection_context        *conn_ctx = NULL;
 
     /* get connection identifier and context */
     HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
@@ -620,13 +701,14 @@ out_err:
     return err;
 }
 
-static int signaling_handle_notify_connection_failed(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx) {
-    struct signaling_connection *conn = NULL;
-    const struct signaling_param_connection_identifier *conn_id = NULL;
-    const struct hip_notification *notification = NULL;
-    const struct signaling_ntf_connection_failed_data *ntf_data = NULL;
-    int reason = 0;
-    int err = 1;
+static int signaling_handle_notify_connection_failed(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
+{
+    struct signaling_connection                        *conn         = NULL;
+    const struct signaling_param_connection_identifier *conn_id      = NULL;
+    const struct hip_notification                      *notification = NULL;
+    const struct signaling_ntf_connection_failed_data  *ntf_data     = NULL;
+    int                                                 reason       = 0;
+    int                                                 err          = 1;
 
     /* Get connection context */
     HIP_IFEL(!(notification = hip_get_param(common, HIP_PARAM_NOTIFICATION)),
@@ -638,7 +720,7 @@ static int signaling_handle_notify_connection_failed(struct hip_common *common, 
 
     /* Get notification data */
     ntf_data =  (const struct signaling_ntf_connection_failed_data *) notification->data;
-    reason = ntohs(ntf_data->reason);
+    reason   = ntohs(ntf_data->reason);
     HIP_DEBUG("Received connection failed notification for following reasons:\n");
     if (reason) {
         if (reason & APPLICATION_BLOCKED) {
@@ -666,7 +748,6 @@ out_err:
     return err;
 }
 
-
 /*
  * Handles an NOTIFY packet observed by the firewall.
  *
@@ -674,7 +755,7 @@ out_err:
  */
 int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int err = 1;
+    int                            err          = 1;
     const struct hip_notification *notification = NULL;
 
     /* Get notification type data */
@@ -693,4 +774,3 @@ int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple
 out_err:
     return err;
 }
-
