@@ -546,8 +546,8 @@ int signaling_init_connection_context(struct signaling_connection_context *const
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
-    ctx->direction    = dir;
-    ctx->flags        = 0;
+    ctx->direction = dir;
+    signaling_flag_init(&ctx->flags);
     ctx->userdb_entry = NULL;
     HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
@@ -622,7 +622,7 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_REQ);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_REQ) {
-        HIP_IFEL(signaling_build_host_context((const struct signaling_param_app_context *) param,
+        HIP_IFEL(signaling_build_host_context((const struct signaling_param_host_context *) param,
                                               &ctx->host),
                  -1, "Could not init host context from host ctx parameter \n");
     }
@@ -711,55 +711,74 @@ int signaling_flag_check_auth_complete(struct flags_connection_context flags)
 /*int signaling_flag_check(uint8_t flags, int f) {
  *  return (flags & (1 << f)) > 0;
  * }*/
-int signaling_flag_check(struct flags_connection_context *flags, int f)
+int signaling_flag_check(struct flags_connection_context flags, int f)
 {
     switch (f) {
     case USER_AUTH_REQUEST:
-        return (flags->USER_AUTH_REQUEST) ? 1 : 0;
+        return (flags.USER_AUTH_REQUEST) ? 1 : 0;
         break;
     case USER_AUTHED:
-        return (flags->USER_AUTHED) ? 1 : 0;
+        return (flags.USER_AUTHED) ? 1 : 0;
         break;
-    case HOST_AUTH_REQUEST: return (flags->HOST_AUTH_REQUEST) ? 1 : 0;
+    case HOST_AUTH_REQUEST:
+        return (flags.HOST_AUTH_REQUEST) ? 1 : 0;
         break;
-    case HOST_AUTHED:               return (flags->HOST_AUTHED) ? 1 : 0;
-        break;
-
-    case HOST_INFO_SHORT:           return (flags->HOST_INFO_SHORT) ? 1 : 0;
-        break;
-    case HOST_INFO_LONG:            return (flags->HOST_INFO_LONG) ? 1 : 0;
-        break;
-    case HOST_INFO_CERTS:           return (flags->HOST_INFO_CERTS) ? 1 : 0;
-        break;
-    case USER_SIGN:                         return (flags->USER_SIGN) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT:           return (flags->USER_INFO_SHORT) ? 1 : 0;
-        break;
-    case USER_INFO_LONG:            return (flags->USER_INFO_LONG) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT_SIGNED:    return (flags->USER_INFO_SHORT_SIGNED) ? 1 : 0;
-        break;
-    case USER_INFO_LONG_SIGNED:             return (flags->USER_INFO_LONG_SIGNED) ? 1 : 0;
+    case HOST_AUTHED:
+        return (flags.HOST_AUTHED) ? 1 : 0;
         break;
 
-    case HOST_INFO_SHORT_RECV:                      return (flags->HOST_INFO_SHORT_RECV) ? 1 : 0;
+    case HOST_INFO_SHORT:
+        return (flags.HOST_INFO_SHORT) ? 1 : 0;
         break;
-    case HOST_INFO_LONG_RECV:                       return (flags->HOST_INFO_LONG_RECV) ? 1 : 0;
+    case HOST_INFO_LONG:
+        return (flags.HOST_INFO_LONG) ? 1 : 0;
         break;
-    case HOST_INFO_CERTS_RECV:                      return (flags->HOST_INFO_CERTS_RECV) ? 1 : 0;
+    case HOST_INFO_CERTS:
+        return (flags.HOST_INFO_CERTS) ? 1 : 0;
         break;
-    case USER_SIGN_RECV:                            return (flags->USER_SIGN_RECV) ? 1 : 0;
+    case USER_SIGN:
+        return (flags.USER_SIGN) ? 1 : 0;
         break;
-    case USER_INFO_SHORT_RECV:                      return (flags->USER_INFO_SHORT_RECV) ? 1 : 0;
+    case USER_INFO_SHORT:
+        return (flags.USER_INFO_SHORT) ? 1 : 0;
         break;
-    case USER_INFO_LONG_RECV:                       return (flags->USER_INFO_LONG_RECV) ? 1 : 0;
+    case USER_INFO_LONG:
+        return (flags.USER_INFO_LONG) ? 1 : 0;
         break;
-    case USER_INFO_SHORT_SIGNED_RECV:       return (flags->USER_INFO_SHORT_SIGNED_RECV) ? 1 : 0;
+    case USER_INFO_SHORT_SIGNED:
+        return (flags.USER_INFO_SHORT_SIGNED) ? 1 : 0;
         break;
-    case USER_INFO_LONG_SIGNED_RECV:        return (flags->USER_INFO_LONG_SIGNED_RECV) ? 1 : 0;
+    case USER_INFO_LONG_SIGNED:
+        return (flags.USER_INFO_LONG_SIGNED) ? 1 : 0;
         break;
 
-    default:                                return 0;
+    case HOST_INFO_SHORT_RECV:
+        return (flags.HOST_INFO_SHORT_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_LONG_RECV:
+        return (flags.HOST_INFO_LONG_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_CERTS_RECV:
+        return (flags.HOST_INFO_CERTS_RECV) ? 1 : 0;
+        break;
+    case USER_SIGN_RECV:
+        return (flags.USER_SIGN_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT_RECV:
+        return (flags.USER_INFO_SHORT_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_LONG_RECV:
+        return (flags.USER_INFO_LONG_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_SHORT_SIGNED_RECV:
+        return (flags.USER_INFO_SHORT_SIGNED_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_LONG_SIGNED_RECV:
+        return (flags.USER_INFO_LONG_SIGNED_RECV) ? 1 : 0;
+        break;
+
+    default:
+        return 0;
         break;
     }
 }
@@ -772,50 +791,71 @@ int signaling_flag_check(struct flags_connection_context *flags, int f)
 void signaling_flag_set(struct flags_connection_context *flags, int f)
 {
     switch (f) {
-    case USER_AUTH_REQUEST:         flags->USER_AUTH_REQUEST = 1;
+    case USER_AUTH_REQUEST:
+        flags->USER_AUTH_REQUEST = 1;
         break;
-    case USER_AUTHED:                       flags->USER_AUTHED = 1;
+    case USER_AUTHED:
+        flags->USER_AUTHED = 1;
         break;
-    case HOST_AUTH_REQUEST:         flags->HOST_AUTH_REQUEST = 1;
+    case HOST_AUTH_REQUEST:
+        flags->HOST_AUTH_REQUEST = 1;
         break;
-    case HOST_AUTHED:                       flags->HOST_AUTHED = 1;
-        break;
-
-    case HOST_INFO_SHORT:           flags->HOST_INFO_SHORT = 1;
-        break;
-    case HOST_INFO_LONG:            flags->HOST_INFO_LONG = 1;
-        break;
-    case HOST_INFO_CERTS:           flags->HOST_INFO_CERTS = 1;
-        break;
-    case USER_SIGN:                         flags->USER_SIGN = 1;
-        break;
-    case USER_INFO_SHORT:           flags->USER_INFO_SHORT = 1;
-        break;
-    case USER_INFO_LONG:            flags->USER_INFO_LONG = 1;
-        break;
-    case USER_INFO_SHORT_SIGNED: flags->USER_INFO_SHORT = 1;
-        break;
-    case USER_INFO_LONG_SIGNED:     flags->USER_INFO_LONG = 1;
+    case HOST_AUTHED:
+        flags->HOST_AUTHED = 1;
         break;
 
-    case HOST_INFO_SHORT_RECV:      flags->HOST_INFO_SHORT_RECV = 1;
+    case HOST_INFO_SHORT:
+        flags->HOST_INFO_SHORT = 1;
         break;
-    case HOST_INFO_LONG_RECV:       flags->HOST_INFO_LONG_RECV = 1;
+    case HOST_INFO_LONG:
+        flags->HOST_INFO_LONG = 1;
         break;
-    case HOST_INFO_CERTS_RECV:      flags->HOST_INFO_CERTS_RECV = 1;
+    case HOST_INFO_CERTS:
+        flags->HOST_INFO_CERTS = 1;
         break;
-    case USER_SIGN_RECV:            flags->USER_SIGN_RECV = 1;
+    case USER_SIGN:
+        flags->USER_SIGN = 1;
         break;
-    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 1;
+    case USER_INFO_SHORT:
+        flags->USER_INFO_SHORT = 1;
         break;
-    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 1;
+    case USER_INFO_LONG:
+        flags->USER_INFO_LONG = 1;
         break;
-    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 1;
+    case USER_INFO_SHORT_SIGNED:
+        flags->USER_INFO_SHORT_SIGNED = 1;
         break;
-    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 1;
+    case USER_INFO_LONG_SIGNED:
+        flags->USER_INFO_LONG_SIGNED = 1;
         break;
 
-    default:                                                                                                                break;
+    case HOST_INFO_SHORT_RECV:
+        flags->HOST_INFO_SHORT_RECV = 1;
+        break;
+    case HOST_INFO_LONG_RECV:
+        flags->HOST_INFO_LONG_RECV = 1;
+        break;
+    case HOST_INFO_CERTS_RECV:
+        flags->HOST_INFO_CERTS_RECV = 1;
+        break;
+    case USER_SIGN_RECV:
+        flags->USER_SIGN_RECV = 1;
+        break;
+    case USER_INFO_SHORT_RECV:
+        flags->USER_INFO_SHORT_RECV = 1;
+        break;
+    case USER_INFO_LONG_RECV:
+        flags->USER_INFO_LONG_RECV = 1;
+        break;
+    case USER_INFO_SHORT_SIGNED_RECV:
+        flags->USER_INFO_SHORT_SIGNED_RECV = 1;
+        break;
+    case USER_INFO_LONG_SIGNED_RECV:
+        flags->USER_INFO_LONG_SIGNED_RECV = 1;
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -832,46 +872,94 @@ void signaling_flag_set(struct flags_connection_context *flags, int f)
 void signaling_flag_unset(struct flags_connection_context *flags, int f)
 {
     switch (f) {
-    case USER_AUTH_REQUEST: flags->USER_AUTH_REQUEST = 0;
+    case USER_AUTH_REQUEST:
+        flags->USER_AUTH_REQUEST = 0;
         break;
-    case USER_AUTHED:               flags->USER_AUTHED = 0;
+    case USER_AUTHED:
+        flags->USER_AUTHED = 0;
         break;
-    case HOST_AUTH_REQUEST: flags->HOST_AUTH_REQUEST = 0;
+    case HOST_AUTH_REQUEST:
+        flags->HOST_AUTH_REQUEST = 0;
         break;
-    case HOST_AUTHED:               flags->HOST_AUTHED = 0;
-        break;
-
-    case HOST_INFO_SHORT:   flags->HOST_INFO_SHORT = 0;
-        break;
-    case HOST_INFO_LONG:    flags->HOST_INFO_LONG = 0;
-        break;
-    case HOST_INFO_CERTS:   flags->HOST_INFO_CERTS = 0;
-        break;
-    case USER_SIGN:                 flags->USER_SIGN = 0;
-        break;
-    case USER_INFO_SHORT:   flags->USER_INFO_SHORT = 0;
-        break;
-    case USER_INFO_LONG:    flags->USER_INFO_LONG = 0;
+    case HOST_AUTHED:
+        flags->HOST_AUTHED = 0;
         break;
 
-    case HOST_INFO_SHORT_RECV:      flags->HOST_INFO_SHORT_RECV = 0;
+    case HOST_INFO_SHORT:
+        flags->HOST_INFO_SHORT = 0;
         break;
-    case HOST_INFO_LONG_RECV:       flags->HOST_INFO_LONG_RECV = 0;
+    case HOST_INFO_LONG:
+        flags->HOST_INFO_LONG = 0;
         break;
-    case HOST_INFO_CERTS_RECV:      flags->HOST_INFO_CERTS_RECV = 0;
+    case HOST_INFO_CERTS:
+        flags->HOST_INFO_CERTS = 0;
         break;
-    case USER_SIGN_RECV:            flags->USER_SIGN_RECV = 0;
+    case USER_SIGN:
+        flags->USER_SIGN = 0;
         break;
-    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 0;
+    case USER_INFO_SHORT:
+        flags->USER_INFO_SHORT = 0;
         break;
-    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 0;
+    case USER_INFO_LONG:
+        flags->USER_INFO_LONG = 0;
         break;
-    case USER_INFO_SHORT_RECV:      flags->USER_INFO_SHORT_RECV = 0;
+    case USER_INFO_SHORT_SIGNED:
+        flags->USER_INFO_SHORT_SIGNED = 0;
         break;
-    case USER_INFO_LONG_RECV:       flags->USER_INFO_LONG_RECV = 0;
+    case USER_INFO_LONG_SIGNED:
+        flags->USER_INFO_LONG_SIGNED = 0;
+        break;
+
+    case HOST_INFO_SHORT_RECV:
+        flags->HOST_INFO_SHORT_RECV = 0;
+        break;
+    case HOST_INFO_LONG_RECV:
+        flags->HOST_INFO_LONG_RECV = 0;
+        break;
+    case HOST_INFO_CERTS_RECV:
+        flags->HOST_INFO_CERTS_RECV = 0;
+        break;
+    case USER_SIGN_RECV:
+        flags->USER_SIGN_RECV = 0;
+        break;
+    case USER_INFO_SHORT_RECV:
+        flags->USER_INFO_SHORT_RECV = 0;
+        break;
+    case USER_INFO_LONG_RECV:
+        flags->USER_INFO_LONG_RECV = 0;
+        break;
+    case USER_INFO_SHORT_SIGNED_RECV:
+        flags->USER_INFO_SHORT_SIGNED_RECV = 0;
+        break;
+    case USER_INFO_LONG_SIGNED_RECV:
+        flags->USER_INFO_LONG_SIGNED_RECV = 0;
         break;
 
     default:
         break;
     }
+}
+
+void signaling_flag_init(struct flags_connection_context *flags)
+{
+    flags->USER_AUTH_REQUEST           = 0;
+    flags->USER_AUTHED                 = 0;
+    flags->HOST_AUTH_REQUEST           = 0;
+    flags->HOST_AUTHED                 = 0;
+    flags->HOST_INFO_SHORT             = 0;
+    flags->HOST_INFO_LONG              = 0;
+    flags->HOST_INFO_CERTS             = 0;
+    flags->USER_SIGN                   = 0;
+    flags->USER_INFO_SHORT             = 0;
+    flags->USER_INFO_LONG              = 0;
+    flags->USER_INFO_SHORT_SIGNED      = 0;
+    flags->USER_INFO_LONG_SIGNED       = 0;
+    flags->HOST_INFO_SHORT_RECV        = 0;
+    flags->HOST_INFO_LONG_RECV         = 0;
+    flags->HOST_INFO_CERTS_RECV        = 0;
+    flags->USER_SIGN_RECV              = 0;
+    flags->USER_INFO_SHORT_RECV        = 0;
+    flags->USER_INFO_LONG_RECV         = 0;
+    flags->USER_INFO_SHORT_SIGNED_RECV = 0;
+    flags->USER_INFO_LONG_SIGNED_RECV  = 0;
 }

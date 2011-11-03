@@ -70,7 +70,7 @@ struct policy_decision {
     uint8_t POLICY_USER_INFO_CERTS;
     uint8_t POLICY_USER_INFO_SHORT_SIGNED;
     uint8_t POLICY_USER_INFO_LONG_SIGNED;
-} init_policy = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+};
 
 
 struct host_info {
@@ -109,8 +109,9 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
 int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
                                            struct signaling_connection_context *const conn_ctx);
 
-void policy_decision_set(struct policy_decision flags, int f);
-void policy_decision_unset(struct policy_decision flags, int f);
+void policy_decision_set(struct policy_decision *flags, int f);
+void policy_decision_unset(struct policy_decision *flags, int f);
+void policy_decision_init(struct policy_decision *flags);
 int policy_decision_check(struct policy_decision flags, int f);
 
 

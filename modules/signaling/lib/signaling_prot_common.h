@@ -215,6 +215,37 @@ enum side {
 };
 
 
+/*
+ * Moving on from bitwise representation and usage of flags to structures
+ * Structure to represent the new profiles / request types
+ */
+struct flags_connection_context{
+    uint8_t USER_AUTH_REQUEST;
+    uint8_t USER_AUTHED;
+    uint8_t HOST_AUTH_REQUEST;
+    uint8_t HOST_AUTHED;
+
+    uint8_t HOST_INFO_SHORT;
+    uint8_t HOST_INFO_SHORT_RECV;
+    uint8_t HOST_INFO_LONG;
+    uint8_t HOST_INFO_LONG_RECV;
+    uint8_t HOST_INFO_CERTS;
+    uint8_t HOST_INFO_CERTS_RECV;
+    uint8_t USER_SIGN;
+    uint8_t USER_SIGN_RECV;
+    uint8_t USER_INFO_SHORT;
+    uint8_t USER_INFO_SHORT_RECV;
+    uint8_t USER_INFO_LONG;
+    uint8_t USER_INFO_LONG_RECV;
+    uint8_t USER_INFO_CERTS;
+    uint8_t USER_INFO_CERTS_RECV;
+    uint8_t USER_INFO_SHORT_SIGNED;
+    uint8_t USER_INFO_SHORT_SIGNED_RECV;
+    uint8_t USER_INFO_LONG_SIGNED;
+    uint8_t USER_INFO_LONG_SIGNED_RECV;
+};
+
+
 /* ------------------------------------------------------------------------------------
  *
  *                    PARAMETER DEFINITIONS
@@ -553,7 +584,7 @@ struct signaling_user_context {
  *   All integers are in host-byte-order.
  */
 struct signaling_host_context {
-    long int host_id;
+    char    *host_id;
     uint16_t info_profile;
     uint16_t num_items;
     int      host_kernel_len;
@@ -562,14 +593,14 @@ struct signaling_host_context {
     long int host_certs_len;
 
     /*Must for Short Info HOST_INFO_SHORT*/
-    unsigned char host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    unsigned char host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
 
     /* Host Name. Must for Long Info HOST_INFO_LONG*/
-    unsigned char host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
 
     /*Host certificates HOST_INFO_CERTS*/
-    unsigned char host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
+    char host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
 };
 
 
@@ -609,36 +640,6 @@ struct signaling_connection {
     struct signaling_port_pair          sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
-};
-
-/*
- * Moving on from bitwise representation and usage of flags to structures
- * Structure to represent the new profiles / request types
- */
-struct flags_connection_context{
-    uint8_t USER_AUTH_REQUEST;
-    uint8_t USER_AUTHED;
-    uint8_t HOST_AUTH_REQUEST;
-    uint8_t HOST_AUTHED;
-
-    uint8_t HOST_INFO_SHORT;
-    uint8_t HOST_INFO_SHORT_RECV;
-    uint8_t HOST_INFO_LONG;
-    uint8_t HOST_INFO_LONG_RECV;
-    uint8_t HOST_INFO_CERTS;
-    uint8_t HOST_INFO_CERTS_RECV;
-    uint8_t USER_SIGN;
-    uint8_t USER_SIGN_RECV;
-    uint8_t USER_INFO_SHORT;
-    uint8_t USER_INFO_SHORT_RECV;
-    uint8_t USER_INFO_LONG;
-    uint8_t USER_INFO_LONG_RECV;
-    uint8_t USER_INFO_CERTS;
-    uint8_t USER_INFO_CERTS_RECV;
-    uint8_t USER_INFO_SHORT_SIGNED;
-    uint8_t USER_INFO_SHORT_SIGNED_RECV;
-    uint8_t USER_INFO_LONG_SIGNED;
-    uint8_t USER_INFO_LONG_SIGNED_RECV;
 };
 
 
@@ -707,6 +708,8 @@ void signaling_flags_print(struct flags_connection_context flags, const char *co
 int signaling_flag_check(struct flags_connection_context flags, int f);
 void signaling_flag_set(struct flags_connection_context *flags, int f);
 void signaling_flag_unset(struct flags_connection_context *flags, int f);
+void signaling_flag_init(struct flags_connection_context *flags);
+
 
 /* Misc */
 const char *signaling_connection_status_name(int status);

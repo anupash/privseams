@@ -533,7 +533,7 @@ int signaling_build_host_context(const struct signaling_param_host_context *para
 
     for (i = 0; i < host_ctx->num_items; i++) {
         tmp_len =  SIGNALING_HOST_INFO_PROFILE;
-        memcpy(&profile, p_contents, tmp_len);
+        memcpy(&profile, p_contents, sizeof(uint16_t));
         profile     = ntohs(profile);
         p_contents += tmp_len;
 

@@ -158,91 +158,9 @@ static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED const c
     printf("%s--------------------------------------------\n", prefix);
 }
 
-#ifdef 0
 static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 {
     int                  err           = 0;
-    struct policy_tuple *entry         = NULL;
-    const char          *host_id       = NULL;
-    const char          *user_id       = NULL;
-    const char          *app_id        = NULL;
-    const char          *req_host      = NULL;
-    const char          *req_user      = NULL;
-    const char          *req_app       = NULL;
-    const char          *target_string = NULL;
-
-    HIP_IFEL(!tuple, -1, "Got NULL-tuple\n");
-    HIP_IFEL(!(entry = malloc(sizeof(struct policy_tuple))),
-             -1, "Could not allocate memory for new rule\n");
-
-    entry->request = init_requests_types();
-    entry->target  = init_policy();
-
-    // Lookup and save values
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "host", &host_id)) {
-        entry->host_id = in6addr_any;
-    } else {
-        HIP_IFEL(inet_pton(AF_INET6, host_id, &entry->host_id) != 1,
-                 -1, "Could not parse host id to in6addr \n");
-    }
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "user", &user_id)) {
-        entry->user_id[0] = '\0';
-    } else {
-        strncpy(entry->user_id, user_id, SIGNALING_USER_ID_MAX_LEN - 1);
-        entry->user_id[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
-    }
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "application", &app_id)) {
-        entry->app_id[0] = '\0';
-    } else {
-        strncpy(entry->app_id, app_id, SIGNALING_APP_DN_MAX_LEN - 1);
-        entry->app_id[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
-    }
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "req_host", &req_host)) {
-        request_type_unset(entry->request, REQ_HOST_INFO_SHORT);
-        request_type_unset(entry->request, REQ_HOST_INFO_LONG);
-        request_type_unset(entry->request, REQ_HOST_INFO_CERTS);
-        HIP_DEBUG("Read requests returned no HOST information in the policy file \n");
-    } else {
-        HIP_DEBUG("Read requests for Host information - %s from policy file \n", req_host);
-        request_type_set(entry->request, lookup_request_type(req_host));
-    }
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "req_user", &req_user)) {
-        request_type_unset(entry->request, REQ_USER_INFO_SHORT);
-        request_type_unset(entry->request, REQ_USER_INFO_LONG);
-        request_type_unset(entry->request, REQ_USER_INFO_CERTS);
-        request_type_unset(entry->request, REQ_USER_INFO_SHORT_SIGNED);
-        request_type_unset(entry->request, REQ_USER_INFO_LONG_SIGNED);
-        HIP_DEBUG("Read requests returned no User information in the policy file \n");
-    } else {
-        HIP_DEBUG("Read requests for User information - %s from policy file \n", req_user);
-        request_type_set(entry->request, lookup_request_type(req_user));
-    }
-    if (CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
-        policy_decision_set(entry->target, POLICY_REJECT);
-    } else {
-        if (strcmp(target_string, "ALLOW") == 0) {
-            policy_decision_set(entry->target, POLICY_ACCEPT);
-        } else if (strcmp(target_string, "INFO") == 0) {
-            policy_decision_set(entry->target, POLICY_INFO_REQUIRED);
-        } else {
-            policy_decision_set(entry->target, POLICY_REJECT);
-        }
-
-        policy_decision_set(entry->target, strcmp(target_string, "ALLOW") == 0 ? POLICY_ACCEPT : POLICY_REJECT);
-    }
-    *rulelist = append_to_slist(*rulelist, entry);
-
-out_err:
-    return err;
-}
-
-#endif
-
-
-static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
-{
-    int                  err           = 0;
-    int                  i             = 0;
     struct policy_tuple *entry         = NULL;
     const char          *host_id       = NULL;
     const char          *host_name     = NULL;
@@ -250,11 +168,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     const char          *host_kernel   = NULL;
     const char          *host_os       = NULL;
     const char          *user_id       = NULL;
-    const char          *user_prr      = NULL;
     const char          *app_id        = NULL;
-    const char          *req_host      = NULL;
-    const char          *req_user      = NULL;
-    const char          *req_app       = NULL;
     const char          *target_string = NULL;
     config_setting_t    *temp          = NULL;
 
@@ -263,7 +177,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     HIP_IFEL(!(entry = malloc(sizeof(struct policy_tuple))),
              -1, "Could not allocate memory for new rule\n");
 
-    entry->target = init_policy();
+    policy_decision_init(&entry->target);
 
 
     if (!(temp = config_setting_get_member(tuple, "host"))) {
@@ -316,7 +230,6 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
         HIP_DEBUG("No USER information in the policy file \n");
         entry->user.user_id[0] = '\0';
     } else {
-        int i = 0;
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "name", &user_id)) {
             HIP_DEBUG("No USER DN information in the policy file \n");
             entry->user.user_id[0] = '\0';
@@ -324,7 +237,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             strncpy(entry->user.user_id, user_id, SIGNALING_USER_ID_MAX_LEN - 1);
             entry->user.user_id[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
             /*Request for USER_INFO_SHORT*/
-            policy_decision_set(entry.target, POLICY_USER_INFO_SHORT);
+            policy_decision_set(&entry->target, POLICY_USER_INFO_SHORT);
         }
     }
 
@@ -337,9 +250,9 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     }
 
     if (CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
-        policy_decision_set(entry->target, POLICY_REJECT);
+        policy_decision_set(&entry->target, POLICY_REJECT);
     } else {
-        policy_decision_set(entry->target, strcmp(target_string, "ALLOW") == 0 ? POLICY_ACCEPT : POLICY_REJECT);
+        policy_decision_set(&entry->target, strcmp(target_string, "ALLOW") == 0 ? POLICY_ACCEPT : POLICY_REJECT);
     }
     *rulelist = append_to_slist(*rulelist, entry);
 
@@ -437,24 +350,24 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
     }
     /* Check if host with any kernel version is allowed */
     if (strlen(tuple_rule->host.host_kernel) > 0) {
-        if (strcmp(&tuple_rule->host.host_kernel, &tuple_conn->host.host_kernel) > 0) {
-            HIP_DEBUG("Kernel version below %s is not allowed\n", &tuple_rule->host.host_kernel);
+        if (strcmp(tuple_rule->host.host_kernel, tuple_conn->host.host_kernel) > 0) {
+            HIP_DEBUG("Kernel version below %s is not allowed\n", tuple_rule->host.host_kernel);
             return 0;
         }
     }
 
     /* Check if host with any operating system is allowed */
     if (strlen(tuple_rule->host.host_os) > 0) {
-        if (strcmp(&tuple_rule->host.host_os, &tuple_conn->host.host_os) != 0) {
-            HIP_DEBUG("Operating system %s is not allowed\n", &tuple_rule->host.host_os);
+        if (strcmp(tuple_rule->host.host_os, tuple_conn->host.host_os) != 0) {
+            HIP_DEBUG("Operating system %s is not allowed\n", tuple_rule->host.host_os);
             return 0;
         }
     }
 
     /* Check if host with any name is allowed */
     if (strlen(tuple_rule->host.host_name) > 0) {
-        if (strcmp(&tuple_rule->host.host_name, &tuple_conn->host.host_name) != 0) {
-            HIP_DEBUG("Hosts with the name %s is not allowed\n", &tuple_rule->host.host_name);
+        if (strcmp(tuple_rule->host.host_name, tuple_conn->host.host_name) != 0) {
+            HIP_DEBUG("Hosts with the name %s is not allowed\n", tuple_rule->host.host_name);
             return 0;
         }
     }
@@ -518,7 +431,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
     struct slist              *rule_list   = NULL;
     X509_NAME                 *x509_subj_name;
 
-    ret.target = init_policy();
+    policy_decision_init(&ret.target);
 
     /* Construct the authed and unauthed tuple for the current context.
      * Need to memset-0 because we want to use memcmp later. */
@@ -588,13 +501,13 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
         printf_policy_tuple(&tuple_for_conn_authed, "\t");
         printf("is matched by rule tuple:\n");
         printf_policy_tuple(tuple_match, "\t");
-        return tuple_match;
+        return *tuple_match;
     }
 
     /* If we haven't found a match and the unauthed tuple does not differ from
      * the authed tuple, we can return the result right away. */
     if (!memcmp(&tuple_for_conn_authed, &tuple_for_conn_unauthed, sizeof(struct policy_tuple))) {
-        policy_decision_set(ret.target, POLICY_REJECT);
+        policy_decision_set(&ret.target, POLICY_REJECT);
         return ret;
     }
 
@@ -604,7 +517,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
         printf("\033[22;32mRejected because no match for unauthed tuple.\033[22;37m\n\033[22;37m");
         printf("Rejected tuple:\n");
         printf_policy_tuple(&tuple_for_conn_authed, "\t");
-        policy_decision_set(ret.target, POLICY_REJECT);
+        policy_decision_set(&ret.target, POLICY_REJECT);
         return ret;
     }
 
@@ -615,37 +528,37 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
      * this is the case if the match's host id is not "ANY",
      */
     if (ipv6_addr_cmp(&tuple_match->host.host_id, &in6addr_any)) {
-        policy_decision_set(ret.target, POLICY_HOST_AUTH_REQUIRED);
+        policy_decision_set(&ret.target, POLICY_HOST_AUTH_REQUIRED);
     }
 
     /* Check if we really need the user auth,
      * this is the case if the match's user id is not "ANY",
      */
     if (strlen(tuple_match->user.user_id)) {
-        policy_decision_set(ret.target, POLICY_USER_AUTH_REQUIRED);
+        policy_decision_set(&ret.target, POLICY_USER_AUTH_REQUIRED);
     }
 
     /* Check if we really need the app auth,
      * this is the case if the match's app id is not "ANY",
      */
     if (strlen(tuple_match->application.app_id)) {
-        policy_decision_set(ret.target, POLICY_APP_AUTH_REQUIRED);
+        policy_decision_set(&ret.target, POLICY_APP_AUTH_REQUIRED);
     }
 
     /*
      * Check if we need to request for host information
      */
     if (strlen(tuple_match->host.host_kernel) > 0 || strlen(tuple_match->host.host_os) > 0) {
-        policy_decision_set(ret.target, POLICY_HOST_INFO_SHORT);
+        policy_decision_set(&ret.target, POLICY_HOST_INFO_SHORT);
     }
     if (strlen(tuple_match->host.host_name) > 0) {
-        policy_decision_set(ret.target, POLICY_HOST_INFO_LONG);
-        policy_decision_unset(ret.target, POLICY_HOST_INFO_SHORT);
+        policy_decision_set(&ret.target, POLICY_HOST_INFO_LONG);
+        policy_decision_unset(&ret.target, POLICY_HOST_INFO_SHORT);
     }
     if (strlen(tuple_match->host.host_certs) > 0) {
-        policy_decision_set(ret.target, POLICY_HOST_INFO_CERTS);
-        policy_decision_unset(ret.target, POLICY_HOST_INFO_LONG);
-        policy_decision_unset(ret.target, POLICY_HOST_INFO_SHORT);
+        policy_decision_set(&ret.target, POLICY_HOST_INFO_CERTS);
+        policy_decision_unset(&ret.target, POLICY_HOST_INFO_LONG);
+        policy_decision_unset(&ret.target, POLICY_HOST_INFO_SHORT);
     }
 
     printf("\033[22;32mConnection could be matched to firewall rules:\n\033[22;37m");
@@ -760,49 +673,59 @@ void signaling_policy_engine_print_rule_set(UNUSED const char *prefix)
     HIP_DEBUG("%s--------------            END RULES         ----------------\n", prefix);
 }
 
-void policy_decision_set(struct policy_decision flags, int f)
+void policy_decision_set(struct policy_decision *flags, int f)
 {
     switch (f) {
     case POLICY_ACCEPT:
-        flags.POLICY_ACCEPT = 1;
+        flags->POLICY_ACCEPT = 1;
         break;
     case POLICY_REJECT:
-        flags.POLICY_REJECT = 1;
+        flags->POLICY_REJECT = 1;
         break;
     case POLICY_USER_AUTH_REQUIRED:
-        flags.POLICY_USER_AUTH_REQUIRED = 1;
+        flags->POLICY_USER_AUTH_REQUIRED = 1;
         break;
     case POLICY_HOST_AUTH_REQUIRED:
-        flags.POLICY_HOST_AUTH_REQUIRED = 1;
+        flags->POLICY_HOST_AUTH_REQUIRED = 1;
         break;
     case POLICY_APP_AUTH_REQUIRED:
-        flags.POLICY_APP_AUTH_REQUIRED = 1;
-        break;
-    default:                                                                                                                                break;
-    }
-}
-
-void policy_decision_unset(struct policy_decision flags, int f)
-{
-    switch (f) {
-    case POLICY_ACCEPT:
-        flags.POLICY_ACCEPT = 0;
-        break;
-    case POLICY_REJECT:
-        flags.POLICY_REJECT = 0;
-        break;
-    case POLICY_USER_AUTH_REQUIRED:
-        flags.POLICY_USER_AUTH_REQUIRED = 0;
-        break;
-    case POLICY_HOST_AUTH_REQUIRED:
-        flags.POLICY_HOST_AUTH_REQUIRED = 0;
-        break;
-    case POLICY_APP_AUTH_REQUIRED:
-        flags.POLICY_APP_AUTH_REQUIRED = 0;
+        flags->POLICY_APP_AUTH_REQUIRED = 1;
         break;
     default:
         break;
     }
+}
+
+void policy_decision_unset(struct policy_decision *flags, int f)
+{
+    switch (f) {
+    case POLICY_ACCEPT:
+        flags->POLICY_ACCEPT = 0;
+        break;
+    case POLICY_REJECT:
+        flags->POLICY_REJECT = 0;
+        break;
+    case POLICY_USER_AUTH_REQUIRED:
+        flags->POLICY_USER_AUTH_REQUIRED = 0;
+        break;
+    case POLICY_HOST_AUTH_REQUIRED:
+        flags->POLICY_HOST_AUTH_REQUIRED = 0;
+        break;
+    case POLICY_APP_AUTH_REQUIRED:
+        flags->POLICY_APP_AUTH_REQUIRED = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+void policy_decision_init(struct policy_decision *flags)
+{
+    flags->POLICY_ACCEPT             = 0;
+    flags->POLICY_REJECT             = 0;
+    flags->POLICY_USER_AUTH_REQUIRED = 0;
+    flags->POLICY_HOST_AUTH_REQUIRED = 0;
+    flags->POLICY_APP_AUTH_REQUIRED  = 0;
 }
 
 int policy_decision_check(struct policy_decision flags, int f)
@@ -827,9 +750,4 @@ int policy_decision_check(struct policy_decision flags, int f)
         return 0;
         break;
     }
-}
-
-int app_info_request_check(struct request_type req)
-{
-    return 0;
 }

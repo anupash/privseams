@@ -25,7 +25,7 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
 int signaling_build_param_user_auth_fail(struct hip_common *msg, const uint16_t reason);
 int signaling_build_param_connection_fail(struct hip_common *msg, const uint16_t reason);
 int signaling_build_param_cert_chain(struct hip_common *msg,
-                                     STACK_OF(X509) *cert_chain,
+                                     STACK_OF(X509) * cert_chain,
                                      int start,
                                      int count,
                                      int freespace);
@@ -39,6 +39,8 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
 
 
 /* Builders for internal state structures */
+int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
+                                 struct signaling_host_context *host_ctx);
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
                                         struct signaling_application_context *app_ctx);
 int signaling_build_user_context(const struct signaling_param_user_context *param_usr_ctx,
