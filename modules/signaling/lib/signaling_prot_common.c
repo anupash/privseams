@@ -108,6 +108,33 @@ void signaling_param_application_context_print(const struct signaling_param_app_
 /**
  * Print the internal application context structure.
  *
+ * @param host_ctx  the host context to print
+ * @param prefix    prefix is prepended to all output of this function
+ * @param header    0 for no header, 1 to print a header
+ */
+void signaling_host_context_print(const struct signaling_host_context *const host_ctx,
+                                  UNUSED const char *prefix, const int header)
+{
+    if (host_ctx == NULL) {
+        HIP_DEBUG("%sNo host ctx parameter given.\n", prefix);
+        return;
+    }
+    if (header) {
+        HIP_DEBUG("%s+------------ HOST CONTEXT START ----------------------\n", prefix);
+    }
+    HIP_DEBUG("%s  Host context \n", prefix);
+    HIP_DEBUG("%s  \tHost Name:\t %s\n", prefix, host_ctx->host_name);
+    HIP_DEBUG("%s  \tOperating System:\t %s\n", prefix, host_ctx->host_os);
+    HIP_DEBUG("%s  \tKernel:\t %s\n", prefix, host_ctx->host_kernel);
+    HIP_DEBUG("%s  \tCertificate:\t\t %s\n", prefix, host_ctx->host_certs);
+    if (header) {
+        HIP_DEBUG("%s+------------ HOST CONTEXT END   ----------------------\n", prefix);
+    }
+}
+
+/**
+ * Print the internal application context structure.
+ *
  * @param app_ctx   the application context to print
  * @param prefix    prefix is prepended to all output of this function
  * @param header    0 for no header, 1 to print a header
@@ -279,6 +306,35 @@ void signaling_param_user_context_print(const struct signaling_param_user_contex
 }
 
 /**
+ * Initializes the given host context to default values.
+ * Memory for context has to be allocated and freed by the caller.
+ *
+ * @param host_ctx a pointer to the host context that should be initialized
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_host_context(struct signaling_host_context *const host_ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(!host_ctx, -1, "Host context has to be allocated before initialization\n");
+
+    host_ctx->host_kernel_len = -1;
+    host_ctx->host_name_len   = -1;
+    host_ctx->host_os_len     = -1;
+    host_ctx->host_certs_len  = -1;
+
+    host_ctx->host_id[0]     = '\0';
+    host_ctx->host_kernel[0] = '\0';
+    host_ctx->host_name[0]   = '\0';
+    host_ctx->host_os[0]     = '\0';
+    host_ctx->host_certs[0]  = '\0';
+
+out_err:
+    return err;
+}
+
+/**
  * Initializes the given application context to default values.
  * Memory for context has to be allocated and freed by the caller.
  *
@@ -394,6 +450,7 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     }
     ctx_to_init->direction = dir;
 
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
@@ -405,6 +462,10 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
         signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
     }
 
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_REQ);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_REQ) {
+        signaling_build_host_context((const struct signaling_param_host_context *) param, &ctx_to_init->host);
+    }
 out_err:
     return err;
 }
@@ -492,6 +553,8 @@ int signaling_init_connection_context(struct signaling_connection_context *const
              -1, "Could not init outgoing application context\n");
     HIP_IFEL(signaling_init_user_context(&ctx->user),
              -1, "Could not init user context\n");
+    HIP_IFEL(signaling_init_host_context(&ctx->host),
+             -1, "Could not init outgoing host context\n");
 
 out_err:
     return err;
@@ -555,6 +618,13 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
         HIP_IFEL(signaling_build_user_context((const struct signaling_param_user_context *) param,
                                               &ctx->user),
                  -1, "Could not init user context from user ctx parameter \n");
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_REQ);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_REQ) {
+        HIP_IFEL(signaling_build_host_context((const struct signaling_param_app_context *) param,
+                                              &ctx->host),
+                 -1, "Could not init host context from host ctx parameter \n");
     }
 
 out_err:

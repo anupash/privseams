@@ -507,6 +507,72 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
 }
 
 /*
+ * Fill the internal host_context struct with data from host_context parameter.
+ *
+ * @return 0 on success
+ */
+int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
+                                 struct signaling_host_context *host_ctx)
+{
+    int            err = 0;
+    const uint8_t *p_contents;
+    uint16_t       tmp_len;
+    uint16_t       profile;
+    int            i = 0;
+    /* sanity checks */
+    HIP_IFEL(!param_host_ctx,    -1, "Got NULL user context parameter\n");
+    HIP_IFEL(!host_ctx,          -1, "Got NULL user context to write to\n");
+    HIP_IFEL(hip_get_param_type(param_host_ctx) != HIP_PARAM_SIGNALING_HOST_INFO_REQ,
+             -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_HOST_INFO_REQ);
+
+    /* copy contents and make sure max lengths are kept */
+
+    host_ctx->info_profile = ntohs(param_host_ctx->profile);
+    host_ctx->num_items    = ntohs(param_host_ctx->num_items);
+    p_contents             = (const uint8_t *) param_host_ctx + 2 * sizeof(uint16_t);
+
+    for (i = 0; i < host_ctx->num_items; i++) {
+        tmp_len =  SIGNALING_HOST_INFO_PROFILE;
+        memcpy(&profile, p_contents, tmp_len);
+        profile     = ntohs(profile);
+        p_contents += tmp_len;
+
+        switch (profile) {
+        case INFO_KERNEL:
+            memcpy(&host_ctx->host_kernel_len, p_contents, tmp_len);
+            host_ctx->host_kernel_len = ntohs(host_ctx->host_kernel_len);
+            p_contents               += 2 * tmp_len;
+            tmp_len                   = MIN(host_ctx->host_kernel_len, SIGNALING_HOST_INFO_MAX_LEN);
+            memcpy(host_ctx->host_kernel, p_contents, tmp_len);
+            host_ctx->host_kernel[tmp_len - 1] = '\0';
+            p_contents                        += tmp_len;
+            break;
+        case INFO_OS:
+            memcpy(&host_ctx->host_os_len, p_contents, tmp_len);
+            host_ctx->host_os_len = ntohs(host_ctx->host_os_len);
+            p_contents           += 2 * tmp_len;
+            tmp_len               = MIN(host_ctx->host_os_len, SIGNALING_HOST_INFO_MAX_LEN);
+            memcpy(host_ctx->host_os, p_contents, tmp_len);
+            host_ctx->host_os[tmp_len - 1] = '\0';
+            p_contents                    += tmp_len;
+            break;
+        case INFO_NAME:
+            memcpy(&host_ctx->host_name_len, p_contents, tmp_len);
+            host_ctx->host_name_len = ntohs(host_ctx->host_name_len);
+            p_contents             += 2 * tmp_len;
+            tmp_len                 = MIN(host_ctx->host_name_len, SIGNALING_HOST_INFO_MAX_LEN);
+            memcpy(host_ctx->host_name, p_contents, tmp_len);
+            host_ctx->host_name[tmp_len - 1] = '\0';
+            p_contents                      += tmp_len;
+            break;
+        }
+    }
+
+out_err:
+    return err;
+}
+
+/*
  * Fill the internal application_context struct with data from application_context parameter.
  *
  * @return 0 on success

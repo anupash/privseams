@@ -246,7 +246,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     struct policy_tuple *entry         = NULL;
     const char          *host_id       = NULL;
     const char          *host_name     = NULL;
-    const char          *host_netid    = NULL;
+    const char          *host_certs    = NULL;
     const char          *host_kernel   = NULL;
     const char          *host_os       = NULL;
     const char          *user_id       = NULL;
@@ -279,8 +279,6 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "kernel", &host_kernel)) {
             HIP_DEBUG("No HOST Kernel information in the policy file \n");
-            /*Request for HOST_INFO_SHORT*/
-            policy_decision_set(entry.target, POLICY_HOST_INFO_SHORT);
         } else {
             strncpy(entry->host.host_os, host_kernel, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
             entry->host.host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
@@ -288,9 +286,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "os", &host_os)) {
             HIP_DEBUG("No HOST OS information in the policy file \n");
-            /*Request for HOST_INFO_SHORT*/
             entry->host.host_os[0] = '\0';
-            policy_decision_set(entry.target, POLICY_HOST_INFO_SHORT);
         } else {
             strncpy(entry->host.host_os, host_name, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
             entry->host.host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
@@ -298,23 +294,19 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "name", &host_name)) {
             HIP_DEBUG("No HOST Name information in the policy file \n");
-            /*Request for HOST_INFO_LONG*/
             entry->host.host_name[0] = '\0';
-            policy_decision_set(entry.target, POLICY_HOST_INFO_LONG);
         } else {
             strncpy(entry->host.host_name, host_name, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
             entry->host.host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
         }
 
 
-        if (CONFIG_FALSE == config_setting_lookup_string(temp, "network", &host_netid)) {
+        if (CONFIG_FALSE == config_setting_lookup_string(temp, "certs", &host_certs)) {
             HIP_DEBUG("No HOST Name information in the policy file \n");
-            /*Request for HOST_INFO_LONG*/
-            entry->host.host_netid[0] = '\0';
+            entry->host.host_certs[0] = '\0';
         } else {
-            strncpy(entry->host.host_netid, host_netid, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
-            entry->host.host_netid[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
-            policy_decision_set(entry.target, POLICY_HOST_INFO_CERTS);
+            strncpy(entry->host.host_certs, host_certs, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
+            entry->host.host_certs[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
         }
     }
 
@@ -328,10 +320,11 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "name", &user_id)) {
             HIP_DEBUG("No USER DN information in the policy file \n");
             entry->user.user_id[0] = '\0';
-            policy_decision_set(entry.target, POLICY_USER_INFO_SHORT);
         } else {
             strncpy(entry->user.user_id, user_id, SIGNALING_USER_ID_MAX_LEN - 1);
             entry->user.user_id[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
+            /*Request for USER_INFO_SHORT*/
+            policy_decision_set(entry.target, POLICY_USER_INFO_SHORT);
         }
     }
 
@@ -442,27 +435,31 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
             return 0;
         }
     }
-    /* Check if hits match or if rule allows any hit */
-    if (ipv6_addr_cmp(&tuple_rule->host.host_id, &in6addr_any) != 0) {
-        if (ipv6_addr_cmp(&tuple_rule->host.host_id, &tuple_conn->host.host_id) != 0) {
-            HIP_DEBUG("Host does not match\n");
-            return 0;
-        }
-    }
     /* Check if host with any kernel version is allowed */
-    if (ipv6_addr_cmp(&tuple_rule->host.host_id, &in6addr_any) != 0) {
-        if (ipv6_addr_cmp(&tuple_rule->host.host_id, &tuple_conn->host.host_id) != 0) {
-            HIP_DEBUG("Host does not match\n");
+    if (strlen(tuple_rule->host.host_kernel) > 0) {
+        if (strcmp(&tuple_rule->host.host_kernel, &tuple_conn->host.host_kernel) > 0) {
+            HIP_DEBUG("Kernel version below %s is not allowed\n", &tuple_rule->host.host_kernel);
             return 0;
         }
     }
-    /* Check if hits match or if rule allows any hit */
-    if (ipv6_addr_cmp(&tuple_rule->host.host_id, &in6addr_any) != 0) {
-        if (ipv6_addr_cmp(&tuple_rule->host.host_id, &tuple_conn->host.host_id) != 0) {
-            HIP_DEBUG("Host does not match\n");
+
+    /* Check if host with any operating system is allowed */
+    if (strlen(tuple_rule->host.host_os) > 0) {
+        if (strcmp(&tuple_rule->host.host_os, &tuple_conn->host.host_os) != 0) {
+            HIP_DEBUG("Operating system %s is not allowed\n", &tuple_rule->host.host_os);
             return 0;
         }
     }
+
+    /* Check if host with any name is allowed */
+    if (strlen(tuple_rule->host.host_name) > 0) {
+        if (strcmp(&tuple_rule->host.host_name, &tuple_conn->host.host_name) != 0) {
+            HIP_DEBUG("Hosts with the name %s is not allowed\n", &tuple_rule->host.host_name);
+            return 0;
+        }
+    }
+
+
     /* Check if user ids match or if rule allows any user */
 
     if (strlen(tuple_rule->user.user_id) > 0) {
@@ -531,9 +528,29 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
     memcpy(tuple_for_conn_unauthed.application.app_id, conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
     if (signaling_flag_check(conn_ctx->flags, HOST_AUTHED)) {
         memcpy(&tuple_for_conn_authed.host.host_id, hit, sizeof(struct in6_addr));
+        if (conn_ctx->host.host_kernel_len > 0) {
+            strncpy(tuple_for_conn_authed.host.host_kernel, conn_ctx->host.host_kernel, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
+        if (conn_ctx->host.host_os_len > 0) {
+            strncpy(tuple_for_conn_authed.host.host_os, conn_ctx->host.host_os, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
+
+        if (conn_ctx->host.host_name_len > 0) {
+            strncpy(tuple_for_conn_authed.host.host_name, conn_ctx->host.host_name, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
     } else {
         memcpy(&tuple_for_conn_authed.host.host_id, &in6addr_any, sizeof(struct in6_addr));
+        if (conn_ctx->host.host_kernel_len > 0) {
+            strncpy(tuple_for_conn_unauthed.host.host_kernel, conn_ctx->host.host_kernel, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
+        if (conn_ctx->host.host_os_len > 0) {
+            strncpy(tuple_for_conn_unauthed.host.host_os, conn_ctx->host.host_os, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
+        if (conn_ctx->host.host_name_len > 0) {
+            strncpy(tuple_for_conn_unauthed.host.host_name, conn_ctx->host.host_name, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        }
     }
+
     memcpy(&tuple_for_conn_unauthed.host.host_id, hit,         sizeof(struct in6_addr));
     if (!signaling_DER_to_X509_NAME(conn_ctx->user.subject_name, conn_ctx->user.subject_name_len, &x509_subj_name)) {
         X509_NAME_oneline(x509_subj_name, tuple_for_conn_authed.user.user_id, SIGNALING_USER_ID_MAX_LEN);
@@ -615,6 +632,22 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
         policy_decision_set(ret.target, POLICY_APP_AUTH_REQUIRED);
     }
 
+    /*
+     * Check if we need to request for host information
+     */
+    if (strlen(tuple_match->host.host_kernel) > 0 || strlen(tuple_match->host.host_os) > 0) {
+        policy_decision_set(ret.target, POLICY_HOST_INFO_SHORT);
+    }
+    if (strlen(tuple_match->host.host_name) > 0) {
+        policy_decision_set(ret.target, POLICY_HOST_INFO_LONG);
+        policy_decision_unset(ret.target, POLICY_HOST_INFO_SHORT);
+    }
+    if (strlen(tuple_match->host.host_certs) > 0) {
+        policy_decision_set(ret.target, POLICY_HOST_INFO_CERTS);
+        policy_decision_unset(ret.target, POLICY_HOST_INFO_LONG);
+        policy_decision_unset(ret.target, POLICY_HOST_INFO_SHORT);
+    }
+
     printf("\033[22;32mConnection could be matched to firewall rules:\n\033[22;37m");
     printf("Connection tuple:\n");
     printf_policy_tuple(&tuple_for_conn_unauthed, "\t");
@@ -647,26 +680,7 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
         signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
         signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
         return 0;
-    }
-#ifdef 0
-    else if (policy_decision_check(req_auth_tuple.target, POLICY_INFO_REQUIRED)) {
-        if (host_info_request_check(req_auth_tuple.request)) {
-            switch (req_auth_tuple.request) {
-            case REQ_HOST_INFO_SHORT:       signaling_flag_set(&conn_ctx->flags, HOST_INFO_SHORT);
-                break;
-            case REQ_HOST_INFO_LONG:        signaling_flag_set(&conn_ctx->flags, HOST_INFO_LONG);
-                break;
-            case REQ_HOST_INFO_CERTS:       signaling_flag_set(&conn_ctx->flags, HOST_INFO_CERTS);
-                break;
-            }
-        }
-        if (user_info_request_check(req_auth_tuple.request)) {
-        }
-        if (app_info_request_check(req_auth_tuple.request)) {
-        }
-    }
-#endif
-    else {
+    } else {
         HIP_DEBUG("Connection request will be accepted by local policy if further authentication is effectuated: \n");
         /* Set those flags for which we need no user authentication */
         if (!policy_decision_check(req_auth_tuple.target, POLICY_USER_AUTH_REQUIRED)) {
@@ -684,6 +698,25 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
         } else {
             signaling_flag_set(&conn_ctx->flags, HOST_AUTH_REQUEST);
         }
+        /* Requesting for additional information from host based on the firewall policy*/
+        if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_SHORT)) {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_SHORT);
+        } else {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_SHORT_RECV);
+        }
+
+        if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_LONG)) {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_LONG);
+        } else {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_LONG_RECV);
+        }
+
+        if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_CERTS)) {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_CERTS);
+        } else {
+            signaling_flag_set(&conn_ctx->flags, HOST_INFO_CERTS_RECV);
+        }
+
         return 0;
     }
 }

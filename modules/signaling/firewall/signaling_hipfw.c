@@ -248,7 +248,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
-        HIP_ERROR("Could not init connection context from I2 \n");
+        HIP_ERROR("Could not init connection context from R1 \n");
         return -1;
     }
     new_conn.ctx_in.direction = FWD;

@@ -78,7 +78,7 @@ struct host_info {
     char            host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char            host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char            host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char            host_netid[2 * SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_certs[2 * SIGNALING_HOST_INFO_REQ_MAX_LEN];
 };
 
 struct user_info {

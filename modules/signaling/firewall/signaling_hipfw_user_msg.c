@@ -34,7 +34,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
                                  const struct in6_addr *const d,
                                  const struct signaling_port_pair *const ports)
 {
-    int i = 0;
+    int  i = 0;
     char buf[400];
     char src_hit[41];
     char dst_hit[41];
@@ -50,7 +50,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
     HIP_DEBUG("Start PERF_IP6TABLES\n");
     hip_perf_start_benchmark(perf_set, PERF_IP6TABLES);
 #endif
-    while(i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
+    while (i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
         sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT &&"
                      "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
                 src_hit, dst_hit, ports[i].src_port, ports[i].dst_port, src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
@@ -74,9 +74,10 @@ static void insert_iptables_rule(const struct in6_addr *const s,
  * @return          0 on sucess, negative on error
  */
 int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                            const struct signaling_connection *const conn) {
-    int err                 = 0;
-    struct hip_common *msg  = NULL;
+                                            const struct signaling_connection *const conn)
+{
+    int                err = 0;
+    struct hip_common *msg = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, 0),
@@ -121,8 +122,8 @@ out_err:
 static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_t *hitr,
                                                         const struct signaling_connection *const conn)
 {
-    int err                 = 0;
-    struct hip_common *msg  = NULL;
+    int                err = 0;
+    struct hip_common *msg = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRMATION, 0),
@@ -138,24 +139,24 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3\n");
-        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ1);
-        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
-        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
+    HIP_DEBUG("Stop PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ1);
+    hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
+    hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
 
-        HIP_DEBUG("Write PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH\n");
-        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
-        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
-        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
-        hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
-        hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
-        hip_perf_write_benchmark(perf_set, PERF_HASH);
-        hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
-        hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
-        hip_perf_write_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
-        hip_perf_write_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
+    HIP_DEBUG("Write PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_HIPFW_R2_FINISH, PERF_HIPFW_I3_FINISH, PERF_HIPFW_REQ1, PERF_HIPFW_REQ2, PERF_HIPFW_REQ3, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH\n");
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
+    hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
+    hip_perf_write_benchmark(perf_set, PERF_HASH);
+    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
 #endif
 
     HIP_DEBUG("Sent connection confirmation to HIPD: \n");
@@ -176,22 +177,23 @@ out_err:
  *
  * @return      0 on success, negative on error
  */
-int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
-    int err = 0;
-    const struct hip_tlv_common *param          = NULL;
-    const hip_hit_t *src_hit                    = NULL;
-    const hip_hit_t *dst_hit                    = NULL;
-    struct signaling_connection conn;
+int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
+{
+    int                          err     = 0;
+    const struct hip_tlv_common *param   = NULL;
+    const hip_hit_t             *src_hit = NULL;
+    const hip_hit_t             *dst_hit = NULL;
+    struct signaling_connection  conn;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
-            -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
+             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
 
     HIP_DEBUG("Got confirmation about a previously requested connection from HIPD\n");
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-            -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
+             -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
     // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
     signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
@@ -211,19 +213,20 @@ out_err:
  *   a) check whether we want to allow the remote connection context
  *   b) establish the local connection context
  *   c) check whether to allow the local connection context
-     d) send an answer with the local context
+ *   d) send an answer with the local context
  *
  * @param msg the message from the hipd
  *
  * @return 0 on success
  */
-int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
-    int err                                         = 0;
-    const struct hip_tlv_common *param              = NULL;
-    const hip_hit_t *hits                           = NULL;
-    const hip_hit_t *hitr                           = NULL;
-    const struct signaling_connection *recv_conn    = NULL;
-    struct signaling_connection new_conn;
+int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
+{
+    int                                err       = 0;
+    const struct hip_tlv_common       *param     = NULL;
+    const hip_hit_t                   *hits      = NULL;
+    const hip_hit_t                   *hitr      = NULL;
+    const struct signaling_connection *recv_conn = NULL;
+    struct signaling_connection        new_conn;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ1\n");
@@ -235,7 +238,7 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
 
     /* Establish a new connection state from the incoming connection context */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-            -1, "Could not get connection parameter from connection request \n");
+             -1, "Could not get connection parameter from connection request \n");
     recv_conn = (const struct signaling_connection *) (param + 1);
     signaling_get_hits_from_msg(msg, &hitr, &hits);
     signaling_copy_connection(&new_conn, recv_conn);
@@ -253,6 +256,14 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
     /* Since the remote context has been accepted,
      * build the local connection context and check it, too. */
     // todo: [mult conns] verify all contexts and that they're equal
+
+    //TODO write the handler for verification of host identifier
+    if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
+                                                            0,
+                                                            &new_conn.ctx_out)) {
+        HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
+        signaling_init_host_context(&new_conn.ctx_out.host);
+    }
     if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
                                                             0,
                                                             &new_conn.ctx_out)) {
@@ -301,13 +312,14 @@ out_err:
  *
  * @return 0 on success
  */
-int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
-    int err                                         = 0;
-    const struct hip_tlv_common *param              = NULL;
-    const hip_hit_t *hits                           = NULL;
-    const hip_hit_t *hitr                           = NULL;
-    const struct signaling_connection *recv_conn    = NULL;
-    struct signaling_connection *existing_conn      = NULL;
+int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
+{
+    int                                err           = 0;
+    const struct hip_tlv_common       *param         = NULL;
+    const hip_hit_t                   *hits          = NULL;
+    const hip_hit_t                   *hitr          = NULL;
+    const struct signaling_connection *recv_conn     = NULL;
+    struct signaling_connection       *existing_conn = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -340,7 +352,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     if (existing_conn->status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Connection is blocked by peer host (or network).\n");
     } else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
-        signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
+               signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -369,13 +381,14 @@ out_err:
 /**
  *
  */
-int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
-    int err                                         = 0;
-    const struct hip_tlv_common *param              = NULL;
-    const hip_hit_t *hits                           = NULL;
-    const hip_hit_t *hitr                           = NULL;
-    const struct signaling_connection *recv_conn    = NULL;
-    struct signaling_connection *existing_conn      = NULL;
+int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
+{
+    int                                err           = 0;
+    const struct hip_tlv_common       *param         = NULL;
+    const hip_hit_t                   *hits          = NULL;
+    const hip_hit_t                   *hitr          = NULL;
+    const struct signaling_connection *recv_conn     = NULL;
+    struct signaling_connection       *existing_conn = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ3, PERF_HIPFW_I3_FINISH\n");
@@ -400,7 +413,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     if (existing_conn->status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Connection is blocked by peer host (or network).\n");
     } else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
-        signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
+               signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
