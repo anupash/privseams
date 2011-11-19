@@ -727,11 +727,14 @@ int signaling_flag_check(struct flags_connection_context flags, int f)
         return (flags.HOST_AUTHED) ? 1 : 0;
         break;
 
-    case HOST_INFO_SHORT:
-        return (flags.HOST_INFO_SHORT) ? 1 : 0;
+    case HOST_INFO_OS:
+        return (flags.HOST_INFO_OS) ? 1 : 0;
         break;
-    case HOST_INFO_LONG:
-        return (flags.HOST_INFO_LONG) ? 1 : 0;
+    case HOST_INFO_KERNEL:
+        return (flags.HOST_INFO_KERNEL) ? 1 : 0;
+        break;
+    case HOST_INFO_NAME:
+        return (flags.HOST_INFO_NAME) ? 1 : 0;
         break;
     case HOST_INFO_CERTS:
         return (flags.HOST_INFO_CERTS) ? 1 : 0;
@@ -752,11 +755,14 @@ int signaling_flag_check(struct flags_connection_context flags, int f)
         return (flags.USER_INFO_LONG_SIGNED) ? 1 : 0;
         break;
 
-    case HOST_INFO_SHORT_RECV:
-        return (flags.HOST_INFO_SHORT_RECV) ? 1 : 0;
+    case HOST_INFO_OS_RECV:
+        return (flags.HOST_INFO_OS_RECV) ? 1 : 0;
         break;
-    case HOST_INFO_LONG_RECV:
-        return (flags.HOST_INFO_LONG_RECV) ? 1 : 0;
+    case HOST_INFO_KERNEL_RECV:
+        return (flags.HOST_INFO_KERNEL_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_NAME_RECV:
+        return (flags.HOST_INFO_NAME_RECV) ? 1 : 0;
         break;
     case HOST_INFO_CERTS_RECV:
         return (flags.HOST_INFO_CERTS_RECV) ? 1 : 0;
@@ -804,11 +810,14 @@ void signaling_flag_set(struct flags_connection_context *flags, int f)
         flags->HOST_AUTHED = 1;
         break;
 
-    case HOST_INFO_SHORT:
-        flags->HOST_INFO_SHORT = 1;
+    case HOST_INFO_OS:
+        flags->HOST_INFO_OS = 1;
         break;
-    case HOST_INFO_LONG:
-        flags->HOST_INFO_LONG = 1;
+    case HOST_INFO_KERNEL:
+        flags->HOST_INFO_KERNEL = 1;
+        break;
+    case HOST_INFO_NAME:
+        flags->HOST_INFO_NAME = 1;
         break;
     case HOST_INFO_CERTS:
         flags->HOST_INFO_CERTS = 1;
@@ -829,11 +838,11 @@ void signaling_flag_set(struct flags_connection_context *flags, int f)
         flags->USER_INFO_LONG_SIGNED = 1;
         break;
 
-    case HOST_INFO_SHORT_RECV:
-        flags->HOST_INFO_SHORT_RECV = 1;
+    case HOST_INFO_OS_RECV:
+        flags->HOST_INFO_OS_RECV = 1;
         break;
-    case HOST_INFO_LONG_RECV:
-        flags->HOST_INFO_LONG_RECV = 1;
+    case HOST_INFO_KERNEL_RECV:
+        flags->HOST_INFO_KERNEL_RECV = 1;
         break;
     case HOST_INFO_CERTS_RECV:
         flags->HOST_INFO_CERTS_RECV = 1;
@@ -885,11 +894,14 @@ void signaling_flag_unset(struct flags_connection_context *flags, int f)
         flags->HOST_AUTHED = 0;
         break;
 
-    case HOST_INFO_SHORT:
-        flags->HOST_INFO_SHORT = 0;
+    case HOST_INFO_OS:
+        flags->HOST_INFO_OS = 0;
         break;
-    case HOST_INFO_LONG:
-        flags->HOST_INFO_LONG = 0;
+    case HOST_INFO_KERNEL:
+        flags->HOST_INFO_KERNEL = 0;
+        break;
+    case HOST_INFO_NAME:
+        flags->HOST_INFO_NAME = 0;
         break;
     case HOST_INFO_CERTS:
         flags->HOST_INFO_CERTS = 0;
@@ -910,11 +922,14 @@ void signaling_flag_unset(struct flags_connection_context *flags, int f)
         flags->USER_INFO_LONG_SIGNED = 0;
         break;
 
-    case HOST_INFO_SHORT_RECV:
-        flags->HOST_INFO_SHORT_RECV = 0;
+    case HOST_INFO_OS_RECV:
+        flags->HOST_INFO_OS_RECV = 0;
         break;
-    case HOST_INFO_LONG_RECV:
-        flags->HOST_INFO_LONG_RECV = 0;
+    case HOST_INFO_KERNEL_RECV:
+        flags->HOST_INFO_KERNEL_RECV = 0;
+        break;
+    case HOST_INFO_NAME_RECV:
+        flags->HOST_INFO_NAME_RECV = 0;
         break;
     case HOST_INFO_CERTS_RECV:
         flags->HOST_INFO_CERTS_RECV = 0;
@@ -946,16 +961,18 @@ void signaling_flag_init(struct flags_connection_context *flags)
     flags->USER_AUTHED                 = 0;
     flags->HOST_AUTH_REQUEST           = 0;
     flags->HOST_AUTHED                 = 0;
-    flags->HOST_INFO_SHORT             = 0;
-    flags->HOST_INFO_LONG              = 0;
+    flags->HOST_INFO_OS                = 0;
+    flags->HOST_INFO_NAME              = 0;
+    flags->HOST_INFO_KERNEL            = 0;
     flags->HOST_INFO_CERTS             = 0;
     flags->USER_SIGN                   = 0;
     flags->USER_INFO_SHORT             = 0;
     flags->USER_INFO_LONG              = 0;
     flags->USER_INFO_SHORT_SIGNED      = 0;
     flags->USER_INFO_LONG_SIGNED       = 0;
-    flags->HOST_INFO_SHORT_RECV        = 0;
-    flags->HOST_INFO_LONG_RECV         = 0;
+    flags->HOST_INFO_OS_RECV           = 0;
+    flags->HOST_INFO_NAME_RECV         = 0;
+    flags->HOST_INFO_KERNEL_RECV       = 0;
     flags->HOST_INFO_CERTS_RECV        = 0;
     flags->USER_SIGN_RECV              = 0;
     flags->USER_INFO_SHORT_RECV        = 0;

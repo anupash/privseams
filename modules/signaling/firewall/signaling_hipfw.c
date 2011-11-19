@@ -277,10 +277,20 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     /* Step c) */
-    // TODO Add more handlers for different types of requests
+    // TODO Add more handlers for user and application information requests
     if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
         if (signaling_build_param_user_auth_req_u(common, 0)) {
             HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+            return 0;
+        }
+        ctx->modified = 1;
+    }
+    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_NAME) ||
+        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
+        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
+        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
+        if (signaling_build_param_host_info_req_u(common, 0, new_conn.ctx_in.flags)) {
+            HIP_ERROR("Could not add host info request. Dropping packet.\n");
             return 0;
         }
         ctx->modified = 1;

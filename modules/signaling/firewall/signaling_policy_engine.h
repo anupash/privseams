@@ -44,15 +44,16 @@ enum policy_all {
     POLICY_USER_AUTH_REQUIRED     = 2,
     POLICY_HOST_AUTH_REQUIRED     = 3,
     POLICY_APP_AUTH_REQUIRED      = 4,
-    POLICY_HOST_INFO_SHORT        = 5,
-    POLICY_HOST_INFO_LONG         = 6,
-    POLICY_HOST_INFO_CERTS        = 7,
-    POLICY_USER_SIGN              = 8,
-    POLICY_USER_INFO_SHORT        = 9,
-    POLICY_USER_INFO_LONG         = 10,
-    POLICY_USER_INFO_CERTS        = 11,
-    POLICY_USER_INFO_SHORT_SIGNED = 12,
-    POLICY_USER_INFO_LONG_SIGNED  = 13
+    POLICY_HOST_INFO_OS           = 5,
+    POLICY_HOST_INFO_KERNEL       = 6,
+    POLICY_HOST_INFO_NAME         = 7,
+    POLICY_HOST_INFO_CERTS        = 8,
+    POLICY_USER_SIGN              = 9,
+    POLICY_USER_INFO_SHORT        = 10,
+    POLICY_USER_INFO_LONG         = 11,
+    POLICY_USER_INFO_CERTS        = 12,
+    POLICY_USER_INFO_SHORT_SIGNED = 13,
+    POLICY_USER_INFO_LONG_SIGNED  = 14
 };
 
 struct policy_decision {
@@ -61,8 +62,9 @@ struct policy_decision {
     uint8_t POLICY_USER_AUTH_REQUIRED;
     uint8_t POLICY_HOST_AUTH_REQUIRED;
     uint8_t POLICY_APP_AUTH_REQUIRED;
-    uint8_t POLICY_HOST_INFO_SHORT;
-    uint8_t POLICY_HOST_INFO_LONG;
+    uint8_t POLICY_HOST_INFO_OS;
+    uint8_t POLICY_HOST_INFO_KERNEL;
+    uint8_t POLICY_HOST_INFO_NAME;
     uint8_t POLICY_HOST_INFO_CERTS;
     uint8_t POLICY_USER_SIGN;
     uint8_t POLICY_USER_INFO_SHORT;

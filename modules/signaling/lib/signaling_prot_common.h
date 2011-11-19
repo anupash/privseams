@@ -120,6 +120,12 @@
 #define SIGNALING_USER_AUTH_FAILED                  124
 #define SIGNALING_CONNECTION_FAILED                 125
 
+/* Parameters for the information items
+ * Information items is a data structure to store values requested by the middlebox
+ */
+#define MAX_INFO_LENGTH 200
+#define MAX_NUM_INFO_ITEMS 10
+
 /*
  * // Request types/ Profiles for host information
  * #define HOST_INFO_SHORT         30
@@ -167,30 +173,33 @@ enum flag_internal {
     HOST_AUTHED       = 3,
 
     /*New flags for various request profiles*/
-    HOST_INFO_SHORT        = 4,
-    HOST_INFO_LONG         = 5,
-    HOST_INFO_CERTS        = 6,
-    USER_SIGN              = 7,
-    USER_INFO_SHORT        = 8,
-    USER_INFO_LONG         = 9,
-    USER_INFO_SHORT_SIGNED = 10,
-    USER_INFO_LONG_SIGNED  = 11,
+    HOST_INFO_OS           = 4,
+    HOST_INFO_KERNEL       = 5,
+    HOST_INFO_NAME         = 6,
+    HOST_INFO_CERTS        = 7,
+    USER_SIGN              = 8,
+    USER_INFO_SHORT        = 9,
+    USER_INFO_LONG         = 10,
+    USER_INFO_SHORT_SIGNED = 11,
+    USER_INFO_LONG_SIGNED  = 12,
 
     /*New flags checked on receiving a response for the request*/
-    HOST_INFO_SHORT_RECV        = 12,
-    HOST_INFO_LONG_RECV         = 13,
-    HOST_INFO_CERTS_RECV        = 14,
-    USER_SIGN_RECV              = 15,
-    USER_INFO_SHORT_RECV        = 16,
-    USER_INFO_LONG_RECV         = 17,
-    USER_INFO_SHORT_SIGNED_RECV = 18,
-    USER_INFO_LONG_SIGNED_RECV  = 19
+    HOST_INFO_OS_RECV           = 13,
+    HOST_INFO_KERNEL_RECV       = 14,
+    HOST_INFO_NAME_RECV         = 15,
+    HOST_INFO_CERTS_RECV        = 16,
+    USER_SIGN_RECV              = 17,
+    USER_INFO_SHORT_RECV        = 18,
+    USER_INFO_LONG_RECV         = 19,
+    USER_INFO_SHORT_SIGNED_RECV = 20,
+    USER_INFO_LONG_SIGNED_RECV  = 21
 };
 
 enum profile_subtype{
     INFO_OS,
     INFO_KERNEL,
     INFO_NAME,
+    INFO_CERTS,
     INFO_DN,
     INFO_PRR
 };
@@ -225,10 +234,12 @@ struct flags_connection_context{
     uint8_t HOST_AUTH_REQUEST;
     uint8_t HOST_AUTHED;
 
-    uint8_t HOST_INFO_SHORT;
-    uint8_t HOST_INFO_SHORT_RECV;
-    uint8_t HOST_INFO_LONG;
-    uint8_t HOST_INFO_LONG_RECV;
+    uint8_t HOST_INFO_OS;
+    uint8_t HOST_INFO_OS_RECV;
+    uint8_t HOST_INFO_KERNEL;
+    uint8_t HOST_INFO_KERNEL_RECV;
+    uint8_t HOST_INFO_NAME;
+    uint8_t HOST_INFO_NAME_RECV;
     uint8_t HOST_INFO_CERTS;
     uint8_t HOST_INFO_CERTS_RECV;
     uint8_t USER_SIGN;
@@ -245,6 +256,16 @@ struct flags_connection_context{
     uint8_t USER_INFO_LONG_SIGNED_RECV;
 };
 
+
+/*
+ * Data structure to store the values of the various information requests
+ */
+
+struct info_item {
+    uint16_t info_type;
+    uint16_t info_length;
+    uint8_t  info[MAX_INFO_LENGTH];
+};
 
 /* ------------------------------------------------------------------------------------
  *
@@ -488,11 +509,12 @@ struct signaling_param_app_context {
  *  for more information
  */
 
+
 struct signaling_param_host_context {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    profile;
-    uint16_t    num_items;
+    hip_tlv          type;
+    hip_tlv_len      length;
+    uint16_t         num_items;
+    struct info_item items[MAX_NUM_INFO_ITEMS];
 } __attribute__((packed));
 
 
@@ -508,19 +530,14 @@ struct signaling_param_host_context {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                      Network Identifier                       |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                            PROFILE                            |
+ * |         INFO_ITEM             |         INFO_ITEM             |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * /                                                               /
- * /                Optional/Variable Parameters                   /
- * /                                                               |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |
  */
 struct signaling_param_host_info_request {
     hip_tlv     type;
     hip_tlv_len length;
     uint32_t    network_id;
-    uint32_t    profile;
+    uint16_t    info_items[MAX_NUM_INFO_ITEMS];
 } __attribute__((packed));
 
 
@@ -585,7 +602,6 @@ struct signaling_user_context {
  */
 struct signaling_host_context {
     char    *host_id;
-    uint16_t info_profile;
     uint16_t num_items;
     int      host_kernel_len;
     int      host_name_len;

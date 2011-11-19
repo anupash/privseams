@@ -37,6 +37,10 @@ int signaling_build_param_user_auth_req_u(struct hip_common *msg,
 int signaling_build_param_user_auth_req_s(struct hip_common *msg,
                                           uint32_t network_id);
 
+int signaling_build_param_host_info_req_u(struct hip_common *msg,
+                                          uint32_t network_id,
+                                          struct flags_connection_context flags);
+
 
 /* Builders for internal state structures */
 int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
