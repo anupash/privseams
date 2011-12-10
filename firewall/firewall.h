@@ -30,6 +30,7 @@
 
 #include "lib/core/protodefs.h"
 
+enum {NONE, ENDPOINT, MIDDLEBOX};
 
 /** globally used variables defined in firewall.c */
 extern int accept_normal_traffic_by_default;
@@ -48,6 +49,7 @@ extern int hip_fw_sock;
 extern int system_based_opp_mode;
 extern int esp_speedup;
 extern int sgnl_timeout;
+extern int ep_signaling;
 
 int hipfw_main(const char *const rule_file,
                const bool        kill_old,

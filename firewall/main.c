@@ -53,7 +53,7 @@
 static void hipfw_usage(void)
 {
     puts("HIP Firewall");
-    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-u] [-h] [-V]");
+    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-s|S] [-t <seconds>] [-u] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     puts(" [-m]");
 #endif
@@ -72,6 +72,8 @@ static void hipfw_usage(void)
     puts("      -e = use esp protection extension (also sets -i)");
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
+    puts("      -s = activate service negotiation for firewall");
+    puts("      -S = activate signaling end-point information at end host");
     puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
@@ -111,7 +113,7 @@ int main(int argc, char *argv[])
      * Otherwise may get warnings from system_print() commands. */
     setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:uvVT:")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpSsTt:uvV:")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -161,6 +163,12 @@ int main(int argc, char *argv[])
 #endif
         case 'p':
             limit_capabilities = 1;
+            break;
+        case 'S':
+            ep_signaling = ENDPOINT;
+            break;
+        case 's':
+            ep_signaling = MIDDLEBOX;
             break;
         case 'T':
             sgnl_timeout = atoi(optarg);
@@ -221,6 +229,16 @@ int main(int argc, char *argv[])
     if (esp_speedup && !filter_traffic) {
         puts("Warning: ESP speedup (-U) has no effect without\n");
         puts("         connection tracking (-F)\n");
+    }
+
+    if (ep_signaling == MIDDLEBOX && !filter_traffic) {
+        puts("Warning: Service negotiation (-s) has no effect without\n");
+        puts("         connection tracking (-F)\n");
+    }
+
+    if (ep_signaling == ENDPOINT && filter_traffic) {
+        puts("Warning: End point information signaling (-S) may have side\n");
+        puts("         effects with connection tracking (specify -F)\n");
     }
 
     if (geteuid() != 0) {

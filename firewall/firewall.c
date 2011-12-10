@@ -137,6 +137,7 @@ int esp_relay                 = 0;
 int hip_esp_protection        = 0;
 int esp_speedup               = 0; /**< Enable esp speedup via dynamic iptables usage (-u option). */
 int sgnl_timeout              = 0;
+int ep_signaling              = NONE; /**< Enable end point information signaling (-S|s option). */
 
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
@@ -378,17 +379,19 @@ static int hip_fw_init_signaling_extensions(void)
 {
     int err = 0;
 
-    OpenSSL_add_all_algorithms();
+    if (ep_signaling) {
+        OpenSSL_add_all_algorithms();
+    }
 
-    if (filter_traffic) {
+    if (ep_signaling == MIDDLEBOX) {
         HIP_IFEL(signaling_hipfw_init(NULL),
                  -1, "failed to init signaling firewall\n");
-    } else {
+    } else if (ep_signaling == ENDPOINT) {
         HIP_IFEL(signaling_hipfw_oslayer_init(),
                  -1, "failed to init signaling os layer\n");
     }
 
-    if (!hip_userspace_ipsec) {
+    if (ep_signaling && !hip_userspace_ipsec) {
         // queue outgoing TCP and UDP packets sent to HITs
         system_print("ip6tables -I HIPFW-OUTPUT -p tcp -d 2001:0010::/28 -j QUEUE");
         system_print("ip6tables -I HIPFW-OUTPUT -p udp -d 2001:0010::/28 -j QUEUE");
