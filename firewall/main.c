@@ -77,7 +77,6 @@ static void hipfw_usage(void)
     puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
-    puts("      -T = timeout in microseconds to wait for new connections before triggering bex/update\n");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
     puts("      -w = IP address of web-based authentication server");
@@ -169,9 +168,6 @@ int main(int argc, char *argv[])
             break;
         case 's':
             ep_signaling = MIDDLEBOX;
-            break;
-        case 'T':
-            sgnl_timeout = atoi(optarg);
             break;
         case 't':
             connection_timeout = strtoul(optarg, &end_of_number, 10);

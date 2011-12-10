@@ -48,7 +48,6 @@ extern int use_midauth;
 extern int hip_fw_sock;
 extern int system_based_opp_mode;
 extern int esp_speedup;
-extern int sgnl_timeout;
 extern int ep_signaling;
 
 int hipfw_main(const char *const rule_file,

@@ -307,12 +307,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
                  -1, "Could not copy connection context\n");
 
-        /* check if previous BEX has been completed */
-        if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT)) {
-            new_conn.status         = SIGNALING_CONN_WAITING;
-        } else {
-            new_conn.status         = SIGNALING_CONN_PROCESSING;
-        }
+        new_conn.status         = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),

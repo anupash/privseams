@@ -53,9 +53,6 @@
 
 #define HIPFW_SIGNALING_CONF_FILE HIPL_SYSCONFDIR "/signaling_firewall_policy.cfg"
 
-static int            waiting_connections = 0;
-static struct timeval new_connection_wait_timeout;
-
 /* Init connection tracking data base */
 int signaling_hipfw_oslayer_init(void)
 {
@@ -63,12 +60,6 @@ int signaling_hipfw_oslayer_init(void)
         HIP_ERROR("Could not init connection tracking database \n");
         return -1;
     }
-
-    new_connection_wait_timeout.tv_sec  =  0;
-    new_connection_wait_timeout.tv_usec = sgnl_timeout;
-
-    HIP_DEBUG("Using timeout of %3.2f ms \n", sgnl_timeout / 1000.0);
-
 
     if (signaling_policy_engine_init_from_file(HIPFW_SIGNALING_CONF_FILE)) {
         HIP_ERROR("Could not init connection tracking database \n");
@@ -83,66 +74,6 @@ int signaling_hipfw_oslayer_uninit(void)
     return 0;
 }
 
-/*
- * return 1 if expired, else 0
- */
-static int expired(struct timeval *start, struct timeval *timeout)
-{
-    struct timeval now;
-    uint64_t       timediff;
-    gettimeofday(&now, NULL);
-
-    timediff = calc_timeval_diff(start, &now);
-    HIP_DEBUG("Time passed since start %.3f ms, timeout is %.3f ms\n", timediff / 1000.0, timeout->tv_sec * 1000.0);
-
-    /* no timeout */
-    if (timeout->tv_sec == 0 && timeout->tv_usec == 0) {
-        return 1;
-    }
-    /* timeout given in seconds */
-    if (timeout->tv_sec > 0 && (now.tv_sec - start->tv_sec >= timeout->tv_sec)) {
-        return 1;
-    }
-    /* timeout given in microseconds */
-    if (timeout->tv_usec > 0 && (now.tv_usec - start->tv_usec >= timeout->tv_usec)) {
-        return 1;
-    }
-    return 0;
-}
-
-static int send_on_timeout(signaling_cdb_entry_t *entry)
-{
-    struct slist                *listentry = NULL;
-    struct signaling_connection *conn      = NULL;
-
-    listentry = entry->connections;
-    while (listentry) {
-        if ((conn = listentry->data) && (conn->status == SIGNALING_CONN_WAITING)) {
-            if (!expired(&conn->timestamp, &new_connection_wait_timeout)) {
-                HIP_DEBUG("Continue to wait on connection %d until expired.\n", conn->id);
-            } else {
-                /* timeout has expired, send it */
-                conn->status = SIGNALING_CONN_PROCESSING;
-                HIP_DEBUG("Sending connection request after timeout of %d s.\n", new_connection_wait_timeout.tv_sec);
-                signaling_hipfw_send_connection_request(&entry->local_hit, &entry->remote_hit, conn);
-            }
-        }
-        listentry = listentry->next;
-    }
-    return 0;
-}
-
-/**
- * This function checks whether there are connections in our outgoing queue,
- * which we should send out because the timeout is reached.
- *
- * @return      0 on success, -1 on internal errors
- */
-static void check_timeout_wait_for_new_connections(void)
-{
-    signaling_cdb_apply_func(&send_on_timeout);
-}
-
 static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                                  uint16_t src_port, uint16_t dst_port)
 {
@@ -152,43 +83,16 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     int                          pos = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN\n");
+    HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");
     hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
     hip_perf_start_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-#endif
-
-    /* Find if there is a waiting connection for this source and destination application. */
-    if ((new_connection_wait_timeout.tv_sec != 0 || new_connection_wait_timeout.tv_usec != 0) &&
-        (conn = signaling_cdb_entry_find_connection_by_dst_port(src_hit, dst_hit, dst_port))) {
-        if (conn->status == SIGNALING_CONN_WAITING) {
-            pos = signaling_connection_add_port_pair(src_port, dst_port, conn);
-            if (pos < 0 || pos == SIGNALING_MAX_SOCKETS - 1) {
-                if (!signaling_hipfw_send_connection_request(src_hit, dst_hit, conn)) {
-                    waiting_connections--;
-                    return 0;
-                } else {
-                    HIP_ERROR("Failed to send connection request to HIPD for connection:\n");
-                    signaling_connection_print(conn, "\t");
-                    return -1;
-                }
-            } else {
-                HIP_DEBUG("Queued new connection (this is the %d. connection for the same application), "
-                          "waiting for more until timeout.\n", pos);
-                check_timeout_wait_for_new_connections();
-                return 0;
-            }
-        }
-    }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_CONN_REQUEST\n");
     hip_perf_start_benchmark(perf_set, PERF_CONN_REQUEST);
 #endif
 
     /* We have no waiting contexts. So build the local connection context and queue it. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.status              = SIGNALING_CONN_WAITING;
+    new_conn.status              = SIGNALING_CONN_PROCESSING;;
     new_conn.id                  = signaling_cdb_get_next_connection_id();
     new_conn.side                = INITIATOR;
     new_conn.sockets[0].src_port = src_port;
@@ -232,18 +136,14 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn),
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
-    waiting_connections++;
+
+    HIP_DEBUG("Sending connection request to hipd.\n");
+    signaling_hipfw_send_connection_request(&entry->local_hit, &entry->remote_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_REQUEST);
-#endif
-
-    /* check if this can be sent right away */
-    check_timeout_wait_for_new_connections();
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_CONN_REQUEST, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_HASH, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+    HIP_DEBUG("Write PERF_CONN_REQUEST, PERF_CONN_REQUEST, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_HASH, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
     hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
     hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
@@ -305,10 +205,6 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
             HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
             verdict = VERDICT_DROP;
             break;
-        case SIGNALING_CONN_WAITING:
-            HIP_DEBUG("Connection is on wait, but will be established later. Drop packet.\n");
-            verdict = VERDICT_DROP;
-            break;
         case SIGNALING_CONN_PROCESSING:
             HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
             verdict = VERDICT_DROP;
@@ -317,6 +213,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
         default:
             HIP_DEBUG("Invalid connection state %d. Drop packet.\n", conn->status);
             verdict = VERDICT_DROP;
+            break;
         }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
@@ -330,18 +227,4 @@ out_err:
         return VERDICT_DROP;
     }
     return verdict;
-}
-
-/*
- * This function will be called after each firewall cycle,
- * i.e. either after the select timeout is reached
- * or after at most one message from each socket handle has been processed.
- * Register all functions that should be called periodically here.
- */
-int signaling_firewall_maintenance(void)
-{
-    /* Check if we need to send out queued connection requests. */
-    check_timeout_wait_for_new_connections();
-
-    return 0;
 }

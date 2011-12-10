@@ -136,7 +136,6 @@ int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
 int esp_speedup               = 0; /**< Enable esp speedup via dynamic iptables usage (-u option). */
-int sgnl_timeout              = 0;
 int ep_signaling              = NONE; /**< Enable end point information signaling (-S|s option). */
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -2200,9 +2199,6 @@ int hipfw_main(const char *const rule_file,
         }
 
         hip_fw_conntrack_periodic_cleanup();
-
-        /* Call to periodic maintenance function of firewall signaling extension. */
-        signaling_firewall_maintenance();
     }
 
 out_err:

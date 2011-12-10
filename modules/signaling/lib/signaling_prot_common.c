@@ -25,8 +25,6 @@ const char *signaling_connection_status_name(int status)
         return "NEW";
     case SIGNALING_CONN_PROCESSING:
         return "PROCESSING";
-    case SIGNALING_CONN_WAITING:
-        return "WAITING";
     case SIGNALING_CONN_BLOCKED:
         return "BLOCKED";
     case SIGNALING_CONN_ALLOWED:
