@@ -271,6 +271,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     struct signaling_connection *conn  = NULL;
 
     /* Get ports from tcp header */
+    // TODO this code should not depend on payload to be TCP
     src_port  = ntohs(ctx->transport_hdr.tcp->source);
     dest_port = ntohs(ctx->transport_hdr.tcp->dest);
 
