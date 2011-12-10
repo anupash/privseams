@@ -51,6 +51,8 @@
 #include "signaling_cdb.h"
 #include "signaling_policy_engine.h"
 
+#define HIPFW_SIGNALING_CONF_FILE HIPL_SYSCONFDIR "/signaling_firewall_policy.cfg"
+
 static int            waiting_connections = 0;
 static struct timeval new_connection_wait_timeout;
 
@@ -67,7 +69,8 @@ int signaling_hipfw_oslayer_init(void)
 
     HIP_DEBUG("Using timeout of %3.2f ms \n", sgnl_timeout / 1000.0);
 
-    if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_firewall_policy.cfg")) {
+
+    if (signaling_policy_engine_init_from_file(HIPFW_SIGNALING_CONF_FILE)) {
         HIP_ERROR("Could not init connection tracking database \n");
         return -1;
     }
