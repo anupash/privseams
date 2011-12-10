@@ -45,9 +45,7 @@
 
 int signaling_hipfw_oslayer_init(void);
 int signaling_hipfw_oslayer_uninit(void);
-
-/* Check if the packet is conntracked or not. Take the corresponding actions. */
-int signaling_hipfw_conntrack(struct hip_fw_context *ctx);
+int signaling_hipfw_handle_packet(struct hip_fw_context *ctx);
 
 /* Generic maintenance callback. */
 int signaling_firewall_maintenance(void);

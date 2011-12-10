@@ -253,10 +253,12 @@ out_err:
     return err;
 }
 
-/*
- * Returns a verdict 1 for pass, 0 for drop.
+/**
+ * Check if the packet is conntracked or not. Take the corresponding actions.
+ *
+ * @return verdict 1 for pass, 0 for drop.
  */
-int signaling_hipfw_conntrack(struct hip_fw_context *ctx)
+int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
     int                          err     = 0;
     int                          verdict = VERDICT_DEFAULT;
