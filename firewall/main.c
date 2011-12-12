@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
             ep_signaling = ENDPOINT;
             break;
         case 's':
-            ep_signaling = MIDDLEBOX;
+            ep_signaling = MIDDLE;
             break;
         case 't':
             connection_timeout = strtoul(optarg, &end_of_number, 10);
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
         puts("         connection tracking (-F)\n");
     }
 
-    if (ep_signaling == MIDDLEBOX && !filter_traffic) {
+    if (ep_signaling == MIDDLE && !filter_traffic) {
         puts("Warning: Service negotiation (-s) has no effect without\n");
         puts("         connection tracking (-F)\n");
     }

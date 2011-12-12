@@ -382,7 +382,7 @@ static int hip_fw_init_signaling_extensions(void)
         OpenSSL_add_all_algorithms();
     }
 
-    if (ep_signaling == MIDDLEBOX) {
+    if (ep_signaling == MIDDLE) {
         HIP_IFEL(signaling_hipfw_init(NULL),
                  -1, "failed to init signaling firewall\n");
     } else if (ep_signaling == ENDPOINT) {
