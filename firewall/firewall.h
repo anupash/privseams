@@ -30,7 +30,7 @@
 
 #include "lib/core/protodefs.h"
 
-enum {NONE, ENDPOINT, MIDDLEBOX};
+enum { NONE, ENDPOINT, MIDDLE };
 
 /** globally used variables defined in firewall.c */
 extern int accept_normal_traffic_by_default;
