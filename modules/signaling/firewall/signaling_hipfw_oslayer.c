@@ -39,6 +39,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/prefix.h"
 #include "firewall/firewall.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
@@ -74,12 +75,15 @@ int signaling_hipfw_oslayer_uninit(void)
     return 0;
 }
 
-static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
     int                          err  = 0;
     struct signaling_connection *conn = NULL;
     struct signaling_connection  new_conn;
+
+    HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
+    HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");
@@ -119,9 +123,9 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
 
     /* Check the local context against our local policy,
      * block this connection if context is rejected */
-    if (signaling_policy_engine_check_and_flag(dst_hit, &new_conn.ctx_out)) {
+    if (signaling_policy_engine_check_and_flag(&ctx->dst, &new_conn.ctx_out)) {
         new_conn.status = SIGNALING_CONN_BLOCKED;
-        HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn), -1, "Could not insert connection into cdb\n");
+        HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn), -1, "Could not insert connection into cdb\n");
         signaling_cdb_print();
         return 0;
     }
@@ -132,12 +136,12 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
 
     /* Since this is a new connection we have to add an entry to the scdb */
     gettimeofday(&new_conn.timestamp, NULL);
-    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn),
+    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn),
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
 
     HIP_DEBUG("Sending connection request to hipd.\n");
-    signaling_hipfw_send_connection_request(&entry->local_hit, &entry->remote_hit, conn);
+    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
@@ -183,7 +187,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if (entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
-        HIP_IFEL(handle_new_connection(&ctx->src, &ctx->dst, src_port, dest_port),
+        HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
                  -1, "Failed to handle new connection\n");
         verdict = VERDICT_DROP;
         goto out_err;
@@ -216,7 +220,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
         }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
-        HIP_IFEL(handle_new_connection(&ctx->src, &ctx->dst, src_port, dest_port),
+        HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
                  -1, "Failed to handle new connection\n");
         verdict = VERDICT_DROP;
     }
