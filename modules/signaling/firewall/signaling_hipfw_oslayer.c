@@ -80,7 +80,6 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     int                          err  = 0;
     struct signaling_connection *conn = NULL;
     struct signaling_connection  new_conn;
-    int                          pos = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");
@@ -92,7 +91,7 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     /* We have no waiting contexts. So build the local connection context and queue it. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.status              = SIGNALING_CONN_PROCESSING;;
+    new_conn.status              = SIGNALING_CONN_PROCESSING;
     new_conn.id                  = signaling_cdb_get_next_connection_id();
     new_conn.side                = INITIATOR;
     new_conn.sockets[0].src_port = src_port;
