@@ -24,6 +24,7 @@
 #define OUTBOUND_I2_CREATE_APPINFO_PRIO         41500
 #define OUTBOUND_I2_CREATE_USRINFO_PRIO         41502
 #define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
+#define OUTBOUND_I2_CREATE_HOST_INFO_PRIO       41505
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
 #define OUTBOUND_R2_CREATE_USRINFO_PRIO         41502
 #define OUTBOUND_R2_CREATE_USR_AUTH_PRIO        41504
@@ -33,15 +34,15 @@
 
 int hip_signaling_init(void)
 {
-	int err = 0;
+    int err = 0;
 
-	HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not init user management\n");
+    HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not init user management\n");
 
-	// register I3
+    // register I3
     lmod_register_packet_type(HIP_I3, "HIP_I3");
 
-	// register on the wire parameter types
-	lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,      "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
+    // register on the wire parameter types
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,      "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO,            "HIP_PARAM_SIGNALING_APPLICATION_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USERINFO,           "HIP_PARAM_SIGNALING_USER_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,     "HIP_PARAM_SIGNALING_USER_SIGNATURE");
@@ -77,7 +78,7 @@ int hip_signaling_init(void)
     /* Handle Notifications */
     HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_NONE,        &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_UNASSOCIATED,&signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_UNASSOCIATED, &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT,     &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
@@ -96,17 +97,23 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_application_context, OUTBOUND_I2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
-	/* Add user context to I2 */
+    /* Add user context to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_user_context, OUTBOUND_I2_CREATE_USRINFO_PRIO),
-            -1, "Error on registering Signaling handle function.\n");
+             -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_user_context, OUTBOUND_I2_CREATE_USRINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
 
-	/* Add user signature to I2 */
+    /* Add user signature to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_user_signature, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_user_signature, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    /* Add user signature to I2 */
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_host_info, OUTBOUND_I2_CREATE_HOST_INFO_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_host_info, OUTBOUND_I2_CREATE_HOST_INFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add application context to in R2 */
@@ -171,5 +178,3 @@ int hip_signaling_init(void)
 out_err:
     return err;
 }
-
-
