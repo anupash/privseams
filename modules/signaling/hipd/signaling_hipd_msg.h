@@ -53,6 +53,7 @@ int signaling_handle_incoming_notification(const uint8_t packet_type, const uint
 int signaling_i2_add_application_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_i2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_i2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_host_info(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_application_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
