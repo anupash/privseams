@@ -59,11 +59,12 @@
 #define HIP_PARAM_SIGNALING_USERINFO            5004
 #define HIP_PARAM_SIGNALING_USER_REQ_S          5006
 #define HIP_PARAM_SIGNALING_CERT_CHAIN_ID       5008
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     5009
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
 #define HIP_PARAM_SIGNALING_USER_REQ_U          62502
-#define HIP_PARAM_SIGNALING_HOST_INFO_REQ       62504
-#define HIP_PARAM_SIGNALING_USER_INFO_REQ       62506
-#define HIP_PARAM_SIGNALING_APP_INFO_REQ        62508
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER_U     62504
+#define HIP_PARAM_SIGNALING_SERVICE_ACK         62507
+#define HIP_PARAM_SIGNALING_SERVICE_NACK        62508
 
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
@@ -124,7 +125,7 @@
  */
 #define MAX_INFO_LENGTH 200
 #define MAX_NUM_INFO_ITEMS 10
-
+#define MAX_NUM_SERVICE_OFFER_ACCEPTABLE 10
 /*
  * // Request types/ Profiles for host information
  * #define HOST_INFO_SHORT         30
@@ -171,27 +172,57 @@ enum flag_internal {
     HOST_AUTH_REQUEST = 2,
     HOST_AUTHED       = 3,
 
-    /*New flags for various request profiles*/
-    HOST_INFO_OS           = 4,
-    HOST_INFO_KERNEL       = 5,
-    HOST_INFO_NAME         = 6,
-    HOST_INFO_CERTS        = 7,
-    USER_SIGN              = 8,
-    USER_INFO_SHORT        = 9,
-    USER_INFO_LONG         = 10,
-    USER_INFO_SHORT_SIGNED = 11,
-    USER_INFO_LONG_SIGNED  = 12,
+    /*New flags to request for host informatin*/
+    HOST_INFO_OS     = 4,
+    HOST_INFO_KERNEL = 5,
+    HOST_INFO_ID     = 6,
+    HOST_INFO_CERTS  = 7,
+
+    /*New flags to request for user informatin*/
+    USER_INFO_ID    = 8,
+    USER_INFO_CERTS = 9,
+
+    /*New flags to request for user informatin*/
+    APP_INFO_NAME         = 10,
+    APP_INFO_QOS_CLASS    = 11,
+    APP_INFO_CONNECTIONS  = 12,
+    APP_INFO_REQUIREMENTS = 13,
 
     /*New flags checked on receiving a response for the request*/
-    HOST_INFO_OS_RECV           = 13,
-    HOST_INFO_KERNEL_RECV       = 14,
-    HOST_INFO_NAME_RECV         = 15,
-    HOST_INFO_CERTS_RECV        = 16,
-    USER_SIGN_RECV              = 17,
-    USER_INFO_SHORT_RECV        = 18,
-    USER_INFO_LONG_RECV         = 19,
-    USER_INFO_SHORT_SIGNED_RECV = 20,
-    USER_INFO_LONG_SIGNED_RECV  = 21
+    HOST_INFO_OS_RECV     = 14,
+    HOST_INFO_KERNEL_RECV = 15,
+    HOST_INFO_ID_RECV     = 16,
+    HOST_INFO_CERTS_RECV  = 17,
+
+    USER_INFO_ID_RECV    = 18,
+    USER_INFO_CERTS_RECV = 19,
+
+    APP_INFO_NAME_RECV         = 20,
+    APP_INFO_QOS_CLASS_RECV    = 21,
+    APP_INFO_CONNECTIONS_RECV  = 22,
+    APP_INFO_REQUIREMENTS_RECV = 23
+};
+
+enum flags_service_state {
+    SERVICE_OFFER = 0,
+    SERVICE_ACK   = 1,
+    SERVICE_NACK  = 2,
+
+    SERVICE_OFFER_RECV = 3,
+    SERVICE_ACK_RECV   = 4,
+    SERVICE_NACK_RECV  = 5
+};
+
+enum flags_service_options {
+    SERVICE_OPTION1 = 0,
+    SERVICE_OPTION2 = 1,
+    SERVICE_OPTION3 = 2,
+};
+
+enum flags_nack_reason {
+    SERVICE_REASON1 = 0,
+    SERVICE_REASON2 = 1,
+    SERVICE_REASON3 = 2,
 };
 
 enum profile_subtype{
@@ -202,6 +233,7 @@ enum profile_subtype{
     INFO_DN,
     INFO_PRR
 };
+
 enum flag_connection_reject {
     APPLICATION_BLOCKED = 1,
     USER_BLOCKED        = 2,
@@ -232,29 +264,46 @@ struct flags_connection_context{
     uint8_t USER_AUTHED;
     uint8_t HOST_AUTH_REQUEST;
     uint8_t HOST_AUTHED;
+};
 
+struct signaling_flags_service_info {
     uint8_t HOST_INFO_OS;
     uint8_t HOST_INFO_OS_RECV;
     uint8_t HOST_INFO_KERNEL;
     uint8_t HOST_INFO_KERNEL_RECV;
-    uint8_t HOST_INFO_NAME;
-    uint8_t HOST_INFO_NAME_RECV;
+    uint8_t HOST_INFO_ID;
+    uint8_t HOST_INFO_ID_RECV;
     uint8_t HOST_INFO_CERTS;
     uint8_t HOST_INFO_CERTS_RECV;
-    uint8_t USER_SIGN;
-    uint8_t USER_SIGN_RECV;
-    uint8_t USER_INFO_SHORT;
-    uint8_t USER_INFO_SHORT_RECV;
-    uint8_t USER_INFO_LONG;
-    uint8_t USER_INFO_LONG_RECV;
+
+    uint8_t USER_INFO_ID;
+    uint8_t USER_INFO_ID_RECV;
     uint8_t USER_INFO_CERTS;
     uint8_t USER_INFO_CERTS_RECV;
-    uint8_t USER_INFO_SHORT_SIGNED;
-    uint8_t USER_INFO_SHORT_SIGNED_RECV;
-    uint8_t USER_INFO_LONG_SIGNED;
-    uint8_t USER_INFO_LONG_SIGNED_RECV;
+
+    uint8_t APP_INFO_NAME;
+    uint8_t APP_INFO_NAME_RECV;
+    uint8_t APP_INFO_QOS_CLASS;
+    uint8_t APP_INFO_QOS_CLASS_RECV;
+    uint8_t APP_INFO_CONNECTIONS;
+    uint8_t APP_INFO_CONNECTIONS_RECV;
+    uint8_t APP_INFO_REQUIREMENTS;
+    uint8_t APP_INFO_REQUIREMENTS_RECV;
 };
 
+
+/*
+ * FLags to keep track of the state of services offered and received
+ */
+struct signaling_flags_service_state {
+    uint8_t SERVICE_OFFER;
+    uint8_t SERVICE_ACK;
+    uint8_t SERVICE_NACK;
+
+    uint8_t SERVICE_OFFER_RECV;
+    uint8_t SERVICE_ACK_RECV;
+    uint8_t SERIVCE_NACK_RECV;
+};
 
 /*
  * Data structure to store the values of the various information requests
@@ -486,7 +535,7 @@ struct signaling_param_app_context {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |            Profile            |       Number of Items         |
+ * |            Reserved           |       Number of Items         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |        INFO_KERNEL            |      Length of the Info       |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -508,18 +557,274 @@ struct signaling_param_app_context {
  *  for more information
  */
 
-
 struct signaling_param_host_context {
     hip_tlv          type;
     hip_tlv_len      length;
+    uint16_t         reserved;
     uint16_t         num_items;
     struct info_item items[MAX_NUM_INFO_ITEMS];
 } __attribute__((packed));
 
 
+
 /*
- *   Parameter to request for Host Information in brief.
- *   The parameter contains Network Identifier and a profile type.
+ *   Parameter in response for the information request about host identity in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |        HOST_INFO_ID           |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           HI Length           | DI - Type     | DI - Length   |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                        Host Identity                          /
+ * +                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                               |        Domain - Identifier    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+               +-+-+-+-+-+-+-+-+
+ * /                                               |     Padding   |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_host_info_id {
+    hip_tlv     type;
+    hip_tlv_len length;
+    hip_tlv_len host_id_length;
+    uint8_t     domain_id_type;
+    uint8_t     domain_id_length;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for the information request about kernel in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      HOST_INFO_KERNEL         |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    Length Kernel Version                      /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_host_info_kernel {
+    hip_tlv     type;
+    hip_tlv_len length;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for certificate information of the host in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      HOST_INFO_CERTS          |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                       Certificate Group                       /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+struct signaling_param_host_info_certs {
+    hip_tlv     type;
+    hip_tlv_len length;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for certificate information of the host in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      HOST_INFO_OS             |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                       Operating System                        /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                          OS Version                           /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+struct signaling_param_host_info_kernel {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    os;
+    uint32_t    os_version;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for the information request about user identity in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          USER_INFO_ID         |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |        USER DN Length         |            PRR Length         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |         Flags                 |   Protocol    |  Algorithm    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                              ...                              /
+ * /                           Public Key                          /
+ * /                        ( Variable Length )                    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                                                               /
+ * /                    X.509 Subject Length                       /
+ * /                             ...                -+-+-+-+-+-+-+-+
+ * /                                                |  Padding     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_user_info_id {
+    hip_tlv     type;
+    hip_tlv_len length;
+    hip_tlv_len user_dn_length;
+    hip_tlv_len prr_length;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for certificate information of the user in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      USER_INFO_CERTS          |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                       Certificate Group                       /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_user_info_certs {
+    hip_tlv     type;
+    hip_tlv_len length;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter in response for name information of the application in the endpoint
+ *   Responds with both the distinguished name of the application
+ *   and the distinguished name of the issuer
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      APP_INFO_NAME            |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |    Length Application DN      |        Length Issuer DN       /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          X.500 Distinguished Name of the Application          /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             X.500 Distinguished Name of the Issuer            /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      Version of the application               /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_app_info_name {
+    hip_tlv     type;
+    hip_tlv_len length;
+    hip_tlv_len app_dn_length;
+    hip_tlv_len issuer_dn_length;
+} __attribute__((packed));
+
+
+
+/*
+ *   Parameter in response for connection information of the application in the endpoint
+ *   Responds with the connection count and the port-pairs
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |     APP_INFO_CONNECTIONS      |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |        Connection Count       |        Length Port Pair       /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                        Port Pair <0>                          /
+ * /                        Port Pair <1>                          /
+ * /                              ...                              /
+ * /                        Port Pair <n>                          /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_app_info_connections {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    connection_count;
+    hip_tlv_len port_pair_length;
+} __attribute__((packed));
+
+
+
+/*
+ *   Parameter in response for certificate information of the user in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       APP_INFO_QOS_CLASS      |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                             Class                             /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_app_info_qos_class {
+    hip_tlv     type;
+    hip_tlv_len length;
+} __attribute__((packed));
+
+
+
+/*
+ *   Parameter in response for certificate information of the user in the endpoint
+ *
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |     APP_INFO_REQUIREMENTS     |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                          Requirements                         /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_app_info_requirements {
+    hip_tlv     type;
+    hip_tlv_len length;
+} __attribute__((packed));
+
+
+
+/*
+ *   Parameter for the middlebox to offer services
+ *   The parameter contains Service Offer Identifier, Service Type and Service Description
+ *   Also contains the information parameters requested by the middlebox
  *   All integers are in network byte order.
  *
  * 0                   1                   2                   3
@@ -527,18 +832,82 @@ struct signaling_param_host_context {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                      Network Identifier                       |
+ * |       SERVICE_OFFER_ID        |          SERVICE_TYPE         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |         INFO_ITEM             |         INFO_ITEM             |
+ * |                          SERVICE_DESCRIPTION                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       ENDPOINT_INFO_REQ       |              ...              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                              ...                              /
+ * /                              ...                              /
+ * /                              ...                              /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
  */
-struct signaling_param_host_info_request {
+
+struct signaling_param_service_offer_u {
     hip_tlv     type;
     hip_tlv_len length;
-    uint32_t    network_id;
-    uint16_t    info_items[MAX_NUM_INFO_ITEMS];
+    uint16_t    service_offer_id;
+    uint16_t    service_type;
+    uint32_t    service_description;
+    uint16_t    endpoint_info_req[MAX_NUM_INFO_ITEMS];
 } __attribute__((packed));
 
+
+
+/*
+ *   Parameter for acknowledging the Service Offer from middlebox
+ *   The parameter contains Service Offer Identifier and Service Options
+ *   Also contains the hash of the service offer
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       SERVICE_OFFER_ID        |          SERVICE_OPTION       |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               /
+ * /                         SERVICE_OFFER_HASH                    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_service_ack {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    service_offer_id;
+    uint16_t    service_type;
+} __attribute__((packed));
+
+
+/*
+ *   Parameter for not accepting the Service Offer from middlebox
+ *   The parameter contains Service Offer Identifier and reason for the NACK
+ *   Also contains the hash of the service offer
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       SERVICE_OFFER_ID        |           NACK_REASON         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               /
+ * /                         SERVICE_OFFER_HASH                    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_service_nack {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    service_offer_id;
+    uint16_t    nack_reason;
+} __attribute__((packed));
 
 
 /* ------------------------------------------------------------------------------------
@@ -607,15 +976,35 @@ struct signaling_host_context {
     int      host_os_len;
     long int host_certs_len;
 
-    /*Must for Short Info HOST_INFO_SHORT*/
     char host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-
-    /* Host Name. Must for Long Info HOST_INFO_LONG*/
     char host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-
-    /*Host certificates HOST_INFO_CERTS*/
     char host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
+};
+
+
+
+/*
+ * Internal representation of a service offer sent
+ */
+struct signaling_services_context {
+    uint16_t                             service_offer_id;
+    uint16_t                             service_type;
+    uint32_t                             service_description;
+    uint8_t                              service_options;
+    struct signaling_flags_service_state flag_services;
+    struct signaling_flags_service_info  flag_info_requests;
+    uint8_t                              nack_reason;
+};
+
+
+/*
+ * Internal representation to store the services offered or the services received
+ */
+struct signaling_service_container {
+    int                                 num_items;
+    struct signaling_flags_service_info service_flags;
+    struct signaling_services_context   services[MAX_NUM_SERVICE_OFFER_ACCEPTABLE];
 };
 
 
@@ -635,8 +1024,68 @@ struct signaling_connection_context {
     struct signaling_application_context app;
     struct signaling_user_context        user;
     struct signaling_host_context        host;
+    struct signaling_service_container   service;
     struct userdb_user_entry            *userdb_entry;
 };
+
+
+/*
+ *   Internal representation of a service offer
+ *
+ *   Use signaling_init_host_context() to initialize this structure.
+ *
+ *   All integers are in host-byte-order.
+ */
+struct signaling_service_offer {
+    uint16_t service_offer_id;
+    uint16_t service_type;
+    uint32_t service_description;
+    uint16_t endpoint_info_req[MAX_NUM_INFO_ITEMS];
+};
+
+
+/*
+ *   Internal representation of a service ack
+ *
+ *   Use signaling_init_host_context() to initialize this structure.
+ *
+ *   All integers are in host-byte-order.
+ */
+struct signaling_service_ack {
+    uint16_t service_offer_id;
+    uint16_t service_option;
+    char     service_offer_hash[];
+};
+
+
+/*
+ *   Internal representation of a service nack
+ *
+ *   Use signaling_init_host_context() to initialize this structure.
+ *
+ *   All integers are in host-byte-order.
+ */
+struct signaling_service_nack {
+    uint16_t service_offer_id;
+    uint16_t nack_reason;
+    char     service_offer_hash[];
+};
+
+
+/*
+ *   Internal representation of a service ack
+ *
+ *   Use signaling_init_host_context() to initialize this structure.
+ *
+ *   All integers are in host-byte-order.
+ */
+struct signaling_service_offer {
+    uint16_t service_offer_id;
+    uint16_t service_type;
+    uint32_t service_description;
+    uint16_t endpoint_info_req[MAX_NUM_INFO_ITEMS];
+};
+
 
 /**
  *   Internal representation of context information for a bidirectional connection.
@@ -718,12 +1167,25 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn);
+
 int signaling_flag_check_auth_complete(struct flags_connection_context flags);
 void signaling_flags_print(struct flags_connection_context flags, const char *const prefix);
 int signaling_flag_check(struct flags_connection_context flags, int f);
 void signaling_flag_set(struct flags_connection_context *flags, int f);
 void signaling_flag_unset(struct flags_connection_context *flags, int f);
 void signaling_flag_init(struct flags_connection_context *flags);
+
+void signaling_service_state_flags_print(struct signaling_flags_service_state flags, const char *const prefix);
+int signaling_service_state_flag_check(struct signaling_flags_service_state flags, int f);
+void signaling_service_state_flag_set(struct signaling_flags_service_state *flags, int f);
+void signaling_service_state_flag_unset(struct signaling_flags_service_state *flags, int f);
+void signaling_service_state_flag_init(struct signaling_flags_service_state *flags);
+
+void signaling_service_info_flags_print(struct signaling_flags_service_info flags, const char *const prefix);
+int signaling_service_info_flag_check(struct signaling_flags_service_info flags, int f);
+void signaling_service_info_flag_set(struct signaling_flags_service_info *flags, int f);
+void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f);
+void signaling_service_info_flag_init(struct signaling_flags_service_info *flags);
 
 
 /* Misc */
