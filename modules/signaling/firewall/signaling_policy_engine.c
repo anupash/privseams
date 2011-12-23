@@ -237,7 +237,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             strncpy(entry->user.user_id, user_id, SIGNALING_USER_ID_MAX_LEN - 1);
             entry->user.user_id[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
             /*Request for USER_INFO_SHORT*/
-            policy_decision_set(&entry->target, POLICY_USER_INFO_SHORT);
+            policy_decision_set(&entry->target, POLICY_USER_INFO_ID);
         }
     }
 
@@ -555,7 +555,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
         policy_decision_set(&ret.target, POLICY_HOST_INFO_OS);
     }
     if (strlen(tuple_match->host.host_name) > 0) {
-        policy_decision_set(&ret.target, POLICY_HOST_INFO_NAME);
+        policy_decision_set(&ret.target, POLICY_HOST_INFO_ID);
     }
     if (strlen(tuple_match->host.host_certs) > 0) {
         policy_decision_set(&ret.target, POLICY_HOST_INFO_CERTS);
@@ -596,6 +596,7 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
     } else {
         HIP_DEBUG("Connection request will be accepted by local policy if further authentication is effectuated: \n");
         /* Set those flags for which we need no user authentication */
+
         if (!policy_decision_check(req_auth_tuple.target, POLICY_USER_AUTH_REQUIRED)) {
             signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
         } else {
@@ -612,29 +613,33 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
             signaling_flag_set(&conn_ctx->flags, HOST_AUTH_REQUEST);
         }
 
-        /* Requesting for additional information from host based on the firewall policy*/
+        /*
+         * Making service offers here
+         * Requesting for additional information from host based on the firewall policy
+         */
         if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_OS)) {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_OS);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_OS);
         } else {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_OS_RECV);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_OS_RECV);
         }
 
         if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_KERNEL)) {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_KERNEL);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_KERNEL);
         } else {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_KERNEL_RECV);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_KERNEL_RECV);
         }
 
-        if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_NAME)) {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_NAME);
+        if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_ID)) {
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_ID);
         } else {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_NAME_RECV);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_ID_RECV);
         }
 
         if (policy_decision_check(req_auth_tuple.target, POLICY_HOST_INFO_CERTS)) {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_CERTS);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_CERTS);
         } else {
-            signaling_flag_set(&conn_ctx->flags, HOST_INFO_CERTS_RECV);
+            signaling_service_info_flag_set(&conn_ctx->service.service_flags, HOST_INFO_CERTS_RECV);
+            ;
         }
 
         return 0;
@@ -704,28 +709,30 @@ void policy_decision_set(struct policy_decision *flags, int f)
     case POLICY_HOST_INFO_KERNEL:
         flags->POLICY_HOST_INFO_KERNEL = 1;
         break;
-    case POLICY_HOST_INFO_NAME:
-        flags->POLICY_HOST_INFO_NAME = 1;
+    case POLICY_HOST_INFO_ID:
+        flags->POLICY_HOST_INFO_ID = 1;
         break;
     case POLICY_HOST_INFO_CERTS:
         flags->POLICY_HOST_INFO_CERTS = 1;
         break;
-    case POLICY_USER_SIGN:
-        flags->POLICY_USER_SIGN = 1;
+    case POLICY_USER_INFO_ID:
+        flags->POLICY_USER_INFO_ID = 1;
         break;
-    case POLICY_USER_INFO_SHORT:
-        flags->POLICY_USER_INFO_SHORT = 1;
+    case POLICY_USER_INFO_CERTS:
+        flags->POLICY_USER_INFO_CERTS = 1;
         break;
-    case POLICY_USER_INFO_LONG:
-        flags->POLICY_USER_INFO_LONG = 1;
+    case POLICY_APP_INFO_NAME:
+        flags->POLICY_APP_INFO_NAME = 1;
         break;
-    case POLICY_USER_INFO_SHORT_SIGNED:
-        flags->POLICY_USER_INFO_SHORT_SIGNED = 1;
+    case POLICY_APP_INFO_QOS_CLASS:
+        flags->POLICY_APP_INFO_QOS_CLASS = 1;
         break;
-    case POLICY_USER_INFO_LONG_SIGNED:
-        flags->POLICY_USER_INFO_LONG_SIGNED = 1;
+    case POLICY_APP_INFO_CONNECTIONS:
+        flags->POLICY_APP_INFO_QOS_CLASS = 1;
         break;
-
+    case POLICY_APP_INFO_CONNECTIONS:
+        flags->POLICY_APP_INFO_REQUIREMENTS = 1;
+        break;
     default:
         break;
     }
@@ -755,28 +762,30 @@ void policy_decision_unset(struct policy_decision *flags, int f)
     case POLICY_HOST_INFO_KERNEL:
         flags->POLICY_HOST_INFO_KERNEL = 0;
         break;
-    case POLICY_HOST_INFO_NAME:
-        flags->POLICY_HOST_INFO_NAME = 0;
+    case POLICY_HOST_INFO_ID:
+        flags->POLICY_HOST_INFO_ID = 1;
         break;
     case POLICY_HOST_INFO_CERTS:
         flags->POLICY_HOST_INFO_CERTS = 0;
         break;
-    case POLICY_USER_SIGN:
-        flags->POLICY_USER_SIGN = 0;
+    case POLICY_USER_INFO_ID:
+        flags->POLICY_USER_INFO_ID = 1;
         break;
-    case POLICY_USER_INFO_SHORT:
-        flags->POLICY_USER_INFO_SHORT = 0;
+    case POLICY_USER_INFO_CERTS:
+        flags->POLICY_USER_INFO_CERTS = 1;
         break;
-    case POLICY_USER_INFO_LONG:
-        flags->POLICY_USER_INFO_LONG = 0;
+    case POLICY_APP_INFO_NAME:
+        flags->POLICY_APP_INFO_NAME = 1;
         break;
-    case POLICY_USER_INFO_SHORT_SIGNED:
-        flags->POLICY_USER_INFO_SHORT_SIGNED = 0;
+    case POLICY_APP_INFO_QOS_CLASS:
+        flags->POLICY_APP_INFO_QOS_CLASS = 1;
         break;
-    case POLICY_USER_INFO_LONG_SIGNED:
-        flags->POLICY_USER_INFO_LONG_SIGNED = 0;
+    case POLICY_APP_INFO_CONNECTIONS:
+        flags->POLICY_APP_INFO_QOS_CLASS = 1;
         break;
-
+    case POLICY_APP_INFO_CONNECTIONS:
+        flags->POLICY_APP_INFO_REQUIREMENTS = 1;
+        break;
     default:
         break;
     }
@@ -784,21 +793,21 @@ void policy_decision_unset(struct policy_decision *flags, int f)
 
 void policy_decision_init(struct policy_decision *flags)
 {
-    flags->POLICY_ACCEPT                 = 0;
-    flags->POLICY_REJECT                 = 0;
-    flags->POLICY_USER_AUTH_REQUIRED     = 0;
-    flags->POLICY_HOST_AUTH_REQUIRED     = 0;
-    flags->POLICY_APP_AUTH_REQUIRED      = 0;
-    flags->POLICY_HOST_INFO_OS           = 0;
-    flags->POLICY_HOST_INFO_KERNEL       = 0;
-    flags->POLICY_HOST_INFO_NAME         = 0;
-    flags->POLICY_HOST_INFO_CERTS        = 0;
-    flags->POLICY_USER_SIGN              = 0;
-    flags->POLICY_USER_INFO_SHORT        = 0;
-    flags->POLICY_USER_INFO_LONG         = 0;
-    flags->POLICY_USER_INFO_CERTS        = 0;
-    flags->POLICY_USER_INFO_SHORT_SIGNED = 0;
-    flags->POLICY_USER_INFO_LONG_SIGNED  = 0;
+    flags->POLICY_ACCEPT                = 0;
+    flags->POLICY_REJECT                = 0;
+    flags->POLICY_USER_AUTH_REQUIRED    = 0;
+    flags->POLICY_HOST_AUTH_REQUIRED    = 0;
+    flags->POLICY_APP_AUTH_REQUIRED     = 0;
+    flags->POLICY_HOST_INFO_OS          = 0;
+    flags->POLICY_HOST_INFO_KERNEL      = 0;
+    flags->POLICY_HOST_INFO_ID          = 0;
+    flags->POLICY_HOST_INFO_CERTS       = 0;
+    flags->POLICY_USER_INFO_ID          = 0;
+    flags->POLICY_USER_INFO_CERTS       = 0;
+    flags->POLICY_APP_INFO_NAME         = 0;
+    flags->POLICY_APP_INFO_QOS_CLASS    = 0;
+    flags->POLICY_APP_INFO_CONNECTIONS  = 0;
+    flags->POLICY_APP_INFO_REQUIREMENTS = 0;
 }
 
 int policy_decision_check(struct policy_decision flags, int f)
@@ -825,26 +834,29 @@ int policy_decision_check(struct policy_decision flags, int f)
     case POLICY_HOST_INFO_KERNEL:
         return (flags.POLICY_HOST_INFO_KERNEL) ? 1 : 0;
         break;
-    case POLICY_HOST_INFO_NAME:
-        return (flags.POLICY_HOST_INFO_NAME) ? 1 : 0;
+    case POLICY_HOST_INFO_ID:
+        return (flags.POLICY_HOST_INFO_ID) ? 1 : 0;
         break;
     case POLICY_HOST_INFO_CERTS:
         return (flags.POLICY_HOST_INFO_CERTS) ? 1 : 0;
         break;
-    case POLICY_USER_SIGN:
-        return (flags.POLICY_USER_SIGN) ? 1 : 0;
+    case POLICY_USER_INFO_ID:
+        return (flags.POLICY_USER_INFO_ID) ? 1 : 0;
         break;
-    case POLICY_USER_INFO_SHORT:
-        return (flags.POLICY_USER_INFO_SHORT) ? 1 : 0;
+    case POLICY_USER_INFO_CERTS:
+        return (flags.POLICY_USER_INFO_CERTS) ? 1 : 0;
         break;
-    case POLICY_USER_INFO_LONG:
-        return (flags.POLICY_USER_INFO_LONG) ? 1 : 0;
+    case POLICY_APP_INFO_REQUIREMENTS:
+        return (flags.POLICY_APP_INFO_REQUIREMENTS) ? 1 : 0;
         break;
-    case POLICY_USER_INFO_SHORT_SIGNED:
-        return (flags.POLICY_USER_INFO_SHORT_SIGNED) ? 1 : 0;
+    case POLICY_APP_INFO_QOS_CLASS:
+        return (flags.POLICY_APP_INFO_QOS_CLASS) ? 1 : 0;
         break;
-    case POLICY_USER_INFO_LONG_SIGNED:
-        return (flags.POLICY_USER_INFO_LONG_SIGNED) ? 1 : 0;
+    case POLICY_APP_INFO_CONNECTIONS:
+        return (flags.POLICY_APP_INFO_CONNECTIONS) ? 1 : 0;
+        break;
+    case POLICY_APP_INFO_CONNECTIONS:
+        return (flags.POLICY_APP_INFO_CONNECTIONS) ? 1 : 0;
         break;
     default:
         return 0;
