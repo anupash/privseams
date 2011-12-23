@@ -449,6 +449,18 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     ctx_to_init->direction = dir;
 
 
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
+    while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
+        signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
+        param = hip_get_next_param(*msg, *param);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
+    while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_S) {
+        signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
+        param = hip_get_next_param(*msg, *param);
+    }
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
@@ -460,10 +472,6 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
         signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
     }
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_REQ);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_REQ) {
-        signaling_build_host_context((const struct signaling_param_host_context *) param, &ctx_to_init->host);
-    }
 out_err:
     return err;
 }
@@ -618,8 +626,8 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
                  -1, "Could not init user context from user ctx parameter \n");
     }
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_REQ);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_REQ) {
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
         HIP_IFEL(signaling_build_host_context((const struct signaling_param_host_context *) param,
                                               &ctx->host),
                  -1, "Could not init host context from host ctx parameter \n");
@@ -651,8 +659,13 @@ int signaling_copy_connection_context(struct signaling_connection_context *const
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn)
 {
-    int                                             err = 0;
+    int                                             err      = 0;
+    int                                             tmp_len  = 0;
+    uint16_t                                        tmp_info = -1;
+    int                                             i        = 0;
     const struct signaling_param_user_auth_request *param_usr_auth;
+    const struct signaling_param_host_info_request *param_host_info;
+    const uint8_t                                  *p_contents;
 
     /* sanity checks */
     HIP_IFEL(!conn,           -1, "Cannot update flags of NULL-connection\n");
@@ -672,6 +685,30 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
       //  signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
       //}
 
+    if ((param_host_info = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U))) {
+        tmp_len    = param_host_info->length;
+        tmp_len    = (tmp_len - sizeof(param_host_info->network_id)) / sizeof(param_host_info->info_items[0]);
+        p_contents = (const uint8_t *) param_host_info + sizeof(hip_tlv) + sizeof(hip_tlv_len) + sizeof(param_host_info->network_id);
+        for (i = 0; i < tmp_len; i++) {
+            memcpy(&tmp_info, p_contents, sizeof(param_host_info->info_items[i]));
+            switch (tmp_info) {
+            case INFO_KERNEL:
+                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_KERNEL);
+                break;
+            case INFO_OS:
+                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_OS);
+                break;
+            case INFO_NAME:
+                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_ID);
+                break;
+            case INFO_CERTS:
+                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_CERTS);
+                break;
+            default:
+                break;
+            }
+        }
+    }
 out_err:
     return err;
 }
@@ -725,62 +762,6 @@ int signaling_flag_check(struct flags_connection_context flags, int f)
         return (flags.HOST_AUTHED) ? 1 : 0;
         break;
 
-    case HOST_INFO_OS:
-        return (flags.HOST_INFO_OS) ? 1 : 0;
-        break;
-    case HOST_INFO_KERNEL:
-        return (flags.HOST_INFO_KERNEL) ? 1 : 0;
-        break;
-    case HOST_INFO_NAME:
-        return (flags.HOST_INFO_NAME) ? 1 : 0;
-        break;
-    case HOST_INFO_CERTS:
-        return (flags.HOST_INFO_CERTS) ? 1 : 0;
-        break;
-    case USER_SIGN:
-        return (flags.USER_SIGN) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT:
-        return (flags.USER_INFO_SHORT) ? 1 : 0;
-        break;
-    case USER_INFO_LONG:
-        return (flags.USER_INFO_LONG) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT_SIGNED:
-        return (flags.USER_INFO_SHORT_SIGNED) ? 1 : 0;
-        break;
-    case USER_INFO_LONG_SIGNED:
-        return (flags.USER_INFO_LONG_SIGNED) ? 1 : 0;
-        break;
-
-    case HOST_INFO_OS_RECV:
-        return (flags.HOST_INFO_OS_RECV) ? 1 : 0;
-        break;
-    case HOST_INFO_KERNEL_RECV:
-        return (flags.HOST_INFO_KERNEL_RECV) ? 1 : 0;
-        break;
-    case HOST_INFO_NAME_RECV:
-        return (flags.HOST_INFO_NAME_RECV) ? 1 : 0;
-        break;
-    case HOST_INFO_CERTS_RECV:
-        return (flags.HOST_INFO_CERTS_RECV) ? 1 : 0;
-        break;
-    case USER_SIGN_RECV:
-        return (flags.USER_SIGN_RECV) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT_RECV:
-        return (flags.USER_INFO_SHORT_RECV) ? 1 : 0;
-        break;
-    case USER_INFO_LONG_RECV:
-        return (flags.USER_INFO_LONG_RECV) ? 1 : 0;
-        break;
-    case USER_INFO_SHORT_SIGNED_RECV:
-        return (flags.USER_INFO_SHORT_SIGNED_RECV) ? 1 : 0;
-        break;
-    case USER_INFO_LONG_SIGNED_RECV:
-        return (flags.USER_INFO_LONG_SIGNED_RECV) ? 1 : 0;
-        break;
-
     default:
         return 0;
         break;
@@ -807,60 +788,6 @@ void signaling_flag_set(struct flags_connection_context *flags, int f)
     case HOST_AUTHED:
         flags->HOST_AUTHED = 1;
         break;
-
-    case HOST_INFO_OS:
-        flags->HOST_INFO_OS = 1;
-        break;
-    case HOST_INFO_KERNEL:
-        flags->HOST_INFO_KERNEL = 1;
-        break;
-    case HOST_INFO_NAME:
-        flags->HOST_INFO_NAME = 1;
-        break;
-    case HOST_INFO_CERTS:
-        flags->HOST_INFO_CERTS = 1;
-        break;
-    case USER_SIGN:
-        flags->USER_SIGN = 1;
-        break;
-    case USER_INFO_SHORT:
-        flags->USER_INFO_SHORT = 1;
-        break;
-    case USER_INFO_LONG:
-        flags->USER_INFO_LONG = 1;
-        break;
-    case USER_INFO_SHORT_SIGNED:
-        flags->USER_INFO_SHORT_SIGNED = 1;
-        break;
-    case USER_INFO_LONG_SIGNED:
-        flags->USER_INFO_LONG_SIGNED = 1;
-        break;
-
-    case HOST_INFO_OS_RECV:
-        flags->HOST_INFO_OS_RECV = 1;
-        break;
-    case HOST_INFO_KERNEL_RECV:
-        flags->HOST_INFO_KERNEL_RECV = 1;
-        break;
-    case HOST_INFO_CERTS_RECV:
-        flags->HOST_INFO_CERTS_RECV = 1;
-        break;
-    case USER_SIGN_RECV:
-        flags->USER_SIGN_RECV = 1;
-        break;
-    case USER_INFO_SHORT_RECV:
-        flags->USER_INFO_SHORT_RECV = 1;
-        break;
-    case USER_INFO_LONG_RECV:
-        flags->USER_INFO_LONG_RECV = 1;
-        break;
-    case USER_INFO_SHORT_SIGNED_RECV:
-        flags->USER_INFO_SHORT_SIGNED_RECV = 1;
-        break;
-    case USER_INFO_LONG_SIGNED_RECV:
-        flags->USER_INFO_LONG_SIGNED_RECV = 1;
-        break;
-
     default:
         break;
     }
@@ -892,32 +819,198 @@ void signaling_flag_unset(struct flags_connection_context *flags, int f)
         flags->HOST_AUTHED = 0;
         break;
 
+    default:
+        break;
+    }
+}
+
+void signaling_flag_init(struct flags_connection_context *flags)
+{
+    flags->USER_AUTH_REQUEST = 0;
+    flags->USER_AUTHED       = 0;
+    flags->HOST_AUTH_REQUEST = 0;
+    flags->HOST_AUTHED       = 0;
+}
+
+void signaling_service_info_flags_print(struct signaling_flags_service_info *flags, const char *const prefix)
+{
+    char buf[100];
+    memset(buf, 0, sizeof(buf));
+
+    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_flag_check(flags, SERVICE_OFFER));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_flag_check(flags, SERVICE_NACK));
+
+    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_flag_check(flags, SERVICE_OFFER_RECV));
+    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_flag_check(flags, SERVICE_ACK_RECV));
+
+    HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
+}
+
+int signaling_service_info_flag_check(struct signaling_flags_service_info flags, int f)
+{
+    switch (f) {
+    case HOST_INFO_OS:
+        return (flags.HOST_INFO_OS) ? 1 : 0;
+        break;
+    case HOST_INFO_KERNEL:
+        return (flags.HOST_INFO_KERNEL) ? 1 : 0;
+        break;
+    case HOST_INFO_ID:
+        return (flags.HOST_INFO_ID) ? 1 : 0;
+        break;
+    case HOST_INFO_CERTS:
+        return (flags.HOST_INFO_CERTS) ? 1 : 0;
+        break;
+    case USER_INFO_ID:
+        return (flags.USER_INFO_ID) ? 1 : 0;
+        break;
+    case USER_INFO_CERTS:
+        return (flags.USER_INFO_CERTS) ? 1 : 0;
+        break;
+    case APP_INFO_NAME:
+        return (flags.APP_INFO_NAME) ? 1 : 0;
+        break;
+    case APP_INFO_QOS_CLASS:
+        return (flags.APP_INFO_QOS_CLASS) ? 1 : 0;
+        break;
+    case APP_INFO_CONNECTIONS:
+        return (flags.APP_INFO_CONNECTIONS) ? 1 : 0;
+        break;
+    case APP_INFO_REQUIREMENTS:
+        return (flags.APP_INFO_REQUIREMENTS) ? 1 : 0;
+        break;
+
+    case HOST_INFO_OS_RECV:
+        return (flags.HOST_INFO_OS_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_KERNEL_RECV:
+        return (flags.HOST_INFO_KERNEL_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_ID_RECV:
+        return (flags.HOST_INFO_ID_RECV) ? 1 : 0;
+        break;
+    case HOST_INFO_CERTS_RECV:
+        return (flags.HOST_INFO_CERTS_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_ID_RECV:
+        return (flags.USER_INFO_ID_RECV) ? 1 : 0;
+        break;
+    case USER_INFO_CERTS_RECV:
+        return (flags.USER_INFO_CERTS_RECV) ? 1 : 0;
+        break;
+    case APP_INFO_NAME_RECV:
+        return (flags.APP_INFO_NAME_RECV) ? 1 : 0;
+        break;
+    case APP_INFO_QOS_CLASS_RECV:
+        return (flags.APP_INFO_QOS_CLASS_RECV) ? 1 : 0;
+        break;
+    case APP_INFO_CONNECTIONS_RECV:
+        return (flags.APP_INFO_CONNECTIONS_RECV) ? 1 : 0;
+        break;
+    case APP_INFO_REQUIREMENTS_RECV:
+        return (flags.APP_INFO_REQUIREMENTS_RECV) ? 1 : 0;
+        break;
+    }
+}
+
+void signaling_service_info_flag_set(struct signaling_flags_service_info *flags, int f)
+{
+    switch (f) {
+    case HOST_INFO_OS:
+        flags->HOST_INFO_OS = 1;
+        break;
+    case HOST_INFO_KERNEL:
+        flags->HOST_INFO_KERNEL = 1;
+        break;
+    case HOST_INFO_ID:
+        flags->HOST_INFO_ID = 1;
+        break;
+    case HOST_INFO_CERTS:
+        flags->HOST_INFO_CERTS = 1;
+        break;
+    case USER_INFO_ID:
+        flags->USER_INFO_ID = 1;
+        break;
+    case USER_INFO_CERTS:
+        flags->USER_INFO_CERTS = 1;
+        break;
+    case APP_INFO_NAME:
+        flags->APP_INFO_NAME = 1;
+        break;
+    case APP_INFO_QOS_CLASS:
+        flags->APP_INFO_QOS_CLASS = 1;
+        break;
+    case APP_INFO_CONNECTIONS:
+        flags->APP_INFO_CONNECTIONS = 1;
+        break;
+    case APP_INFO_REQUIREMENTS:
+        flags->APP_INFO_REQUIREMENTS = 1;
+        break;
+
+    case HOST_INFO_OS_RECV:
+        flags->HOST_INFO_OS_RECV = 1;
+        break;
+    case HOST_INFO_KERNEL_RECV:
+        flags->HOST_INFO_KERNEL_RECV = 1;
+        break;
+    case HOST_INFO_CERTS_RECV:
+        flags->HOST_INFO_CERTS_RECV = 1;
+        break;
+    case USER_INFO_ID_RECV:
+        flags->USER_INFO_ID_RECV = 1;
+        break;
+    case USER_INFO_CERTS_RECV:
+        flags->USER_INFO_CERTS_RECV = 1;
+        break;
+    case APP_INFO_NAME_RECV:
+        flags->APP_INFO_NAME_RECV = 1;
+        break;
+    case APP_INFO_QOS_CLASS_RECV:
+        flags->APP_INFO_QOS_CLASS_RECV = 1;
+        break;
+    case APP_INFO_CONNECTIONS_RECV:
+        flags->APP_INFO_CONNECTIONS_RECV = 1;
+        break;
+    case APP_INFO_REQUIREMENTS_RECV:
+        flags->APP_INFO_REQUIREMENTS_RECV = 1;
+        break;
+    }
+}
+
+void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f)
+{
+    switch (f) {
     case HOST_INFO_OS:
         flags->HOST_INFO_OS = 0;
         break;
     case HOST_INFO_KERNEL:
         flags->HOST_INFO_KERNEL = 0;
         break;
-    case HOST_INFO_NAME:
-        flags->HOST_INFO_NAME = 0;
+    case HOST_INFO_ID:
+        flags->HOST_INFO_ID = 0;
         break;
     case HOST_INFO_CERTS:
         flags->HOST_INFO_CERTS = 0;
         break;
-    case USER_SIGN:
-        flags->USER_SIGN = 0;
+    case USER_INFO_ID:
+        flags->USER_INFO_ID = 0;
         break;
-    case USER_INFO_SHORT:
-        flags->USER_INFO_SHORT = 0;
+    case USER_INFO_CERTS:
+        flags->USER_INFO_CERTS = 0;
         break;
-    case USER_INFO_LONG:
-        flags->USER_INFO_LONG = 0;
+    case APP_INFO_NAME:
+        flags->APP_INFO_NAME = 0;
         break;
-    case USER_INFO_SHORT_SIGNED:
-        flags->USER_INFO_SHORT_SIGNED = 0;
+    case APP_INFO_QOS_CLASS:
+        flags->APP_INFO_QOS_CLASS = 0;
         break;
-    case USER_INFO_LONG_SIGNED:
-        flags->USER_INFO_LONG_SIGNED = 0;
+    case APP_INFO_CONNECTIONS:
+        flags->APP_INFO_CONNECTIONS = 0;
+        break;
+    case APP_INFO_REQUIREMENTS:
+        flags->APP_INFO_REQUIREMENTS = 0;
         break;
 
     case HOST_INFO_OS_RECV:
@@ -926,55 +1019,153 @@ void signaling_flag_unset(struct flags_connection_context *flags, int f)
     case HOST_INFO_KERNEL_RECV:
         flags->HOST_INFO_KERNEL_RECV = 0;
         break;
-    case HOST_INFO_NAME_RECV:
-        flags->HOST_INFO_NAME_RECV = 0;
-        break;
     case HOST_INFO_CERTS_RECV:
         flags->HOST_INFO_CERTS_RECV = 0;
         break;
-    case USER_SIGN_RECV:
-        flags->USER_SIGN_RECV = 0;
+    case USER_INFO_ID_RECV:
+        flags->USER_INFO_ID_RECV = 0;
         break;
-    case USER_INFO_SHORT_RECV:
-        flags->USER_INFO_SHORT_RECV = 0;
+    case USER_INFO_CERTS_RECV:
+        flags->USER_INFO_CERTS_RECV = 0;
         break;
-    case USER_INFO_LONG_RECV:
-        flags->USER_INFO_LONG_RECV = 0;
+    case APP_INFO_NAME_RECV:
+        flags->APP_INFO_NAME_RECV = 0;
         break;
-    case USER_INFO_SHORT_SIGNED_RECV:
-        flags->USER_INFO_SHORT_SIGNED_RECV = 0;
+    case APP_INFO_QOS_CLASS_RECV:
+        flags->APP_INFO_QOS_CLASS_RECV = 0;
         break;
-    case USER_INFO_LONG_SIGNED_RECV:
-        flags->USER_INFO_LONG_SIGNED_RECV = 0;
+    case APP_INFO_CONNECTIONS_RECV:
+        flags->APP_INFO_CONNECTIONS_RECV = 0;
         break;
-
-    default:
+    case APP_INFO_REQUIREMENTS_RECV:
+        flags->APP_INFO_REQUIREMENTS_RECV = 0;
         break;
     }
 }
 
-void signaling_flag_init(struct flags_connection_context *flags)
+void signaling_service_info_flag_init(struct signaling_flags_service_info *flags)
 {
-    flags->USER_AUTH_REQUEST           = 0;
-    flags->USER_AUTHED                 = 0;
-    flags->HOST_AUTH_REQUEST           = 0;
-    flags->HOST_AUTHED                 = 0;
-    flags->HOST_INFO_OS                = 0;
-    flags->HOST_INFO_NAME              = 0;
-    flags->HOST_INFO_KERNEL            = 0;
-    flags->HOST_INFO_CERTS             = 0;
-    flags->USER_SIGN                   = 0;
-    flags->USER_INFO_SHORT             = 0;
-    flags->USER_INFO_LONG              = 0;
-    flags->USER_INFO_SHORT_SIGNED      = 0;
-    flags->USER_INFO_LONG_SIGNED       = 0;
-    flags->HOST_INFO_OS_RECV           = 0;
-    flags->HOST_INFO_NAME_RECV         = 0;
-    flags->HOST_INFO_KERNEL_RECV       = 0;
-    flags->HOST_INFO_CERTS_RECV        = 0;
-    flags->USER_SIGN_RECV              = 0;
-    flags->USER_INFO_SHORT_RECV        = 0;
-    flags->USER_INFO_LONG_RECV         = 0;
-    flags->USER_INFO_SHORT_SIGNED_RECV = 0;
-    flags->USER_INFO_LONG_SIGNED_RECV  = 0;
+    flags->HOST_INFO_OS          = 0;
+    flags->HOST_INFO_KERNEL      = 0;
+    flags->HOST_INFO_ID          = 0;
+    flags->HOST_INFO_CERTS       = 0;
+    flags->USER_INFO_ID          = 0;
+    flags->USER_INFO_CERTS       = 0;
+    flags->APP_INFO_NAME         = 0;
+    flags->APP_INFO_QOS_CLASS    = 0;
+    flags->APP_INFO_CONNECTIONS  = 0;
+    flags->APP_INFO_REQUIREMENTS = 0;
+
+    flags->HOST_INFO_OS_RECV          = 0;
+    flags->HOST_INFO_KERNEL_RECV      = 0;
+    flags->HOST_INFO_ID_RECV          = 0;
+    flags->HOST_INFO_CERTS_RECV       = 0;
+    flags->USER_INFO_ID_RECV          = 0;
+    flags->USER_INFO_CERTS_RECV       = 0;
+    flags->APP_INFO_NAME_RECV         = 0;
+    flags->APP_INFO_QOS_CLASS_RECV    = 0;
+    flags->APP_INFO_CONNECTIONS_RECV  = 0;
+    flags->APP_INFO_REQUIREMENTS_RECV = 0;
+}
+
+void signaling_service_state_flags_print(struct signaling_flags_service_state *flags, const char *const prefix)
+{
+    char buf[100];
+    memset(buf, 0, sizeof(buf));
+
+    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_flag_check(flags, SERVICE_OFFER));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_flag_check(flags, SERVICE_NACK));
+
+    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_flag_check(flags, SERVICE_OFFER_RECV));
+    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_flag_check(flags, SERVICE_ACK_RECV));
+
+    HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
+}
+
+int signaling_service_state_flag_check(struct signaling_flags_service_state *flags, int f)
+{
+    switch (f) {
+    case SERVICE_OFFER:
+        return (flags->SERVICE_OFFER)       ? 1 : 0;
+        break;
+    case SERVICE_ACK:
+        return flags->SERVICE_ACK           ? 1 : 0;
+        break;
+    case SERVICE_NACK:
+        return (flags->SERVICE_NACK)        ? 1 : 0;
+        break;
+
+    case SERVICE_OFFER_RECV:
+        return (flags->SERVICE_OFFER_RECV)  ? 1 : 0;
+        break;
+    case SERVICE_ACK_RECV:
+        return (flags->SERVICE_OFFER_RECV)  ? 1 : 0;
+        break;
+    case SERVICE_NACK_RECV:
+        return (flags->SERVICE_OFFER_RECV)  ? 1 : 0;
+        break;
+    }
+}
+
+void signaling_service_state_flag_set(struct signaling_flags_service_state *flags, int f)
+{
+    switch (f) {
+    case SERVICE_OFFER:
+        flags->SERVICE_OFFER = 1;
+        break;
+    case SERVICE_ACK:
+        flags->SERVICE_ACK = 1;
+        break;
+    case SERVICE_NACK:
+        flags->SERVICE_NACK = 1;
+        break;
+
+    case SERVICE_OFFER_RECV:
+        flags->SERVICE_OFFER_RECV = 1;
+        break;
+    case SERVICE_ACK_RECV:
+        flags->SERVICE_ACK_RECV = 1;
+        break;
+    case SERVICE_NACK_RECV:
+        flags->SERIVCE_NACK_RECV = 1;
+        break;
+    }
+}
+
+void signaling_service_state_flag_unset(struct signaling_flags_service_state *flags, int f)
+{
+    switch (f) {
+    case SERVICE_OFFER:
+        flags->SERVICE_OFFER = 0;
+        break;
+    case SERVICE_ACK:
+        flags->SERVICE_ACK = 0;
+        break;
+    case SERVICE_NACK:
+        flags->SERVICE_NACK = 0;
+        break;
+
+    case SERVICE_OFFER_RECV:
+        flags->SERVICE_OFFER_RECV = 0;
+        break;
+    case SERVICE_ACK_RECV:
+        flags->SERVICE_ACK_RECV = 0;
+        break;
+    case SERVICE_NACK_RECV:
+        flags->SERIVCE_NACK_RECV = 0;
+        break;
+    }
+}
+
+void signaling_service_state_flag_init(struct signaling_flags_service_state *flags)
+{
+    flags->SERVICE_OFFER = 0;
+    flags->SERVICE_ACK   = 0;
+    flags->SERVICE_NACK  = 0;
+
+    flags->SERVICE_OFFER_RECV = 0;
+    flags->SERVICE_ACK_RECV   = 0;
+    flags->SERIVCE_NACK_RECV  = 0;
 }
