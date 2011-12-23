@@ -285,7 +285,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         }
         ctx->modified = 1;
     }
-    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_NAME) ||
+    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_ID) ||
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
@@ -375,6 +375,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         ctx->modified = 1;
     }
 
+    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS)) {
+    }
     /* Step d) */
     new_conn.status = SIGNALING_CONN_PROCESSING;
     HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &new_conn),
@@ -705,6 +707,7 @@ int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct
         break;
     default:
         HIP_DEBUG("Received unknown UPDATE type. \n");
+        break;
     }
 
 out_err:
@@ -779,6 +782,7 @@ int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple
         break;
     default:
         HIP_DEBUG("Unhandled notification type: %d \n", htons(notification->msgtype));
+        break;
     }
 
 out_err:
