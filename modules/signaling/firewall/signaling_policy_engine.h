@@ -39,21 +39,21 @@
 /* Definition of return values for signaling_policy_check.
  */
 enum policy_all {
-    POLICY_ACCEPT                 = 0,
-    POLICY_REJECT                 = 1,
-    POLICY_USER_AUTH_REQUIRED     = 2,
-    POLICY_HOST_AUTH_REQUIRED     = 3,
-    POLICY_APP_AUTH_REQUIRED      = 4,
-    POLICY_HOST_INFO_OS           = 5,
-    POLICY_HOST_INFO_KERNEL       = 6,
-    POLICY_HOST_INFO_NAME         = 7,
-    POLICY_HOST_INFO_CERTS        = 8,
-    POLICY_USER_SIGN              = 9,
-    POLICY_USER_INFO_SHORT        = 10,
-    POLICY_USER_INFO_LONG         = 11,
-    POLICY_USER_INFO_CERTS        = 12,
-    POLICY_USER_INFO_SHORT_SIGNED = 13,
-    POLICY_USER_INFO_LONG_SIGNED  = 14
+    POLICY_ACCEPT                = 0,
+    POLICY_REJECT                = 1,
+    POLICY_USER_AUTH_REQUIRED    = 2,
+    POLICY_HOST_AUTH_REQUIRED    = 3,
+    POLICY_APP_AUTH_REQUIRED     = 4,
+    POLICY_HOST_INFO_OS          = 5,
+    POLICY_HOST_INFO_KERNEL      = 6,
+    POLICY_HOST_INFO_ID          = 7,
+    POLICY_HOST_INFO_CERTS       = 8,
+    POLICY_USER_INFO_ID          = 9,
+    POLICY_USER_INFO_CERTS       = 10,
+    POLICY_APP_INFO_NAME         = 11,
+    POLICY_APP_INFO_QOS_CLASS    = 12,
+    POLICY_APP_INFO_CONNECTIONS  = 13,
+    POLICY_APP_INFO_REQUIREMENTS = 14
 };
 
 struct policy_decision {
@@ -64,14 +64,14 @@ struct policy_decision {
     uint8_t POLICY_APP_AUTH_REQUIRED;
     uint8_t POLICY_HOST_INFO_OS;
     uint8_t POLICY_HOST_INFO_KERNEL;
-    uint8_t POLICY_HOST_INFO_NAME;
+    uint8_t POLICY_HOST_INFO_ID;
     uint8_t POLICY_HOST_INFO_CERTS;
-    uint8_t POLICY_USER_SIGN;
-    uint8_t POLICY_USER_INFO_SHORT;
-    uint8_t POLICY_USER_INFO_LONG;
+    uint8_t POLICY_USER_INFO_ID;
     uint8_t POLICY_USER_INFO_CERTS;
-    uint8_t POLICY_USER_INFO_SHORT_SIGNED;
-    uint8_t POLICY_USER_INFO_LONG_SIGNED;
+    uint8_t POLICY_APP_INFO_NAME;
+    uint8_t POLICY_APP_INFO_QOS_CLASS;
+    uint8_t POLICY_APP_INFO_CONNECTIONS;
+    uint8_t POLICY_APP_INFO_REQUIREMENTS;
 };
 
 
