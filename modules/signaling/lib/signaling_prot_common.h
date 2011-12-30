@@ -302,7 +302,7 @@ struct signaling_flags_service_state {
 
     uint8_t SERVICE_OFFER_RECV;
     uint8_t SERVICE_ACK_RECV;
-    uint8_t SERIVCE_NACK_RECV;
+    uint8_t SERVICE_NACK_RECV;
 };
 
 /*
@@ -654,7 +654,7 @@ struct signaling_param_host_info_certs {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
-struct signaling_param_host_info_kernel {
+struct signaling_param_host_info_os {
     hip_tlv     type;
     hip_tlv_len length;
     uint32_t    os;
@@ -1072,21 +1072,6 @@ struct signaling_service_nack {
 };
 
 
-/*
- *   Internal representation of a service ack
- *
- *   Use signaling_init_host_context() to initialize this structure.
- *
- *   All integers are in host-byte-order.
- */
-struct signaling_service_offer {
-    uint16_t service_offer_id;
-    uint16_t service_type;
-    uint32_t service_description;
-    uint16_t endpoint_info_req[MAX_NUM_INFO_ITEMS];
-};
-
-
 /**
  *   Internal representation of context information for a bidirectional connection.
  *   This structure should be used whenever state needs to be kept about a connection.
@@ -1175,8 +1160,8 @@ void signaling_flag_set(struct flags_connection_context *flags, int f);
 void signaling_flag_unset(struct flags_connection_context *flags, int f);
 void signaling_flag_init(struct flags_connection_context *flags);
 
-void signaling_service_state_flags_print(struct signaling_flags_service_state flags, const char *const prefix);
-int signaling_service_state_flag_check(struct signaling_flags_service_state flags, int f);
+void signaling_service_state_flags_print(struct signaling_flags_service_state *flags, const char *const prefix);
+int signaling_service_state_flag_check(struct signaling_flags_service_state *flags, int f);
 void signaling_service_state_flag_set(struct signaling_flags_service_state *flags, int f);
 void signaling_service_state_flag_unset(struct signaling_flags_service_state *flags, int f);
 void signaling_service_state_flag_init(struct signaling_flags_service_state *flags);

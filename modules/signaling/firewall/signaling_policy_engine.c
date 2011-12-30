@@ -728,9 +728,9 @@ void policy_decision_set(struct policy_decision *flags, int f)
         flags->POLICY_APP_INFO_QOS_CLASS = 1;
         break;
     case POLICY_APP_INFO_CONNECTIONS:
-        flags->POLICY_APP_INFO_QOS_CLASS = 1;
+        flags->POLICY_APP_INFO_CONNECTIONS = 1;
         break;
-    case POLICY_APP_INFO_CONNECTIONS:
+    case POLICY_APP_INFO_REQUIREMENTS:
         flags->POLICY_APP_INFO_REQUIREMENTS = 1;
         break;
     default:
@@ -769,22 +769,22 @@ void policy_decision_unset(struct policy_decision *flags, int f)
         flags->POLICY_HOST_INFO_CERTS = 0;
         break;
     case POLICY_USER_INFO_ID:
-        flags->POLICY_USER_INFO_ID = 1;
+        flags->POLICY_USER_INFO_ID = 0;
         break;
     case POLICY_USER_INFO_CERTS:
-        flags->POLICY_USER_INFO_CERTS = 1;
+        flags->POLICY_USER_INFO_CERTS = 0;
         break;
     case POLICY_APP_INFO_NAME:
-        flags->POLICY_APP_INFO_NAME = 1;
+        flags->POLICY_APP_INFO_NAME = 0;
         break;
     case POLICY_APP_INFO_QOS_CLASS:
-        flags->POLICY_APP_INFO_QOS_CLASS = 1;
+        flags->POLICY_APP_INFO_QOS_CLASS = 0;
         break;
     case POLICY_APP_INFO_CONNECTIONS:
-        flags->POLICY_APP_INFO_QOS_CLASS = 1;
+        flags->POLICY_APP_INFO_CONNECTIONS = 0;
         break;
-    case POLICY_APP_INFO_CONNECTIONS:
-        flags->POLICY_APP_INFO_REQUIREMENTS = 1;
+    case POLICY_APP_INFO_REQUIREMENTS:
+        flags->POLICY_APP_INFO_REQUIREMENTS = 0;
         break;
     default:
         break;
@@ -846,8 +846,8 @@ int policy_decision_check(struct policy_decision flags, int f)
     case POLICY_USER_INFO_CERTS:
         return (flags.POLICY_USER_INFO_CERTS) ? 1 : 0;
         break;
-    case POLICY_APP_INFO_REQUIREMENTS:
-        return (flags.POLICY_APP_INFO_REQUIREMENTS) ? 1 : 0;
+    case POLICY_APP_INFO_NAME:
+        return (flags.POLICY_APP_INFO_NAME) ? 1 : 0;
         break;
     case POLICY_APP_INFO_QOS_CLASS:
         return (flags.POLICY_APP_INFO_QOS_CLASS) ? 1 : 0;
@@ -855,8 +855,8 @@ int policy_decision_check(struct policy_decision flags, int f)
     case POLICY_APP_INFO_CONNECTIONS:
         return (flags.POLICY_APP_INFO_CONNECTIONS) ? 1 : 0;
         break;
-    case POLICY_APP_INFO_CONNECTIONS:
-        return (flags.POLICY_APP_INFO_CONNECTIONS) ? 1 : 0;
+    case POLICY_APP_INFO_REQUIREMENTS:
+        return (flags.POLICY_APP_INFO_REQUIREMENTS) ? 1 : 0;
         break;
     default:
         return 0;

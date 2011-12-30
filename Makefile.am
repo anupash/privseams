@@ -255,9 +255,9 @@ test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               
 ### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
-firewall_hipfw_LDADD                    +=-L/home/hummen/src/x509ac -lx509ac -lssl
+firewall_hipfw_LDADD                    +=-L/home/ashish/Thesis/x509ac -lx509ac -lssl
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
-hipd_hipd_LDADD                         +=-L/home/hummen/src/x509ac -lx509ac -lssl
+hipd_hipd_LDADD                         +=-L/home/ashish/Thesis/x509ac -lx509ac -lssl
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
@@ -270,7 +270,7 @@ test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
 tools_accert_LDADD                       = lib/core/libhipcore.la
-tools_accert_LDADD                      += -L/home/hummen/src/x509ac -lx509ac
+tools_accert_LDADD                      += -L/home/ashish/Thesis/x509ac -lx509ac
 
 ### dynamic library dependencies ###
 

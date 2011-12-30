@@ -651,6 +651,7 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  * }
  */
 
+
 /*
  * Fill the internal host_context struct with data from host_context parameter.
  *
@@ -712,10 +713,10 @@ int signaling_build_service_state(const struct signaling_param_service_offer_u *
 {
     int      err = 0;
     uint16_t tmp_len;
-    uint8_t  tmp_items;
+    int      tmp_items;
     uint16_t tmp_info;
     uint16_t tmp_param;
-    int      i = 0;
+
     /* sanity checks */
     HIP_IFEL(!param_service_offer,  -1, "Got NULL service offer parameter\n");
     HIP_IFEL(!service_con,          -1, "Got NULL service state container to write to\n");
@@ -729,13 +730,13 @@ int signaling_build_service_state(const struct signaling_param_service_offer_u *
 
     tmp_param = hip_get_param_type(param_service_offer);
     /* number of service offers to be accepted, if more than the limit drop it */
-    (ntohs(service_con->num_items) < MAX_NUM_SERVICE_OFFER_ACCEPTABLE)  ?
-    tmp_items = ntohs(service_con->num_items) + 1 : tmp_items = -1;
+    (ntohs(service_con->num_items) < MAX_NUM_SERVICE_OFFER_ACCEPTABLE) ?
+    (tmp_items = ntohs(service_con->num_items) + 1) : (tmp_items = -1);
 
     if (tmp_items != -1) {
         switch (tmp_param) {
         case HIP_PARAM_SIGNALING_SERVICE_OFFER_U:
-            signaling_service_state_flag_set(&service_con->services[tmp_len - 1].flag_services, SERVICE_OFFER_RECV);
+            signaling_service_state_flag_set(&service_con->services[tmp_items - 1].flag_services, SERVICE_OFFER_RECV);
             service_con->services[tmp_items - 1].service_offer_id    = ntohs(param_service_offer->service_offer_id);
             service_con->services[tmp_items - 1].service_type        = ntohs(param_service_offer->service_type);
             service_con->services[tmp_items - 1].service_description = ntohs(param_service_offer->service_description);

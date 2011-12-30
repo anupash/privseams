@@ -289,10 +289,12 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
         signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
-        if (signaling_build_param_host_info_req_u(common, 0, new_conn.ctx_in.flags)) {
-            HIP_ERROR("Could not add host info request. Dropping packet.\n");
-            return 0;
-        }
+/*
+ *        if (signaling_build_param_host_info_req_u(common, 0, new_conn.ctx_in.flags)) {
+ *           HIP_ERROR("Could not add host info request. Dropping packet.\n");
+ *           return 0;
+ *       }
+ */
         ctx->modified = 1;
     }
 
