@@ -53,6 +53,7 @@ int hip_signaling_init(void)
     // register internal parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,         "HIP_PARAM_SIGNALING_CONNECTION");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_SHORT,              "HIP_PARAM_SIGNALING_CONNECTION_SHORT");
 
 
     // register initialization function for port information per connection state in hadb

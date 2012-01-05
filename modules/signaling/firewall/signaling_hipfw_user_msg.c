@@ -73,7 +73,9 @@ static void insert_iptables_rule(const struct in6_addr *const s,
  *
  * @return          0 on sucess, negative on error
  */
+//TODO remove the signaling_connection parameter from the function.
 int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                                            const struct signaling_connection_short *conn_short,
                                             const struct signaling_connection *const conn)
 {
     int                err = 0;
@@ -86,7 +88,7 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+    HIP_IFEL(hip_build_param_contents(msg, conn_short, HIP_PARAM_SIGNALING_CONNECTION_SHORT, sizeof(struct signaling_connection_short)),
              -1, "build connection parameter failed \n");
 
 #ifdef CONFIG_HIP_PERFORMANCE

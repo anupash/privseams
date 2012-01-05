@@ -75,12 +75,16 @@ int signaling_hipfw_oslayer_uninit(void)
     return 0;
 }
 
+/* RIght now we save the whole signaling connection in the database
+ * TODO Store only that much information that is needed
+ */
 static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
-    int                          err  = 0;
-    struct signaling_connection *conn = NULL;
-    struct signaling_connection  new_conn;
+    int err = 0;
+//  struct signaling_connection *conn = NULL;
+    struct signaling_connection       new_conn;
+    struct signaling_connection_short conn_short;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
@@ -123,12 +127,14 @@ static int handle_new_connection(struct hip_fw_context *ctx,
 
     /* Check the local context against our local policy,
      * block this connection if context is rejected */
-    if (signaling_policy_engine_check_and_flag(&ctx->dst, &new_conn.ctx_out)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn), -1, "Could not insert connection into cdb\n");
-        signaling_cdb_print();
-        return 0;
-    }
+    //TODO to remove the policy checking altogether
+/*    if (signaling_policy_engine_check_and_flag(&ctx->dst, &new_conn.ctx_out)) {
+ *      new_conn.status = SIGNALING_CONN_BLOCKED;
+ *      HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn), -1, "Could not insert connection into cdb\n");
+ *      signaling_cdb_print();
+ *      return 0;
+ *  }
+ */
 
     /* set local host and user to authed since we have passed policy check */
     signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
@@ -140,8 +146,14 @@ static int handle_new_connection(struct hip_fw_context *ctx,
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
 
+
+    conn_short.id                  = new_conn.id;
+    conn_short.status              = new_conn.status;
+    conn_short.side                = INITIATOR;
+    conn_short.sockets[0].src_port = src_port;
+    conn_short.sockets[0].dst_port = dst_port;
     HIP_DEBUG("Sending connection request to hipd.\n");
-    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, conn);
+    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &conn_short, &new_conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");

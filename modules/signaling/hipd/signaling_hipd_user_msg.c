@@ -21,6 +21,8 @@
 
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_user_management.h"
+#include "modules/signaling/lib/signaling_user_api.h"
+#include "modules/signaling/lib/signaling_oslayer.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
@@ -36,8 +38,8 @@ static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
 {
     struct sockaddr_in6 hip_fw_addr;
     struct sockaddr_in6 resp_addr;
-    struct in6_addr loopback = in6addr_loopback;
-    int err                  = 0;
+    struct in6_addr     loopback = in6addr_loopback;
+    int                 err      = 0;
 
     HIP_ASSERT(msg != NULL);
 
@@ -63,7 +65,6 @@ static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
         HIP_DEBUG("Waiting for response on msg type %d\n", hip_get_msg_type(msg));
         HIP_IFEL(hip_read_user_control_msg(hip_user_sock, msg, &resp_addr),
                  -1, "Could not receive response on connection request\n");
-
     }
 
 out_err:
@@ -81,28 +82,28 @@ out_err:
  * @return          0 on success, negative on error
  */
 static int signaling_send_connection_confirmation(const hip_hit_t *hits,
-                                           const hip_hit_t *hitr,
-                                           const struct signaling_connection *conn)
+                                                  const hip_hit_t *hitr,
+                                                  const struct signaling_connection *conn)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
+    int                err = 0;
 
     /* Build and send a HIP_MSG_SIGNALING_CONFIRM_CONNECTION message.
      * The message must identify the connection that has been established,
      * i.e. include HITs and application context. */
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
-            -1, "alloc memory for adding scdb entry\n");
+             -1, "alloc memory for adding scdb entry\n");
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRMATION, 0), -1,
-              "build hdr failed\n");
+             "build hdr failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits,
                                       HIP_PARAM_HIT,
                                       sizeof(hip_hit_t)), -1,
-              "build param contents (src hit) failed\n");
+             "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hitr,
                                       HIP_PARAM_HIT,
                                       sizeof(hip_hit_t)), -1,
-              "build param contents (src hit) failed\n");
+             "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build connection context failed \n");
 
@@ -129,16 +130,17 @@ out_err:
  * @return 0 on success, negative on error
  */
 static int signaling_handle_connection_confirmation(struct hip_common *msg,
-                                                    UNUSED struct sockaddr_in6 *src) {
-    int err                                 = 0;
-    const hip_hit_t *our_hit                = NULL;
-    const hip_hit_t *peer_hit               = NULL;
-    struct signaling_hipd_state *sig_state  = NULL;
-    const struct hip_tlv_common *param      = NULL;
-    struct hip_hadb_state *entry                         = NULL;
-    const struct signaling_connection *recv_conn  = NULL;
-    struct signaling_connection *existing_conn = NULL;
-    struct userdb_user_entry *db_entry = NULL;
+                                                    UNUSED struct sockaddr_in6 *src)
+{
+    int                                err           = 0;
+    const hip_hit_t                   *our_hit       = NULL;
+    const hip_hit_t                   *peer_hit      = NULL;
+    struct signaling_hipd_state       *sig_state     = NULL;
+    const struct hip_tlv_common       *param         = NULL;
+    struct hip_hadb_state             *entry         = NULL;
+    const struct signaling_connection *recv_conn     = NULL;
+    struct signaling_connection       *existing_conn = NULL;
+    struct userdb_user_entry          *db_entry      = NULL;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
@@ -189,12 +191,13 @@ out_err:
  *                      to look the context up and fill it in
  *
  * @return              0 on sucess, negative on error
-  */
+ */
 static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
                                                  const hip_hit_t *dst_hit,
                                                  const int type,
-                                                 const struct signaling_connection *conn) {
-    int err = 0;
+                                                 const struct signaling_connection *conn)
+{
+    int                err = 0;
     struct hip_common *msg = NULL;
 
     /* sanity checks */
@@ -209,7 +212,7 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
 
     /* Include hits and connection state */
     HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-            -1, "build param contents (dst hit) failed\n");
+             -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
@@ -245,19 +248,22 @@ out_err:
 
 int signaling_send_first_connection_request(const hip_hit_t *src_hit,
                                             const hip_hit_t *dst_hit,
-                                            const struct signaling_connection *conn) {
+                                            const struct signaling_connection *conn)
+{
     return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, conn);
 }
 
 int signaling_send_second_connection_request(const hip_hit_t *src_hit,
                                              const hip_hit_t *dst_hit,
-                                             const struct signaling_connection *conn) {
+                                             const struct signaling_connection *conn)
+{
     return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST, conn);
 }
 
 int signaling_send_connection_update_request(const hip_hit_t *src_hit,
                                              const hip_hit_t *dst_hit,
-                                             const struct signaling_connection *conn) {
+                                             const struct signaling_connection *conn)
+{
     return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST, conn);
 }
 
@@ -275,39 +281,80 @@ int signaling_send_connection_update_request(const hip_hit_t *src_hit,
  * @return 0 on success
  */
 int signaling_handle_connection_request(struct hip_common *msg,
-                                        struct sockaddr_in6 *src) {
-    const hip_hit_t *our_hit    = NULL;
-    const hip_hit_t *peer_hit   = NULL;
-    const struct hip_tlv_common *param;
-    struct hip_hadb_state *entry = NULL;
-    struct signaling_hipd_state *sig_state = NULL;
-    struct signaling_connection *conn = NULL;
-    struct signaling_connection new_conn;
-    int err = 0;
-    struct userdb_user_entry *db_entry = NULL;
+                                        struct sockaddr_in6 *src)
+{
+    const hip_hit_t                  *our_hit  = NULL;
+    const hip_hit_t                  *peer_hit = NULL;
+    const struct hip_tlv_common      *param;
+    struct hip_hadb_state            *entry     = NULL;
+    struct signaling_hipd_state      *sig_state = NULL;
+    struct signaling_connection      *conn      = NULL;
+    struct signaling_connection       new_conn;
+    struct signaling_connection_short conn_short;
+    int                               err      = 0;
+    struct userdb_user_entry         *db_entry = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
-        hip_perf_start_benchmark(perf_set, PERF_TRIGGER_CONN);
+    HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
+    hip_perf_start_benchmark(perf_set, PERF_TRIGGER_CONN);
 #endif
+
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_SHORT)),
+             -1, "Missing application_port_pair parameter\n");
+    HIP_IFEL(signaling_copy_connection_short(&conn_short, (const struct signaling_connection_short *) (param + 1)),
+             -1, "Could not copy connection context\n");
+    HIP_IFEL(signaling_init_connection(&new_conn),
+             -1, "Could not init connection context\n");
+
+    //TODO check if I need to do ntohs here
+    new_conn.status              = conn_short.status;
+    new_conn.id                  = conn_short.id;
+    new_conn.side                = conn_short.side;
+    new_conn.sockets[0].src_port = conn_short.sockets[0].src_port;
+    new_conn.sockets[0].dst_port = conn_short.sockets[0].dst_port;
+
+    /* Look up the host context */
+    //TODO write the handler for verification of host identifier
+/*
+ *  if (signaling_get_verified_application_context_by_ports(conn_short.sockets[0].src_port, conn_short.sockets[0].dst_port, &new_conn.ctx_out)) {
+ *      HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
+ *      signaling_init_host_context(&new_conn.ctx_out.host);
+ *  }
+ *  if (signaling_get_verified_application_context_by_ports(conn_short.sockets[0].src_port, conn_short.sockets[0].dst_port, &new_conn.ctx_out)) {
+ *      HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
+ *      signaling_init_application_context(&new_conn.ctx_out.app);
+ *  }
+ *  if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
+ *      HIP_DEBUG("Could not get user name, assuming ANY USER. \n");
+ *      signaling_init_user_context(&new_conn.ctx_out.user);
+ *  }
+ */
+    /* Set host and user authentication flags.
+     * These are trivially true. */
+    signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
+    signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
+
 
     /* Determine if we already have an association */
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
 
     /* Now check whether we need to trigger a BEX or an UPDATE */
-    if(entry) {   // UPDATE
+    if (entry) {   // UPDATE
         /* check if there is a connection context, if not exit */
-        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-                 -1, "Missing application_context parameter\n");
+        /*HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+         *       -1, "Missing application_context parameter\n");
+         */
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
         /* get a local copy of the connection context */
-        HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
-                 -1, "Could not copy connection context\n");
+        /*HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
+         *       -1, "Could not copy connection context\n");
+         */
+        /* We have no waiting contexts. So build the local connection context and queue it. */
 
-        new_conn.status         = SIGNALING_CONN_PROCESSING;
+        new_conn.status = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
@@ -324,8 +371,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
             HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, conn),
                      -1, "Failed triggering first bex update.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+            HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
 #endif
             HIP_DEBUG("Triggered UPDATE for following connection context:\n");
             signaling_connection_print(conn, "");
@@ -333,10 +380,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
             HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
             signaling_connection_print(conn, "");
         }
-
     } else {       // BEX
         HIP_DEBUG("Triggering BEX \n");
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
+        HIP_IFEL(hip_build_param_contents(msg, &new_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "adding connection parameter to hip_common message failed \n");
         HIP_IFEL(hip_netdev_trigger_bex_msg(msg, src),
                  -1, "Netdev could not trigger the BEX\n");
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -353,7 +401,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
         HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
                  -1, "Could not copy connection\n");
-        new_conn.status         = SIGNALING_CONN_PROCESSING;
+        new_conn.status = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
@@ -369,15 +417,14 @@ int signaling_handle_connection_request(struct hip_common *msg,
         signaling_connection_print(conn, "");
     }
 
-
     /* send status for new connection to os layer */
     signaling_send_connection_confirmation(our_hit, peer_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
-        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
+    HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
+    hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
 #endif
 
 out_err:

@@ -409,6 +409,28 @@ out_err:
 }
 
 /**
+ * Initializes the given connection context to default values.
+ * Memory for context has to be allocated and freed by the caller.
+ *
+ * @param ctx a pointer to the connection context that should be initialized
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_connection_short(struct signaling_connection_short *const conn)
+{
+    int err = 0;
+
+    HIP_IFEL(!conn, -1, "Short Connection context has to be allocated before initialization\n");
+    conn->id     = 0;
+    conn->status = SIGNALING_CONN_NEW;
+    conn->side   = INITIATOR;
+    memset(conn->sockets, 0, sizeof(conn->sockets));
+
+out_err:
+    return err;
+}
+
+/**
  * Initializes the given connection context by stripping all
  * connection context information found in the message.
  * Values that are not given in the  message are initialized to default.
@@ -588,6 +610,44 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
 
 out_err:
     return err;
+}
+
+/**
+ * Copies a port pair from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_port_pair(struct signaling_port_pair *const dst,
+                             const struct signaling_port_pair *const src)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_port_pair));
+    return 0;
+}
+
+/**
+ * Copies a short signaling connection from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_connection_short(struct signaling_connection_short *const dst,
+                                    const struct signaling_connection_short *const src)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_connection_short));
+    return 0;
 }
 
 /**
