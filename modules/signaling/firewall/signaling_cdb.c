@@ -48,7 +48,7 @@
 #define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
 /* database storing the connection tracking entries, indexed by src _and_ dst hits */
-HIP_HASHTABLE *scdb   = NULL;
+HIP_HASHTABLE *scdb = NULL;
 
 /* variable for storing the next free connection id */
 static int next_conn_id;
@@ -62,14 +62,14 @@ static int next_conn_id;
 static unsigned long signaling_cdb_entry_hash(const signaling_cdb_entry_t *scdb_entry)
 {
     struct in6_addr addr_pair[2];
-    unsigned char hash[INDEX_HASH_LENGTH];
-    int err = 0;
+    unsigned char   hash[INDEX_HASH_LENGTH];
+    int             err = 0;
 
     memset(&hash, 0, INDEX_HASH_LENGTH);
     memcpy(&addr_pair[0], &scdb_entry->local_hit, sizeof(struct in6_addr));
     memcpy(&addr_pair[1], &scdb_entry->remote_hit, sizeof(struct in6_addr));
     HIP_IFEL(hip_build_digest(INDEX_HASH_FN, addr_pair, 2 * sizeof(struct in6_addr), hash),
-            -1, "failed to hash addresses\n");
+             -1, "failed to hash addresses\n");
 
 out_err:
     if (err) {
@@ -90,7 +90,7 @@ out_err:
 static int signaling_cdb_entries_cmp(const signaling_cdb_entry_t *scdb_entry1,
                                      const signaling_cdb_entry_t *scdb_entry2)
 {
-    int err             = 0;
+    int           err   = 0;
     unsigned long hash1 = 0;
     unsigned long hash2 = 0;
 
@@ -144,11 +144,11 @@ static void signaling_cdb_entry_free(signaling_cdb_entry_t *entry)
 UNUSED static int signaling_cdb_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
     signaling_cdb_entry_t *stored_entry = NULL;
-    int err = 0;
+    int                    err          = 0;
 
     /* find entry in scdb and delete entry */
     HIP_IFEL(!(stored_entry = signaling_cdb_entry_find(src_addr, dst_addr)),
-            -1, "failed to retrieve scdb entry\n");
+             -1, "failed to retrieve scdb entry\n");
 
     // delete the entry from the scdb
     hip_ht_delete(scdb, stored_entry);
@@ -162,7 +162,6 @@ out_err:
     return err;
 }
 
-
 /** initializes the scdb
  *
  * @return -1, if error occurred, else 0
@@ -172,7 +171,7 @@ int signaling_cdb_init(void)
     int err = 0;
 
     HIP_IFEL(!(scdb = hip_ht_init(LHASH_HASH_FN(signaling_cdb_entry), LHASH_COMP_FN(signaling_cdb_entries))),
-            -1, "failed to initialize sadb\n");
+             -1, "failed to initialize sadb\n");
     next_conn_id = 0;
 
 out_err:
@@ -186,10 +185,10 @@ out_err:
  */
 int signaling_cdb_uninit(void)
 {
-    int err = 0;
-    LHASH_NODE *curr, *iter;
+    int                         err = 0;
+    LHASH_NODE                 *curr, *iter;
     struct signaling_cdb_entry *tmp;
-    int count;
+    int                         count;
 
     list_for_each_safe(curr, iter, scdb, count) {
         tmp = (struct signaling_cdb_entry *) list_entry(curr);
@@ -207,18 +206,19 @@ int signaling_cdb_uninit(void)
  * @return < 0 for error, 0 for not found, > 0 for found.
  */
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
-                                        signaling_cdb_entry_t * entry,
-                                        struct signaling_connection **ret) {
-    int err = 0;
-    int i = 0;
-    struct slist *listitem;
+                                        signaling_cdb_entry_t *entry,
+                                        struct signaling_connection **ret)
+{
+    int                          err = 0;
+    int                          i   = 0;
+    struct slist                *listitem;
     struct signaling_connection *conn = NULL;
 
     HIP_IFEL(entry == NULL,
-            -1, "Entry is null.\n" );
+             -1, "Entry is null.\n");
 
     listitem = entry->connections;
-    while(listitem) {
+    while (listitem) {
         conn = (struct signaling_connection *) listitem->data;
         for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
             if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
@@ -240,7 +240,8 @@ out_err:
  * @return 0 if a message with src and dsthit is in direction initiatior responder, 1 otherwise, -1 if no entry
  */
 int signaling_cdb_direction(const struct in6_addr *src_hit,
-                            const struct in6_addr *dst_hit) {
+                            const struct in6_addr *dst_hit)
+{
     signaling_cdb_entry_t *entry = NULL;
     if ((entry = signaling_cdb_entry_find(src_hit, dst_hit))) {
         return IN6_ARE_ADDR_EQUAL(&entry->local_hit, src_hit) ? 0 : 1;
@@ -252,15 +253,15 @@ struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6
                                                                 const struct in6_addr *remote_hit,
                                                                 const uint32_t id)
 {
-    struct slist *listitem;
-    struct signaling_connection *conn = NULL;
-    signaling_cdb_entry_t *entry = NULL;
+    struct slist                *listitem;
+    struct signaling_connection *conn  = NULL;
+    signaling_cdb_entry_t       *entry = NULL;
 
     if ((entry = signaling_cdb_entry_find(local_hit, remote_hit))) {
         listitem = entry->connections;
-        while(listitem) {
+        while (listitem) {
             conn = (struct signaling_connection *) listitem->data;
-            if(conn->id == id) {
+            if (conn->id == id) {
                 return conn;
             }
             listitem = listitem->next;
@@ -277,23 +278,23 @@ struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
                                                 const struct in6_addr *remote_hit)
 {
-    signaling_cdb_entry_t search_entry;
+    signaling_cdb_entry_t  search_entry;
     signaling_cdb_entry_t *stored_entry = NULL;
-    int err                      = 0;
+    int                    err          = 0;
 
     // fill search entry with information needed by the hash function
     memcpy(&search_entry.local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&search_entry.remote_hit, remote_hit, sizeof(struct in6_addr));
     stored_entry = hip_ht_find(scdb, &search_entry);
 
-    if(!stored_entry) {
+    if (!stored_entry) {
         memcpy(&search_entry.local_hit, remote_hit, sizeof(struct in6_addr));
         memcpy(&search_entry.remote_hit, local_hit, sizeof(struct in6_addr));
     }
 
     // find entry in sadb db
     HIP_IFEL(!(stored_entry = hip_ht_find(scdb, &search_entry)),
-            -1, "No corresponding scdb entry found.\n");
+             -1, "No corresponding scdb entry found.\n");
 
 out_err:
     if (err) {
@@ -303,10 +304,11 @@ out_err:
     return stored_entry;
 }
 
-static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *local_hit,
-                                                     const struct in6_addr *remote_hit) {
-    int err = 0;
-    signaling_cdb_entry_t * entry = NULL;
+static signaling_cdb_entry_t *signaling_cdb_add_new(const struct in6_addr *local_hit,
+                                                    const struct in6_addr *remote_hit)
+{
+    int                    err   = 0;
+    signaling_cdb_entry_t *entry = NULL;
 
     HIP_IFEL(!(entry = malloc(sizeof(signaling_cdb_entry_t))),
              -1, "Could not allocate memory for new scdb entry \n");
@@ -317,8 +319,9 @@ static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *loca
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
 out_err:
-    if(err != 0)
+    if (err != 0) {
         entry = NULL;
+    }
 
     return entry;
 }
@@ -327,11 +330,26 @@ out_err:
  * Updates all fields in old with values from new.
  */
 static int signaling_cdb_update_entry(struct signaling_connection *old,
-                                      const struct signaling_connection *new) {
-
-    old->status = new->status;
+                                      const struct signaling_connection *new)
+{
+    old->status        = new->status;
     old->ctx_in.flags  = new->ctx_in.flags;
     old->ctx_out.flags = new->ctx_out.flags;
+    // TODO: update application context and user context
+
+    return 0;
+}
+
+/*
+ * Updates all fields in old with values from new.
+ * Shorter version of signaling connection used
+ *
+ * TODO to be discussed if even connection flags to added to the signaling_connection_short
+ */
+static int signaling_cdb_update_entry_short(struct signaling_connection *old,
+                                            const struct signaling_connection_short *new)
+{
+    old->status = new->status;
     // TODO: update application context and user context
 
     return 0;
@@ -349,10 +367,10 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
                       struct signaling_connection *conn)
 {
-    int err = 0;
-    int i;
-    int found;
-    signaling_cdb_entry_t *entry = NULL;
+    int                          err = 0;
+    int                          i;
+    int                          found;
+    signaling_cdb_entry_t       *entry = NULL;
     struct signaling_connection *new_conn;
     struct signaling_connection *existing_conn;
 
@@ -361,7 +379,7 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     entry = signaling_cdb_entry_find(local_hit, remote_hit);
 
-    if(entry == NULL) {
+    if (entry == NULL) {
         entry = signaling_cdb_add_new(local_hit, remote_hit);
     }
 
@@ -382,14 +400,68 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
         new_conn = malloc(sizeof(struct signaling_connection));
         signaling_copy_connection(new_conn, conn);
         entry->connections = append_to_slist(entry->connections, new_conn);
-        next_conn_id = new_conn->id + 1;
+        next_conn_id       = new_conn->id + 1;
     }
 
 out_err:
     return err;
 }
 
-uint32_t signaling_cdb_get_next_connection_id(void) {
+/* Adds or updates and entry.
+ *
+ * @param local_hit the hit of the local host
+ * @param remote_hi the hit of the peer host
+ * @param conn the shorter version of signaling connection context to add to the entry identified by local and remote hit
+ *
+ * @return 0 on success, negative otherwise
+ * */
+int signaling_cdb_add_conn_short(const struct in6_addr *local_hit,
+                                 const struct in6_addr *remote_hit,
+                                 struct signaling_connection_short *conn)
+{
+    int                          err = 0;
+    int                          i;
+    int                          found;
+    signaling_cdb_entry_t       *entry = NULL;
+    struct signaling_connection *new_conn;
+    struct signaling_connection *existing_conn;
+
+    HIP_IFEL(!local_hit || !remote_hit,
+             -1, "Got local or remote hit NULL\n");
+
+    entry = signaling_cdb_entry_find(local_hit, remote_hit);
+
+    if (entry == NULL) {
+        entry = signaling_cdb_add_new(local_hit, remote_hit);
+    }
+
+    HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
+
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
+            found = 0;
+            break;
+        } else if ((found = signaling_cdb_entry_find_connection(conn->sockets[i].src_port, conn->sockets[i].dst_port, entry, &existing_conn))) {
+            break;
+        }
+    }
+
+    if (found > 0) {
+        signaling_cdb_update_entry_short(existing_conn, conn);
+    } else {
+        // TODO add functionality to add a new signaling connection based on the shorter version
+        new_conn = malloc(sizeof(struct signaling_connection));
+        signaling_copy_connection(new_conn, conn);
+        entry->connections = append_to_slist(entry->connections, new_conn);
+        next_conn_id       = new_conn->id + 1;
+    }
+
+out_err:
+    return err;
+}
+
+uint32_t signaling_cdb_get_next_connection_id(void)
+{
     return next_conn_id;
 }
 
@@ -398,8 +470,9 @@ uint32_t signaling_cdb_get_next_connection_id(void) {
  *
  * @return always returns 0 (but needs to be of type int to be able to use it with cdb_apply_func).
  */
-int signaling_cdb_entry_print(signaling_cdb_entry_t * entry) {
-    struct slist *listentry;
+int signaling_cdb_entry_print(signaling_cdb_entry_t *entry)
+{
+    struct slist                *listentry;
     struct signaling_connection *conn;
 
     HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
@@ -409,8 +482,8 @@ int signaling_cdb_entry_print(signaling_cdb_entry_t * entry) {
     HIP_DEBUG("\tLocal application context:\n");
 
     listentry = entry->connections;
-    while(listentry != NULL) {
-        if(listentry->data != NULL) {
+    while (listentry != NULL) {
+        if (listentry->data != NULL) {
             conn = ((struct signaling_connection *) listentry->data);
             signaling_connection_print(conn, "\t");
         }
@@ -423,9 +496,10 @@ int signaling_cdb_entry_print(signaling_cdb_entry_t * entry) {
 /*
  * Prints one database entry.
  */
-static void signaling_cdb_apply_func_doall_arg(signaling_cdb_entry_t *entry, void *ptr) {
+static void signaling_cdb_apply_func_doall_arg(signaling_cdb_entry_t *entry, void *ptr)
+{
     int err = 0;
-    int(**func)(signaling_cdb_entry_t *) = ptr;
+    int(**func) (signaling_cdb_entry_t *) = ptr;
 
     if ((err = (**func)(entry))) {
         HIP_DEBUG("Error evaluationg following entry: \n");
@@ -440,15 +514,16 @@ static void signaling_cdb_apply_func_doall_arg(signaling_cdb_entry_t *entry, voi
 static IMPLEMENT_LHASH_DOALL_ARG_FN(signaling_cdb_apply_func, signaling_cdb_entry_t, void *)
 
 /* Apply a function to each element of the cdb. */
-void signaling_cdb_apply_func(int(*func)(signaling_cdb_entry_t *)) {
+void signaling_cdb_apply_func(int(*func)(signaling_cdb_entry_t *))
+{
     hip_ht_doall_arg(scdb, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(signaling_cdb_apply_func), &func);
 }
 
 /* Print the contents of the database */
-void signaling_cdb_print(void) {
+void signaling_cdb_print(void)
+{
     HIP_DEBUG("------------------ SCDB START ------------------\n");
     signaling_cdb_apply_func(&signaling_cdb_entry_print);
     //hip_ht_doall(scdb, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(signaling_cdb_print));
     HIP_DEBUG("------------------ SCDB END   ------------------\n");
 }
-

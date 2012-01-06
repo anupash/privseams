@@ -1100,6 +1100,7 @@ struct signaling_connection {
  *   Use signaling_init_connection_short() to initialize this structure to standard values.
  *
  *   All integers are in host-byte-order.
+ *   TODO discuss if connection flags to be added to signaling_connection_short
  */
 struct signaling_connection_short {
     uint32_t                   id;

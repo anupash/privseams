@@ -181,11 +181,12 @@ out_err:
  */
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
 {
-    int                          err     = 0;
-    const struct hip_tlv_common *param   = NULL;
-    const hip_hit_t             *src_hit = NULL;
-    const hip_hit_t             *dst_hit = NULL;
-    struct signaling_connection  conn;
+    int                               err     = 0;
+    const struct hip_tlv_common      *param   = NULL;
+    const hip_hit_t                  *src_hit = NULL;
+    const hip_hit_t                  *dst_hit = NULL;
+    struct signaling_connection       conn;
+    struct signaling_connection_short conn_short;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
              -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -194,12 +195,19 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-             -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
-    // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
-    signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
+    /*
+     * HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+     *        -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
+     * // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
+     * signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
+     */
 
-    signaling_cdb_add(src_hit, dst_hit, &conn);
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_SHORT)),
+             -1, "No HIP_PARAM_SIGNALING_CONNECTION_SHORT parameter in message.\n");
+    // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
+    signaling_copy_connection_short(&conn_short, (const struct signaling_connection_short *) (param + 1));
+
+    signaling_cdb_add_conn_short(src_hit, dst_hit, &conn);
     signaling_cdb_print();
 
 out_err:
