@@ -687,11 +687,12 @@ out_err:
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                          err       = 0;
-    struct signaling_hipd_state *sig_state = NULL;
-    struct signaling_connection  new_conn;
-    struct signaling_connection *conn;
-    struct userdb_user_entry    *db_entry = NULL;
+    int                                err       = 0;
+    struct signaling_hipd_state       *sig_state = NULL;
+    struct signaling_connection        new_conn;
+    struct signaling_connection       *conn;
+    struct signaling_connection_short *conn_short = NULL;
+    struct userdb_user_entry          *db_entry   = NULL;
 
     /* Sanity checks */
     if (packet_type == HIP_I2) {
@@ -726,8 +727,10 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
 
+    signaling_copy_connection_short_from_connection(conn_short, &new_conn);
+
     /* Tell the firewall/oslayer about the new connection and await it's decision */
-    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn_short, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
     /* If connection has been blocked by the oslayer.
@@ -757,6 +760,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state                    *sig_state = NULL;
     struct signaling_connection                     recv_conn;
     struct signaling_connection                    *conn           = NULL;
+    struct signaling_connection_short              *conn_short     = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
     struct userdb_user_entry                       *db_entry       = NULL;
 
@@ -798,7 +802,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
     /* Ask the firewall for a decision on the remote connection context */
-    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
+    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 
@@ -878,8 +882,9 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     int                                             wait_auth = 0;
     int                                             err       = 0;
     struct signaling_connection                     conn;
-    struct signaling_connection                    *existing_conn  = NULL;
-    struct signaling_hipd_state                    *sig_state      = NULL;
+    struct signaling_connection                    *existing_conn = NULL;
+    struct signaling_hipd_state                    *sig_state     = NULL;
+    struct signaling_connection_short               conn_short;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
     /* sanity checks */
@@ -947,7 +952,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3/U3 \n");
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &conn_short, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN, PERF_I3, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_I3);
@@ -992,6 +997,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     X509                                       *cert          = NULL;
     struct signaling_hipd_state                *sig_state     = NULL;
     struct signaling_connection                *conn          = NULL;
+    struct signaling_connection_short          *conn_short    = NULL;
     const struct hip_seq                       *param_seq     = NULL;
     struct userdb_certificate_context          *cert_ctx      = NULL;
     uint32_t                                    network_id;
@@ -1066,7 +1072,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
          * our local user has not been requested or is already completed.
          * If not, we'll confirm when we receive our own certifiate ack. */
         if (!signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-            signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+            signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, conn);
 #ifdef CONFIG_HIP_PERFORMANCE
             HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
             hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
@@ -1095,6 +1101,7 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     struct signaling_hipd_state                *sig_state     = NULL;
     struct signaling_connection                *existing_conn = NULL;
+    struct signaling_connection_short          *conn_short    = NULL;
     uint32_t                                    conn_id;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1122,7 +1129,7 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
         HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
     } else {
         HIP_DEBUG("Auth completed after update ack \n");
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
@@ -1263,6 +1270,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
 {
     struct signaling_hipd_state                        *sig_state    = NULL;
     struct signaling_connection                        *conn         = NULL;
+    struct signaling_connection_short                  *conn_short   = NULL;
     const struct signaling_param_connection_identifier *conn_id      = NULL;
     const struct hip_notification                      *notification = NULL;
     const struct signaling_ntf_connection_failed_data  *ntf_data     = NULL;
@@ -1382,7 +1390,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
     /* Adapt connection status */
     conn->status        = SIGNALING_CONN_BLOCKED;
     conn->reason_reject = reason;
-    signaling_send_connection_update_request(our_hit, peer_hit, conn);
+    signaling_send_connection_update_request(our_hit, peer_hit, conn_short, conn);
 
 out_err:
     return err;

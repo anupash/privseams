@@ -423,7 +423,6 @@ int signaling_cdb_add_conn_short(const struct in6_addr *local_hit,
     int                          i;
     int                          found;
     signaling_cdb_entry_t       *entry = NULL;
-    struct signaling_connection *new_conn;
     struct signaling_connection *existing_conn;
 
     HIP_IFEL(!local_hit || !remote_hit,
@@ -450,10 +449,12 @@ int signaling_cdb_add_conn_short(const struct in6_addr *local_hit,
         signaling_cdb_update_entry_short(existing_conn, conn);
     } else {
         // TODO add functionality to add a new signaling connection based on the shorter version
-        new_conn = malloc(sizeof(struct signaling_connection));
-        signaling_copy_connection(new_conn, conn);
-        entry->connections = append_to_slist(entry->connections, new_conn);
-        next_conn_id       = new_conn->id + 1;
+/*
+ *      new_conn = malloc(sizeof(struct signaling_connection));
+ *      signaling_copy_connection(new_conn, conn);
+ *      entry->connections = append_to_slist(entry->connections, new_conn);
+ *      next_conn_id       = new_conn->id + 1;
+ */
     }
 
 out_err:

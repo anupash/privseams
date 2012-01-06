@@ -651,6 +651,35 @@ int signaling_copy_connection_short(struct signaling_connection_short *const dst
 }
 
 /**
+ * Copies a short signaling connection from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_connection_short_from_connection(struct signaling_connection_short *const dst,
+                                                    const struct signaling_connection *const src)
+{
+    int i = 0;
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+
+    //TODO check if I need to do ntohs here
+    dst->status = src->status;
+    dst->id     = src->id;
+    dst->side   = src->side;
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        dst->sockets[i].src_port = src->sockets[i].src_port;
+        dst->sockets[i].dst_port = src->sockets[i].dst_port;
+    }
+
+    return 0;
+}
+
+/**
  * Initializes the given connection context by stripping all
  * connection context information found in the message.
  * Values that are not given in the  message are initialized to default.

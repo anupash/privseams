@@ -195,6 +195,7 @@ out_err:
 static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
                                                  const hip_hit_t *dst_hit,
                                                  const int type,
+                                                 const struct signaling_connection_short *conn_short,
                                                  const struct signaling_connection *conn)
 {
     int                err = 0;
@@ -215,8 +216,13 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-             -1, "build connection context failed \n");
+    if (type == HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST) {
+        HIP_IFEL(hip_build_param_contents(msg, conn_short, HIP_PARAM_SIGNALING_CONNECTION_SHORT, sizeof(struct signaling_connection_short)),
+                 -1, "build connection context failed \n");
+    } else {
+        HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "build connection context failed \n");
+    }
 
     /* Print and send */
     HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
@@ -248,23 +254,26 @@ out_err:
 
 int signaling_send_first_connection_request(const hip_hit_t *src_hit,
                                             const hip_hit_t *dst_hit,
+                                            const struct signaling_connection_short *conn_short,
                                             const struct signaling_connection *conn)
 {
-    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, conn);
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, conn_short, conn);
 }
 
 int signaling_send_second_connection_request(const hip_hit_t *src_hit,
                                              const hip_hit_t *dst_hit,
+                                             const struct signaling_connection_short *conn_short,
                                              const struct signaling_connection *conn)
 {
-    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST, conn);
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST, conn_short, conn);
 }
 
 int signaling_send_connection_update_request(const hip_hit_t *src_hit,
                                              const hip_hit_t *dst_hit,
+                                             const struct signaling_connection_short *conn_short,
                                              const struct signaling_connection *conn)
 {
-    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST, conn);
+    return signaling_send_any_connection_request(src_hit, dst_hit, HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST, conn_short, conn);
 }
 
 /**

@@ -122,6 +122,7 @@ out_err:
  * @return          0 on success, negative on error
  */
 static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_t *hitr,
+                                                        const struct signaling_connection_short *const conn_short,
                                                         const struct signaling_connection *const conn)
 {
     int                err = 0;
@@ -134,10 +135,17 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, conn,
-                                      HIP_PARAM_SIGNALING_CONNECTION,
-                                      sizeof(struct signaling_connection)),
-             -1, "build application context failed \n");
+/*
+ *  HIP_IFEL(hip_build_param_contents(msg, conn,
+ *                                    HIP_PARAM_SIGNALING_CONNECTION,
+ *                                    sizeof(struct signaling_connection)),
+ *           -1, "build application context failed \n");
+ */
+    HIP_IFEL(hip_build_param_contents(msg, conn_short,
+                                      HIP_PARAM_SIGNALING_CONNECTION_SHORT,
+                                      sizeof(struct signaling_connection_short)),
+             -1, "build shorter application context failed \n");
+
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -181,11 +189,11 @@ out_err:
  */
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
 {
-    int                               err     = 0;
-    const struct hip_tlv_common      *param   = NULL;
-    const hip_hit_t                  *src_hit = NULL;
-    const hip_hit_t                  *dst_hit = NULL;
-    struct signaling_connection       conn;
+    int                          err     = 0;
+    const struct hip_tlv_common *param   = NULL;
+    const hip_hit_t             *src_hit = NULL;
+    const hip_hit_t             *dst_hit = NULL;
+    // struct signaling_connection       conn;
     struct signaling_connection_short conn_short;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
@@ -207,7 +215,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
     // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
     signaling_copy_connection_short(&conn_short, (const struct signaling_connection_short *) (param + 1));
 
-    signaling_cdb_add_conn_short(src_hit, dst_hit, &conn);
+    signaling_cdb_add_conn_short(src_hit, dst_hit, &conn_short);
     signaling_cdb_print();
 
 out_err:
@@ -232,11 +240,13 @@ out_err:
 int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
 {
     int                                err       = 0;
+    int                                i         = 0;
     const struct hip_tlv_common       *param     = NULL;
     const hip_hit_t                   *hits      = NULL;
     const hip_hit_t                   *hitr      = NULL;
     const struct signaling_connection *recv_conn = NULL;
     struct signaling_connection        new_conn;
+    struct signaling_connection_short  conn_short;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ1\n");
@@ -247,34 +257,55 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     HIP_IFEL(!msg, -1, "Msg is NULL \n");
 
     /* Establish a new connection state from the incoming connection context */
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-             -1, "Could not get connection parameter from connection request \n");
-    recv_conn = (const struct signaling_connection *) (param + 1);
+/*
+ * HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+ *           -1, "Could not get connection parameter from connection request \n");
+ *  recv_conn = (const struct signaling_connection *) (param + 1);
+ */
+
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_SHORT)),
+             -1, "Could not get connection short parameter from connection request \n");
+    signaling_copy_connection_short(&conn_short, (const struct signaling_connection_short *) (param + 1));
+
     signaling_get_hits_from_msg(msg, &hitr, &hits);
     signaling_copy_connection(&new_conn, recv_conn);
 
+    /* We have no waiting contexts. So build the local connection context and queue it. */
+    HIP_IFEL(signaling_init_connection(&new_conn),
+             -1, "Could not init connection context\n");
+    new_conn.status = conn_short.status;
+    new_conn.id     = conn_short.id;
+    new_conn.side   = conn_short.side;
+    //TODO check if we need to use for loop and access all the port pairs
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        new_conn.sockets[i].src_port = conn_short.sockets[i].src_port;
+        new_conn.sockets[i].dst_port = conn_short.sockets[i].dst_port;
+    }
+
     /* Check the remote context against our local policy,
      * block this connection if context is rejected */
-    if (signaling_policy_engine_check_and_flag(hitr, &new_conn.ctx_in)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        signaling_cdb_add(hits, hitr, &new_conn);
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
-        return 0;
-    }
+/*
+ *  if (signaling_policy_engine_check_and_flag(hitr, &new_conn.ctx_in)) {
+ *      new_conn.status = SIGNALING_CONN_BLOCKED;
+ *      signaling_cdb_add(hits, hitr, &new_conn);
+ *      signaling_cdb_print();
+ *      signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+ *      return 0;
+ *  }
+ */
 
     /* Since the remote context has been accepted,
      * build the local connection context and check it, too. */
     // todo: [mult conns] verify all contexts and that they're equal
 
     //TODO write the handler for verification of host identifier
-    if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
+    if (signaling_get_verified_application_context_by_ports(conn_short.sockets[0].src_port,
                                                             0,
                                                             &new_conn.ctx_out)) {
         HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
         signaling_init_host_context(&new_conn.ctx_out.host);
     }
-    if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
+    if (signaling_get_verified_application_context_by_ports(conn_short.sockets[0].src_port,
                                                             0,
                                                             &new_conn.ctx_out)) {
         HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
@@ -285,25 +316,33 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
         signaling_init_user_context(&new_conn.ctx_out.user);
     }
 
+    //TODO check if the below has to removed. commented out right now
+    //signaling_flag_set(&new_conn->ctx_in.flags, HOST_AUTHED);
+
+
     /* Set host and user authentication flags.
      * These are trivially true. */
     signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
     signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
 
-    if (signaling_policy_engine_check_and_flag(hits, &new_conn.ctx_out)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        signaling_cdb_add(hits, hitr, &new_conn);
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
-        return 0;
-    }
+/*
+ *  if (signaling_policy_engine_check_and_flag(hits, &new_conn.ctx_out)) {
+ *      new_conn.status = SIGNALING_CONN_BLOCKED;
+ *      conn_short.status = SIGNALING_CONN_BLOCKED;
+ *      signaling_cdb_add(hits, hitr, &new_conn);
+ *      signaling_cdb_print();
+ *      signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+ *      return 0;
+ *  }
+ */
 
     /* Both the local and the remote connection context have passed
      * the policy checks. We can now add the connection and send a
      * confirmation to the HIPD */
-    new_conn.status = SIGNALING_CONN_PROCESSING;
+    new_conn.status   = SIGNALING_CONN_PROCESSING;
+    conn_short.status = SIGNALING_CONN_PROCESSING;
     signaling_cdb_add(hits, hitr, &new_conn);
-    signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, &conn_short, &new_conn);
 
 out_err:
     return err;
@@ -330,6 +369,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     const hip_hit_t                   *hitr          = NULL;
     const struct signaling_connection *recv_conn     = NULL;
     struct signaling_connection       *existing_conn = NULL;
+    struct signaling_connection_short *conn_short    = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -354,7 +394,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     if (signaling_policy_engine_check_and_flag(hits, &existing_conn->ctx_in)) {
         existing_conn->status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+        signaling_hipfw_send_connection_confirmation(hits, hitr, conn_short, existing_conn);
         return 0;
     }
 
@@ -382,7 +422,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     }
 
     /* Answer to HIPD */
-    signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, conn_short, existing_conn);
 
 out_err:
     return err;
@@ -399,6 +439,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
     const hip_hit_t                   *hitr          = NULL;
     const struct signaling_connection *recv_conn     = NULL;
     struct signaling_connection       *existing_conn = NULL;
+    struct signaling_connection_short *conn_short    = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ3, PERF_HIPFW_I3_FINISH\n");
@@ -443,7 +484,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
     }
 
     /* Answer to HIPD */
-    signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, conn_short, existing_conn);
 
     return 0;
 

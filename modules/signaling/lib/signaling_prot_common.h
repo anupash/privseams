@@ -1171,6 +1171,8 @@ int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
 int signaling_copy_connection_short(struct signaling_connection_short *const dst,
                                     const struct signaling_connection_short *const src);
+int signaling_copy_connection_short_from_connection(struct signaling_connection_short *const dst,
+                                                    const struct signaling_connection *const src);
 
 
 /* Flag handling */

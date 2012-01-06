@@ -147,11 +147,7 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     signaling_cdb_print();
 
 
-    conn_short.id                  = new_conn.id;
-    conn_short.status              = new_conn.status;
-    conn_short.side                = INITIATOR;
-    conn_short.sockets[0].src_port = src_port;
-    conn_short.sockets[0].dst_port = dst_port;
+    signaling_copy_connection_short_from_connection(&conn_short, &new_conn);
     HIP_DEBUG("Sending connection request to hipd.\n");
     signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &conn_short, &new_conn);
 
