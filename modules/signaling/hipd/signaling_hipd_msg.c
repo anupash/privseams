@@ -687,12 +687,12 @@ out_err:
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                                err       = 0;
-    struct signaling_hipd_state       *sig_state = NULL;
-    struct signaling_connection        new_conn;
-    struct signaling_connection       *conn;
-    struct signaling_connection_short *conn_short = NULL;
-    struct userdb_user_entry          *db_entry   = NULL;
+    int                               err       = 0;
+    struct signaling_hipd_state      *sig_state = NULL;
+    struct signaling_connection       new_conn;
+    struct signaling_connection      *conn;
+    struct signaling_connection_short conn_short;
+    struct userdb_user_entry         *db_entry = NULL;
 
     /* Sanity checks */
     if (packet_type == HIP_I2) {
@@ -727,10 +727,10 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
 
-    signaling_copy_connection_short_from_connection(conn_short, &new_conn);
+    signaling_copy_connection_short_from_connection(&conn_short, conn);
 
     /* Tell the firewall/oslayer about the new connection and await it's decision */
-    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn_short, conn),
+    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_short, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
     /* If connection has been blocked by the oslayer.
@@ -759,8 +759,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     int                                             err       = 0;
     struct signaling_hipd_state                    *sig_state = NULL;
     struct signaling_connection                     recv_conn;
-    struct signaling_connection                    *conn           = NULL;
-    struct signaling_connection_short              *conn_short     = NULL;
+    struct signaling_connection                    *conn = NULL;
+    struct signaling_connection_short               conn_short;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
     struct userdb_user_entry                       *db_entry       = NULL;
 
@@ -801,8 +801,10 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
+    signaling_copy_connection_short_from_connection(&conn_short, conn);
+
     /* Ask the firewall for a decision on the remote connection context */
-    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, conn),
+    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &conn_short, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 
@@ -881,6 +883,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 {
     int                                             wait_auth = 0;
     int                                             err       = 0;
+    int                                             i         = 0;
     struct signaling_connection                     conn;
     struct signaling_connection                    *existing_conn = NULL;
     struct signaling_hipd_state                    *sig_state     = NULL;
@@ -917,6 +920,14 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 
     /* Signature validation */
     userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
+
+    conn_short.id     = existing_conn->id;
+    conn_short.side   = existing_conn->side;
+    conn_short.status = existing_conn->status;
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        conn_short.sockets[i].src_port = existing_conn->sockets[i].src_port;
+        conn_short.sockets[i].dst_port = existing_conn->sockets[i].dst_port;
+    }
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {

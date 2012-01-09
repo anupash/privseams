@@ -130,35 +130,48 @@ out_err:
  * @return 0 on success, negative on error
  */
 static int signaling_handle_connection_confirmation(struct hip_common *msg,
-                                                    UNUSED struct sockaddr_in6 *src)
+                                                    UNUSED struct sockaddr_in6 *src,
+                                                    const struct signaling_connection *r2_conn)
 {
-    int                                err           = 0;
-    const hip_hit_t                   *our_hit       = NULL;
-    const hip_hit_t                   *peer_hit      = NULL;
-    struct signaling_hipd_state       *sig_state     = NULL;
-    const struct hip_tlv_common       *param         = NULL;
-    struct hip_hadb_state             *entry         = NULL;
-    const struct signaling_connection *recv_conn     = NULL;
-    struct signaling_connection       *existing_conn = NULL;
-    struct userdb_user_entry          *db_entry      = NULL;
+    int                          err       = 0;
+    const hip_hit_t             *our_hit   = NULL;
+    const hip_hit_t             *peer_hit  = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
+    const struct hip_tlv_common *param     = NULL;
+    struct hip_hadb_state       *entry     = NULL;
+    //const struct signaling_connection *recv_conn     = NULL;
+    struct signaling_connection             *existing_conn = NULL;
+    const struct signaling_connection_short *conn_short;
+    struct userdb_user_entry                *db_entry = NULL;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
              -1, "hadb entry has not been set up\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-             -1, "Missing connection parameter\n");
-    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    recv_conn = (const struct signaling_connection *) (param + 1);
+/*
+ *  HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+ *           -1, "Missing connection parameter\n");
+ */
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_SHORT)),
+             -1, "Missing connection short parameter\n");
 
-    existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id);
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    conn_short = (const struct signaling_connection_short *) (param + 1);
+
+    // TODO check with RenŽ what to do here
+    // We do not receive the whole signaling_connection but instead signaling_connection_short
+    existing_conn = signaling_hipd_state_get_connection(sig_state, conn_short->id);
     if (!existing_conn) {
-        HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, recv_conn)),
+        HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, r2_conn)),
                  -1, "Could not save connection in local state\n");
+        existing_conn->status = conn_short->status;
     } else {
-        HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
-                 -1, "Could not copy connection context to state \n");
+/*
+ *        HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
+ *               -1, "Could not copy connection context to state \n");
+ */
+        existing_conn->status = conn_short->status;
     }
 
     /* add/update user in user db */
@@ -216,13 +229,12 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    if (type == HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST) {
-        HIP_IFEL(hip_build_param_contents(msg, conn_short, HIP_PARAM_SIGNALING_CONNECTION_SHORT, sizeof(struct signaling_connection_short)),
-                 -1, "build connection context failed \n");
-    } else {
-        HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-                 -1, "build connection context failed \n");
-    }
+    HIP_IFEL(hip_build_param_contents(msg, conn_short, HIP_PARAM_SIGNALING_CONNECTION_SHORT, sizeof(struct signaling_connection_short)),
+             -1, "build connection context failed \n");
+/*
+ *   HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+ *            -1, "build connection context failed \n");
+ */
 
     /* Print and send */
     HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
@@ -244,7 +256,7 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
 #endif
 
     /* We expect the corresponding local application context in the response. */
-    HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL),
+    HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL, conn),
              -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
 out_err:
