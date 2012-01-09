@@ -159,7 +159,7 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
     conn_short = (const struct signaling_connection_short *) (param + 1);
 
-    // TODO check with RenŽ what to do here
+    // TODO check with Rene what to do here
     // We do not receive the whole signaling_connection but instead signaling_connection_short
     existing_conn = signaling_hipd_state_get_connection(sig_state, conn_short->id);
     if (!existing_conn) {
