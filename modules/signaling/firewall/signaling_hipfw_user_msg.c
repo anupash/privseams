@@ -363,13 +363,14 @@ out_err:
  */
 int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
 {
-    int                                      err           = 0;
-    const struct hip_tlv_common             *param         = NULL;
-    const hip_hit_t                         *hits          = NULL;
-    const hip_hit_t                         *hitr          = NULL;
-    const struct signaling_connection       *recv_conn     = NULL;
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+    const hip_hit_t             *hits  = NULL;
+    const hip_hit_t             *hitr  = NULL;
+    //const struct signaling_connection       *recv_conn     = NULL;
     struct signaling_connection             *existing_conn = NULL;
-    const struct signaling_connection_short *conn_short;
+    const struct signaling_connection_short *recv_conn_short;
+    struct signaling_connection_short        conn_short;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -389,21 +390,20 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
  */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_SHORT)),
              -1, "Could not get connection parameter from connection request \n");
-    conn_short = (const struct signaling_connection_short *) (param + 1);
+    recv_conn_short = (const struct signaling_connection_short *) (param + 1);
 
-    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, conn_short->id)),
-             -1, "Received second connection request for non-existant connection id %d \n", conn_short->id);
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, recv_conn_short->id)),
+             -1, "Received second connection request for non-existant connection id %d \n", recv_conn_short->id);
     //signaling_copy_connection(existing_conn, recv_conn);
     //signaling_copy_connection_short_from_connection(&conn_short, existing_conn);
-    existing_conn->status = conn_short.status; // Connection id, side should not change
+    existing_conn->status = recv_conn_short->status; // Connection id, side should not change
 
     /* Check the remote context against our local policy,
      * block this connection if context is rejected */
     if (signaling_policy_engine_check_and_flag(hits, &existing_conn->ctx_in)) {
         existing_conn->status = SIGNALING_CONN_BLOCKED;
-        conn_short.status     = SIGNALING_CONN_BLOCKED;
         signaling_cdb_print();
-        signaling_hipfw_send_connection_confirmation(hits, hitr, &conn_short, existing_conn);
+        signaling_hipfw_send_connection_confirmation(hits, hitr, recv_conn_short, existing_conn);
         return 0;
     }
 
@@ -417,7 +417,6 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
              signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
-        conn_short.status     = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
         if (existing_conn->id <= 0) {
@@ -435,8 +434,9 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
         signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
     }
 
+    signaling_copy_connection_short_from_connection(&conn_short, existing_conn);
     /* Answer to HIPD */
-    signaling_hipfw_send_connection_confirmation(hits, hitr, &conn_short, existing_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, recv_conn_short, existing_conn);
 
 out_err:
     return err;
