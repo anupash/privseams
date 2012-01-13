@@ -235,7 +235,7 @@ out_err:
  *
  * @return          the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
+int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
     int                         err = 0;
     struct signaling_connection new_conn;
@@ -251,56 +251,56 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         HIP_ERROR("Could not init connection context from R1 \n");
         return -1;
     }
-    new_conn.ctx_in.direction = FWD;
-    new_conn.side             = MIDDLEBOX;
+    new_conn.side = MIDDLEBOX;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
         HIP_ERROR("Could not add user from message\n");
     }
-    new_conn.ctx_in.userdb_entry = db_entry;
 
     /* Try to auth the user and set flags accordingly */
-    userdb_handle_user_signature(common, &new_conn, IN);
     /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
-    if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-        return 0;
-    }
+/*
+ *   if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
+ *       new_conn.status = SIGNALING_CONN_BLOCKED;
+ *       signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
+ *       signaling_cdb_print();
+ *       signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+ *       return 0;
+ *   }
+ */
 
     /* Step c) */
     // TODO Add more handlers for user and application information requests
-    if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
-        if (signaling_build_param_user_auth_req_u(common, 0)) {
-            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
-            return 0;
-        }
-        ctx->modified = 1;
-    }
-    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_ID) ||
-        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
-        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
-        signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
 /*
+ *   if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
+ *       if (signaling_build_param_user_auth_req_u(common, 0)) {
+ *           HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+ *           return 0;
+ *       }
+ *       ctx->modified = 1;
+ *   }
+ *   if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_ID) ||
+ *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
+ *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
+ *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
+ *
  *        if (signaling_build_param_host_info_req_u(common, 0, new_conn.ctx_in.flags)) {
  *           HIP_ERROR("Could not add host info request. Dropping packet.\n");
  *           return 0;
  *       }
+ *
+ *       ctx->modified = 1;
+ *   }
  */
-        ctx->modified = 1;
-    }
 
     /* Step d) */
     new_conn.status = SIGNALING_CONN_PROCESSING;
-    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &new_conn),
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of R1\n");
     signaling_cdb_print();
@@ -327,7 +327,7 @@ out_err:
  *
  * @return          the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
+int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
     int                         err = 0;
     struct signaling_connection new_conn;
@@ -343,45 +343,42 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         HIP_ERROR("Could not init connection context from I2 \n");
         return -1;
     }
-    new_conn.ctx_in.direction = FWD;
-    new_conn.side             = MIDDLEBOX;
+    new_conn.side = MIDDLEBOX;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
         HIP_ERROR("Could not add user from message\n");
     }
-    new_conn.ctx_in.userdb_entry = db_entry;
 
     /* Try to auth the user and set flags accordingly */
     userdb_handle_user_signature(common, &new_conn, IN);
     /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of i2\n");
     signaling_connection_print(&new_conn, "\t");
-    if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
-        new_conn.status = SIGNALING_CONN_BLOCKED;
-        signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-        return 0;
-    }
+/*
+ *   if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
+ *       new_conn.status = SIGNALING_CONN_BLOCKED;
+ *       signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
+ *       signaling_cdb_print();
+ *       signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+ *       return 0;
+ *   }
+ *
+ *    Step c)
+ *   if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
+ *       if (signaling_build_param_user_auth_req_u(common, 0)) {
+ *           HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+ *           return 0;
+ *       }
+ *       ctx->modified = 1;
+ *   }
+ */
 
-    /* Step c) */
-    if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
-        if (signaling_build_param_user_auth_req_u(common, 0)) {
-            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
-            return 0;
-        }
-        ctx->modified = 1;
-    }
-
-    if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS)) {
-    }
     /* Step d) */
     new_conn.status = SIGNALING_CONN_PROCESSING;
-    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &new_conn),
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of I2\n");
     signaling_cdb_print();
@@ -405,13 +402,13 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
+int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                                             err = 0;
-    struct signaling_connection                     recv_conn;
-    struct signaling_connection                    *conn     = NULL;
-    const struct signaling_param_user_auth_request *auth_req = NULL;
-    struct userdb_user_entry                       *db_entry = NULL;
+    int                          err = 0;
+    struct signaling_connection  recv_conn;
+    struct signaling_connection *conn = NULL;
+    //const struct signaling_param_user_auth_request *auth_req = NULL;
+    struct userdb_user_entry *db_entry = NULL;
 
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
 
@@ -421,51 +418,53 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     /* Step a) */
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from R2/U2 \n");
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, recv_conn.id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id)),
              0, "Could not get connection state for connection-tracking table\n");
     HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
              0, "Could not update connection state with information from R2\n");
-    conn->ctx_out.direction = FWD;
+    //conn->ctx_out.direction = FWD;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
         HIP_ERROR("Could not add user from message\n");
     }
-    conn->ctx_out.userdb_entry = db_entry;
+    //conn->ctx_out.userdb_entry = db_entry;
 
     /* Try to auth the user and set flags accordingly */
     userdb_handle_user_signature(common, conn, OUT);
     /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
+    //signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
 
 
     /* Step b) */
-    if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
-            HIP_ERROR("Requested authentication in I2, but R2 is missing signed request parameter. \n");
-            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
-            return 0;
-        }
-    }
-
-    /* Step c) */
-    if (signaling_policy_engine_check_and_flag(&common->hits, &conn->ctx_out)) {
-        conn->status = SIGNALING_CONN_BLOCKED;
-        signaling_cdb_add(&common->hits, &common->hitr, conn);
-        signaling_cdb_print();
-        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
-        return 0;
-    }
-
-    /* Step d) */
-    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        if (signaling_build_param_user_auth_req_u(common, 0)) {
-            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
-            return 0;
-        }
-        ctx->modified = 1;
-    }
+/*
+ *  if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+ *          HIP_ERROR("Requested authentication in I2, but R2 is missing signed request parameter. \n");
+ *          signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
+ *          return 0;
+ *      }
+ *  }
+ *
+ *   Step c)
+ *  if (signaling_policy_engine_check_and_flag(&common->hits, &conn->ctx_out)) {
+ *      conn->status = SIGNALING_CONN_BLOCKED;
+ *      signaling_cdb_add(&common->hits, &common->hitr, conn);
+ *      signaling_cdb_print();
+ *      signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
+ *      return 0;
+ *  }
+ *
+ *   Step d)
+ *  if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *      if (signaling_build_param_user_auth_req_u(common, 0)) {
+ *          HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+ *          return 0;
+ *      }
+ *      ctx->modified = 1;
+ *  }
+ */
 
     HIP_DEBUG("Connection tracking table after receipt of R2\n");
     signaling_cdb_print();
@@ -490,43 +489,47 @@ out_err:
  */
 int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const struct hip_fw_context *ctx)
 {
-    int                                             err = 0;
-    struct signaling_connection                     recv_conn;
-    struct signaling_connection                    *existing_conn = NULL;
-    const struct signaling_param_user_auth_request *auth_req      = NULL;
-    int                                             wait_auth     = 0;
+    int                          err = 0;
+    struct signaling_connection  recv_conn;
+    struct signaling_connection *existing_conn = NULL;
+    //const struct signaling_param_user_auth_request *auth_req      = NULL;
+    int wait_auth = 0;
 
     printf("\033[22;34mReceived I3 packet\033[22;37m\n\033[01;37m");
 
     /* Step a) */
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from I3 \n");
-    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, recv_conn.id)),
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id)),
              0, "Could not get connection state for connection-tracking table\n");
     HIP_IFEL(signaling_update_flags_from_connection_id(common, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
 
     /* Step b) */
-    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
-            HIP_ERROR("Requested authentication in R2, but I3 is missing signed request parameter. \n");
-            // todo: [user auth] send notification
-            return 0;
-        }
-    }
+/*
+ *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *      if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+ *          HIP_ERROR("Requested authentication in R2, but I3 is missing signed request parameter. \n");
+ *          // todo: [user auth] send notification
+ *          return 0;
+ *      }
+ *  }
+ */
 
     /* Try to auth the user and set flags accordingly */
     userdb_handle_user_signature(common, existing_conn, IN);
 
-    /* Check if we're done with this connection or if we have to wait for addition authentication */
-    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
-        wait_auth = 1;
-    }
-    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of responder user.\n");
-        wait_auth = 1;
-    }
+/*
+ *   Check if we're done with this connection or if we have to wait for addition authentication
+ *  if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
+ *      wait_auth = 1;
+ *  }
+ *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of responder user.\n");
+ *      wait_auth = 1;
+ *  }
+ */
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3/U3 \n");
         existing_conn->status = SIGNALING_CONN_ALLOWED;
@@ -567,21 +570,23 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, conn_id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id)),
              -1, "No connection context for connection id \n");
     HIP_IFEL(!(param_cert = hip_get_param(common, HIP_PARAM_CERT)),
              -1, "Message contains no certificates.\n");
-    switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
-    case 0:
-        conn_ctx = &conn->ctx_in;
-        break;
-    case 1:
-        conn_ctx = &conn->ctx_out;
-        break;
-    default:
-        HIP_DEBUG("Connection is not conntracked \n");
-        return 0;
-    }
+/*
+ *  switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
+ *  case 0:
+ *      conn_ctx = &conn->ctx_in;
+ *      break;
+ *  case 1:
+ *      conn_ctx = &conn->ctx_out;
+ *      break;
+ *  default:
+ *      HIP_DEBUG("Connection is not conntracked \n");
+ *      return 0;
+ *  }
+ */
 
     /* process certificates and check completeness*/
     err = userdb_add_certificates_from_msg(common, conn_ctx->userdb_entry);
@@ -644,19 +649,21 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
              0, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, conn_id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id)),
              0, "No connection context for connection id \n");
-    switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
-    case 0:
-        conn_ctx = &conn->ctx_in;
-        break;
-    case 1:
-        conn_ctx = &conn->ctx_out;
-        break;
-    default:
-        HIP_DEBUG("Connection is not conntracked \n");
-        return 0;
-    }
+/*
+ *  switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
+ *  case 0:
+ *      conn_ctx = &conn->ctx_in;
+ *      break;
+ *  case 1:
+ *      conn_ctx = &conn->ctx_out;
+ *      break;
+ *  default:
+ *      HIP_DEBUG("Connection is not conntracked \n");
+ *      return 0;
+ *  }
+ */
 
     /* check if we authed the user too */
     if (!signaling_flag_check(conn_ctx->flags, USER_AUTHED)) {
@@ -730,7 +737,7 @@ static int signaling_handle_notify_connection_failed(struct hip_common *common, 
              1, "Message contains no notification parameter.\n");
     HIP_IFEL(!(conn_id = hip_get_param(common, HIP_PARAM_SIGNALING_CONNECTION_ID)),
              1, "Could not find connection identifier in notification. \n");
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, ntohs(conn_id->id))),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, ntohs(conn_id->id))),
              1, "Could not get connection state from connection-tracking table\n");
 
     /* Get notification data */

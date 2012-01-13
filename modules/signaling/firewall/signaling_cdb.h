@@ -40,11 +40,15 @@
 
 #include "firewall/common_types.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/linkedlist.h"
+
 
 typedef struct signaling_cdb_entry {
-    hip_hit_t     local_hit;
-    hip_hit_t     remote_hit;
-    struct slist *connections;
+    hip_hit_t                   local_hit;
+    hip_hit_t                   remote_hit;
+    uint16_t                    src_port;
+    uint16_t                    dst_port;
+    struct signaling_connection connections;
 } signaling_cdb_entry_t;
 
 int signaling_cdb_init(void);
@@ -52,17 +56,21 @@ int signaling_cdb_uninit(void);
 
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
+                      const uint16_t        *src_port,
+                      const uint16_t        *dst_port,
                       struct signaling_connection *conn);
 
-int signaling_cdb_add_conn_short(const struct in6_addr *local_hit,
-                                 const struct in6_addr *remote_hit,
-                                 struct signaling_connection_short *conn);
-
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
-                                                const struct in6_addr *remote_hit);
+                                                const struct in6_addr *remote_hit,
+                                                const uint16_t        *src_port,
+                                                const uint16_t        *dst_port);
+
 struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
                                                                 const struct in6_addr *remote_hit,
+                                                                const uint16_t        *src_port,
+                                                                const uint16_t        *dst_port,
                                                                 const uint32_t id);
+
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
                                         signaling_cdb_entry_t *entry,
                                         struct signaling_connection **ret);
@@ -75,7 +83,9 @@ struct signaling_connection *signaling_cdb_get_waiting(const struct in6_addr *sr
                                                        const struct in6_addr *dst_hit);
 
 int signaling_cdb_direction(const struct in6_addr *src_hit,
-                            const struct in6_addr *dst_hit);
+                            const struct in6_addr *dst_hit,
+                            const uint16_t        *src_port,
+                            const uint16_t        *dst_port);
 
 int signaling_cdb_entry_print(signaling_cdb_entry_t *entry);
 

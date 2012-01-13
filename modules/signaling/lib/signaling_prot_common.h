@@ -69,7 +69,7 @@
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
 #define HIP_PARAM_SIGNALING_CONNECTION          5102
-#define HIP_PARAM_SIGNALING_CONNECTION_SHORT               5103
+#define HIP_PARAM_SIGNALING_PORTS               5103
 
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE              33001
@@ -1082,31 +1082,9 @@ struct signaling_service_nack {
  *   All integers are in host-byte-order.
  */
 struct signaling_connection {
-    uint32_t                            id;
-    int                                 status;
-    int                                 side;
-    int                                 reason_reject;
-    struct timeval                      timestamp;
-    struct signaling_port_pair          sockets[SIGNALING_MAX_SOCKETS];
-    struct signaling_connection_context ctx_out;
-    struct signaling_connection_context ctx_in;
-};
-
-/**
- *   Signaling connection to be sent by the hipfw to the hipd
- *   This motivation behind the structure is to reduce the size of the payload to
- *   be tranfered from hipfw to hipd and vice-versa
- *
- *   Use signaling_init_connection_short() to initialize this structure to standard values.
- *
- *   All integers are in host-byte-order.
- *   TODO discuss if connection flags to be added to signaling_connection_short
- */
-struct signaling_connection_short {
-    uint32_t                   id;
-    int                        status;
-    int                        side;
-    struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
+    uint32_t id;
+    int      side;
+    int      status;
 };
 
 
@@ -1159,7 +1137,6 @@ int signaling_init_connection(struct signaling_connection *const conn);
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
                                        enum direction dir);
-int signaling_init_connection_short(struct signaling_connection_short *const conn);
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
                                          const struct hip_common *const msg,
                                          enum direction dir);
@@ -1169,10 +1146,6 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
                                        struct signaling_connection *const conn);
 int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
-int signaling_copy_connection_short(struct signaling_connection_short *const dst,
-                                    const struct signaling_connection_short *const src);
-int signaling_copy_connection_short_from_connection(struct signaling_connection_short *const dst,
-                                                    const struct signaling_connection *const src);
 
 
 /* Flag handling */

@@ -224,7 +224,6 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  */
 void signaling_connection_print(const struct signaling_connection *const conn, UNUSED const char *const prefix)
 {
-    int  i;
     char prefix_buf[strlen(prefix) + 2];
     sprintf(prefix_buf, "%s\t", prefix);
 
@@ -248,19 +247,9 @@ void signaling_connection_print(const struct signaling_connection *const conn, U
         break;
     default:
         HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "UNKNOWN");
-    }
-    HIP_DEBUG("%s  Sockets:\t\t ", prefix);
-    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
-        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0 && i > 0) {
-            break;
-        }
-        fprintf(stderr, "[%d: %d -> %d]  ", i, conn->sockets[i].src_port, conn->sockets[i].dst_port);
+        break;
     }
     fprintf(stderr, "\n");
-    HIP_DEBUG("%s  Outgoing connection context:\n", prefix);
-    signaling_connection_context_print(&conn->ctx_out, prefix_buf);
-    HIP_DEBUG("%s  Incoming connection context:\n", prefix);
-    signaling_connection_context_print(&conn->ctx_in, prefix_buf);
     HIP_DEBUG("%s+------------ CONNECTION END   ----------------------\n", prefix);
 }
 
@@ -395,37 +384,9 @@ int signaling_init_connection(struct signaling_connection *const conn)
     int err = 0;
 
     HIP_IFEL(!conn, -1, "Connection context has to be allocated before initialization\n");
-    conn->id            = 0;
-    conn->status        = SIGNALING_CONN_NEW;
-    conn->side          = INITIATOR;
-    conn->reason_reject = 0;
-    memset(conn->sockets, 0, sizeof(conn->sockets));
-    HIP_IFEL(signaling_init_connection_context(&conn->ctx_in, IN),
-             -1, "Could not init incoming connection context\n");
-    HIP_IFEL(signaling_init_connection_context(&conn->ctx_out, OUT),
-             -1, "Could not init outgoing connection context\n");
-out_err:
-    return err;
-}
-
-/**
- * Initializes the given connection context to default values.
- * Memory for context has to be allocated and freed by the caller.
- *
- * @param ctx a pointer to the connection context that should be initialized
- *
- * @return negative value on error, 0 on success
- */
-int signaling_init_connection_short(struct signaling_connection_short *const conn)
-{
-    int err = 0;
-
-    HIP_IFEL(!conn, -1, "Short Connection context has to be allocated before initialization\n");
     conn->id     = 0;
     conn->status = SIGNALING_CONN_NEW;
     conn->side   = INITIATOR;
-    memset(conn->sockets, 0, sizeof(conn->sockets));
-
 out_err:
     return err;
 }
@@ -444,7 +405,7 @@ out_err:
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
-                                       enum direction dir)
+                                       UNUSED enum direction dir)
 {
     int                                  err         = 0;
     const struct hip_tlv_common         *param       = NULL;
@@ -463,14 +424,6 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     signaling_update_flags_from_connection_id(msg, conn);
 
-    if (dir == IN) {
-        ctx_to_init = &conn->ctx_in;
-    } else {
-        ctx_to_init = &conn->ctx_out;
-    }
-    ctx_to_init->direction = dir;
-
-
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
     while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
         signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
@@ -486,7 +439,7 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
-        signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
+        //signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
@@ -500,7 +453,7 @@ out_err:
 
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
                                          const struct hip_common *const msg,
-                                         enum direction dir)
+                                         UNUSED enum direction dir)
 {
     int                                  err           = 0;
     const struct hip_tlv_common         *param         = NULL;
@@ -515,12 +468,6 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
         conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
-    if (dir == IN) {
-        ctx_to_update = &conn->ctx_in;
-    } else {
-        ctx_to_update = &conn->ctx_out;
-    }
-
     signaling_update_flags_from_connection_id(msg, conn);
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
@@ -528,9 +475,11 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
         signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_update->app);
         // init ports only for the responder, the initiator already has them
         // todo: [mult conn] define some checks, that ports are equal?
-        if (conn->side == RESPONDER) {
-            signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
-        }
+/*
+ *      if (conn->side == RESPONDER) {
+ *          signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
+ *      }
+ */
     }
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
@@ -591,7 +540,7 @@ out_err:
 /**
  * @return -1 if the port list is full, other wise the position where the ports were added
  */
-int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
+int signaling_connection_add_port_pair(UNUSED uint16_t src_port, UNUSED uint16_t dst_port,
                                        struct signaling_connection *const conn)
 {
     int i;
@@ -601,11 +550,6 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
     HIP_IFEL(!conn, -1, "Need connection context to add port pair\n");
 
     for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
-        if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0) {
-            conn->sockets[i].src_port = src_port;
-            conn->sockets[i].dst_port = dst_port;
-            return i;
-        }
     }
 
 out_err:
@@ -628,54 +572,6 @@ int signaling_copy_port_pair(struct signaling_port_pair *const dst,
         return -1;
     }
     memcpy(dst, src, sizeof(struct signaling_port_pair));
-    return 0;
-}
-
-/**
- * Copies a short signaling connection from src to dst.
- *
- * @param dst   the destination struct
- * @param src   the source struct
- *
- * @return negative value on error, 0 on success
- */
-int signaling_copy_connection_short(struct signaling_connection_short *const dst,
-                                    const struct signaling_connection_short *const src)
-{
-    if (!dst || !src) {
-        HIP_ERROR("Cannot copy from/to NULL struct \n");
-        return -1;
-    }
-    memcpy(dst, src, sizeof(struct signaling_connection_short));
-    return 0;
-}
-
-/**
- * Copies a short signaling connection from src to dst.
- *
- * @param dst   the destination struct
- * @param src   the source struct
- *
- * @return negative value on error, 0 on success
- */
-int signaling_copy_connection_short_from_connection(struct signaling_connection_short *const dst,
-                                                    const struct signaling_connection *const src)
-{
-    int i = 0;
-    if (!dst || !src) {
-        HIP_ERROR("Cannot copy from/to NULL struct \n");
-        return -1;
-    }
-
-    //TODO check if I need to do ntohs here
-    dst->status = src->status;
-    dst->id     = src->id;
-    dst->side   = src->side;
-    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
-        dst->sockets[i].src_port = src->sockets[i].src_port;
-        dst->sockets[i].dst_port = src->sockets[i].dst_port;
-    }
-
     return 0;
 }
 
@@ -748,31 +644,33 @@ int signaling_copy_connection_context(struct signaling_connection_context *const
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn)
 {
-    int                                             err      = 0;
-    int                                             tmp_len  = 0;
-    uint16_t                                        tmp_info = -1;
-    int                                             i        = 0;
-    const struct signaling_param_user_auth_request *param_usr_auth;
-    const struct signaling_param_service_offer_u   *param_service_offer;
-    const uint8_t                                  *p_contents;
+    int err     = 0;
+    int tmp_len = 0;
+//    const struct signaling_param_user_auth_request *param_usr_auth;
+    const struct signaling_param_service_offer_u *param_service_offer;
+    const uint8_t                                *p_contents;
 
     /* sanity checks */
     HIP_IFEL(!conn,           -1, "Cannot update flags of NULL-connection\n");
     HIP_IFEL(!msg,            -1, "Cannot update flags from NULL-msg\n");
 
     /* This flags the local user. */
-    if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
-        signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-    } //else {
-      //  signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-      //}
+/*
+ *  if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+ *      signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+ *  } else {
+ *      signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+ *    }
+ */
 
     /* This flags the remote user */
-    if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_U))) {
-        signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-    } //else if (!signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-      //  signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-      //}
+/*
+ *  if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_U))) {
+ *      signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+ *  } //else if (!signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *    //  signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+ *    //}
+ */
 
     if ((param_service_offer = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U))) {
         tmp_len = param_service_offer->length;
@@ -784,25 +682,25 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
                      sizeof(param_service_offer->service_type) +
                      sizeof(param_service_offer->service_description);
 
-        for (i = 0; i < tmp_len; i++) {
-            memcpy(&tmp_info, p_contents, sizeof(param_service_offer->endpoint_info_req[i]));
-            switch (tmp_info) {
-            case HOST_INFO_KERNEL:
-                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_KERNEL);
-                break;
-            case HOST_INFO_OS:
-                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_OS);
-                break;
-            case HOST_INFO_ID:
-                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_ID);
-                break;
-            case HOST_INFO_CERTS:
-                signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_CERTS);
-                break;
-            default:
-                break;
-            }
-        }
+/*        for (i = 0; i < tmp_len; i++) {
+ *          memcpy(&tmp_info, p_contents, sizeof(param_service_offer->endpoint_info_req[i]));
+ *          switch (tmp_info) {
+ *          case HOST_INFO_KERNEL:
+ *              signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_KERNEL);
+ *              break;
+ *          case HOST_INFO_OS:
+ *              signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_OS);
+ *              break;
+ *          case HOST_INFO_ID:
+ *              signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_ID);
+ *              break;
+ *          case HOST_INFO_CERTS:
+ *              signaling_flag_set(&conn->ctx_in.flags, HOST_INFO_CERTS);
+ *              break;
+ *          default:
+ *              break;
+ *          }
+ *      }*/
     }
 out_err:
     return err;

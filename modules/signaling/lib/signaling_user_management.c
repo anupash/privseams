@@ -50,24 +50,28 @@ static int userdb_user_entries_cmp(const struct userdb_user_entry *e1,
 static IMPLEMENT_LHASH_HASH_FN(userdb_user_entry, struct userdb_user_entry)
 static IMPLEMENT_LHASH_COMP_FN(userdb_user_entries, struct userdb_user_entry)
 
-static void userdb_apply_func_doall_arg(struct userdb_user_entry *entry, void *ptr) {
+static void userdb_apply_func_doall_arg(struct userdb_user_entry *entry, void *ptr)
+{
     int err = 0;
-    int(**func)(struct userdb_user_entry *) = ptr;
+    int(**func) (struct userdb_user_entry *) = ptr;
 
     if ((err = (**func)(entry))) {
         HIP_DEBUG("Error evaluating following entry: \n");
         userdb_entry_print(entry);
     }
 }
+
 static IMPLEMENT_LHASH_DOALL_ARG_FN(userdb_apply_func, struct userdb_user_entry, void *)
 
-void userdb_apply_func(int(*func)(struct userdb_user_entry *)) {
+void userdb_apply_func(int(*func)(struct userdb_user_entry *))
+{
     hip_ht_doall_arg(user_db, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(userdb_apply_func), &func);
 }
 
-static void userdb_certificate_chain_print(STACK_OF(X509) *chain, UNUSED const char *const prefix) {
+static void userdb_certificate_chain_print(STACK_OF(X509) *chain, UNUSED const char *const prefix)
+{
     char buf[SIGNALING_USER_ID_MAX_LEN];
-    int i;
+    int  i;
 
     HIP_DEBUG("%sCertificate chain subjects:\n", prefix);
     if (chain == NULL) {
@@ -76,7 +80,7 @@ static void userdb_certificate_chain_print(STACK_OF(X509) *chain, UNUSED const c
     }
     for (i = sk_X509_num(chain) - 1; i >= 0; i--) {
         X509_NAME_oneline(X509_get_subject_name(sk_X509_value(chain, i)), buf, SIGNALING_USER_ID_MAX_LEN);
-        buf[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+        buf[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
         HIP_DEBUG("%s\t -> Subject #%02d: %s\n", prefix, i + 1, buf);
     }
 }
@@ -89,11 +93,11 @@ static void userdb_certificate_context_print(struct userdb_certificate_context *
     userdb_certificate_chain_print(ctx->cert_chain, prefix);
 }
 
-
-int userdb_entry_print(struct userdb_user_entry *e) {
-    const struct hip_ll_node *listentry = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
-    char subj_name[SIGNALING_USER_ID_MAX_LEN];
+int userdb_entry_print(struct userdb_user_entry *e)
+{
+    const struct hip_ll_node          *listentry = NULL;
+    struct userdb_certificate_context *cert_ctx  = NULL;
+    char                               subj_name[SIGNALING_USER_ID_MAX_LEN];
 
     if (e == NULL) {
         HIP_DEBUG("\t\t < NULL ENTRY > \n ");
@@ -102,7 +106,7 @@ int userdb_entry_print(struct userdb_user_entry *e) {
 
     HIP_DEBUG("\t----- USERDB ELEMENT START ------\n");
     X509_NAME_oneline(e->uname, subj_name, SIGNALING_USER_ID_MAX_LEN);
-    subj_name[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+    subj_name[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
     HIP_DEBUG("\tUser name:\t %s\n", subj_name);
     HIP_DEBUG("\tUid:\t\t %ld \n", e->uid);
     if (e->pub_key) {
@@ -123,7 +127,7 @@ int userdb_entry_print(struct userdb_user_entry *e) {
         HIP_DEBUG("\tKey:\t\t n/a\n");
     }
     HIP_DEBUG("\tCertificate contexts:\n");
-    while((listentry = hip_ll_iterate(e->cert_contexts, listentry))) {
+    while ((listentry = hip_ll_iterate(e->cert_contexts, listentry))) {
         if ((cert_ctx = listentry->ptr)) {
             userdb_certificate_context_print(cert_ctx, "\t\t");
         }
@@ -133,26 +137,30 @@ int userdb_entry_print(struct userdb_user_entry *e) {
 }
 
 /* Print the contents of the database */
-void userdb_print(void) {
+void userdb_print(void)
+{
     HIP_DEBUG("------------------ USERDB START ------------------\n");
     userdb_apply_func(&userdb_entry_print);
     HIP_DEBUG("------------------ USERDB END   ------------------\n");
 }
 
-int signaling_user_mgmt_init(void) {
-    if(!(user_db = hip_ht_init(LHASH_HASH_FN(userdb_user_entry), LHASH_COMP_FN(userdb_user_entries)))) {
+int signaling_user_mgmt_init(void)
+{
+    if (!(user_db = hip_ht_init(LHASH_HASH_FN(userdb_user_entry), LHASH_COMP_FN(userdb_user_entries)))) {
         HIP_ERROR("failed to initialize user db\n");
         return -1;
     }
     return 0;
 }
 
-int signaling_user_mgmt_uninit(void) {
+int signaling_user_mgmt_uninit(void)
+{
     hip_ht_uninit(user_db);
     return 0;
 }
 
-struct userdb_user_entry *userdb_get_user(X509_NAME *uname) {
+struct userdb_user_entry *userdb_get_user(X509_NAME *uname)
+{
     struct userdb_user_entry search_entry;
 
     search_entry.uname = uname;
@@ -162,20 +170,21 @@ struct userdb_user_entry *userdb_get_user(X509_NAME *uname) {
 struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_user_entry *const user,
                                                                   const struct in6_addr *const src_hit,
                                                                   const struct in6_addr *const dst_hit,
-                                                                  const uint32_t network_id) {
-    const struct hip_ll_node *listentry = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
+                                                                  const uint32_t network_id)
+{
+    const struct hip_ll_node          *listentry = NULL;
+    struct userdb_certificate_context *cert_ctx  = NULL;
 
     if (!user) {
         return NULL;
     }
 
-    while((listentry = hip_ll_iterate(user->cert_contexts, listentry))) {
-        if((cert_ctx = listentry->ptr) &&
-                IN6_ARE_ADDR_EQUAL(src_hit, &cert_ctx->src_hit) &&
-                IN6_ARE_ADDR_EQUAL(dst_hit, &cert_ctx->dst_hit) &&
-                network_id == cert_ctx->network_id) {
-                return cert_ctx;
+    while ((listentry = hip_ll_iterate(user->cert_contexts, listentry))) {
+        if ((cert_ctx = listentry->ptr) &&
+            IN6_ARE_ADDR_EQUAL(src_hit, &cert_ctx->src_hit) &&
+            IN6_ARE_ADDR_EQUAL(dst_hit, &cert_ctx->dst_hit) &&
+            network_id == cert_ctx->network_id) {
+            return cert_ctx;
         }
     }
 
@@ -191,9 +200,9 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
  */
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
-    int err = 0;
-    X509_NAME *uname = NULL;
-    struct userdb_user_entry *new = NULL;
+    int                       err   = 0;
+    X509_NAME                *uname = NULL;
+    struct userdb_user_entry *new   = NULL;
 
     /* Check if we already have that user */
     HIP_IFEL(signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname),
@@ -216,7 +225,7 @@ struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *u
     hip_ll_init(new->cert_contexts);
     new->uname = uname;
     new->flags = 0;
-    new->uid = user->uid;
+    new->uid   = user->uid;
     if (user->key_rr_len > 0) {
         userdb_add_key_from_rr(new, &user->rdata, user->key_rr_len, user->pkey);
     } else {
@@ -242,11 +251,11 @@ out_err:
  */
 struct userdb_user_entry *userdb_add_user_from_msg(const struct hip_common *const msg, int replace)
 {
-    const struct signaling_connection *conn                   = NULL;
-    const struct hip_tlv_common *param                        = NULL;
-    const struct signaling_user_context *user_ctx                   = NULL;
-    struct signaling_user_context user;
-    int err = 0;
+    const struct signaling_connection   *conn     = NULL;
+    const struct hip_tlv_common         *param    = NULL;
+    const struct signaling_user_context *user_ctx = NULL;
+    struct signaling_user_context        user;
+    int                                  err = 0;
 
     /* sanity checks */
     HIP_IFEL(!msg, -1, "Cannot add user from  NULL-message\n");
@@ -254,15 +263,15 @@ struct userdb_user_entry *userdb_add_user_from_msg(const struct hip_common *cons
     /* First check if there is a connection context,
      * This is the case if the message was sent by the firewall. */
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)) &&
-            hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
+        hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
         conn = (const struct signaling_connection *) (param + 1);
-        user_ctx = &conn->ctx_out.user;
+        //user_ctx = &conn->ctx_out.user;
     }
     /* This is no message from a firewall, so just init a connection
      * from the information in the message. */
     /* get connection and update flags */
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)) &&
-            hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+        hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
         signaling_init_user_context(&user);
         signaling_build_user_context((const struct signaling_param_user_context *) param, &user);
         user_ctx = &user;
@@ -283,7 +292,7 @@ struct userdb_certificate_context *userdb_add_certificate_context(struct userdb_
                                                                   const uint32_t network_id,
                                                                   const struct hip_cert *const first_cert)
 {
-    int err = 0;
+    int                                err     = 0;
     struct userdb_certificate_context *new_ctx = NULL;
 
     /* sanity checks */
@@ -294,14 +303,14 @@ struct userdb_certificate_context *userdb_add_certificate_context(struct userdb_
     HIP_IFEL(!(new_ctx = malloc(sizeof(struct userdb_certificate_context))),
              -1, "Could not allocate new certificate context \n");
 
-    new_ctx->count = first_cert->cert_count;
-    new_ctx->group = first_cert->cert_group;
+    new_ctx->count        = first_cert->cert_count;
+    new_ctx->group        = first_cert->cert_group;
     new_ctx->next_cert_id = 1;
-    new_ctx->network_id = network_id;
+    new_ctx->network_id   = network_id;
     memcpy(&new_ctx->src_hit, src_hit, sizeof(struct in6_addr));
     memcpy(&new_ctx->dst_hit, dst_hit, sizeof(struct in6_addr));
     HIP_IFEL(!(new_ctx->cert_chain = sk_X509_new_null()),
-                 -1, "memory allocation failure\n");
+             -1, "memory allocation failure\n");
     HIP_IFEL(hip_ll_add_first(user->cert_contexts, new_ctx),
              -1, "Error adding to list\n");
 
@@ -313,18 +322,19 @@ out_err:
 }
 
 struct userdb_certificate_context *userdb_get_certificate_context_by_key(const struct userdb_user_entry *const user,
-                                                                         const EVP_PKEY *pubkey) {
-    const struct hip_ll_node *listentry = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
-    X509 *leafcert = NULL;
+                                                                         const EVP_PKEY *pubkey)
+{
+    const struct hip_ll_node          *listentry = NULL;
+    struct userdb_certificate_context *cert_ctx  = NULL;
+    X509                              *leafcert  = NULL;
 
     if (!user) {
         return NULL;
     }
 
-    while((listentry = hip_ll_iterate(user->cert_contexts, listentry))) {
+    while ((listentry = hip_ll_iterate(user->cert_contexts, listentry))) {
         if ((cert_ctx = listentry->ptr) && sk_X509_num(cert_ctx->cert_chain) > 0) {
-            leafcert = sk_X509_value(cert_ctx->cert_chain, sk_X509_num(cert_ctx->cert_chain) -1);
+            leafcert = sk_X509_value(cert_ctx->cert_chain, sk_X509_num(cert_ctx->cert_chain) - 1);
             if (match_public_key(leafcert, pubkey)) {
                 return cert_ctx;
             }
@@ -341,11 +351,11 @@ struct userdb_certificate_context *userdb_get_certificate_context_by_key(const s
  * @param key_rr_len    the length of the key resource record (without the length of the key_rr_header)
  */
 int userdb_add_key_from_rr(struct userdb_user_entry *user,
-                   const struct hip_host_id_key_rdata *const key_rr_header,
-                   const unsigned int key_rr_len,
-                   const unsigned char *key_rr)
+                           const struct hip_host_id_key_rdata *const key_rr_header,
+                           const unsigned int key_rr_len,
+                           const unsigned char *key_rr)
 {
-    int err = 0;
+    int                err = 0;
     struct hip_host_id pseudo_ui;
 
     HIP_IFEL(!user, -1, "User db entry is NULL \n");
@@ -362,14 +372,13 @@ out_err:
     return err;
 }
 
-
 /**
  * @return the id of the next expected certificate, 0 if chain is complete
  */
 int userdb_add_certifiate(struct userdb_certificate_context *cert_ctx,
                           const struct hip_cert *param_cert)
 {
-    int err = 0;
+    int   err  = 0;
     X509 *cert = NULL;
 
     /* sanity checks */
@@ -405,11 +414,11 @@ out_err:
 int userdb_add_certificates_from_msg(const struct hip_common *const msg,
                                      struct userdb_user_entry *user)
 {
-    int err = 0;
-    int next_cert_id = -1;
+    int                                         err                 = 0;
+    int                                         next_cert_id        = -1;
     const struct signaling_param_cert_chain_id *param_cert_chain_id = NULL;
-    const struct hip_cert *param_cert = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
+    const struct hip_cert                      *param_cert          = NULL;
+    struct userdb_certificate_context          *cert_ctx            = NULL;
 
     /* sanity checks */
     HIP_IFEL(!msg,      -1, "Message is NULL. \n");
@@ -418,7 +427,7 @@ int userdb_add_certificates_from_msg(const struct hip_common *const msg,
 
     /* Get certificate context or add new */
     HIP_IFEL(!(param_cert = hip_get_param(msg, HIP_PARAM_CERT)),
-                 -1, "Message contains no certificate. \n");
+             -1, "Message contains no certificate. \n");
     if (!(cert_ctx = userdb_get_certificate_context(user, &msg->hits, &msg->hitr, ntohl(param_cert_chain_id->network_id)))) {
         if (!(cert_ctx = userdb_add_certificate_context(user,
                                                         &msg->hits,
@@ -432,7 +441,7 @@ int userdb_add_certificates_from_msg(const struct hip_common *const msg,
     }
 
     /* process certificates from the message */
-    while(param_cert != NULL && hip_get_param_type((const struct hip_tlv_common *) param_cert) == HIP_PARAM_CERT) {
+    while (param_cert != NULL && hip_get_param_type((const struct hip_tlv_common *) param_cert) == HIP_PARAM_CERT) {
         HIP_DEBUG("Got certificate %d from a group of %d certificates \n", param_cert->cert_id, param_cert->cert_count);
         next_cert_id = userdb_add_certifiate(cert_ctx, param_cert);
         if (next_cert_id == 0) {
@@ -440,19 +449,19 @@ int userdb_add_certificates_from_msg(const struct hip_common *const msg,
         } else if (next_cert_id != param_cert->cert_id + 1) {
             HIP_DEBUG("received out of order ceritifcate, dropping... \n");
         }
-        param_cert = (const struct hip_cert *) hip_get_next_param(msg,(const struct hip_tlv_common *) param_cert);
+        param_cert = (const struct hip_cert *) hip_get_next_param(msg, (const struct hip_tlv_common *) param_cert);
     }
 
     return next_cert_id;
 out_err:
     return err;
-
 }
 
 /**
  * @return 1 if user is authenticated, 0 if not, or on error
  */
-int userdb_user_is_authed(const struct userdb_user_entry *const user) {
+int userdb_user_is_authed(const struct userdb_user_entry *const user)
+{
     return user && user->flags & USER_IS_AUTHED;
 }
 
@@ -466,20 +475,23 @@ int userdb_user_is_authed(const struct userdb_user_entry *const user) {
  *
  * @note            see sprintf() for return values
  */
-static int subject_hash(X509_NAME *subject, char *const out_buf) {
+static int subject_hash(X509_NAME *subject, char *const out_buf)
+{
     return sprintf(out_buf, "%08lx", X509_NAME_hash(subject));
 }
 
-static void get_user_certchain_hash_path(X509_NAME *subject, char *const buf) {
+static void get_user_certchain_hash_path(X509_NAME *subject, char *const buf)
+{
     strcat(buf, CERTIFICATE_INDEX_USER_DIR);
     subject_hash(subject, buf + sizeof(CERTIFICATE_INDEX_USER_DIR) - 1);
     /* We need the -1 because sizeof, unlike strlen, counts the 0-terminator. However, we prefer sizeof for performance reasons */
     strcat(buf, ".0");
 }
 
-static void get_free_user_certchain_hash_path(X509_NAME *subject, char *const buf) {
+static void get_free_user_certchain_hash_path(X509_NAME *subject, char *const buf)
+{
     struct stat buf_stat;
-    int i = 0;
+    int         i = 0;
     get_user_certchain_hash_path(subject, buf);
     while (!stat(buf, &buf_stat) && i < 10) {
         i++;
@@ -487,25 +499,25 @@ static void get_free_user_certchain_hash_path(X509_NAME *subject, char *const bu
     }
 }
 
-
 /*
  * TODO: beautify this
  */
-static void get_free_user_certchain_name_path(X509_NAME *subject, char *const buf) {
-    char name_buf[128];
-    int name_len;
-    int i = 0;
+static void get_free_user_certchain_name_path(X509_NAME *subject, char *const buf)
+{
+    char        name_buf[128];
+    int         name_len;
+    int         i = 0;
     struct stat stat_buf;
 
     strcat(buf, CERTIFICATE_INDEX_USER_DIR);
     memset(name_buf, 0, 128);
     X509_NAME_get_text_by_NID(subject, NID_commonName, name_buf, 127);
     name_buf[127] = '\0';
-    name_len = strlen(name_buf);
+    name_len      = strlen(name_buf);
     if (name_len == 0) {
         X509_NAME_get_text_by_NID(subject, NID_organizationName, name_buf, 127);
         name_buf[127] = '\0';
-        name_len = strlen(name_buf);
+        name_len      = strlen(name_buf);
     }
     strcat(buf, name_buf);
     strcat(buf, ".cert.0");
@@ -528,24 +540,25 @@ static void get_free_user_certchain_name_path(X509_NAME *subject, char *const bu
  * TODO: update if we got a matching longer certificate chain
  * @return 1 if we have a matching certificate chain, 0 if not
  */
-static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
-    int i = 0;
-    char path_buf[PATH_MAX];
-    X509 *cert = NULL;
+static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain)
+{
+    int        i = 0;
+    char       path_buf[PATH_MAX];
+    X509      *cert           = NULL;
     X509_NAME *x509_subj_name = NULL;
-    STACK_OF(X509) *local_chain = NULL;
+    STACK_OF(X509) * local_chain = NULL;
 
     if (sk_X509_num(cert_chain) <= 0) {
         return 1;
     }
 
-    cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
+    cert           = sk_X509_value(cert_chain, sk_X509_num(cert_chain) - 1);
     x509_subj_name = X509_get_subject_name(cert);
     memset(path_buf, 0, PATH_MAX);
     get_user_certchain_hash_path(x509_subj_name, path_buf);
 
     while ((local_chain = signaling_load_certificate_chain(path_buf)) != NULL) {
-        if(!certificate_chain_cmp(local_chain, cert_chain)) {
+        if (!certificate_chain_cmp(local_chain, cert_chain)) {
             return 1;
         }
         free(local_chain);
@@ -559,20 +572,21 @@ static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
  * @return 0 if the certificate chain has been added or if we have it already
  *         negative if an error occurs
  */
-int userdb_save_user_certificate_chain(STACK_OF(X509) *cert_chain) {
-    int err = 0;
-    X509 *cert = NULL;
+int userdb_save_user_certificate_chain(STACK_OF(X509) *cert_chain)
+{
+    int        err            = 0;
+    X509      *cert           = NULL;
     X509_NAME *x509_subj_name = NULL;
-    char subj_name[128];
-    char dst_path[PATH_MAX];
-    char dst_hash_path[PATH_MAX];
+    char       subj_name[128];
+    char       dst_path[PATH_MAX];
+    char       dst_hash_path[PATH_MAX];
 
     if (sk_X509_num(cert_chain) <= 0) {
         return 0;
     }
 
     /* write the certificates to a file */
-    cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
+    cert           = sk_X509_value(cert_chain, sk_X509_num(cert_chain) - 1);
     x509_subj_name = X509_get_subject_name(cert);
     X509_NAME_oneline(x509_subj_name, subj_name, 128);
     HIP_DEBUG("Got certificate chain for user: %s\n", subj_name);
@@ -590,7 +604,7 @@ int userdb_save_user_certificate_chain(STACK_OF(X509) *cert_chain) {
              -1, "Could not save certificate chain to file \n");
     memset(dst_hash_path, 0, PATH_MAX);
     get_free_user_certchain_hash_path(x509_subj_name, dst_hash_path);
-    if(symlink(dst_path, dst_hash_path)) {
+    if (symlink(dst_path, dst_hash_path)) {
         HIP_DEBUG("Failed creating symlink: %s -> %s \n", dst_hash_path, dst_path);
     } else {
         HIP_DEBUG("Successfully created symlink: %s -> %s \n", dst_hash_path, dst_path);
@@ -607,15 +621,15 @@ out_err:
  */
 int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key)
 {
-    int err = 0;
-    int i = 0;
+    int  err = 0;
+    int  i   = 0;
     char name[SIGNALING_USER_ID_MAX_LEN];
     //char hash_filename[sizeof(CERTIFICATE_INDEX_BASE_DIR) + CERTIFICATE_INDEX_HASH_LENGTH + CERTIFICATE_INDEX_SUFFIX_LENGTH];
     char hash_filename[PATH_MAX];
-    STACK_OF(X509) *cert_chain = NULL;
-    X509 *leaf_cert = NULL;
-    struct userdb_user_entry *db_entry = NULL;
-    struct userdb_certificate_context *cert_ctx = NULL;
+    STACK_OF(X509) * cert_chain = NULL;
+    X509                              *leaf_cert = NULL;
+    struct userdb_user_entry          *db_entry  = NULL;
+    struct userdb_certificate_context *cert_ctx  = NULL;
 
     /* sanity checks */
     HIP_IFEL(!pub_key,      -1, "Cannot verify NULL-pubkey.\n");
@@ -630,7 +644,7 @@ int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key)
         if ((cert_ctx = userdb_get_certificate_context_by_key(db_entry, pub_key))) {
             HIP_DEBUG("Using certificate chain from user database.\n");
             cert_chain = cert_ctx->cert_chain;
-            leaf_cert = sk_X509_pop(cert_chain);
+            leaf_cert  = sk_X509_pop(cert_chain);
         }
     }
 
@@ -670,14 +684,15 @@ out_err:
 /**
  * @return 0 if signature verified correctly, < 0 otherwise
  */
-int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
-    int err = 0;
-    int hash_range_len;
+int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey)
+{
+    int             err = 0;
+    int             hash_range_len;
     struct hip_sig *param_user_signature = NULL;
-    unsigned char sha1_digest[HIP_AH_SHA_LEN];
-    RSA *rsa = NULL;
-    EC_KEY *ecdsa = NULL;
-    const int orig_len = hip_get_msg_total_len(msg);
+    unsigned char   sha1_digest[HIP_AH_SHA_LEN];
+    RSA            *rsa      = NULL;
+    EC_KEY         *ecdsa    = NULL;
+    const int       orig_len = hip_get_msg_total_len(msg);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n"); // test 2.1.1
@@ -715,7 +730,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey) {
         HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
         HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
-                     -1, "ECDSA user signature did not verify correctly\n");
+                 -1, "ECDSA user signature did not verify correctly\n");
         break;
     case EVP_PKEY_RSA:
         rsa = EVP_PKEY_get1_RSA(pkey);
@@ -755,16 +770,11 @@ out_err:
  *          the user's public key
  */
 int userdb_handle_user_signature(struct hip_common *const msg,
-                                    struct signaling_connection *const conn,
-                                    enum direction dir) {
-    int v_err = 0;
+                                 UNUSED struct signaling_connection *const conn,
+                                 UNUSED enum direction dir)
+{
+    int                                  v_err    = 0;
     struct signaling_connection_context *conn_ctx = NULL;
-
-    if (dir == IN) {
-        conn_ctx = &conn->ctx_in;
-    } else {
-        conn_ctx = &conn->ctx_out;
-    }
 
     /* check if we have a user */
     if (!conn_ctx->userdb_entry) {
@@ -774,10 +784,10 @@ int userdb_handle_user_signature(struct hip_common *const msg,
 
     /* check signature in any case */
     /*if (signaling_verify_user_signature(msg, conn_ctx->userdb_entry->pub_key)) {
-        HIP_ERROR("User's signature is incorrect.\n");
-        return -1;
-    }
-    HIP_DEBUG("Verified user's signature.\n");*/
+     *  HIP_ERROR("User's signature is incorrect.\n");
+     *  return -1;
+     * }
+     * HIP_DEBUG("Verified user's signature.\n");*/
 
     if (msg->type_hdr == HIP_I3) {
         HIP_DEBUG("Not verifying users public key again in I3.\n");
@@ -834,6 +844,3 @@ int userdb_handle_user_signature(struct hip_common *const msg,
         return 0;
     }
 }
-
-
-

@@ -82,9 +82,8 @@ static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
     int err = 0;
-//  struct signaling_connection *conn = NULL;
-    struct signaling_connection       new_conn;
-    struct signaling_connection_short conn_short;
+    //struct signaling_connection *conn = NULL;
+    struct signaling_connection new_conn;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
@@ -99,31 +98,13 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     /* We have no waiting contexts. So build the local connection context and queue it. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.status              = SIGNALING_CONN_PROCESSING;
-    new_conn.id                  = signaling_cdb_get_next_connection_id();
-    new_conn.side                = INITIATOR;
-    new_conn.sockets[0].src_port = src_port;
-    new_conn.sockets[0].dst_port = dst_port;
+    new_conn.status = SIGNALING_CONN_PROCESSING;
+    new_conn.id     = signaling_cdb_get_next_connection_id();
+    new_conn.side   = INITIATOR;
 
     /* Look up the host context */
     //TODO write the handler for verification of host identifier
-    if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
-        HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
-        signaling_init_host_context(&new_conn.ctx_out.host);
-    }
-    if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
-        HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
-        signaling_init_application_context(&new_conn.ctx_out.app);
-    }
-    if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
-        HIP_DEBUG("Could not get user name, assuming ANY USER. \n");
-        signaling_init_user_context(&new_conn.ctx_out.user);
-    }
 
-    /* Set host and user authentication flags.
-     * These are trivially true. */
-    signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
-    signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
 
     /* Check the local context against our local policy,
      * block this connection if context is rejected */
@@ -137,19 +118,16 @@ static int handle_new_connection(struct hip_fw_context *ctx,
  */
 
     /* set local host and user to authed since we have passed policy check */
-    signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
-    signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
 
     /* Since this is a new connection we have to add an entry to the scdb */
-    gettimeofday(&new_conn.timestamp, NULL);
-    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn),
+    //ttimeofday(&new_conn.timestamp, NULL);
+    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &src_port, &dst_port, &new_conn),
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
 
 
-    signaling_copy_connection_short_from_connection(&conn_short, &new_conn);
     HIP_DEBUG("Sending connection request to hipd.\n");
-    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &conn_short, &new_conn);
+    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &new_conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
@@ -177,7 +155,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     int                          err     = 0;
     int                          verdict = VERDICT_DEFAULT;
     int                          found   = 0;
-    int                          src_port, dest_port;
+    uint16_t                     src_port, dest_port;
     signaling_cdb_entry_t       *entry = NULL;
     struct signaling_connection *conn  = NULL;
 
@@ -192,7 +170,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     HIP_DEBUG("\t on ports %d/%d or if corresponding application is generally allowed.\n", src_port, dest_port);
 
     /* Is there a HA between the two hosts? */
-    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
+    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst, &src_port, &dest_port);
     if (entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
         HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),

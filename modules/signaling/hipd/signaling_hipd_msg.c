@@ -145,20 +145,24 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     /* Add application and user context.
      * These parameters (as well as the user's signature are non-critical */
     if (type == SIGNALING_FIRST_BEX_UPDATE || type == SIGNALING_SECOND_BEX_UPDATE) {
-        if (signaling_build_param_application_context(msg_buf, conn->sockets, &conn->ctx_out.app)) {
-            HIP_DEBUG("Building of application context parameter failed\n");
-        }
-        if (signaling_build_param_user_context(msg_buf, &conn->ctx_out.user, conn->ctx_out.userdb_entry)) {
-            HIP_DEBUG("Building of user conext parameter failed.\n");
-        }
+/*
+ *      if (signaling_build_param_application_context(msg_buf, conn->sockets, &conn->ctx_out.app)) {
+ *          HIP_DEBUG("Building of application context parameter failed\n");
+ *      }
+ *      if (signaling_build_param_user_context(msg_buf, &conn->ctx_out.user, conn->ctx_out.userdb_entry)) {
+ *          HIP_DEBUG("Building of user conext parameter failed.\n");
+ *      }
+ */
     }
 
     /* check if we have to include a user auth req_s parameter */
     if (type == SIGNALING_SECOND_BEX_UPDATE || type == SIGNALING_THIRD_BEX_UPDATE) {
-        if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-            HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
-                     -1, "Building of user context parameter failed.\n");
-        }
+/*
+ *      if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *          HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
+ *                   -1, "Building of user context parameter failed.\n");
+ *      }
+ */
     }
 
     /* Add host authentication */
@@ -187,9 +191,9 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     hip_perf_start_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
 #endif
     /* Add user authentication */
-    if (signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
-        HIP_DEBUG("User failed to sign UPDATE.\n");
-    }
+/*    if (signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
+ *      HIP_DEBUG("User failed to sign UPDATE.\n");
+ *  }*/
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
@@ -236,10 +240,12 @@ int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *co
 
     /* Add user_auth_request parameter, if received in R2
      * This parameter is critical, if flagged. */
-    if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
-                 -1, "Failed to build signed user authentication request\n");
-    }
+/*
+ *  if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
+ *               -1, "Failed to build signed user authentication request\n");
+ *  }
+ */
 
     /* Add host authentication. */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -248,9 +254,11 @@ int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *co
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
              -EINVAL, "Could not sign I3. Failing\n");
 
-    if (signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
-        HIP_DEBUG("User failed to sign packet.\n");
-    }
+/*
+ *  if (signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
+ *      HIP_DEBUG("User failed to sign packet.\n");
+ *  }
+ */
 
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
@@ -600,8 +608,8 @@ int signaling_send_user_certificate_chain(struct hip_hadb_state *ha, struct sign
              -1, "Could not get update state for host association.\n");
 
     /* Get the users certificate chain */
-    HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(conn->ctx_out.user.uid)),
-             -1, "Could not get certificate for user with id %d\n", conn->ctx_out.user.uid);
+/*    HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(conn->ctx_out.user.uid)),
+ *           -1, "Could not get certificate for user with id %d\n", conn->ctx_out.user.uid);*/
     total_cert_count = sk_X509_num(cert_chain);
     HIP_DEBUG("Sending a total of %d certificates from users chain.\n", total_cert_count);
 
@@ -642,8 +650,10 @@ int signaling_send_user_certificate_chain(struct hip_hadb_state *ha, struct sign
         HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
                  -EINVAL, "Could not sign UPDATE. Failing\n");
 
-        HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n",
-                  conn->ctx_out.user.uid, next_id - 1, total_cert_count);
+/*
+ *      HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n",
+ *                conn->ctx_out.user.uid, next_id - 1, total_cert_count);
+ */
 
         err = hip_send_pkt(NULL,
                            &ha->peer_addr,
@@ -687,12 +697,11 @@ out_err:
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                               err       = 0;
-    struct signaling_hipd_state      *sig_state = NULL;
-    struct signaling_connection       new_conn;
-    struct signaling_connection      *conn;
-    struct signaling_connection_short conn_short;
-    struct userdb_user_entry         *db_entry = NULL;
+    int                          err       = 0;
+    struct signaling_hipd_state *sig_state = NULL;
+    struct signaling_connection  new_conn;
+    struct signaling_connection *conn;
+    struct userdb_user_entry    *db_entry = NULL;
 
     /* Sanity checks */
     if (packet_type == HIP_I2) {
@@ -716,21 +725,15 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I2 \n");
-    new_conn.side                = RESPONDER;
-    new_conn.ctx_in.userdb_entry = db_entry;
+    new_conn.side = RESPONDER;
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
 
     /* Try to authenticate the user and set flags accordingly */
     userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
-    /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
-
-    signaling_copy_connection_short_from_connection(&conn_short, conn);
-
     /* Tell the firewall/oslayer about the new connection and await it's decision */
-    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_short, conn),
+    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
     /* If connection has been blocked by the oslayer.
@@ -756,13 +759,12 @@ out_err:
  */
 int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                                             err       = 0;
-    struct signaling_hipd_state                    *sig_state = NULL;
-    struct signaling_connection                     recv_conn;
-    struct signaling_connection                    *conn = NULL;
-    struct signaling_connection_short               conn_short;
-    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
-    struct userdb_user_entry                       *db_entry       = NULL;
+    int                          err       = 0;
+    struct signaling_hipd_state *sig_state = NULL;
+    struct signaling_connection  recv_conn;
+    struct signaling_connection *conn = NULL;
+    //const struct signaling_param_user_auth_request *param_usr_auth = NULL;
+    struct userdb_user_entry *db_entry = NULL;
 
     /* sanity checks */
     if (packet_type == HIP_R2) {
@@ -789,22 +791,13 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get connection state for connection in R2\n");
     HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg, IN),
              -1, "Could not update connection state with information from R2\n", IN);
-    conn->ctx_in.userdb_entry = db_entry;
-
 
     /* Try to authenticate the user and set flags accordingly */
     userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
 
-    /* The initiator and responder hosts are authed,
-     * because this packet went through all the default hip checking functions. */
-    signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
-    signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
-
-    signaling_copy_connection_short_from_connection(&conn_short, conn);
-
     /* Ask the firewall for a decision on the remote connection context */
-    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &conn_short, conn),
+    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 
@@ -837,15 +830,17 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
     /* Check if authentication of initiator user was requested,
      * if yes send certificate chain */
-    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
-            signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn, ntohl(param_usr_auth->network_id));
-        } else {
-            HIP_ERROR("User auth parameter missing \n");
-            err = -1;
-            goto out_err;
-        }
-    }
+/*
+ *  if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *      if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+ *          signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn, ntohl(param_usr_auth->network_id));
+ *      } else {
+ *          HIP_ERROR("User auth parameter missing \n");
+ *          err = -1;
+ *          goto out_err;
+ *      }
+ *  }
+ */
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -881,14 +876,12 @@ out_err:
  */
 int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                                             wait_auth = 0;
-    int                                             err       = 0;
-    int                                             i         = 0;
-    struct signaling_connection                     conn;
-    struct signaling_connection                    *existing_conn = NULL;
-    struct signaling_hipd_state                    *sig_state     = NULL;
-    struct signaling_connection_short               conn_short;
-    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
+    int                          wait_auth = 0;
+    int                          err       = 0;
+    struct signaling_connection  conn;
+    struct signaling_connection *existing_conn = NULL;
+    struct signaling_hipd_state *sig_state     = NULL;
+    //const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
     /* sanity checks */
     if (packet_type == HIP_I3) {
@@ -921,49 +914,47 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     /* Signature validation */
     userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
 
-    conn_short.id     = existing_conn->id;
-    conn_short.side   = existing_conn->side;
-    conn_short.status = existing_conn->status;
-    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
-        conn_short.sockets[i].src_port = existing_conn->sockets[i].src_port;
-        conn_short.sockets[i].dst_port = existing_conn->sockets[i].dst_port;
-    }
+    conn.id     = existing_conn->id;
+    conn.side   = existing_conn->side;
+    conn.status = existing_conn->status;
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
-    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of remote user.\n");
-        wait_auth = 1;
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I3, PERF_CONN_U3\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I3);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
-        HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
-        hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
-        hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
-#endif
-    }
-    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
-        if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_I3\n");
-            hip_perf_stop_benchmark(perf_set, PERF_I3);
-            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
-            HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
-            hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
-#endif
-            signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn, ntohl(param_usr_auth->network_id));
-            wait_auth = 1;
-        } else {
-            HIP_ERROR("User auth parameter missing \n");
-            err = -1;
-            goto out_err;
-        }
-    }
+/*
+ *  if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of remote user.\n");
+ *      wait_auth = 1;
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *      HIP_DEBUG("Stop PERF_I3, PERF_CONN_U3\n");
+ *      hip_perf_stop_benchmark(perf_set, PERF_I3);
+ *      hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
+ *      HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
+ *      hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+ *      hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
+ * #endif
+ *  }
+ *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *      HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
+ *      if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *          HIP_DEBUG("Stop PERF_I3\n");
+ *          hip_perf_stop_benchmark(perf_set, PERF_I3);
+ *          hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
+ *          HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
+ *          hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+ * #endif
+ *          signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn, ntohl(param_usr_auth->network_id));
+ *          wait_auth = 1;
+ *      } else {
+ *          HIP_ERROR("User auth parameter missing \n");
+ *          err = -1;
+ *          goto out_err;
+ *      }
+ *  }
+ */
 
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3/U3 \n");
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, &conn_short, existing_conn);
+        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN, PERF_I3, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_I3);
@@ -1008,7 +999,6 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     X509                                       *cert          = NULL;
     struct signaling_hipd_state                *sig_state     = NULL;
     struct signaling_connection                *conn          = NULL;
-    struct signaling_connection_short          *conn_short    = NULL;
     const struct hip_seq                       *param_seq     = NULL;
     struct userdb_certificate_context          *cert_ctx      = NULL;
     uint32_t                                    network_id;
@@ -1022,20 +1012,20 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
              -1, "failed to retrieve state\n");
     HIP_IFEL(!(param_cert_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
-    conn_id    =  ntohl(param_cert_id->connection_id);
+    conn_id    = ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
              -1, "No connection context for connection id \n");
 
     /* Process certificates and check completeness*/
-    err = userdb_add_certificates_from_msg(ctx->input_msg, conn->ctx_in.userdb_entry);
+    //err = userdb_add_certificates_from_msg(ctx->input_msg, conn->ctx_in.userdb_entry);
     if (err < 0) {
         HIP_ERROR("Internal error while processing certificates \n");
         err = -1;
         goto out_err;
     } else if (err > 0) {
         HIP_DEBUG("Waiting for further certificate updates because chain is incomplete. \n");
-        userdb_entry_print(conn->ctx_in.userdb_entry);
+        //userdb_entry_print(conn->ctx_in.userdb_entry);
         return 0;
     }
 
@@ -1048,26 +1038,30 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
 
     /* We have received a complete chain */
     HIP_DEBUG("Received complete certificate chain.\n");
-    HIP_IFEL(!(cert_ctx = userdb_get_certificate_context(conn->ctx_in.userdb_entry,
-                                                         &ctx->input_msg->hits,
-                                                         &ctx->input_msg->hitr,
-                                                         network_id)),
-             -1, "Could not retrieve users certificate chain\n");
+/*    HIP_IFEL(!(cert_ctx = userdb_get_certificate_context(conn->ctx_in.userdb_entry,
+ *                                                       &ctx->input_msg->hits,
+ *                                                       &ctx->input_msg->hitr,
+ *                                                       network_id)),
+ *           -1, "Could not retrieve users certificate chain\n");*/
     stack_reverse(&cert_ctx->cert_chain);
-    userdb_entry_print(conn->ctx_in.userdb_entry);
+    //userdb_entry_print(conn->ctx_in.userdb_entry);
 
     /* Match the public key */
     cert = sk_X509_pop(cert_ctx->cert_chain);
-    HIP_IFEL(!match_public_key(cert, conn->ctx_in.userdb_entry->pub_key),
-             -1, "Users public key does not match with the key in the received certificate chain\n");
+/*
+ *  HIP_IFEL(!match_public_key(cert, conn->ctx_in.userdb_entry->pub_key),
+ *           -1, "Users public key does not match with the key in the received certificate chain\n");
+ */
 
     /* Verify the certificate chain */
     if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_ctx->cert_chain)) {
         /* Public key verification was successful, so we save the chain */
         sk_X509_push(cert_ctx->cert_chain, cert);
         userdb_save_user_certificate_chain(cert_ctx->cert_chain);
-        signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
-        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+/*
+ *      signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
+ *      signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+ */
 
         /* We send an ack */
         HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
@@ -1082,15 +1076,16 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
         /* We confirm to the firewall if we're done, i.e. if the authentication of
          * our local user has not been requested or is already completed.
          * If not, we'll confirm when we receive our own certifiate ack. */
-        if (!signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-            signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, conn);
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
-            hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-            hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-#endif
-        }
-    } else {
+/*        if (!signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+ *          signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, conn);
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *          HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+ *          hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+ *          hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+ * #endif
+ *
+ *      }
+ */ } else {
         HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
     }
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1112,7 +1107,6 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     struct signaling_hipd_state                *sig_state     = NULL;
     struct signaling_connection                *existing_conn = NULL;
-    struct signaling_connection_short          *conn_short    = NULL;
     uint32_t                                    conn_id;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1133,20 +1127,22 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
              -1, "No connection context for connection id \n");
 
     /* unflag user authentication flag */
-    signaling_flag_unset(&existing_conn->ctx_out.flags, USER_AUTH_REQUEST);
-
-    /* Check if we're done with this connection or if authentication failed or we have to wait for additional authentication */
-    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
-    } else {
-        HIP_DEBUG("Auth completed after update ack \n");
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, existing_conn);
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-#endif
-    }
+/*
+ *  signaling_flag_unset(&existing_conn->ctx_out.flags, USER_AUTH_REQUEST);
+ *
+ *   Check if we're done with this connection or if authentication failed or we have to wait for additional authentication
+ *  if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
+ *  } else {
+ *      HIP_DEBUG("Auth completed after update ack \n");
+ *      signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn_short, existing_conn);
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *      HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+ *      hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+ *      hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+ * #endif
+ *  }
+ */
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_CERTIFICATE_EXCHANGE, PERF_CERT_UP_CERT_ACK\n");
@@ -1175,11 +1171,12 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
  *  HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
  *  hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
  * #endif
- *  HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
- *                                   ctx->input_msg),
- *                                   -EINVAL,
- *                                   "Verification of Update signature failed\n");
- * #ifdef CONFIG_HIP_PERFORMANCE
+ */
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -EINVAL,
+             "Verification of Update signature failed\n");
+/* #ifdef CONFIG_HIP_PERFORMANCE
  *  HIP_DEBUG("Stop PERF_UPDATE_VERIFY_HOST_SIG\n");
  *  hip_perf_stop_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
  * #endif
@@ -1281,7 +1278,6 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
 {
     struct signaling_hipd_state                        *sig_state    = NULL;
     struct signaling_connection                        *conn         = NULL;
-    struct signaling_connection_short                  *conn_short   = NULL;
     const struct signaling_param_connection_identifier *conn_id      = NULL;
     const struct hip_notification                      *notification = NULL;
     const struct signaling_ntf_connection_failed_data  *ntf_data     = NULL;
@@ -1399,9 +1395,8 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
     }
 
     /* Adapt connection status */
-    conn->status        = SIGNALING_CONN_BLOCKED;
-    conn->reason_reject = reason;
-    signaling_send_connection_update_request(our_hit, peer_hit, conn_short, conn);
+    conn->status = SIGNALING_CONN_BLOCKED;
+    signaling_send_connection_update_request(our_hit, peer_hit, conn);
 
 out_err:
     return err;
@@ -1452,10 +1447,12 @@ int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSE
         err = 0;
     }
 
-    if (signaling_build_param_application_context(ctx->output_msg, sig_state->pending_conn->sockets, &sig_state->pending_conn->ctx_out.app)) {
-        HIP_DEBUG("Building of application context parameter failed.\n");
-        err = 0;
-    }
+/*
+ *  if (signaling_build_param_application_context(ctx->output_msg, sig_state->pending_conn->sockets, &sig_state->pending_conn->ctx_out.app)) {
+ *      HIP_DEBUG("Building of application context parameter failed.\n");
+ *      err = 0;
+ *  }
+ */
 
 out_err:
     return err;
@@ -1469,8 +1466,10 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
-             0, "User failed to sign packet.\n");
+/*
+ *  HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
+ *           0, "User failed to sign packet.\n");
+ */
 
 out_err:
     return err;
@@ -1484,9 +1483,11 @@ int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    if (signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry)) {
-        HIP_ERROR("Building of user context parameter failed.\n");
-    }
+/*
+ *  if (signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry)) {
+ *      HIP_ERROR("Building of user context parameter failed.\n");
+ *  }
+ */
 
 out_err:
     return err;
@@ -1551,10 +1552,12 @@ int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED con
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling\n");
     /* check if we must include a user auth req_s parameter */
-    if (signaling_flag_check(sig_state->pending_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-        HIP_IFEL(signaling_build_param_user_auth_req_s(ctx->output_msg, 0),
-                 -1, "Building of user context parameter failed.\n");
-    }
+/*
+ *  if (signaling_flag_check(sig_state->pending_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+ *      HIP_IFEL(signaling_build_param_user_auth_req_s(ctx->output_msg, 0),
+ *               -1, "Building of user context parameter failed.\n");
+ *  }
+ */
 
 out_err:
     return err;

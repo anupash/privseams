@@ -577,6 +577,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
  * @return    0 on success (if the tuple complies, or will comply if auth is complete),
  *           -1 if the context will be rejected no matter what authentication takes place
  */
+// TODO previously only two values .. have to make compatible with mutiple return values
 int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
                                            struct signaling_connection_context *const conn_ctx)
 {
