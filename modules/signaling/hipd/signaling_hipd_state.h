@@ -18,10 +18,10 @@
 
 struct user_certificate_context {
     uint32_t network_id;
-    int group;
-    int count;
-    int next_cert_id;
-    STACK_OF(X509) *cert_chain;
+    int      group;
+    int      count;
+    int      next_cert_id;
+             STACK_OF(X509) *cert_chain;
 };
 
 /**
@@ -29,7 +29,7 @@ struct user_certificate_context {
  */
 struct signaling_hipd_state {
     /* Holds the connection contexts for the connections that are currently being established */
-    HIP_HASHTABLE *connections;
+    struct hip_ll *connections;
 
     /* Points to a connection context with status pending.
      * We need this to determine which context to use in I2 and R2. */
@@ -40,10 +40,11 @@ struct signaling_hipd_state {
 };
 
 int signaling_hipd_init_state(struct modular_state *state);
-struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id);
+struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id,
+                                                                 uint16_t src_port, uint16_t dst_port);
 void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, struct signaling_connection *conn);
-struct signaling_connection * signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
-                                                                  const struct signaling_connection *const conn);
+struct signaling_connection *signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
+                                                                 const struct signaling_connection *const conn);
 void signaling_hipd_state_print(struct signaling_hipd_state *state);
 
 #endif /*HIP_HIPD_SIGNALING_HIPD_STATE_H*/
