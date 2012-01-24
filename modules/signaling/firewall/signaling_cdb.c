@@ -59,6 +59,7 @@ static int next_conn_id;
  * @param sa_entry  partial SA entry containing inner addresses and IPsec mode
  * @return          hash of inner addresses
  */
+//TODO ask Rene about generating the index hash
 static unsigned long signaling_cdb_entry_hash(const signaling_cdb_entry_t *scdb_entry)
 {
     int             err = 0;
@@ -207,18 +208,18 @@ int signaling_cdb_uninit(void)
  */
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
                                         signaling_cdb_entry_t *entry,
-                                        struct signaling_connection **ret)
+                                        uint32_t **conn_id,
+                                        int **status)
 {
     int err = 0;
-    //int                          i   = 0;
-    //struct slist                *listitem;
 
     HIP_IFEL(entry == NULL,
              -1, "Entry is null.\n");
 
     if ((entry->src_port == src_port && entry->dst_port == dest_port) ||
         (entry->dst_port == src_port && entry->src_port == dest_port)) {
-        *ret = &entry->connections;
+        *conn_id = &entry->conn_id;
+        *status  = &entry->status;
         return 1;
     }
 
@@ -241,22 +242,39 @@ int signaling_cdb_direction(const struct in6_addr *src_hit,
     return -1;
 }
 
-struct signaling_connection *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
-                                                                const struct in6_addr *remote_hit,
-                                                                const uint16_t        *src_port,
-                                                                const uint16_t        *dst_port,
-                                                                const uint32_t id)
+uint32_t *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
+                                             const struct in6_addr *remote_hit,
+                                             const uint16_t        *src_port,
+                                             const uint16_t        *dst_port)
 {
     signaling_cdb_entry_t *entry = NULL;
 
     if ((entry = signaling_cdb_entry_find(local_hit, remote_hit, src_port, dst_port))) {
-        if (entry->connections.id == id) {
-            return &entry->connections;
+        return &entry->conn_id;
+    } else {
+        return 0;
+    }
+
+    return 0;
+}
+
+int signaling_cdb_entry_get_status(const struct in6_addr *local_hit,
+                                   const struct in6_addr *remote_hit,
+                                   const uint16_t        *src_port,
+                                   const uint16_t        *dst_port,
+                                   const uint32_t        *id)
+{
+    signaling_cdb_entry_t *entry = NULL;
+
+    if ((entry = signaling_cdb_entry_find(local_hit, remote_hit, src_port, dst_port))) {
+        if (entry->conn_id == *id) {
+            return entry->status;
         }
     } else {
-        return NULL;
+        return -1;
     }
-    return NULL;
+
+    return -1;
 }
 
 /**
@@ -301,19 +319,21 @@ out_err:
 static signaling_cdb_entry_t *signaling_cdb_add_new(const struct in6_addr *local_hit,
                                                     const struct in6_addr *remote_hit,
                                                     const uint16_t        *src_port,
-                                                    const uint16_t        *dst_port)
+                                                    const uint16_t        *dst_port,
+                                                    const uint32_t        *conn_id,
+                                                    const int             *status)
 {
     int                    err   = 0;
     signaling_cdb_entry_t *entry = NULL;
 
     HIP_IFEL(!(entry = malloc(sizeof(signaling_cdb_entry_t))),
              -1, "Could not allocate memory for new scdb entry \n");
-    memcpy(&entry->local_hit,  local_hit, sizeof(struct in6_addr));
-    memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
-    memcpy(&entry->src_port,   src_port, sizeof(uint16_t));
-    memcpy(&entry->dst_port,   dst_port, sizeof(uint16_t));
-
-    //entry->connections = NULL;
+    memcpy(&entry->local_hit,  local_hit,   sizeof(struct in6_addr));
+    memcpy(&entry->remote_hit, remote_hit,  sizeof(struct in6_addr));
+    memcpy(&entry->src_port,   src_port,    sizeof(uint16_t));
+    memcpy(&entry->dst_port,   dst_port,    sizeof(uint16_t));
+    memcpy(&entry->conn_id,    conn_id,     sizeof(uint32_t));
+    memcpy(&entry->status,     status,      sizeof(int));
 
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
@@ -328,10 +348,10 @@ out_err:
 /*
  * Updates all fields in old with values from new.
  */
-static int signaling_cdb_update_entry(struct signaling_connection *old,
-                                      const struct signaling_connection *new)
+static int signaling_cdb_update_entry(int *old_status,
+                                      const int *new_status)
 {
-    old->status = new->status;
+    *old_status = *new_status;
     return 0;
 }
 
@@ -349,7 +369,8 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
                       const uint16_t        *src_port,
                       const uint16_t        *dst_port,
-                      struct signaling_connection *conn)
+                      const uint32_t        *conn_id,
+                      const int             *status)
 {
     int                    err   = 0;
     signaling_cdb_entry_t *entry = NULL;
@@ -360,18 +381,13 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
     entry = signaling_cdb_entry_find(local_hit, remote_hit, src_port, dst_port);
 
     if (entry == NULL) {
-        entry = signaling_cdb_add_new(local_hit, remote_hit, src_port, dst_port);
-        signaling_copy_connection(&entry->connections, conn);
-        next_conn_id = conn->id + 1;
+        entry        = signaling_cdb_add_new(local_hit, remote_hit, src_port, dst_port, conn_id, status);
+        next_conn_id = entry->conn_id + 1;
     } else {
-        signaling_cdb_update_entry(&entry->connections, conn);
+        signaling_cdb_update_entry(&entry->status, status);
     }
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
-
-    // Not needed any more because if there would have been an entry it would already have been found
-    //if ((found = signaling_cdb_entry_find_connection(src_port, dst_port, entry, &existing_conn))) {
-    //}
 
 out_err:
     return err;
@@ -396,7 +412,8 @@ int signaling_cdb_entry_print(signaling_cdb_entry_t *entry)
     HIP_DEBUG("\tDestination Port: %d\t", &entry->dst_port);
 
     HIP_DEBUG("\tLocal application context:\n");
-    signaling_connection_print(&entry->connections, "\t");
+    HIP_DEBUG("\tConnection Id: %d\t", &entry->conn_id);
+    HIP_DEBUG("\tConnection Status: %d\t", &entry->status);
     HIP_DEBUG("\t----- SCDB ELEMENT END   ------\n");
     return 0;
 }
