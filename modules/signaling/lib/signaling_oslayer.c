@@ -13,6 +13,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/common.h"
+#include "lib/core/linkedlist.h"
 
 #include "signaling_oslayer.h"
 
@@ -35,7 +36,7 @@
 #include "signaling_user_management.h"
 #include "signaling_x509_api.h"
 
-struct slist *verified_apps = NULL;
+struct hip_ll *verified_apps = NULL;
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
@@ -44,19 +45,19 @@ struct slist *verified_apps = NULL;
  */
 static X509AC *get_application_attribute_certificate_chain(const char *app_file, STACK_OF(X509) **chain)
 {
-    FILE *fp = NULL;
-    char app_cert_file[PATH_MAX];
+    FILE   *fp = NULL;
+    char    app_cert_file[PATH_MAX];
     X509AC *app_cert = NULL;
-    int err = 0;
+    int     err      = 0;
 
     HIP_IFEL(app_file == NULL, -1, "Got no path to application (NULL).\n");
 
     /* Get the application attribute certificate */
     sprintf(app_cert_file, "%s.cert", app_file);
     HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
-            -1,"Application certificate could not be found at %s.\n", app_cert_file);
+             -1, "Application certificate could not be found at %s.\n", app_cert_file);
     HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
-            -1, "Could not decode application certificate.\n");
+             -1, "Could not decode application certificate.\n");
     fclose(fp);
 
     /* Look if there is a chain for this certificate */
@@ -77,12 +78,12 @@ out_err:
  */
 static int hash_file(const char *in_file, unsigned char *digest_buffer)
 {
-    SHA_CTX context;
-    int fd;
-    int i;
+    SHA_CTX       context;
+    int           fd;
+    int           i;
     unsigned char read_buffer[500000];
-    FILE *f;
-    int err = 0;
+    FILE         *f;
+    int           err = 0;
 
     HIP_IFEL(!in_file, -1, "No path to application given (NULL).\n");
     HIP_IFEL(!digest_buffer, -1, "Output buffer is NULL.\n");
@@ -93,20 +94,21 @@ static int hash_file(const char *in_file, unsigned char *digest_buffer)
     HIP_DEBUG("Start PERF_HASH\n");   // test 1.1.2
     hip_perf_start_benchmark(perf_set, PERF_HASH);
 #endif
-    f = fopen(in_file,"r");
-    fd=fileno(f);
+    f  = fopen(in_file, "r");
+    fd = fileno(f);
     SHA1_Init(&context);
-    for (;;) {
-        i = read(fd,read_buffer,500000);
-        if(i <= 0)
+    for (;; ) {
+        i = read(fd, read_buffer, 500000);
+        if (i <= 0) {
             break;
-        SHA1_Update(&context,read_buffer,(unsigned long)i);
+        }
+        SHA1_Update(&context, read_buffer, (unsigned long) i);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_HASH\n");
     hip_perf_stop_benchmark(perf_set, PERF_HASH);
 #endif
-    SHA1_Final(digest_buffer,&context);
+    SHA1_Final(digest_buffer, &context);
     fclose(f);
 
 
@@ -116,8 +118,8 @@ out_err:
 
 static int verify_application_hash(X509AC *ac, unsigned char *md)
 {
-    int err = 0;
-    int res = 0;
+    int              err = 0;
+    int              res = 0;
     ASN1_BIT_STRING *hash;
 
     HIP_IFEL(!md, -1, "No hash of application given.");
@@ -125,15 +127,15 @@ static int verify_application_hash(X509AC *ac, unsigned char *md)
 
     // Check if hash is present in certificate
     HIP_IFEL(ac->info->holder->objectDigestInfo == NULL,
-            -1, "Hash could not be found in attribute certificate.");
+             -1, "Hash could not be found in attribute certificate.");
 
     hash = ASN1_BIT_STRING_new();
-    ASN1_BIT_STRING_set(hash,md,SHA_DIGEST_LENGTH);
+    ASN1_BIT_STRING_set(hash, md, SHA_DIGEST_LENGTH);
 
     // Compare the hashes
     // TODO: ASN1_BIT_STRING_cmp compares string types too, is this ok here?
     res = ASN1_STRING_cmp(hash, ac->info->holder->objectDigestInfo->digest);
-    if(res != 0) {
+    if (res != 0) {
         HIP_DEBUG("Hashes differ:\n");
         HIP_HEXDUMP("\thash in cert:\t", ac->info->holder->objectDigestInfo->digest->data, ac->info->holder->objectDigestInfo->digest->length);
         HIP_HEXDUMP("\thash of app:\t", hash->data, hash->length);
@@ -160,11 +162,11 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
                                                            struct system_app_context *const sys_ctx)
 {
     FILE *fp;
-    int err = 0, UNUSED scanerr;
+    int   err = 0, UNUSED scanerr;
     char *res;
-    char callbuf[CALLBUF_SIZE];
-    char symlinkbuf[SYMLINKBUF_SIZE];
-    char readbuf[NETSTAT_SIZE_OUTPUT];
+    char  callbuf[CALLBUF_SIZE];
+    char  symlinkbuf[SYMLINKBUF_SIZE];
+    char  readbuf[NETSTAT_SIZE_OUTPUT];
 
     memset(sys_ctx->proto,       0, NETSTAT_SIZE_PROTO);
     memset(sys_ctx->recv_q,      0, NETSTAT_SIZE_RECV_SEND);
@@ -194,7 +196,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
         pclose(fp);
     }
 
-    if(!res) {
+    if (!res) {
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
     }
     HIP_IFEL(!res, -1, "Got no output from netstat.\n");
@@ -238,23 +240,21 @@ out_err:
 int signaling_get_application_context_from_certificate(X509AC *ac,
                                                        struct signaling_application_context *app_ctx)
 {
-    int err = 0;
+    int        err = 0;
     X509_NAME *name;
 
     HIP_IFEL(!ac,       -1, "Cannot fill application context from NULL-certificate.\n");
     HIP_IFEL(!app_ctx,  -1, "Cannot write to NULL-application context.\n");
 
     /* Fill in context */
-    if ((ac->info->issuer->type == 0)||
-        ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL))) {
+    if ((ac->info->issuer->type == 0) ||
+        ((ac->info->issuer->type == 1) && (ac->info->issuer->d.v2Form->issuer != NULL))) {
         name = X509AC_get_issuer_name(ac);
-        if (!name)
+        if (!name) {
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
-        else
-        {
+        } else {
             X509_NAME_oneline(name, app_ctx->issuer_dn, SIGNALING_ISS_DN_MAX_LEN);
         }
-
     }
 
     if (ac->info->holder->entity != NULL) {
@@ -275,24 +275,26 @@ out_err:
  */
 int signaling_verify_application(const char *app_path)
 {
-    int err = 0;
-    unsigned char md[SHA_DIGEST_LENGTH];
-    struct slist *verified_app = verified_apps;
-    char *hash = NULL;
+    int                       err = 0;
+    unsigned char             md[SHA_DIGEST_LENGTH];
+    struct hip_ll            *verified_app = verified_apps;
+    char                     *hash         = NULL;
+    const struct hip_ll_node *iter         = NULL;
 
     X509AC *app_cert = NULL;
-    STACK_OF(X509) *untrusted_chain = NULL;
+    STACK_OF(X509) * untrusted_chain = NULL;
 
     /* Look if it has been verified before. */
     HIP_IFEL(0 > hash_file(app_path, md),
              -1, "Could not compute hash of binary.\n");
 
-    while (verified_app) {
-        if (!memcmp(md, verified_app->data, SHA_DIGEST_LENGTH)) {
-            HIP_DEBUG("Application has recently been verified and is unchanged, skipping certificate chain verification. \n");
-            return 0;
+    if (verified_app) {
+        while ((iter = hip_ll_iterate(verified_app, iter))) {
+            if (!memcmp(md, iter->ptr, SHA_DIGEST_LENGTH)) {
+                HIP_DEBUG("Application has recently been verified and is unchanged, skipping certificate chain verification. \n");
+                return 0;
+            }
         }
-        verified_app = verified_app->next;
     }
 
     /* Get application certificate chain */
@@ -323,7 +325,10 @@ int signaling_verify_application(const char *app_path)
     /* Add to verified applications */
     hash = malloc(SHA_DIGEST_LENGTH);
     memcpy(hash, md, SHA_DIGEST_LENGTH);
-    verified_apps = append_to_slist(verified_apps, hash);
+
+    HIP_IFEL(hip_ll_add_last(verified_apps, hash), -1,
+             "Could not add the connection context to the signaling state");
+
     HIP_DEBUG("Added hash of application to verified apps. \n", hash);
 
 out_err:
@@ -341,8 +346,8 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
                                                         uint16_t dst_port,
                                                         struct signaling_connection_context *const ctx)
 {
-    int err = 0;
-    X509AC *ac = NULL;
+    int                       err = 0;
+    X509AC                   *ac  = NULL;
     struct system_app_context sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -372,7 +377,7 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
 #endif
 
     HIP_IFEL(!(ac = get_application_attribute_certificate_chain(sys_ctx.path, NULL)),
-            -1, "Could not open application certificate.");
+             -1, "Could not open application certificate.");
     HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app),
              -1, "Could not build application context for application: %s.\n", sys_ctx.path);
 
@@ -383,4 +388,3 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
 out_err:
     return err;
 }
-
