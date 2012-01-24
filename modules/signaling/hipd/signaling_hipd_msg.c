@@ -293,9 +293,9 @@ int signaling_send_first_update(const struct in6_addr *src_hit,
     struct hip_common     *update_packet_to_send = NULL;
 
     /* sanity tests */
-    HIP_IFEL(!src_hit, -1, "No source HIT given \n");
-    HIP_IFEL(!dst_hit, -1, "No destination HIT given \n");
-    HIP_IFEL(!conn,    -1, "No connection context given \n");
+    HIP_IFEL(!src_hit,  -1, "No source HIT given \n");
+    HIP_IFEL(!dst_hit,  -1, "No destination HIT given \n");
+    HIP_IFEL(!conn,     -1, "No connection context given \n");
 
     /* Lookup and update state */
     HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
@@ -359,7 +359,7 @@ int signaling_send_second_update(const struct hip_common *first_update)
 
     /* get the connection state */
     signaling_init_connection_from_msg(&conn_tmp, first_update, IN);
-    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id, conn_tmp.src_port, conn_tmp.dst_port)),
              -1, "Could not retrieve local connection state for conn id %d \n", conn_tmp.id);
 
     /* get the sequence number that we have to acknowledge */
@@ -423,7 +423,7 @@ int signaling_send_third_update(UNUSED const struct hip_common *second_update)
 
     /* get the connection state */
     signaling_init_connection_from_msg(&conn_tmp, second_update, IN);
-    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id, conn_tmp.src_port, conn_tmp.dst_port)),
              -1, "Could not retrieve local connection state for conn id %d \n", conn_tmp.id);
 
     /* get the sequence number that we have to acknowledge */
@@ -725,7 +725,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I2 \n");
-    new_conn.side = RESPONDER;
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
 
@@ -737,14 +736,16 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
     /* If connection has been blocked by the oslayer.
-     * send an error notification with the reason and discard the i2. */
-    if (conn->status == SIGNALING_CONN_BLOCKED) {
-        HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
-        signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
-        HIP_DEBUG("Closing HA to peer...\n");
-        signaling_close_peer(&ctx->hadb_entry->hit_peer);
-        return -1;
-    }
+     * send an error notification with the reason and discard the i2.
+     */
+/*    if (conn->status == SIGNALING_CONN_BLOCKED) {
+ *       HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
+ *       signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
+ *       HIP_DEBUG("Closing HA to peer...\n");
+ *       signaling_close_peer(&ctx->hadb_entry->hit_peer);
+ *       return -1;
+ *   }
+ */
 
 out_err:
     return err;
@@ -787,14 +788,13 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from R2/U2 \n");
-    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id)),
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id, recv_conn.src_port, recv_conn.dst_port)),
              -1, "Could not get connection state for connection in R2\n");
     HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg, IN),
              -1, "Could not update connection state with information from R2\n", IN);
 
     /* Try to authenticate the user and set flags accordingly */
     userdb_handle_user_signature(ctx->input_msg, conn, IN);
-
 
     /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
@@ -803,19 +803,21 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
     /* Send an I3 if connection has not been blocked by the oslayer.
      * otherwise send an error notification with the reason and discard the R2. */
-    if (conn->status != SIGNALING_CONN_BLOCKED) {
-        if (packet_type == HIP_R2) {
-            signaling_send_I3(ctx->hadb_entry, conn);
-        } else {
-            signaling_send_third_update(ctx->input_msg);
-        }
-    } else {
-        HIP_DEBUG("Firewall has blocked the connection after receipt of R2/U2, sending error notification to responder... \n");
-        signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
-        HIP_DEBUG("Closing HA to peer...\n");
-        signaling_close_peer(&ctx->hadb_entry->hit_peer);
-        return -1;
-    }
+/*
+ *     if (conn->status != SIGNALING_CONN_BLOCKED) {
+ *       if (packet_type == HIP_R2) {
+ *           signaling_send_I3(ctx->hadb_entry, conn);
+ *       } else {
+ *           signaling_send_third_update(ctx->input_msg);
+ *       }
+ *   } else {
+ *       HIP_DEBUG("Firewall has blocked the connection after receipt of R2/U2, sending error notification to responder... \n");
+ *       signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
+ *       HIP_DEBUG("Closing HA to peer...\n");
+ *       signaling_close_peer(&ctx->hadb_entry->hit_peer);
+ *       return -1;
+ *   }
+ */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
@@ -906,7 +908,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not init connection context from I3/U3 \n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id)),
+    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id, conn.src_port, conn.dst_port)),
              -1, "Could not get state for existing connection\n");
     HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
@@ -914,9 +916,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     /* Signature validation */
     userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
 
-    conn.id     = existing_conn->id;
-    conn.side   = existing_conn->side;
-    conn.status = existing_conn->status;
+    conn.id = existing_conn->id;
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
 /*
@@ -1001,6 +1001,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     struct signaling_connection                *conn          = NULL;
     const struct hip_seq                       *param_seq     = NULL;
     struct userdb_certificate_context          *cert_ctx      = NULL;
+    struct signaling_port_pair                  ports;
     uint32_t                                    network_id;
     uint32_t                                    conn_id;
 
@@ -1014,7 +1015,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id    = ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
-    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_id, ports.src_port, ports.dst_port)),
              -1, "No connection context for connection id \n");
 
     /* Process certificates and check completeness*/
@@ -1108,6 +1109,8 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     struct signaling_hipd_state                *sig_state     = NULL;
     struct signaling_connection                *existing_conn = NULL;
     uint32_t                                    conn_id;
+    struct signaling_port_pair                  ports;
+
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CERT_UP_CERT_ACK\n");
@@ -1123,7 +1126,7 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     HIP_IFEL(!(param_cert_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              0, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id =  ntohl(param_cert_id->connection_id);
-    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
+    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id, ports.src_port, ports.dst_port)),
              -1, "No connection context for connection id \n");
 
     /* unflag user authentication flag */
@@ -1292,6 +1295,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
     const struct in6_addr                              *src_hit      = NULL;
     int                                                 origin       = 0;
     struct hip_hadb_state                              *ha           = NULL;
+    struct signaling_port_pair                          ports;
 
     /* Get connection context */
     HIP_IFEL(!(notification = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
@@ -1329,7 +1333,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
              -1, "No HA entry found for HITs, no need to update state.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling\n");
-    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, ntohs(conn_id->id))),
+    HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, ntohs(conn_id->id), ports.src_port, ports.dst_port)),
              -1, "Connection does not exist. \n");
 
     /* Now verify the signature */
@@ -1395,7 +1399,7 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
     }
 
     /* Adapt connection status */
-    conn->status = SIGNALING_CONN_BLOCKED;
+    //conn->status = SIGNALING_CONN_BLOCKED;
     signaling_send_connection_update_request(our_hit, peer_hit, conn);
 
 out_err:
@@ -1499,13 +1503,14 @@ int signaling_i2_add_host_info(UNUSED const uint8_t packet_type, UNUSED const ui
     const struct signaling_param_connection_identifier *conn_id       = NULL;
     struct signaling_connection                        *existing_conn = NULL;
     struct signaling_hipd_state                        *sig_state     = NULL;
+    struct signaling_port_pair                          ports;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
     HIP_IFEL(!(conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
              -1, "Could not find connection identifier in notification. \n");
-    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id->id)),
+    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id->id, ports.src_port, ports.dst_port)),
              -1, "Could not get state for existing connection\n");
 
     HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),

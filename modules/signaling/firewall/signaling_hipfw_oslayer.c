@@ -84,6 +84,7 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     int err = 0;
     //struct signaling_connection *conn = NULL;
     struct signaling_connection new_conn;
+    int                         status = -1;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
@@ -98,30 +99,13 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     /* We have no waiting contexts. So build the local connection context and queue it. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.status = SIGNALING_CONN_PROCESSING;
-    new_conn.id     = signaling_cdb_get_next_connection_id();
-    new_conn.side   = INITIATOR;
-
-    /* Look up the host context */
-    //TODO write the handler for verification of host identifier
-
-
-    /* Check the local context against our local policy,
-     * block this connection if context is rejected */
-    //TODO to remove the policy checking altogether
-/*    if (signaling_policy_engine_check_and_flag(&ctx->dst, &new_conn.ctx_out)) {
- *      new_conn.status = SIGNALING_CONN_BLOCKED;
- *      HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &new_conn), -1, "Could not insert connection into cdb\n");
- *      signaling_cdb_print();
- *      return 0;
- *  }
- */
+    status      = SIGNALING_CONN_PROCESSING;
+    new_conn.id = signaling_cdb_get_next_connection_id();
 
     /* set local host and user to authed since we have passed policy check */
 
     /* Since this is a new connection we have to add an entry to the scdb */
-    //ttimeofday(&new_conn.timestamp, NULL);
-    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &src_port, &dst_port, &new_conn),
+    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &src_port, &dst_port, &new_conn.id, *status),
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
 
@@ -156,8 +140,9 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     int                          verdict = VERDICT_DEFAULT;
     int                          found   = 0;
     uint16_t                     src_port, dest_port;
-    signaling_cdb_entry_t       *entry = NULL;
-    struct signaling_connection *conn  = NULL;
+    signaling_cdb_entry_t       *entry  = NULL;
+    struct signaling_connection *conn   = NULL;
+    int                         *status = NULL;
 
     /* Get ports from tcp header */
     // TODO this code should not depend on payload to be TCP
@@ -180,12 +165,12 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     }
 
     /* If there is an association, is the connection known? */
-    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &conn);
+    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &conn->id, &status);
     if (found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;
     } else if (found > 0) {
-        switch (conn->status) {
+        switch (*status) {
         case SIGNALING_CONN_ALLOWED:
             HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
             verdict = VERDICT_ACCEPT;
@@ -200,7 +185,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
             break;
         case SIGNALING_CONN_NEW:
         default:
-            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", conn->status);
+            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", *status);
             verdict = VERDICT_DROP;
             break;
         }

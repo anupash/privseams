@@ -237,7 +237,8 @@ out_err:
  */
 int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                         err = 0;
+    int                         err    = 0;
+    int                         status = -1;
     struct signaling_connection new_conn;
     struct userdb_user_entry   *db_entry = NULL;
 
@@ -251,7 +252,6 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         HIP_ERROR("Could not init connection context from R1 \n");
         return -1;
     }
-    new_conn.side = MIDDLEBOX;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
@@ -299,8 +299,8 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
  */
 
     /* Step d) */
-    new_conn.status = SIGNALING_CONN_PROCESSING;
-    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn),
+    status = SIGNALING_CONN_PROCESSING;
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn->id, &status),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of R1\n");
     signaling_cdb_print();
@@ -343,7 +343,6 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         HIP_ERROR("Could not init connection context from I2 \n");
         return -1;
     }
-    new_conn.side = MIDDLEBOX;
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
@@ -377,7 +376,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
  */
 
     /* Step d) */
-    new_conn.status = SIGNALING_CONN_PROCESSING;
+    //new_conn.status = SIGNALING_CONN_PROCESSING;
     HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of I2\n");
@@ -532,7 +531,7 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
  */
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3/U3 \n");
-        existing_conn->status = SIGNALING_CONN_ALLOWED;
+        //existing_conn->status = SIGNALING_CONN_ALLOWED;
     }
 
     signaling_cdb_print();
@@ -731,14 +730,19 @@ static int signaling_handle_notify_connection_failed(struct hip_common *common, 
     const struct signaling_ntf_connection_failed_data  *ntf_data     = NULL;
     int                                                 reason       = 0;
     int                                                 err          = 1;
-
+    int                                                 status       = -1;
     /* Get connection context */
     HIP_IFEL(!(notification = hip_get_param(common, HIP_PARAM_NOTIFICATION)),
              1, "Message contains no notification parameter.\n");
     HIP_IFEL(!(conn_id = hip_get_param(common, HIP_PARAM_SIGNALING_CONNECTION_ID)),
              1, "Could not find connection identifier in notification. \n");
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, ntohs(conn_id->id))),
+    HIP_IFEL(signaling_init_connection(conn),
+             -1, "Could not init connection context\n");
+    HIP_IFEL(!(conn->id = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port)),
              1, "Could not get connection state from connection-tracking table\n");
+    HIP_IFEL(!(status = signaling_cdb_entry_get_status(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &conn->id)),
+             1, "Could not get connection state from connection-tracking table\n");
+
 
     /* Get notification data */
     ntf_data =  (const struct signaling_ntf_connection_failed_data *) notification->data;
@@ -763,7 +767,7 @@ static int signaling_handle_notify_connection_failed(struct hip_common *common, 
 
     /* Adapt connection status */
     HIP_DEBUG("Blocking the following connection:\n");
-    conn->status = SIGNALING_CONN_BLOCKED;
+    //conn->status = SIGNALING_CONN_BLOCKED;
     signaling_connection_print(conn, "\t");
 
 out_err:

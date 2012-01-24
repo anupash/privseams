@@ -1083,8 +1083,8 @@ struct signaling_service_nack {
  */
 struct signaling_connection {
     uint32_t id;
-    int      side;
-    int      status;
+    uint16_t src_port;
+    uint16_t dst_port;
 };
 
 
@@ -1144,6 +1144,9 @@ int signaling_copy_connection(struct signaling_connection *const dst,
                               const struct signaling_connection *const src);
 int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
                                        struct signaling_connection *const conn);
+int signaling_init_ports_from_msg(struct signaling_port_pair *const ports,
+                                  const struct hip_common *const msg,
+                                  UNUSED enum direction dir);
 int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
 

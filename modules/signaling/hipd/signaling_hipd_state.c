@@ -20,11 +20,16 @@
  * @param sa_entry  partial SA entry containing inner addresses and IPsec mode
  * @return          hash of inner addresses
  */
-static unsigned long signaling_connection_hash(const struct signaling_connection *conn)
-{
-    HIP_DEBUG("Hash of entry: %d \n", conn->id);
-    return conn->id;
-}
+
+
+/*
+ *  static unsigned long signaling_connection_hash(const struct signaling_connection *conn)
+ *  {
+ *      HIP_DEBUG("Hash of entry: %d \n", conn->id);
+ *      return conn->id;
+ *  }
+ */
+
 
 /**
  * Compares the ids of two connection contexts.
@@ -33,15 +38,20 @@ static unsigned long signaling_connection_hash(const struct signaling_connection
  * @param c2     second connection context entry to be compared with
  * @return              1 if different entries, else 0
  */
-static int signaling_connection_cmp(const struct signaling_connection *c1,
-                                    const struct signaling_connection *c2)
-{
-    if (c1->id == c2->id) {
-        return 0;
-    } else {
-        return 1;
-    }
-}
+
+
+/*
+ *  static int signaling_connection_cmp(const struct signaling_connection *c1,
+ *  const struct signaling_connection *c2)
+ *  {
+ *      if (c1->id == c2->id) {
+ *          return 0;
+ *      } else {
+ *          return 1;
+ *      }
+ *  }
+ */
+
 
 /*
  * Initialize an signaling_hipd_state instance.
@@ -79,8 +89,7 @@ out_err:
 struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id,
                                                                  uint16_t src_port, uint16_t dst_port)
 {
-    int                       highest_descriptor = 0;
-    const struct hip_ll_node *iter               = NULL;
+    const struct hip_ll_node *iter = NULL;
     if (state->connections) {
         while ((iter = hip_ll_iterate(state->connections, iter))) {
             if ((((struct signaling_connection *) (iter->ptr))->id       == id) &&
@@ -119,7 +128,7 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
     return new_entry;
 
 out_err:
-    return err;
+    return NULL;
 }
 
 void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, struct signaling_connection *conn)
@@ -147,24 +156,26 @@ void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, 
 /*
  * Prints one database entry.
  */
-static void connections_print_doall(struct signaling_connection *conn)
-{
-    signaling_connection_print(conn, "\t");
-}
+
+/*
+ *  static void connections_print_doall(struct signaling_connection *conn)
+ *  {
+ *      signaling_connection_print(conn, "\t");
+ *  }
+ */
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-static IMPLEMENT_LHASH_DOALL_FN(connections_print, struct signaling_connection);
+//static IMPLEMENT_LHASH_DOALL_FN(connections_print, struct signaling_connection);
 
 /* Print the contents of the database */
 void signaling_hipd_state_print(struct signaling_hipd_state *state)
 {
-    const struct hip_ll_node    *iter      = NULL;
-    struct signaling_connection *temp_conn = NULL;
+    const struct hip_ll_node *iter = NULL;
 
     HIP_DEBUG("------------------ HIPD SIGNALING STATE START ------------------\n");
     if (state->connections) {
         while ((iter = hip_ll_iterate(state->connections, iter)) != NULL) {
-            signaling_connection_print((struct signaling_connection *) (iter->ptr));
+            signaling_connection_print((struct signaling_connection *) (iter->ptr), "\t");
         }
     }
     //hip_ht_doall(state->connections, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(connections_print));

@@ -234,21 +234,8 @@ void signaling_connection_print(const struct signaling_connection *const conn, U
 
     HIP_DEBUG("%s+------------ CONNECTION START ----------------------\n", prefix);
     HIP_DEBUG("%s  Identifier:\t\t %d\n", prefix, conn->id);
-    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(conn->status));
-    switch (conn->side) {
-    case INITIATOR:
-        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "INITIATOR");
-        break;
-    case RESPONDER:
-        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "RESPONDER");
-        break;
-    case MIDDLEBOX:
-        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "MIDDELBOX");
-        break;
-    default:
-        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "UNKNOWN");
-        break;
-    }
+    HIP_DEBUG("%s  Src Port  :\t\t %d\n", prefix, conn->src_port);
+    HIP_DEBUG("%s  Dst Port  :\t\t %d\n", prefix, conn->dst_port);
     fprintf(stderr, "\n");
     HIP_DEBUG("%s+------------ CONNECTION END   ----------------------\n", prefix);
 }
@@ -384,9 +371,9 @@ int signaling_init_connection(struct signaling_connection *const conn)
     int err = 0;
 
     HIP_IFEL(!conn, -1, "Connection context has to be allocated before initialization\n");
-    conn->id     = 0;
-    conn->status = SIGNALING_CONN_NEW;
-    conn->side   = INITIATOR;
+    conn->id       = 0;
+    conn->src_port = 0;
+    conn->dst_port = 0;
 out_err:
     return err;
 }
@@ -484,6 +471,35 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
         signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_update->user);
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * Initializes the given port pair with the information found in the message
+ *
+ * @param ctx   a pointer to the port pair that should be initialized
+ * @param msg   a msg that contains connection context information
+ * @param dir   init the incoming (dir = IN), the outgoing (dir = OUT)
+ *              or the first unassigned (dir = FWD) connection context from this message
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_ports_from_msg(struct signaling_port_pair *const ports,
+                                  const struct hip_common *const msg,
+                                  UNUSED enum direction dir)
+{
+    int                          err               = 0;
+    const struct hip_tlv_common *param             = NULL;
+    struct signaling_port_pair  *port_pair_to_init = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!ports, -1, "Cannot initialize NULL-port pair\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_PORTS) {
+        ports = (struct signaling_port_pair *) param;
     }
 
 out_err:
