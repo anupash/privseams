@@ -209,10 +209,10 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     }
 
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
-    signaling_flags_print(ctx->flags, prefix);
     signaling_user_context_print(&ctx->user, prefix, 0);
     HIP_DEBUG("%sUser DB Entry at:\t %p\n", prefix, ctx->userdb_entry);
     signaling_application_context_print(&ctx->app, prefix, 0);
+    signaling_host_context_print(&ctx->host, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
 
@@ -404,35 +404,46 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection(conn), -1, "Failed to init connection context\n");
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+/*
+ *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
+ *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
+ *      conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+ *  }
+ */
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
+        signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
     }
 
-    signaling_update_flags_from_connection_id(msg, conn);
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
-    while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
-        signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
-        param = hip_get_next_param(msg, param);
-    }
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
-    while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_S) {
-        signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
-        param = hip_get_next_param(msg, param);
-    }
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
-        //signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
-    }
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
-        signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
-    }
+/*
+ *
+ *  signaling_update_flags_from_connection_id(msg, conn);
+ *
+ *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
+ *  while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
+ *      signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
+ *      param = hip_get_next_param(msg, param);
+ *  }
+ *
+ *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
+ *  while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_S) {
+ *      signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
+ *      param = hip_get_next_param(msg, param);
+ *  }
+ *
+ *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+ *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+ *      signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
+ *      //signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
+ *  }
+ *
+ *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
+ *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+ *      signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
+ *  }
+ */
 
 out_err:
     return err;
@@ -457,20 +468,92 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
 
     signaling_update_flags_from_connection_id(msg, conn);
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_update->app);
-        // init ports only for the responder, the initiator already has them
-        // todo: [mult conn] define some checks, that ports are equal?
-/*
- *      if (conn->side == RESPONDER) {
- *          signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
- *      }
- */
+out_err:
+    return err;
+}
+
+int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flags,
+                                         const struct hip_common *const msg,
+                                         UNUSED enum direction dir)
+{
+    int                                  err           = 0;
+    const struct hip_tlv_common         *param         = NULL;
+    struct signaling_connection_context *ctx_to_update = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+
+    flags = malloc(sizeof(struct signaling_connection_flags));
+    signaling_info_req_flag_init(flags->flag_info_requests);
+    signaling_service_info_flag_init(flags->flag_services);
+
+    /*paramters for the host information from the end-point*/
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_OS);
     }
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
-        signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_update->user);
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
+        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_ID);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
+        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_KERNEL);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_CERTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_CERTS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_CERTS);
+    }
+
+    /*paramters for the user information from the end-point*/
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
+        signaling_info_req_flag_set(flags->flag_info_requests, USER_INFO_ID);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, USER_INFO_CERTS);
+    }
+
+    /*paramters for the application information from the end-point*/
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_NAME) {
+        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_NAME);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_CONNECTIONS);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_REQUIREMENTS);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS) {
+        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_QOS_CLASS);
+    }
+
+    /*paramters for the response to service offer information from the end-point*/
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
+        signaling_info_req_flag_set(flags->flag_services, SERVICE_ACK);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_NACK);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_NACK) {
+        signaling_info_req_flag_set(flags->flag_services, SERVICE_NACK);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+        signaling_info_req_flag_set(flags->flag_services, SERVICE_OFFER);
     }
 
 out_err:
@@ -539,8 +622,12 @@ int signaling_init_connection_context(struct signaling_connection_context *const
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
-    ctx->direction = dir;
-    signaling_flag_init(&ctx->flags);
+    ctx->service_offer_id    = 0;
+    ctx->service_type        = 0;
+    ctx->service_description = 0;
+    ctx->service_options     = 0;
+
+    ctx->direction    = dir;
     ctx->userdb_entry = NULL;
     HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
@@ -613,22 +700,10 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection_context(ctx, IN), -1, "Failed to init connection context\n");
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param,
-                                                     &ctx->app),
-                 -1, "Could not init application context from app ctx parameter \n");
-    }
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
-        HIP_IFEL(signaling_build_user_context((const struct signaling_param_user_context *) param,
-                                              &ctx->user),
-                 -1, "Could not init user context from user ctx parameter \n");
-    }
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
         HIP_IFEL(signaling_build_host_context((const struct signaling_param_host_context *) param,
                                               &ctx->host),
                  -1, "Could not init host context from host ctx parameter \n");
@@ -688,7 +763,7 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
  *    //}
  */
 
-    if ((param_service_offer = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U))) {
+    if ((param_service_offer = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         tmp_len = param_service_offer->length;
         tmp_len = (tmp_len - (sizeof(param_service_offer->service_offer_id) +
                               sizeof(param_service_offer->service_type) +
@@ -841,23 +916,23 @@ void signaling_flag_init(struct flags_connection_context *flags)
     flags->HOST_AUTHED       = 0;
 }
 
-void signaling_service_info_flags_print(struct signaling_flags_service_info flags, const char *const prefix)
+void signaling_info_req_flags_print(struct signaling_flags_info_req flags, const char *const prefix)
 {
     char buf[100];
     memset(buf, 0, sizeof(buf));
 
-    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK));
-    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_info_flag_check(flags, SERVICE_NACK));
+    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_info_req_flag_check(flags, SERVICE_NACK));
 
-    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_RECV));
-    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
-    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER_RECV));
+    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
 
     HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
 }
 
-int signaling_service_info_flag_check(struct signaling_flags_service_info flags, int f)
+int signaling_info_req_flag_check(struct signaling_flags_info_req flags, int f)
 {
     switch (f) {
     case HOST_INFO_OS:
@@ -926,7 +1001,7 @@ int signaling_service_info_flag_check(struct signaling_flags_service_info flags,
     }
 }
 
-void signaling_service_info_flag_set(struct signaling_flags_service_info *flags, int f)
+void signaling_info_req_flag_set(struct signaling_flags_info_req *flags, int f)
 {
     switch (f) {
     case HOST_INFO_OS:
@@ -990,7 +1065,7 @@ void signaling_service_info_flag_set(struct signaling_flags_service_info *flags,
     }
 }
 
-void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f)
+void signaling_info_req_flag_unset(struct signaling_flags_info_req *flags, int f)
 {
     switch (f) {
     case HOST_INFO_OS:
@@ -1054,7 +1129,7 @@ void signaling_service_info_flag_unset(struct signaling_flags_service_info *flag
     }
 }
 
-void signaling_service_info_flag_init(struct signaling_flags_service_info *flags)
+void signaling_info_req_flag_init(struct signaling_flags_info_req *flags)
 {
     flags->HOST_INFO_OS          = 0;
     flags->HOST_INFO_KERNEL      = 0;
@@ -1079,23 +1154,23 @@ void signaling_service_info_flag_init(struct signaling_flags_service_info *flags
     flags->APP_INFO_REQUIREMENTS_RECV = 0;
 }
 
-void signaling_service_state_flags_print(struct signaling_flags_service_state *flags, const char *const prefix)
+void signaling_service_info_flags_print(struct signaling_flags_service_info *flags, const char *const prefix)
 {
     char buf[100];
     memset(buf, 0, sizeof(buf));
 
-    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_state_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_state_flag_check(flags, SERVICE_ACK));
-    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_state_flag_check(flags, SERVICE_NACK));
+    sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_info_flag_check(flags, SERVICE_NACK));
 
-    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_state_flag_check(flags, SERVICE_OFFER_RECV));
-    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_state_flag_check(flags, SERVICE_ACK_RECV));
-    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_state_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_RECV));
+    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
 
     HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
 }
 
-int signaling_service_state_flag_check(struct signaling_flags_service_state *flags, int f)
+int signaling_service_info_flag_check(struct signaling_flags_service_info *flags, int f)
 {
     switch (f) {
     case SERVICE_OFFER:
@@ -1122,7 +1197,7 @@ int signaling_service_state_flag_check(struct signaling_flags_service_state *fla
     }
 }
 
-void signaling_service_state_flag_set(struct signaling_flags_service_state *flags, int f)
+void signaling_service_info_flag_set(struct signaling_flags_service_info *flags, int f)
 {
     switch (f) {
     case SERVICE_OFFER:
@@ -1147,7 +1222,7 @@ void signaling_service_state_flag_set(struct signaling_flags_service_state *flag
     }
 }
 
-void signaling_service_state_flag_unset(struct signaling_flags_service_state *flags, int f)
+void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f)
 {
     switch (f) {
     case SERVICE_OFFER:
@@ -1172,7 +1247,7 @@ void signaling_service_state_flag_unset(struct signaling_flags_service_state *fl
     }
 }
 
-void signaling_service_state_flag_init(struct signaling_flags_service_state *flags)
+void signaling_service_info_flag_init(struct signaling_flags_service_info *flags)
 {
     flags->SERVICE_OFFER = 0;
     flags->SERVICE_ACK   = 0;

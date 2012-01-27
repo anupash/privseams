@@ -142,7 +142,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     uint16_t                     src_port, dest_port;
     signaling_cdb_entry_t       *entry  = NULL;
     struct signaling_connection *conn   = NULL;
-    int                         *status = NULL;
+    int                          status = NULL;
 
     /* Get ports from tcp header */
     // TODO this code should not depend on payload to be TCP
@@ -155,7 +155,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     HIP_DEBUG("\t on ports %d/%d or if corresponding application is generally allowed.\n", src_port, dest_port);
 
     /* Is there a HA between the two hosts? */
-    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst, &src_port, &dest_port);
+    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst, src_port, dest_port);
     if (entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
         HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
@@ -165,7 +165,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     }
 
     /* If there is an association, is the connection known? */
-    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &conn->id, &status);
+    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, conn->id, status);
     if (found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;
@@ -185,7 +185,7 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
             break;
         case SIGNALING_CONN_NEW:
         default:
-            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", *status);
+            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
             verdict = VERDICT_DROP;
             break;
         }

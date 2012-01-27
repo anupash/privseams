@@ -74,29 +74,31 @@ int update_sent = 0;
  *   @param peer_hit    the hit of the peer to close
  *   @return            0 on success, negative on error
  */
-static int signaling_close_peer(hip_hit_t *peer_hit)
-{
-    int                err     = 0;
-    uint16_t           mask    = 0;
-    struct hip_common *msg_buf = NULL;
-
-    /* Allocate and build message */
-    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-             -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
-    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, peer_hit, peer_hit);
-
-    /* Add hit to close, this parameter is critical. */
-    HIP_IFEL(hip_build_param_contents(msg_buf, peer_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (dst hit) failed\n");
-
-    HIP_IFEL(hip_send_close(msg_buf, 0),
-             -1, "Could not close hip associaton\n");
-
-    return 0;
-
-out_err:
-    return err;
-}
+/*
+ * static int signaling_close_peer(hip_hit_t *peer_hit)
+ * {
+ *  int                err     = 0;
+ *  uint16_t           mask    = 0;
+ *  struct hip_common *msg_buf = NULL;
+ *
+ *   Allocate and build message
+ *  HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+ *           -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+ *  hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, peer_hit, peer_hit);
+ *
+ *   Add hit to close, this parameter is critical.
+ *  HIP_IFEL(hip_build_param_contents(msg_buf, peer_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+ *           -1, "build param contents (dst hit) failed\n");
+ *
+ *  HIP_IFEL(hip_send_close(msg_buf, 0),
+ *           -1, "Could not close hip associaton\n");
+ *
+ *  return 0;
+ *
+ * out_err:
+ *  return err;
+ * }
+ */
 
 /*
  * Builds either a U1, U2 or U3 update message.
@@ -735,18 +737,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
-    /* If connection has been blocked by the oslayer.
-     * send an error notification with the reason and discard the i2.
-     */
-/*    if (conn->status == SIGNALING_CONN_BLOCKED) {
- *       HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
- *       signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
- *       HIP_DEBUG("Closing HA to peer...\n");
- *       signaling_close_peer(&ctx->hadb_entry->hit_peer);
- *       return -1;
- *   }
- */
-
 out_err:
     return err;
 }
@@ -801,23 +791,18 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 
+    //TODO no sending of I3 anymore
     /* Send an I3 if connection has not been blocked by the oslayer.
      * otherwise send an error notification with the reason and discard the R2. */
 /*
- *     if (conn->status != SIGNALING_CONN_BLOCKED) {
- *       if (packet_type == HIP_R2) {
- *           signaling_send_I3(ctx->hadb_entry, conn);
- *       } else {
- *           signaling_send_third_update(ctx->input_msg);
- *       }
+ *
+ *    if (packet_type == HIP_R2) {
+ *      signaling_send_I3(ctx->hadb_entry, conn);
  *   } else {
- *       HIP_DEBUG("Firewall has blocked the connection after receipt of R2/U2, sending error notification to responder... \n");
- *       signaling_send_connection_failed_ntf(ctx->hadb_entry, PRIVATE_REASON, conn);
- *       HIP_DEBUG("Closing HA to peer...\n");
- *       signaling_close_peer(&ctx->hadb_entry->hit_peer);
- *       return -1;
- *   }
+ *      signaling_send_third_update(ctx->input_msg);
+ *
  */
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
@@ -830,19 +815,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
 #endif
 
-    /* Check if authentication of initiator user was requested,
-     * if yes send certificate chain */
-/*
- *  if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
- *      if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
- *          signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn, ntohl(param_usr_auth->network_id));
- *      } else {
- *          HIP_ERROR("User auth parameter missing \n");
- *          err = -1;
- *          goto out_err;
- *      }
- *  }
- */
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -917,40 +889,6 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
 
     conn.id = existing_conn->id;
-
-    /* Check if we're done with this connection or if we have to wait for addition authentication */
-/*
- *  if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
- *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of remote user.\n");
- *      wait_auth = 1;
- * #ifdef CONFIG_HIP_PERFORMANCE
- *      HIP_DEBUG("Stop PERF_I3, PERF_CONN_U3\n");
- *      hip_perf_stop_benchmark(perf_set, PERF_I3);
- *      hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
- *      HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
- *      hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
- *      hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
- * #endif
- *  }
- *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
- *      HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
- *      if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
- * #ifdef CONFIG_HIP_PERFORMANCE
- *          HIP_DEBUG("Stop PERF_I3\n");
- *          hip_perf_stop_benchmark(perf_set, PERF_I3);
- *          hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
- *          HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
- *          hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
- * #endif
- *          signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn, ntohl(param_usr_auth->network_id));
- *          wait_auth = 1;
- *      } else {
- *          HIP_ERROR("User auth parameter missing \n");
- *          err = -1;
- *          goto out_err;
- *      }
- *  }
- */
 
     if (!wait_auth) {
         HIP_DEBUG("Auth completed after I3/U3 \n");
@@ -1059,10 +997,6 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
         /* Public key verification was successful, so we save the chain */
         sk_X509_push(cert_ctx->cert_chain, cert);
         userdb_save_user_certificate_chain(cert_ctx->cert_chain);
-/*
- *      signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
- *      signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
- */
 
         /* We send an ack */
         HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
@@ -1533,6 +1467,18 @@ out_err:
     return err;
 }
 
+/*
+ * Receive the service offers from the service provider and respond to them.
+ */
+int signaling_i2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int                                                 err           = 0;
+    const struct signaling_param_connection_identifier *conn_id       = NULL;
+    struct signaling_connection                        *existing_conn = NULL;
+    struct signaling_hipd_state                        *sig_state     = NULL;
+    struct signaling_port_pair                          ports;
+}
+
 int signaling_r2_add_application_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     return signaling_i2_add_application_context(packet_type, ha_state, ctx);
@@ -1566,4 +1512,16 @@ int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED con
 
 out_err:
     return err;
+}
+
+/*
+ * Receive the service offers from the service provider with the R2 packet and respond to them
+ */
+int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int                                                 err           = 0;
+    const struct signaling_param_connection_identifier *conn_id       = NULL;
+    struct signaling_connection                        *existing_conn = NULL;
+    struct signaling_hipd_state                        *sig_state     = NULL;
+    struct signaling_port_pair                          ports;
 }

@@ -54,10 +54,13 @@ int signaling_i2_add_application_context(const uint8_t packet_type, const uint32
 int signaling_i2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_i2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_i2_add_host_info(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
 int signaling_r2_add_application_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_auth_resp(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /* Function for prolonged BEX */
 int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *conn);

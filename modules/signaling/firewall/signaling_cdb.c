@@ -70,11 +70,11 @@ static unsigned long signaling_cdb_entry_hash(const signaling_cdb_entry_t *scdb_
 
     memset(&hash, 0, INDEX_HASH_LENGTH);
     memcpy(&index[0], &scdb_entry->local_hit, sizeof(struct in6_addr));
-    memcpy(&addr_pair[1], &scdb_entry->remote_hit, sizeof(struct in6_addr));
+    memcpy(&index[sizeof(struct in6_addr)], &scdb_entry->remote_hit, sizeof(struct in6_addr));
     memcpy(&index[2 * sizeof(struct in6_addr)], &scdb_entry->src_port, sizeof(uint16_t));
-    memcpy(&port_pair[1], &scdb_entry->dst_port, sizeof(uint16_t));
+    memcpy(&index[2 * sizeof(struct in6_addr) + sizeof(uint16_t)], &scdb_entry->dst_port, sizeof(uint16_t));
 
-    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, addr_pair, 2 * sizeof(struct in6_addr), hash),
+    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, index, 2 * sizeof(struct in6_addr) + 2 * sizeof(uint16_t), hash),
              -1, "failed to hash addresses\n");
 
 out_err:
@@ -208,8 +208,8 @@ int signaling_cdb_uninit(void)
  */
 int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
                                         signaling_cdb_entry_t *entry,
-                                        uint32_t **conn_id,
-                                        int **status)
+                                        uint32_t conn_id,
+                                        int status)
 {
     int err = 0;
 

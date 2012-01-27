@@ -164,6 +164,7 @@ void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, 
  *  }
  */
 
+
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
 //static IMPLEMENT_LHASH_DOALL_FN(connections_print, struct signaling_connection);
 

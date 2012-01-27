@@ -736,7 +736,7 @@ int signaling_build_service_state(const struct signaling_param_service_offer_u *
     if (tmp_items != -1) {
         switch (tmp_param) {
         case HIP_PARAM_SIGNALING_SERVICE_OFFER_U:
-            signaling_service_state_flag_set(&service_con->services[tmp_items - 1].flag_services, SERVICE_OFFER_RECV);
+            signaling_service_info_flag_set(&service_con->services[tmp_items - 1].flag_services, SERVICE_OFFER_RECV);
             service_con->services[tmp_items - 1].service_offer_id    = ntohs(param_service_offer->service_offer_id);
             service_con->services[tmp_items - 1].service_type        = ntohs(param_service_offer->service_type);
             service_con->services[tmp_items - 1].service_description = ntohs(param_service_offer->service_description);
@@ -750,36 +750,36 @@ int signaling_build_service_state(const struct signaling_param_service_offer_u *
             while (tmp_len > 0) {
                 switch (tmp_info) {
                 case HOST_INFO_OS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_OS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_OS);
                     break;
                 case HOST_INFO_KERNEL:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_KERNEL);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_KERNEL);
                     break;
                 case HOST_INFO_ID:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_ID);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_ID);
                     break;
                 case HOST_INFO_CERTS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_CERTS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_CERTS);
                     break;
 
                 case USER_INFO_ID:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_ID);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_ID);
                     break;
                 case USER_INFO_CERTS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_CERTS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_CERTS);
                     break;
 
                 case APP_INFO_NAME:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_NAME);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_NAME);
                     break;
                 case APP_INFO_QOS_CLASS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_QOS_CLASS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_QOS_CLASS);
                     break;
                 case APP_INFO_REQUIREMENTS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_REQUIREMENTS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_REQUIREMENTS);
                     break;
                 case APP_INFO_CONNECTIONS:
-                    signaling_service_info_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_CONNECTIONS);
+                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_CONNECTIONS);
                     break;
                 }
             }

@@ -25,6 +25,8 @@
 #define OUTBOUND_I2_CREATE_USRINFO_PRIO         41502
 #define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
 #define OUTBOUND_I2_CREATE_HOST_INFO_PRIO       41505
+#define OUTBOUND_I2_HANDLE_SERVICE_OFFER_PRIO   41506
+#define OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO   41507
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
 #define OUTBOUND_R2_CREATE_USRINFO_PRIO         41502
 #define OUTBOUND_R2_CREATE_USR_AUTH_PRIO        41504
@@ -92,78 +94,30 @@ int hip_signaling_init(void)
 
 
 
+    /* Handle Service Offer to I2*/
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_handle_service_offers, OUTBOUND_I2_HANDLE_SERVICE_OFFER_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_handle_service_offers, OUTBOUND_I2_HANDLE_SERVICE_OFFER_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
     /* Add application context to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_application_context, OUTBOUND_I2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_application_context, OUTBOUND_I2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
 
-    /* Add user context to I2 */
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_user_context, OUTBOUND_I2_CREATE_USRINFO_PRIO),
+    /* Handle Service Offer to I2*/
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_user_context, OUTBOUND_I2_CREATE_USRINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-
-
-    /* Add user signature to I2 */
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_user_signature, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_user_signature, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-
-    /* Add user signature to I2 */
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_host_info, OUTBOUND_I2_CREATE_HOST_INFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_add_host_info, OUTBOUND_I2_CREATE_HOST_INFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add application context to in R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_application_context, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_add_application_context, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_add_application_context, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_add_application_context, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_application_context, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-
-    /* Add user context to R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-
-    /* Add user_auth_request_signed to R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-
-
-    /* Add user signature to R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_application_context, OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
 

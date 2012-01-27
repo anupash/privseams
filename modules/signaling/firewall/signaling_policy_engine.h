@@ -39,35 +39,35 @@
 /* Definition of return values for signaling_policy_check.
  */
 enum policy_all {
-    POLICY_ACCEPT                = 0,
-    POLICY_REJECT                = 1,
-    POLICY_USER_AUTH_REQUIRED    = 2,
-    POLICY_HOST_AUTH_REQUIRED    = 3,
-    POLICY_APP_AUTH_REQUIRED     = 4,
-    POLICY_HOST_INFO_OS          = 5,
-    POLICY_HOST_INFO_KERNEL      = 6,
-    POLICY_HOST_INFO_ID          = 7,
-    POLICY_HOST_INFO_CERTS       = 8,
-    POLICY_USER_INFO_ID          = 9,
-    POLICY_USER_INFO_CERTS       = 10,
-    POLICY_APP_INFO_NAME         = 11,
-    POLICY_APP_INFO_QOS_CLASS    = 12,
-    POLICY_APP_INFO_CONNECTIONS  = 13,
-    POLICY_APP_INFO_REQUIREMENTS = 14
+    POLICY_ACCEPT =  0,
+    POLICY_REJECT =  1,
+
+    POLICY_HOST_INFO_OS     =  2,
+    POLICY_HOST_INFO_KERNEL =  3,
+    POLICY_HOST_INFO_ID     =  4,
+    POLICY_HOST_INFO_CERTS  =  5,
+
+    POLICY_USER_INFO_ID    =  6,
+    POLICY_USER_INFO_CERTS =  7,
+
+    POLICY_APP_INFO_NAME         =  8,
+    POLICY_APP_INFO_QOS_CLASS    =  9,
+    POLICY_APP_INFO_CONNECTIONS  = 10,
+    POLICY_APP_INFO_REQUIREMENTS = 11
 };
 
 struct policy_decision {
     uint8_t POLICY_ACCEPT;
     uint8_t POLICY_REJECT;
-    uint8_t POLICY_USER_AUTH_REQUIRED;
-    uint8_t POLICY_HOST_AUTH_REQUIRED;
-    uint8_t POLICY_APP_AUTH_REQUIRED;
+
     uint8_t POLICY_HOST_INFO_OS;
     uint8_t POLICY_HOST_INFO_KERNEL;
     uint8_t POLICY_HOST_INFO_ID;
     uint8_t POLICY_HOST_INFO_CERTS;
+
     uint8_t POLICY_USER_INFO_ID;
     uint8_t POLICY_USER_INFO_CERTS;
+
     uint8_t POLICY_APP_INFO_NAME;
     uint8_t POLICY_APP_INFO_QOS_CLASS;
     uint8_t POLICY_APP_INFO_CONNECTIONS;
@@ -84,13 +84,17 @@ struct host_info {
 };
 
 struct user_info {
-    char user_id[SIGNALING_USER_ID_MAX_LEN];
+    char user_name[SIGNALING_USER_ID_MAX_LEN];
 };
+
 
 struct app_info {
-    char app_id[SIGNALING_APP_DN_MAX_LEN];
+    char application_dn[SIGNALING_APP_DN_MAX_LEN];
+    char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
+    char requirements[SIGNALING_APP_REQ_MAX_LEN];
 };
 
+//TODO modify all the info parameters according protocol design
 struct policy_tuple {
     struct host_info       host;
     struct user_info       user;
@@ -109,12 +113,15 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
                                            const struct signaling_connection_context *const conn_ctx);
 
 int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
-                                           struct signaling_connection_context *const conn_ctx);
+                                           struct signaling_connection_context *const conn_ctx,
+                                           struct signaling_connection_flags   *ctx_flags,
+                                           struct policy_tuple                 *ret);
 
 void policy_decision_set(struct policy_decision *flags, int f);
 void policy_decision_unset(struct policy_decision *flags, int f);
 void policy_decision_init(struct policy_decision *flags);
 int policy_decision_check(struct policy_decision flags, int f);
 
+int policy_tuple_init(struct policy_tuple *tuple);
 
 #endif /* HIP_HIPFW_SIGNALING_POLICY_ENGINE_H */

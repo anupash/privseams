@@ -237,11 +237,15 @@ out_err:
  */
 int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                         err    = 0;
-    int                         status = -1;
-    struct signaling_connection new_conn;
-    struct userdb_user_entry   *db_entry = NULL;
-
+    int                                  err        = 0;
+    int                                  status     = -1;
+    int                                  flag_check = 0;
+    struct signaling_connection          new_conn;
+    struct userdb_user_entry            *db_entry      = NULL;
+    struct signaling_connection_context *ctx_in        = NULL;
+    struct signaling_connection_context *ctx_out       = NULL;
+    struct signaling_connection_flags   *ctx_flags     = NULL;
+    struct policy_tuple                 *matched_tuple = NULL;
     printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
 
     /* sanity checks */
@@ -253,26 +257,35 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         return -1;
     }
 
-    /* add/update user in user db */
-    if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-        HIP_ERROR("Could not add user from message\n");
+    if (signaling_init_connection_context(ctx_in, IN)) {
+        HIP_ERROR("Could not init connection context for the IN side \n");
+        return -1;
     }
 
-    /* Try to auth the user and set flags accordingly */
-    /* The host is authed because this packet went through all the default hip checking functions */
+    if (signaling_init_connection_context(ctx_out, OUT)) {
+        HIP_ERROR("Could not init connection context for the OUT SIDE \n");
+        return -1;
+    }
+
+    signaling_update_info_flags_from_msg(ctx_flags, common, IN);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
-/*
- *   if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
- *       new_conn.status = SIGNALING_CONN_BLOCKED;
- *       signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
- *       signaling_cdb_print();
- *       signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
- *       return 0;
- *   }
- */
+    flag_check = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, matched_tuple);
+    if (flag_check == -1) {
+        status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(&common->hits, &common->hitr, &new_conn.src_port, &new_conn.dst_port, &new_conn.id, &status);
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+        return 0;
+    } else if (flag_check == 0) {
+        status = SIGNALING_CONN_ALLOWED;
+        signaling_cdb_add(&common->hits, &common->hitr, &new_conn.src_port, &new_conn.dst_port, &new_conn.id, &status);
+        signaling_cdb_print();
+        return 0;
+    } else {
+    }
 
     /* Step c) */
     // TODO Add more handlers for user and application information requests
@@ -300,7 +313,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
     /* Step d) */
     status = SIGNALING_CONN_PROCESSING;
-    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn->id, &status),
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn.id, &status),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of R1\n");
     signaling_cdb_print();
@@ -332,6 +345,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     int                         err = 0;
     struct signaling_connection new_conn;
     struct userdb_user_entry   *db_entry = NULL;
+    int                         status   = SIGNALING_CONN_NEW;
 
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
 
@@ -377,7 +391,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 
     /* Step d) */
     //new_conn.status = SIGNALING_CONN_PROCESSING;
-    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn),
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &new_conn.id, &status),
              -1, "Could not add new connection to conntracking table\n");
     HIP_DEBUG("Connection tracking table after receipt of I2\n");
     signaling_cdb_print();
@@ -408,7 +422,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection *conn = NULL;
     //const struct signaling_param_user_auth_request *auth_req = NULL;
     struct userdb_user_entry *db_entry = NULL;
-
+    int                       status   = SIGNALING_CONN_ALLOWED;
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
 
     /* sanity checks */
@@ -417,7 +431,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     /* Step a) */
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from R2/U2 \n");
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id, &status)),
              0, "Could not get connection state for connection-tracking table\n");
     HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
              0, "Could not update connection state with information from R2\n");
@@ -493,13 +507,13 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     struct signaling_connection *existing_conn = NULL;
     //const struct signaling_param_user_auth_request *auth_req      = NULL;
     int wait_auth = 0;
-
+    int status    = SIGNALING_CONN_ALLOWED;
     printf("\033[22;34mReceived I3 packet\033[22;37m\n\033[01;37m");
 
     /* Step a) */
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from I3 \n");
-    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id)),
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &recv_conn.id, &status)),
              0, "Could not get connection state for connection-tracking table\n");
     HIP_IFEL(signaling_update_flags_from_connection_id(common, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
@@ -560,6 +574,7 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
     uint32_t                                    conn_id;
     const struct hip_cert                      *param_cert = NULL;
     struct signaling_connection_context        *conn_ctx   = NULL;
+    int                                         status     = SIGNALING_CONN_ALLOWED;
 
     /* sanity checks */
     HIP_IFEL(!common,  0, "Message is NULL\n");
@@ -569,7 +584,7 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id, &status)),
              -1, "No connection context for connection id \n");
     HIP_IFEL(!(param_cert = hip_get_param(common, HIP_PARAM_CERT)),
              -1, "Message contains no certificates.\n");
@@ -618,8 +633,8 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
         /* Public key verification was successful, so we save the chain */
         sk_X509_push(cert_ctx->cert_chain, cert);
         userdb_save_user_certificate_chain(cert_ctx->cert_chain);
-        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
-        signaling_flag_unset(&conn_ctx->flags, USER_AUTH_REQUEST);
+        //signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        //signaling_flag_unset(&conn_ctx->flags, USER_AUTH_REQUEST);
     } else {
         HIP_DEBUG("Rejecting certificate chain. Chain will not be saved, update will be dropped. \n");
         // todo: send a notification to the peers
@@ -642,13 +657,14 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
     uint32_t                                    network_id;
     uint32_t                                    conn_id;
     struct signaling_connection_context        *conn_ctx = NULL;
+    int                                         status   = SIGNALING_CONN_ALLOWED;
 
     /* get connection identifier and context */
     HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              0, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
-    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id)),
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &conn_id, &status)),
              0, "No connection context for connection id \n");
 /*
  *  switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
@@ -665,10 +681,12 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
  */
 
     /* check if we authed the user too */
-    if (!signaling_flag_check(conn_ctx->flags, USER_AUTHED)) {
-        HIP_DEBUG("Received auth ack for user auth that hasn't been successful at the firewall \n");
-        return 0;
-    }
+/*
+ *  if (!signaling_flag_check(conn_ctx->flags, USER_AUTHED)) {
+ *      HIP_DEBUG("Received auth ack for user auth that hasn't been successful at the firewall \n");
+ *      return 0;
+ *  }
+ */
 
     return 1;
 out_err:
@@ -738,7 +756,7 @@ static int signaling_handle_notify_connection_failed(struct hip_common *common, 
              1, "Could not find connection identifier in notification. \n");
     HIP_IFEL(signaling_init_connection(conn),
              -1, "Could not init connection context\n");
-    HIP_IFEL(!(conn->id = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port)),
+    HIP_IFEL(!( &conn->id = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port)),
              1, "Could not get connection state from connection-tracking table\n");
     HIP_IFEL(!(status = signaling_cdb_entry_get_status(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &conn->id)),
              1, "Could not get connection state from connection-tracking table\n");

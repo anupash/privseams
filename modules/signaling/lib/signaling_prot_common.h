@@ -55,16 +55,27 @@
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
-#define HIP_PARAM_SIGNALING_APPINFO             5002
-#define HIP_PARAM_SIGNALING_USERINFO            5004
-#define HIP_PARAM_SIGNALING_USER_REQ_S          5006
 #define HIP_PARAM_SIGNALING_CERT_CHAIN_ID       5008
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     5009
-#define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
-#define HIP_PARAM_SIGNALING_USER_REQ_U          62502
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER_U     62504
+
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER     62504
 #define HIP_PARAM_SIGNALING_SERVICE_ACK         62507
 #define HIP_PARAM_SIGNALING_SERVICE_NACK        62508
+
+/*Parameter types for the end-point information*/
+//TODO check for the values for these parameters
+//TODO paramters such as CERTS should be in the signed part
+#define HIP_PARAM_SIGNALING_HOST_INFO_OS            5010
+#define HIP_PARAM_SIGNALING_HOST_INFO_KERNEL        5011
+#define HIP_PARAM_SIGNALING_HOST_INFO_ID            5012
+#define HIP_PARAM_SIGNALING_HOST_INFO_CERTS         5013
+
+#define HIP_PARAM_SIGNALING_USER_INFO_ID            5014
+#define HIP_PARAM_SIGNALING_USER_INFO_CERTS         5015
+
+#define HIP_PARAM_SIGNALING_APP_INFO_NAME           5016
+#define HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS      5017
+#define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5018
+#define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5019
 
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
@@ -267,7 +278,7 @@ struct flags_connection_context{
     uint8_t HOST_AUTHED;
 };
 
-struct signaling_flags_service_info {
+struct signaling_flags_info_req {
     uint8_t HOST_INFO_OS;
     uint8_t HOST_INFO_OS_RECV;
     uint8_t HOST_INFO_KERNEL;
@@ -296,7 +307,7 @@ struct signaling_flags_service_info {
 /*
  * FLags to keep track of the state of services offered and received
  */
-struct signaling_flags_service_state {
+struct signaling_flags_service_info {
     uint8_t SERVICE_OFFER;
     uint8_t SERVICE_ACK;
     uint8_t SERVICE_NACK;
@@ -989,13 +1000,13 @@ struct signaling_host_context {
  * Internal representation of a service offer sent
  */
 struct signaling_services_context {
-    uint16_t                             service_offer_id;
-    uint16_t                             service_type;
-    uint32_t                             service_description;
-    uint8_t                              service_options;
-    struct signaling_flags_service_state flag_services;
-    struct signaling_flags_service_info  flag_info_requests;
-    uint8_t                              nack_reason;
+    uint16_t                            service_offer_id;
+    uint16_t                            service_type;
+    uint32_t                            service_description;
+    uint8_t                             service_options;
+    struct signaling_flags_service_info flag_services;
+    struct signaling_flags_info_req     flag_info_requests;
+    uint8_t                             nack_reason;
 };
 
 
@@ -1003,9 +1014,9 @@ struct signaling_services_context {
  * Internal representation to store the services offered or the services received
  */
 struct signaling_service_container {
-    int                                 num_items;
-    struct signaling_flags_service_info service_flags;
-    struct signaling_services_context   services[MAX_NUM_SERVICE_OFFER_ACCEPTABLE];
+    int                               num_items;
+    struct signaling_flags_info_req   service_flags;
+    struct signaling_services_context services[MAX_NUM_SERVICE_OFFER_ACCEPTABLE];
 };
 
 
@@ -1020,15 +1031,31 @@ struct signaling_service_container {
  *          replaced by the new user database.
  */
 struct signaling_connection_context {
-    struct flags_connection_context      flags;
+    uint16_t service_offer_id;
+    uint16_t service_type;
+    uint32_t service_description;
+    uint8_t  service_options;
+
     uint8_t                              direction;
     struct signaling_application_context app;
     struct signaling_user_context        user;
     struct signaling_host_context        host;
-    struct signaling_service_container   service;
     struct userdb_user_entry            *userdb_entry;
 };
 
+
+/*
+ *   Internal representation of information to be requested
+ *
+ *   All integers are in host-byte-order.
+ *
+ *   The flags will be set by the middlebox and need not be stored
+ */
+
+struct signaling_connection_flags{
+    struct signaling_flags_service_info flag_services;
+    struct signaling_flags_info_req     flag_info_requests;
+};
 
 /*
  *   Internal representation of a service offer
@@ -1140,6 +1167,9 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
                                          const struct hip_common *const msg,
                                          enum direction dir);
+int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flags,
+                                         const struct hip_common *const msg,
+                                         enum direction dir);
 int signaling_copy_connection(struct signaling_connection *const dst,
                               const struct signaling_connection *const src);
 int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
@@ -1162,17 +1192,17 @@ void signaling_flag_set(struct flags_connection_context *flags, int f);
 void signaling_flag_unset(struct flags_connection_context *flags, int f);
 void signaling_flag_init(struct flags_connection_context *flags);
 
-void signaling_service_state_flags_print(struct signaling_flags_service_state *flags, const char *const prefix);
-int signaling_service_state_flag_check(struct signaling_flags_service_state *flags, int f);
-void signaling_service_state_flag_set(struct signaling_flags_service_state *flags, int f);
-void signaling_service_state_flag_unset(struct signaling_flags_service_state *flags, int f);
-void signaling_service_state_flag_init(struct signaling_flags_service_state *flags);
-
-void signaling_service_info_flags_print(struct signaling_flags_service_info flags, const char *const prefix);
-int signaling_service_info_flag_check(struct signaling_flags_service_info flags, int f);
+void signaling_service_info_flags_print(struct signaling_flags_service_info *flags, const char *const prefix);
+int signaling_service_info_flag_check(struct signaling_flags_service_info *flags, int f);
 void signaling_service_info_flag_set(struct signaling_flags_service_info *flags, int f);
 void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f);
 void signaling_service_info_flag_init(struct signaling_flags_service_info *flags);
+
+void signaling_info_req_flags_print(struct signaling_flags_info_req  flags, const char *const prefix);
+int signaling_info_req_flag_check(struct signaling_flags_info_req  flags, int f);
+void signaling_info_req_flag_set(struct signaling_flags_info_req *flags, int f);
+void signaling_info_req_flag_unset(struct signaling_flags_info_req *flags, int f);
+void signaling_info_req_flag_init(struct signaling_flags_info_req *flags);
 
 
 /* Misc */

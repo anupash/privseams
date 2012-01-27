@@ -414,7 +414,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
     /* send status for new connection to os layer */
     //TODO can be removed bcause not so important
     // also the handling of the connection_confirmation
-    signaling_send_connection_confirmation(our_hit, peer_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");

@@ -133,12 +133,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-/*
- *  HIP_IFEL(hip_build_param_contents(msg, conn,
- *                                    HIP_PARAM_SIGNALING_CONNECTION,
- *                                    sizeof(struct signaling_connection)),
- *           -1, "build application context failed \n");
- */
+
     HIP_IFEL(hip_build_param_contents(msg, conn,
                                       HIP_PARAM_SIGNALING_CONNECTION,
                                       sizeof(struct signaling_connection)),
@@ -192,7 +187,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
     const hip_hit_t             *src_hit = NULL;
     const hip_hit_t             *dst_hit = NULL;
     struct signaling_connection  conn;
-    struct signaling_port_pair   port_pair;
+    int                          status = SIGNALING_CONN_PROCESSING;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
              -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -201,25 +196,12 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
-    /*
-     * HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-     *        -1, "No HIP_PARAM_SIGNALING_CONNECTION parameter in message.\n");
-     * // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
-     * signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
-     */
-
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "No HIP_PARAM_SIGNALING_CONNECTION_SHORT parameter in message.\n");
     // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
     signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTS)),
-             -1, "No HIP_PARAM_SIGNALING_CONNECTION_SHORT parameter in message.\n");
-    // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
-    signaling_copy_port_pair(&port_pair, (const struct signaling_port_pair *) (param + 1));
-
-
-    signaling_cdb_add(src_hit, dst_hit, &port_pair.src_port, &port_pair.dst_port, &conn);
+    signaling_cdb_add(src_hit, dst_hit, &conn.src_port, &conn.dst_port, &conn.id, &status);
     signaling_cdb_print();
 
 out_err:
@@ -249,7 +231,7 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     const hip_hit_t             *hitr      = NULL;
     struct signaling_connection *recv_conn = NULL;
     struct signaling_connection  new_conn;
-    struct signaling_port_pair   port_pair;
+    int                          status = SIGNALING_CONN_ALLOWED;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ1\n");
@@ -265,29 +247,8 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     signaling_copy_connection(recv_conn, (const struct signaling_connection *) (param + 1));
 
     signaling_get_hits_from_msg(msg, &hitr, &hits);
-    //signaling_copy_connection(&new_conn, recv_conn);
 
-    /* We have no waiting contexts. So build the local connection context and queue it. */
-    HIP_IFEL(signaling_init_connection(&new_conn),
-             -1, "Could not init connection context\n");
-    signaling_copy_connection(&new_conn, recv_conn);
-
-    //TODO check if we need to use for loop and access all the port pairs
-
-
-    /* Since the remote context has been accepted,
-     * build the local connection context and check it, too. */
-    // todo: [mult conns] verify all contexts and that they're equal
-
-    //TODO check if the below has to removed. commented out right now
-
-    /* Set host and user authentication flags.
-     * These are trivially true. */
-
-    /* Both the local and the remote connection context have passed
-     * the policy checks. We can now add the connection and send a
-     * confirmation to the HIPD */
-    signaling_cdb_add(hits, hitr, &port_pair.src_port, &port_pair.dst_port, &new_conn);
+    signaling_cdb_add(hits, hitr, &new_conn.src_port, &new_conn.dst_port, &new_conn.id, &status);
     signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
 
 out_err:
@@ -316,7 +277,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     //const struct signaling_connection       *recv_conn     = NULL;
     struct signaling_connection       *existing_conn = NULL;
     const struct signaling_connection *recv_conn;
-    struct signaling_port_pair         port_pair;
+    int                                status = SIGNALING_CONN_ALLOWED;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -329,49 +290,13 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
 
     /* Get and update the local connection state */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
-/*
- *    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
- *            -1, "Could not get connection parameter from connection request \n");
- *   recv_conn = (const struct signaling_connection *) (param + 1);
- */
+
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection parameter from connection request \n");
     recv_conn = (const struct signaling_connection *) (param + 1);
 
-    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
+    HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
              -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);
-    signaling_copy_connection(existing_conn, recv_conn);
-
-    /* Check if we want to allow the connection */
-/*    if (existing_conn->status == SIGNALING_CONN_BLOCKED) {
- *      HIP_DEBUG("Connection is blocked by peer host (or network).\n");
- *  } else if (existing_conn->status == SIGNALING_CONN_ALLOWED) {
- *      insert_iptables_rule(hitr, hits, &port_pair);
- *  }*/
-    /* TODO change the logic here. Earlier worked on Boolean expressions
-     * now have to right the complete logic
-     */
-/*
- *  else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
- *           signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
- *      existing_conn->status = SIGNALING_CONN_ALLOWED;
- *      insert_iptables_rule(hitr, hits, existing_conn->sockets);
- * #ifdef CONFIG_HIP_PERFORMANCE
- *      if (existing_conn->id <= 0) {
- *          HIP_DEBUG("Stop PERF_NEW_CONN, PERF_HIPFW_R2_FINISH\n");
- *          hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
- *          hip_perf_stop_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
- *      } else {
- *          HIP_DEBUG("Stop PERF_NEW_UPDATE_CONN\n");
- *          hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
- *      }
- * #endif
- *  } else {
- *      HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
- *      signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
- *      signaling_flags_print(existing_conn->ctx_in.flags, "INCOMING");
- *  }
- */
 
     /* Answer to HIPD */
     signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
@@ -401,11 +326,6 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
 #endif
     /* Get the connection state */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
-/*
- *   HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
- *            -1, "Could not get connection parameter from connection request \n");
- *   recv_conn = (const struct signaling_connection *) (param + 1);
- */
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection parameter from connection request \n");
@@ -418,31 +338,15 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
              -1, "Received connection update request for non-existent connection id %d \n", recv_conn->id);
 
     HIP_DEBUG("Received connection update request from HIPD\n");
-    //signaling_connection_print(recv_conn, "\t");
 
     /* Just copy whole connection state */
     signaling_copy_connection(existing_conn, recv_conn);
 
     /* Check if we want to allow the connection */
     // TODO update flags in the existing_conn
-    if (existing_conn_status == SIGNALING_CONN_BLOCKED) {
+    if (*existing_conn_status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Connection is blocked by peer host (or network).\n");
-    } /*else if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
-       *       signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
-       * existing_conn->status = SIGNALING_CONN_ALLOWED;
-       * insert_iptables_rule(hitr, hits, existing_conn->sockets);
-       * #ifdef CONFIG_HIP_PERFORMANCE
-       * if (existing_conn->id <= 0) {
-       *    HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH, PERF_NEW_CONN\n");
-       *    hip_perf_stop_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
-       *    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-       * } else {
-       *    HIP_DEBUG("Stop PERF_NEW_UPDATE_CONN\n");
-       *    hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-       * }
-       * #endif
-       * }*/
-    else {
+    } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
     }
 
