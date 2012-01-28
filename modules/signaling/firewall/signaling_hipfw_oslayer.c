@@ -57,10 +57,7 @@
 /* Init connection tracking data base */
 int signaling_hipfw_oslayer_init(void)
 {
-    if (signaling_cdb_init()) {
-        HIP_ERROR("Could not init connection tracking database \n");
-        return -1;
-    }
+    signaling_cdb_init();
 
     if (signaling_policy_engine_init_from_file(HIPFW_SIGNALING_CONF_FILE)) {
         HIP_ERROR("Could not init connection tracking database \n");
@@ -70,21 +67,15 @@ int signaling_hipfw_oslayer_init(void)
     return 0;
 }
 
-int signaling_hipfw_oslayer_uninit(void)
+void signaling_hipfw_oslayer_uninit(void)
 {
-    return 0;
+    signaling_cdb_uninit();
 }
 
-/* RIght now we save the whole signaling connection in the database
- * TODO Store only that much information that is needed
- */
 static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
     int err = 0;
-    //struct signaling_connection *conn = NULL;
-    struct signaling_connection new_conn;
-    int                         status = -1;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
@@ -96,19 +87,11 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     hip_perf_start_benchmark(perf_set, PERF_CONN_REQUEST);
 #endif
 
-    /* We have no waiting contexts. So build the local connection context and queue it. */
-    HIP_IFEL(signaling_init_connection(&new_conn),
-             -1, "Could not init connection context\n");
-    status      = SIGNALING_CONN_PROCESSING;
-    new_conn.id = signaling_cdb_get_next_connection_id();
-
-    /* set local host and user to authed since we have passed policy check */
-
     /* Since this is a new connection we have to add an entry to the scdb */
-    HIP_IFEL(signaling_cdb_add(&ctx->src, &ctx->dst, &src_port, &dst_port, &new_conn.id, *status),
+    HIP_IFEL(signaling_cdb_add_connection(ctx->src, ctx->dst,
+                                          src_port, dst_port,
+                                          SIGNALING_CONN_PROCESSING),
              -1, "Could not add entry to scdb.\n");
-    signaling_cdb_print();
-
 
     HIP_DEBUG("Sending connection request to hipd.\n");
     signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &new_conn);
@@ -138,10 +121,8 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
     int                          err     = 0;
     int                          verdict = VERDICT_DEFAULT;
-    int                          found   = 0;
     uint16_t                     src_port, dest_port;
-    signaling_cdb_entry_t       *entry  = NULL;
-    struct signaling_connection *conn   = NULL;
+    struct signaling_cdb_entry  *entry  = NULL;
     int                          status = NULL;
 
     /* Get ports from tcp header */
@@ -154,23 +135,18 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     HIP_DEBUG_HIT("\tdst", &ctx->dst);
     HIP_DEBUG("\t on ports %d/%d or if corresponding application is generally allowed.\n", src_port, dest_port);
 
-    /* Is there a HA between the two hosts? */
-    entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst, src_port, dest_port);
+    /* Do we know this connection already? */
+    entry = signaling_cdb_get_connection(ctx->src, ctx->dst, src_port, dest_port);
     if (entry == NULL) {
-        HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
+        HIP_DEBUG("Unknown connection, need to tell hipd.\n");
         HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
                  -1, "Failed to handle new connection\n");
         verdict = VERDICT_DROP;
         goto out_err;
     }
 
-    /* If there is an association, is the connection known? */
-    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, conn->id, status);
-    if (found < 0) {
-        HIP_DEBUG("An error occured searching the connection tracking database.\n");
-        verdict = VERDICT_DEFAULT;
-    } else if (found > 0) {
-        switch (*status) {
+    /* We know the connection. So what is the status? */
+    switch (entry->status) {
         case SIGNALING_CONN_ALLOWED:
             HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
             verdict = VERDICT_ACCEPT;
@@ -188,12 +164,6 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
             HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
             verdict = VERDICT_DROP;
             break;
-        }
-    } else {
-        HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
-        HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
-                 -1, "Failed to handle new connection\n");
-        verdict = VERDICT_DROP;
     }
 
 out_err:

@@ -405,7 +405,7 @@ out_err:
  *
  * @return zero on success and non-zero on failure
  */
-UNUSED static int hip_fw_uninit_signaling_extensions(void)
+static int hip_fw_uninit_signaling_extensions(void)
 {
     int err = 0;
 
@@ -413,8 +413,7 @@ UNUSED static int hip_fw_uninit_signaling_extensions(void)
         HIP_IFEL(signaling_hipfw_uninit(), -1,
                  "failed to uninit signaling firewall\n");
     } else {
-        HIP_IFEL(signaling_hipfw_oslayer_uninit(), -1,
-                 "failed to uninit signaling os layer\n");
+        signaling_hipfw_oslayer_uninit();
     }
 
 out_err:

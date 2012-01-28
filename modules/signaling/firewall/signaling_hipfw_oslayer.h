@@ -44,7 +44,7 @@
 #define VERDICT_DEFAULT VERDICT_ACCEPT
 
 int signaling_hipfw_oslayer_init(void);
-int signaling_hipfw_oslayer_uninit(void);
+void signaling_hipfw_oslayer_uninit(void);
 int signaling_hipfw_handle_packet(struct hip_fw_context *ctx);
 
 /* Generic maintenance callback. */

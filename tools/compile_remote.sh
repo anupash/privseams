@@ -6,37 +6,36 @@
 #
 # Requirements:
 # -------------
-# 1.) Remote HIPL checkout/branch on build host
-# 2.) Public key-based SSH access to build host from this host
-# 3.) Mounted remote HIPL checkout/branch on this host
-# 4.) Import of mounted folder as an Eclipse project
-#     (File -> New -> C Project -> Location must refer to the local mount point)
-#
-# Installation:
-# -------------
-# 1.) Set Project -> Properties -> C/C++ Build -> Builder Setting -> Build command
-#     to ${ProjDirPath}/tools/compile_remote.sh
+# 1.) Shared HIPL checkout/branch on editing and build hosts (e.g., smbfs, sshfs)
+# 2.) Public key-based SSH access to build host from editing host
 #
 # Setup:
 # ------
-# 1.) Adapt BUILD_HOST and BUILD_HOST_PATH in this file according to your needs
+# 1.) Import project folder as an Eclipse project on editing host
+#     (File -> New -> C Project -> Makefile Project -> Other Toolchain
+#           -> Location must refer to the local project source code)
+# 2.) Set Project -> Properties -> C/C++ Build -> Builder Setting -> Build command
+#     to ${ProjDirPath}/tools/compile_remote.sh
+# 3.) Add BUILD_HOST and BUILD_HOST_PATH to
+#     Project -> Properties -> C/C++ Build Project -> Environment, e.g.,
+#        * BUILD_HOST: passion.comsys.rwth-aachen.de
+#        * BUILD_HOST_PATH: ~/src/hipl/trunk 
 #
 # Optionally, the following options can be enabled:
-# 2.) Set Project -> Properties -> C/C++ Build -> Behavior -> Use parallel build
+# a.) Set Project -> Properties -> C/C++ Build -> Behavior -> Use parallel build
 #     -> Use optimal job number
-# 3.) Unset Project -> Properties -> C/C++ Build -> Behavior -> Stop on 1st error
-
-
-BUILD_HOST="passion.comsys.rwth-aachen.de"
-BUILD_HOST_PATH="~/src/hipl/trunk"
+# b.) Unset Project -> Properties -> C/C++ Build -> Behavior -> Stop on 1st error
 
 
 ######### DON'T CHANGE BELOW THIS LINE #########
 
-echo "Making $*..."
+echo "Calling 'make $*' on remote host..."
 echo
 
-ssh $BUILD_HOST "make -C $BUILD_HOST_PATH $*"
-
-echo
-echo "Done."
+if [ -z $BUILD_HOST ]; then
+	echo "ERROR: BUILD_HOST not specified."
+elif [ -z $BUILD_HOST_PATH ]; then
+	echo "ERROR: BUILD_HOST_PATH not specified."
+else
+	ssh $BUILD_HOST "make -C $BUILD_HOST_PATH $*"
+fi

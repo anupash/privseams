@@ -36,72 +36,36 @@
 #ifndef HIP_HIPFW_SIGNALING_HIPFW_CONNTRACK_DB_H
 #define HIP_HIPFW_SIGNALING_HIPFW_CONNTRACK_DB_H
 
+#include <netinet/in.h>
 #include <stdint.h>
 
-#include "firewall/common_types.h"
 #include "lib/core/protodefs.h"
-#include "lib/core/linkedlist.h"
 
 
-typedef struct signaling_cdb_entry {
-    hip_hit_t local_hit;
-    hip_hit_t remote_hit;
+struct signaling_cdb_entry {
+    hip_hit_t src_hit;
+    hip_hit_t dst_hit;
     uint16_t  src_port;
     uint16_t  dst_port;
-    uint32_t  conn_id;
     int       status;
-} signaling_cdb_entry_t;
+};
 
-int signaling_cdb_init(void);
-int signaling_cdb_uninit(void);
 
-int signaling_cdb_add(const struct in6_addr *local_hit,
-                      const struct in6_addr *remote_hit,
-                      const uint16_t        *src_port,
-                      const uint16_t        *dst_port,
-                      const uint32_t        *conn_id,
-                      const int             *status);
-
-signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
-                                                const struct in6_addr *remote_hit,
-                                                const uint16_t        *src_port,
-                                                const uint16_t        *dst_port);
-
-uint32_t *signaling_cdb_entry_get_connection(const struct in6_addr *local_hit,
-                                             const struct in6_addr *remote_hit,
-                                             const uint16_t        *src_port,
-                                             const uint16_t        *dst_port);
-
-int signaling_cdb_entry_get_status(const struct in6_addr *local_hit,
-                                   const struct in6_addr *remote_hit,
-                                   const uint16_t        *src_port,
-                                   const uint16_t        *dst_port,
-                                   const uint32_t        *conn_id);
-
-int signaling_cdb_entry_find_connection(const uint16_t src_port,
-                                        const uint16_t dest_port,
-                                        signaling_cdb_entry_t *entry,
-                                        uint32_t **conn_id,
-                                        int **status);
-
-uint32_t *signaling_cdb_entry_find_connection_by_dst_port(const struct in6_addr *src_hit,
-                                                          const struct in6_addr *dst_hit,
-                                                          const uint16_t dest_port);
-
-uint32_t  *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
-                                     const struct in6_addr *dst_hit);
-
-int signaling_cdb_direction(const struct in6_addr *src_hit,
-                            const struct in6_addr *dst_hit,
-                            const uint16_t        *src_port,
-                            const uint16_t        *dst_port);
-
-int signaling_cdb_entry_print(signaling_cdb_entry_t *entry);
-
-void signaling_cdb_apply_func(int(*func)(signaling_cdb_entry_t *));
-
-uint32_t signaling_cdb_get_next_connection_id(void);
-
+void signaling_cdb_init(void);
+void signaling_cdb_uninit(void);
+int signaling_cdb_add_connection(const struct in6_addr src_hit,
+                                 const struct in6_addr dst_hit,
+                                 const uint16_t        src_port,
+                                 const uint16_t        dst_port,
+                                 const int             status);
+struct signaling_cdb_entry * signaling_cdb_get_connection(const struct in6_addr src_hit,
+                                                          const struct in6_addr dst_hit,
+                                                          const uint16_t        src_port,
+                                                          const uint16_t        dst_port);
+void signaling_cdb_del_connection(const struct in6_addr src_hit,
+                                  const struct in6_addr dst_hit,
+                                  const uint16_t        src_port,
+                                  const uint16_t        dst_port);
 void signaling_cdb_print(void);
 
 #endif /* HIP_HIPFW_SIGNALING_HIPFW_CONNTRACK_DB_H */

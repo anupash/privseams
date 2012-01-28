@@ -186,8 +186,8 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t             *src_hit = NULL;
     const hip_hit_t             *dst_hit = NULL;
+    struct signaling_cdb_entry  *entry = NULL;
     struct signaling_connection  conn;
-    int                          status = SIGNALING_CONN_PROCESSING;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
              -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -198,10 +198,20 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "No HIP_PARAM_SIGNALING_CONNECTION_SHORT parameter in message.\n");
-    // "param + 1" because we need to skip the hip_tlv_common header to get to the connection context struct
-    signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
+    /* "param + 1" because we need to skip the hip_tlv_common header to get to
+     * the connection context struct */
+    signaling_copy_connection(&conn,
+                              (const struct signaling_connection *) (param + 1));
 
-    signaling_cdb_add(src_hit, dst_hit, &conn.src_port, &conn.dst_port, &conn.id, &status);
+    if ((entry = signaling_cdb_get_connection(src_hit, dst_hit,
+                                              conn.src_port, conn.dst_port)) != NULL) {
+        entry->status = SIGNALING_CONN_PROCESSING;
+    } else {
+        signaling_cdb_add_connection(src_hit, dst_hit,
+                                     conn.src_port, conn.dst_port,
+                                     SIGNALING_CONN_PROCESSING);
+    }
+
     signaling_cdb_print();
 
 out_err:
@@ -227,10 +237,9 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
 {
     int                          err       = 0;
     const struct hip_tlv_common *param     = NULL;
-    const hip_hit_t             *hits      = NULL;
-    const hip_hit_t             *hitr      = NULL;
-    struct signaling_connection *recv_conn = NULL;
-    struct signaling_connection  new_conn;
+    const hip_hit_t             *src_hit   = NULL;
+    const hip_hit_t             *dst_hit   = NULL;
+    struct signaling_connection *conn = NULL;
     int                          status = SIGNALING_CONN_ALLOWED;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -244,12 +253,20 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     /* Establish a new connection state from the incoming connection context */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection short parameter from connection request \n");
-    signaling_copy_connection(recv_conn, (const struct signaling_connection *) (param + 1));
+    signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
 
-    signaling_get_hits_from_msg(msg, &hitr, &hits);
+    signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
 
-    signaling_cdb_add(hits, hitr, &new_conn.src_port, &new_conn.dst_port, &new_conn.id, &status);
-    signaling_hipfw_send_connection_confirmation(hits, hitr, &new_conn);
+    if ((entry = signaling_cdb_get_connection(src_hit, dst_hit,
+                                              conn.src_port, conn.dst_port)) != NULL) {
+        entry->status = SIGNALING_CONN_ALLOWED;
+    } else {
+        signaling_cdb_add_connection(src_hit, dst_hit,
+                                     conn.src_port, conn.dst_port,
+                                     SIGNALING_CONN_ALLOWED);
+    }
+
+    signaling_hipfw_send_connection_confirmation(hits, hitr, &conn);
 
 out_err:
     return err;
@@ -295,8 +312,8 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
              -1, "Could not get connection parameter from connection request \n");
     recv_conn = (const struct signaling_connection *) (param + 1);
 
-    HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
-             -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);
+    /*HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
+             -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);*/
 
     /* Answer to HIPD */
     signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
@@ -317,7 +334,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
     const struct signaling_connection *recv_conn            = NULL;
     struct signaling_connection       *existing_conn        = NULL;
     uint32_t                          *existing_conn_id     = NULL;
-    int                               *existing_conn_status = NULL;
+    const struct signaling_cdb_entry  *entry                = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ3, PERF_HIPFW_I3_FINISH\n");
@@ -331,10 +348,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
              -1, "Could not get connection parameter from connection request \n");
     recv_conn = (const struct signaling_connection *) (param + 1);
 
-    HIP_IFEL(!(existing_conn_id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
-             -1, "Received connection update request for non-existent connection id %d \n", recv_conn->id);
-
-    HIP_IFEL(!(existing_conn_status = signaling_cdb_entry_get_status(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port, &recv_conn->id)),
+    HIP_IFEL(!(entry = signaling_cdb_get_connection(*hits, *hitr, recv_conn->src_port, recv_conn->dst_port)),
              -1, "Received connection update request for non-existent connection id %d \n", recv_conn->id);
 
     HIP_DEBUG("Received connection update request from HIPD\n");
@@ -344,7 +358,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
 
     /* Check if we want to allow the connection */
     // TODO update flags in the existing_conn
-    if (*existing_conn_status == SIGNALING_CONN_BLOCKED) {
+    if (entry->status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Connection is blocked by peer host (or network).\n");
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
