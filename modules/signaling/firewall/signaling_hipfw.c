@@ -68,6 +68,8 @@ typedef struct {
  * for later use. */
 int do_conntrack = 0;
 
+static int next_service_offer_id;
+
 /* Paths to configuration elements */
 const char *default_policy_file = { "/usr/local/etc/hip/signaling_firewall_policy.cfg" };
 
@@ -149,6 +151,7 @@ int signaling_hipfw_init(const char *policy_file)
     signaling_cdb_init();
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
 
+    next_service_offer_id = 0;
     // read and process policy
     if (!policy_file) {
         policy_file = default_policy_file;
@@ -236,9 +239,8 @@ out_err:
  */
 int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                                  err        = 0;
-    int                                  status     = -1;
-    int                                  flag_check = 0;
+    int                                  err          = 0;
+    int                                  policy_check = 0;
     struct signaling_connection          new_conn;
     struct userdb_user_entry            *db_entry      = NULL;
     struct signaling_connection_context *ctx_in        = NULL;
@@ -271,19 +273,22 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
-    flag_check = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, matched_tuple);
-    if (flag_check == -1) {
-        status = SIGNALING_CONN_BLOCKED;
+    policy_check = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, matched_tuple);
+    if (policy_check == -1) {
         // TODO add connection to scdb
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_BLOCKED);
         signaling_cdb_print();
         signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
         return 0;
-    } else if (flag_check == 0) {
-        status = SIGNALING_CONN_ALLOWED;
+    } else if (policy_check == 0) {
         // TODO add connection to scdb
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_ALLOWED);
         signaling_cdb_print();
         return 0;
     } else {
+        HIP_IFEL(signaling_add_service_offer_to_msg_u(&common, ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_PROCESSING);
+        next_service_offer_id++;
     }
 
     /* Step c) */
@@ -311,7 +316,6 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
  */
 
     /* Step d) */
-    status = SIGNALING_CONN_PROCESSING;
     // TODO add connection to scdb
     HIP_DEBUG("Connection tracking table after receipt of R1\n");
     signaling_cdb_print();
@@ -429,7 +433,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from R2/U2 \n");
     /* HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id, &status)),
-             0, "Could not get connection state for connection-tracking table\n");*/
+     *       0, "Could not get connection state for connection-tracking table\n");*/
     HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
              0, "Could not update connection state with information from R2\n");
     //conn->ctx_out.direction = FWD;
@@ -511,7 +515,7 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
              0, "Could not init connection context from I3 \n");
     /* HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &recv_conn.id, &status)),
-             0, "Could not get connection state for connection-tracking table\n"); */
+     *       0, "Could not get connection state for connection-tracking table\n"); */
     HIP_IFEL(signaling_update_flags_from_connection_id(common, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
 
@@ -582,7 +586,7 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
     /*HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id, &status)),
-             -1, "No connection context for connection id \n");*/
+     *       -1, "No connection context for connection id \n");*/
     HIP_IFEL(!(param_cert = hip_get_param(common, HIP_PARAM_CERT)),
              -1, "Message contains no certificates.\n");
 /*
@@ -662,7 +666,7 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
     conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
     /*HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &conn_id, &status)),
-             0, "No connection context for connection id \n");*/
+     *       0, "No connection context for connection id \n");*/
 /*
  *  switch (signaling_cdb_direction(&common->hits, &common->hitr)) {
  *  case 0:

@@ -157,7 +157,8 @@ int signaling_build_param_application_context(struct hip_common *msg,
     /* Set type and length */
     len_contents += sizeof(struct signaling_param_app_context) - sizeof(struct hip_tlv_common);
     hip_set_param_contents_len((struct hip_tlv_common *) &appinfo, len_contents);
-    hip_set_param_type((struct hip_tlv_common *) &appinfo, HIP_PARAM_SIGNALING_APPINFO);
+    //TODO update the parameter type with the correct ones
+    hip_set_param_type((struct hip_tlv_common *) &appinfo, HIP_PARAM_SIGNALING_APP_INFO_NAME);
 
     /* Append the parameter to the message */
     if (hip_build_generic_param(msg, &appinfo, sizeof(struct signaling_param_app_context), param_buf)) {
@@ -279,7 +280,7 @@ int signaling_build_param_user_context(struct hip_common *msg,
     memcpy((uint8_t *) param_userinfo + header_len + pkey_rr_len, user_ctx->subject_name, username_len);
 
     /* Set type and length */
-    hip_set_param_type((struct hip_tlv_common *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
+    hip_set_param_type((struct hip_tlv_common *) param_userinfo, HIP_PARAM_SIGNALING_USER_INFO_ID);
     hip_set_param_contents_len((struct hip_tlv_common *) param_userinfo, par_contents_len);
 
     HIP_IFEL(hip_build_param(msg, param_userinfo),
@@ -317,7 +318,7 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
              -1, "Unsupported signature type: %d\n", sig_type);
 
     /* build the signature parameter */
-    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_SIGNATURE);
+    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     hip_calc_generic_param_len((struct hip_tlv_common *) &sig, sizeof(struct hip_sig), sig_len);
     sig.algorithm = sig_type;     // algo is 8 bits, no htons necessary
     HIP_IFEL(hip_build_generic_param(msg, &sig, sizeof(struct hip_sig), signature_buf),
@@ -650,150 +651,220 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  *  return build_param_host_info_request(msg, network_id, HIP_PARAM_SIGNALING_HOST_INFO_REQ_U, flags);
  * }
  */
+int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
+                                         struct signaling_connection_flags flags,
+                                         int service_offer_id)
+{
+    int                                    err = 0;
+    int                                    len;
+    int                                    idx = 0;
+    struct signaling_param_service_offer_u param_service_offer_u;
 
+    /* build and append parameter */
+    hip_set_param_type((struct hip_tlv_common *) &param_service_offer_u, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+    param_service_offer_u.service_offer_id = service_offer_id;
+    //TODO check for the following values to be assigned to the parameter types
+    param_service_offer_u.service_description = '\0';
+    param_service_offer_u.service_type        = 0;
+
+    if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_HOST_INFO_ID)) {
+        param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_HOST_INFO_ID;
+        idx++;
+    }
+    if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL)) {
+        param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_HOST_INFO_KERNEL;
+        idx++;
+    }
+    if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_HOST_INFO_OS)) {
+        param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_HOST_INFO_OS;
+        idx++;
+
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_HOST_INFO_CERTS)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_HOST_INFO_CERTS;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_USER_INFO_ID)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_USER_INFO_ID;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_USER_INFO_CERTS)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_USER_INFO_CERTS;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_APP_INFO_NAME)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_APP_INFO_NAME;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS;
+            idx++;
+        }
+        if (signaling_service_info_flag_check(&flags.flag_info_requests, HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS)) {
+            param_service_offer_u.endpoint_info_req[idx] = HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS;
+            idx++;
+        }
+        len = sizeof(struct signaling_param_service_offer_u) - (sizeof(struct hip_tlv_common) + sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx));
+        hip_set_param_contents_len((struct hip_tlv_common *) &param_service_offer_u, len);
+        HIP_IFEL(hip_build_param(msg, &param_service_offer_u),
+                 -1, "Could not build notification parameter into message \n");
+
+out_err:
+        return err;
+    }
+
+    int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
+                                             struct signaling_connection_flags flags,
+                                             int service_offer_id)
+    {
+    }
 
 /*
  * Fill the internal host_context struct with data from host_context parameter.
  *
  * @return 0 on success
  */
-int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
-                                 struct signaling_host_context *host_ctx)
-{
-    int      err = 0;
-    uint16_t tmp_len;
-    int      i = 0;
-    /* sanity checks */
-    HIP_IFEL(!param_host_ctx,    -1, "Got NULL user context parameter\n");
-    HIP_IFEL(!host_ctx,          -1, "Got NULL user context to write to\n");
+    int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
+                                     struct signaling_host_context *host_ctx)
+    {
+        int      err = 0;
+        uint16_t tmp_len;
+        int      i = 0;
+        /* sanity checks */
+        HIP_IFEL(!param_host_ctx,    -1, "Got NULL user context parameter\n");
+        HIP_IFEL(!host_ctx,          -1, "Got NULL user context to write to\n");
 /*
  *  HIP_IFEL(hip_get_param_type(param_host_ctx) != HIP_PARAM_SIGNALING_HOST_INFO_REQ_U,
  *           -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_HOST_INFO_REQ_U);
  */
 
-    /* copy contents and make sure max lengths are kept */
-    host_ctx->num_items = ntohs(param_host_ctx->num_items);
+        /* copy contents and make sure max lengths are kept */
+        host_ctx->num_items = ntohs(param_host_ctx->num_items);
 
-    for (i = 0; i < host_ctx->num_items; i++) {
-        switch (ntohs(param_host_ctx->items[i].info_type)) {
-        case INFO_KERNEL:
-            tmp_len                   = ntohs(param_host_ctx->items[i].info_length);
-            host_ctx->host_kernel_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
-            memcpy(host_ctx->host_kernel, param_host_ctx->items[i].info, host_ctx->host_kernel_len);
-            break;
-        case INFO_OS:
-            tmp_len               = ntohs(param_host_ctx->items[i].info_length);
-            host_ctx->host_os_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
-            memcpy(host_ctx->host_os, param_host_ctx->items[i].info, host_ctx->host_os_len);
-            break;
-        case INFO_NAME:
-            tmp_len                 = ntohs(param_host_ctx->items[i].info_length);
-            host_ctx->host_name_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
-            memcpy(host_ctx->host_name, param_host_ctx->items[i].info, host_ctx->host_name_len);
-            break;
-        case INFO_CERTS:
-            tmp_len                  = ntohs(param_host_ctx->items[i].info_length);
-            host_ctx->host_certs_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
-            memcpy(host_ctx->host_certs, param_host_ctx->items[i].info, host_ctx->host_certs_len);
-            break;
+        for (i = 0; i < host_ctx->num_items; i++) {
+            switch (ntohs(param_host_ctx->items[i].info_type)) {
+            case INFO_KERNEL:
+                tmp_len                   = ntohs(param_host_ctx->items[i].info_length);
+                host_ctx->host_kernel_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
+                memcpy(host_ctx->host_kernel, param_host_ctx->items[i].info, host_ctx->host_kernel_len);
+                break;
+            case INFO_OS:
+                tmp_len               = ntohs(param_host_ctx->items[i].info_length);
+                host_ctx->host_os_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
+                memcpy(host_ctx->host_os, param_host_ctx->items[i].info, host_ctx->host_os_len);
+                break;
+            case INFO_NAME:
+                tmp_len                 = ntohs(param_host_ctx->items[i].info_length);
+                host_ctx->host_name_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
+                memcpy(host_ctx->host_name, param_host_ctx->items[i].info, host_ctx->host_name_len);
+                break;
+            case INFO_CERTS:
+                tmp_len                  = ntohs(param_host_ctx->items[i].info_length);
+                host_ctx->host_certs_len = (tmp_len < SIGNALING_HOST_INFO_MAX_LEN ? tmp_len : SIGNALING_HOST_INFO_MAX_LEN);
+                memcpy(host_ctx->host_certs, param_host_ctx->items[i].info, host_ctx->host_certs_len);
+                break;
+            }
         }
-    }
 
 out_err:
-    return err;
-}
+        return err;
+    }
 
 /*
  * Fill the internal service state struct with data from service offer parameter.
  *
  * @return 0 on success
  */
-int signaling_build_service_state(const struct signaling_param_service_offer_u *param_service_offer,
-                                  struct signaling_service_container *service_con)
-{
-    int      err = 0;
-    uint16_t tmp_len;
-    int      tmp_items;
-    uint16_t tmp_info;
-    uint16_t tmp_param;
+//TODO no different parameter types for signed and unsigned service offers. Need to update
+    int signaling_build_service_state(const struct signaling_param_service_offer_u *param_service_offer,
+                                      struct signaling_service_container *service_con)
+    {
+        int      err = 0;
+        uint16_t tmp_len;
+        int      tmp_items;
+        uint16_t tmp_info;
+        uint16_t tmp_param;
 
-    /* sanity checks */
-    HIP_IFEL(!param_service_offer,  -1, "Got NULL service offer parameter\n");
-    HIP_IFEL(!service_con,          -1, "Got NULL service state container to write to\n");
-    HIP_IFEL((hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER_U) ||
-             (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER_S) ||
-             (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_ACK) ||
-             (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_NACK),
-             -1, "Parameter has wrong type, Following parameters expected: %d, %d, %d, %d \n",
-             HIP_PARAM_SIGNALING_SERVICE_OFFER_U,   HIP_PARAM_SIGNALING_SERVICE_OFFER_S,
-             HIP_PARAM_SIGNALING_SERVICE_ACK,       HIP_PARAM_SIGNALING_SERVICE_NACK);
+        /* sanity checks */
+        HIP_IFEL(!param_service_offer,  -1, "Got NULL service offer parameter\n");
+        HIP_IFEL(!service_con,          -1, "Got NULL service state container to write to\n");
+        HIP_IFEL((hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER) ||
+                 (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER_S) ||
+                 (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_ACK) ||
+                 (hip_get_param_type(param_service_offer) != HIP_PARAM_SIGNALING_SERVICE_NACK),
+                 -1, "Parameter has wrong type, Following parameters expected: %d, %d, %d, %d \n",
+                 HIP_PARAM_SIGNALING_SERVICE_OFFER,   HIP_PARAM_SIGNALING_SERVICE_OFFER_S,
+                 HIP_PARAM_SIGNALING_SERVICE_ACK,       HIP_PARAM_SIGNALING_SERVICE_NACK);
 
-    tmp_param = hip_get_param_type(param_service_offer);
-    /* number of service offers to be accepted, if more than the limit drop it */
-    (ntohs(service_con->num_items) < MAX_NUM_SERVICE_OFFER_ACCEPTABLE) ?
-    (tmp_items = ntohs(service_con->num_items) + 1) : (tmp_items = -1);
+        tmp_param = hip_get_param_type(param_service_offer);
+        /* number of service offers to be accepted, if more than the limit drop it */
+        (ntohs(service_con->num_items) < MAX_NUM_SERVICE_OFFER_ACCEPTABLE) ?
+        (tmp_items = ntohs(service_con->num_items) + 1) : (tmp_items = -1);
 
-    if (tmp_items != -1) {
-        switch (tmp_param) {
-        case HIP_PARAM_SIGNALING_SERVICE_OFFER_U:
-            signaling_service_info_flag_set(&service_con->services[tmp_items - 1].flag_services, SERVICE_OFFER_RECV);
-            service_con->services[tmp_items - 1].service_offer_id    = ntohs(param_service_offer->service_offer_id);
-            service_con->services[tmp_items - 1].service_type        = ntohs(param_service_offer->service_type);
-            service_con->services[tmp_items - 1].service_description = ntohs(param_service_offer->service_description);
+        if (tmp_items != -1) {
+            switch (tmp_param) {
+            case HIP_PARAM_SIGNALING_SERVICE_OFFER:
+                signaling_service_info_flag_set(&service_con->services[tmp_items - 1].flag_services, SERVICE_OFFER_RECV);
+                service_con->services[tmp_items - 1].service_offer_id    = ntohs(param_service_offer->service_offer_id);
+                service_con->services[tmp_items - 1].service_type        = ntohs(param_service_offer->service_type);
+                service_con->services[tmp_items - 1].service_description = ntohs(param_service_offer->service_description);
 
-            tmp_len = ntohs(param_service_offer->length) - (sizeof(param_service_offer->service_offer_id) +
-                                                            sizeof(param_service_offer->service_type) +
-                                                            sizeof(param_service_offer->service_description));
+                tmp_len = ntohs(param_service_offer->length) - (sizeof(param_service_offer->service_offer_id) +
+                                                                sizeof(param_service_offer->service_type) +
+                                                                sizeof(param_service_offer->service_description));
 
-            tmp_len /= sizeof(hip_tlv_len);
-            tmp_info = ntohs(param_service_offer->endpoint_info_req[0]);
-            while (tmp_len > 0) {
-                switch (tmp_info) {
-                case HOST_INFO_OS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_OS);
-                    break;
-                case HOST_INFO_KERNEL:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_KERNEL);
-                    break;
-                case HOST_INFO_ID:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_ID);
-                    break;
-                case HOST_INFO_CERTS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_CERTS);
-                    break;
+                tmp_len /= sizeof(hip_tlv_len);
+                tmp_info = ntohs(param_service_offer->endpoint_info_req[0]);
+                while (tmp_len > 0) {
+                    switch (tmp_info) {
+                    case HOST_INFO_OS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_OS);
+                        break;
+                    case HOST_INFO_KERNEL:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_KERNEL);
+                        break;
+                    case HOST_INFO_ID:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_ID);
+                        break;
+                    case HOST_INFO_CERTS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, HOST_INFO_CERTS);
+                        break;
 
-                case USER_INFO_ID:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_ID);
-                    break;
-                case USER_INFO_CERTS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_CERTS);
-                    break;
+                    case USER_INFO_ID:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_ID);
+                        break;
+                    case USER_INFO_CERTS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, USER_INFO_CERTS);
+                        break;
 
-                case APP_INFO_NAME:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_NAME);
-                    break;
-                case APP_INFO_QOS_CLASS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_QOS_CLASS);
-                    break;
-                case APP_INFO_REQUIREMENTS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_REQUIREMENTS);
-                    break;
-                case APP_INFO_CONNECTIONS:
-                    signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_CONNECTIONS);
-                    break;
+                    case APP_INFO_NAME:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_NAME);
+                        break;
+                    case APP_INFO_QOS_CLASS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_QOS_CLASS);
+                        break;
+                    case APP_INFO_REQUIREMENTS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_REQUIREMENTS);
+                        break;
+                    case APP_INFO_CONNECTIONS:
+                        signaling_info_req_flag_set(&service_con->services[tmp_len - 1].flag_info_requests, APP_INFO_CONNECTIONS);
+                        break;
+                    }
                 }
+                break;
+
+            case HIP_PARAM_SIGNALING_SERVICE_OFFER_S:
+                break;
+
+            case HIP_PARAM_SIGNALING_SERVICE_ACK:
+                break;
+
+            case HIP_PARAM_SIGNALING_SERVICE_NACK:
+                break;
             }
-            break;
-
-        case HIP_PARAM_SIGNALING_SERVICE_OFFER_S:
-            break;
-
-        case HIP_PARAM_SIGNALING_SERVICE_ACK:
-            break;
-
-        case HIP_PARAM_SIGNALING_SERVICE_NACK:
-            break;
-        }
 
 /*
  *      for (i = 0; i < host_ctx->num_items; i++) {
@@ -821,134 +892,134 @@ int signaling_build_service_state(const struct signaling_param_service_offer_u *
  *          }
  *      }
  */
-    }
+        }
 
 out_err:
-    return err;
-}
+        return err;
+    }
 
 /*
  * Fill the internal application_context struct with data from application_context parameter.
  *
  * @return 0 on success
  */
-int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
-                                        struct signaling_application_context *app_ctx)
-{
-    int            err = 0;
-    const uint8_t *p_contents;
-    uint16_t       tmp_len;
+    int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
+                                            struct signaling_application_context *app_ctx)
+    {
+        int            err = 0;
+        const uint8_t *p_contents;
+        uint16_t       tmp_len;
 
-    /* sanity checks */
-    HIP_IFEL(!param_app_ctx, -1, "Got NULL application context parameter\n");
-    HIP_IFEL(!app_ctx, -1, "Got NULL application context to write to\n");
+        /* sanity checks */
+        HIP_IFEL(!param_app_ctx, -1, "Got NULL application context parameter\n");
+        HIP_IFEL(!app_ctx, -1, "Got NULL application context to write to\n");
 
-    /* copy contents and make sure maximum lengths are kept */
-    tmp_len    = MIN(ntohs(param_app_ctx->app_dn_length), SIGNALING_APP_DN_MAX_LEN);
-    p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context)
-                 + ntohs(param_app_ctx->port_count) * sizeof(struct signaling_port_pair);
-    memcpy(app_ctx->application_dn, p_contents, tmp_len);
-    app_ctx->application_dn[tmp_len] = '\0';
-    p_contents                      += tmp_len;
+        /* copy contents and make sure maximum lengths are kept */
+        tmp_len    = MIN(ntohs(param_app_ctx->app_dn_length), SIGNALING_APP_DN_MAX_LEN);
+        p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context)
+                     + ntohs(param_app_ctx->port_count) * sizeof(struct signaling_port_pair);
+        memcpy(app_ctx->application_dn, p_contents, tmp_len);
+        app_ctx->application_dn[tmp_len] = '\0';
+        p_contents                      += tmp_len;
 
-    tmp_len = MIN(ntohs(param_app_ctx->iss_dn_length), SIGNALING_ISS_DN_MAX_LEN);
-    memcpy(app_ctx->issuer_dn, p_contents, tmp_len);
-    app_ctx->issuer_dn[tmp_len - 1] = '\0';
-    p_contents                     += tmp_len;
+        tmp_len = MIN(ntohs(param_app_ctx->iss_dn_length), SIGNALING_ISS_DN_MAX_LEN);
+        memcpy(app_ctx->issuer_dn, p_contents, tmp_len);
+        app_ctx->issuer_dn[tmp_len - 1] = '\0';
+        p_contents                     += tmp_len;
 
-    tmp_len = MIN(ntohs(param_app_ctx->req_length), SIGNALING_APP_REQ_MAX_LEN);
-    memcpy(app_ctx->requirements, p_contents, tmp_len);
-    app_ctx->requirements[tmp_len - 1] = '\0';
-    p_contents                        += tmp_len;
+        tmp_len = MIN(ntohs(param_app_ctx->req_length), SIGNALING_APP_REQ_MAX_LEN);
+        memcpy(app_ctx->requirements, p_contents, tmp_len);
+        app_ctx->requirements[tmp_len - 1] = '\0';
+        p_contents                        += tmp_len;
 
-    tmp_len = MIN(ntohs(param_app_ctx->grp_length), SIGNALING_APP_GRP_MAX_LEN);
-    memcpy(app_ctx->groups, p_contents, tmp_len);
-    app_ctx->groups[tmp_len] = '\0';
+        tmp_len = MIN(ntohs(param_app_ctx->grp_length), SIGNALING_APP_GRP_MAX_LEN);
+        memcpy(app_ctx->groups, p_contents, tmp_len);
+        app_ctx->groups[tmp_len] = '\0';
 
 out_err:
-    return err;
-}
+        return err;
+    }
 
 /*
  * Fill the internal user_context struct with data from user_context parameter.
  *
  * @return 0 on success
  */
-int signaling_build_user_context(const struct signaling_param_user_context *param_usr_ctx,
-                                 struct signaling_user_context *usr_ctx)
-{
-    int err = 0;
+    int signaling_build_user_context(const struct signaling_param_user_context *param_usr_ctx,
+                                     struct signaling_user_context *usr_ctx)
+    {
+        int err = 0;
 
-    /* sanity checks */
-    HIP_IFEL(!param_usr_ctx,    -1, "Got NULL user context parameter\n");
-    HIP_IFEL(!usr_ctx,          -1, "Got NULL user context to write to\n");
-    HIP_IFEL(hip_get_param_type(param_usr_ctx) != HIP_PARAM_SIGNALING_USERINFO,
-             -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
+        /* sanity checks */
+        HIP_IFEL(!param_usr_ctx,    -1, "Got NULL user context parameter\n");
+        HIP_IFEL(!usr_ctx,          -1, "Got NULL user context to write to\n");
+        HIP_IFEL(hip_get_param_type(param_usr_ctx) != HIP_PARAM_SIGNALING_USER_INFO_ID,
+                 -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USER_INFO_ID);
 
-    /* copy contents and make sure max lengths are kept */
-    usr_ctx->key_rr_len = MIN(ntohs(param_usr_ctx->pkey_rr_length), SIGNALING_USER_KEY_MAX_LEN + sizeof(struct hip_host_id_key_rdata));
-    memcpy(usr_ctx->pkey,
-           (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
-           usr_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
-    usr_ctx->rdata.algorithm = param_usr_ctx->rdata.algorithm;
-    usr_ctx->rdata.protocol  = param_usr_ctx->rdata.protocol;
-    usr_ctx->rdata.flags     = ntohs(param_usr_ctx->rdata.flags);
+        /* copy contents and make sure max lengths are kept */
+        usr_ctx->key_rr_len = MIN(ntohs(param_usr_ctx->pkey_rr_length), SIGNALING_USER_KEY_MAX_LEN + sizeof(struct hip_host_id_key_rdata));
+        memcpy(usr_ctx->pkey,
+               (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
+               usr_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
+        usr_ctx->rdata.algorithm = param_usr_ctx->rdata.algorithm;
+        usr_ctx->rdata.protocol  = param_usr_ctx->rdata.protocol;
+        usr_ctx->rdata.flags     = ntohs(param_usr_ctx->rdata.flags);
 
-    usr_ctx->subject_name_len = MIN(ntohs(param_usr_ctx->un_length), SIGNALING_USER_ID_MAX_LEN);
-    memcpy(usr_ctx->subject_name,
-           (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context) + ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata),
-           usr_ctx->subject_name_len);
-
-out_err:
-    return err;
-}
-
-int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
-                                           struct signaling_port_pair *const port_list)
-{
-    int                               err = 0;
-    int                               i   = 0;
-    const struct signaling_port_pair *pp  = NULL;
-
-    /* sanity checks */
-    HIP_IFEL(!param_app_ctx,    -1, "Got NULL application context parameter.\n");
-    HIP_IFEL(!port_list,        -1, "Got NULL port list to write to.\n");
-    HIP_IFEL(hip_get_param_type(param_app_ctx) != HIP_PARAM_SIGNALING_APPINFO,
-             -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
-
-    /* copy the ports from the message */
-    pp = (const struct signaling_port_pair *) (param_app_ctx + 1);
-    for (i = 0; i < MIN(ntohs(param_app_ctx->port_count), SIGNALING_MAX_SOCKETS); i++) {
-        port_list[i].src_port = ntohs(pp[i].dst_port);
-        port_list[i].dst_port = ntohs(pp[i].src_port);
-    }
+        usr_ctx->subject_name_len = MIN(ntohs(param_usr_ctx->un_length), SIGNALING_USER_ID_MAX_LEN);
+        memcpy(usr_ctx->subject_name,
+               (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context) + ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata),
+               usr_ctx->subject_name_len);
 
 out_err:
-    return err;
-}
-
-void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
-{
-    const struct hip_tlv_common *param = NULL;
-
-    param = hip_get_param(msg, HIP_PARAM_HIT);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        *hitr = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(*hitr)) {
-            *hitr = NULL;
-            HIP_DEBUG("HITR = NULL \n");
-        }
+        return err;
     }
 
-    param = hip_get_next_param(msg, param);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        *hits = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(*hits)) {
-            *hits = NULL;
-            HIP_DEBUG("HITS = NULL \n");
+    int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
+                                               struct signaling_port_pair *const port_list)
+    {
+        int                               err = 0;
+        int                               i   = 0;
+        const struct signaling_port_pair *pp  = NULL;
+
+        /* sanity checks */
+        HIP_IFEL(!param_app_ctx,    -1, "Got NULL application context parameter.\n");
+        HIP_IFEL(!port_list,        -1, "Got NULL port list to write to.\n");
+        HIP_IFEL(hip_get_param_type(param_app_ctx) != HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS,
+                 -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
+
+        /* copy the ports from the message */
+        pp = (const struct signaling_port_pair *) (param_app_ctx + 1);
+        for (i = 0; i < MIN(ntohs(param_app_ctx->port_count), SIGNALING_MAX_SOCKETS); i++) {
+            port_list[i].src_port = ntohs(pp[i].dst_port);
+            port_list[i].dst_port = ntohs(pp[i].src_port);
+        }
+
+out_err:
+        return err;
+    }
+
+    void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
+    {
+        const struct hip_tlv_common *param = NULL;
+
+        param = hip_get_param(msg, HIP_PARAM_HIT);
+        if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+            *hitr = hip_get_param_contents_direct(param);
+            if (ipv6_addr_is_null(*hitr)) {
+                *hitr = NULL;
+                HIP_DEBUG("HITR = NULL \n");
+            }
+        }
+
+        param = hip_get_next_param(msg, param);
+        if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+            *hits = hip_get_param_contents_direct(param);
+            if (ipv6_addr_is_null(*hits)) {
+                *hits = NULL;
+                HIP_DEBUG("HITS = NULL \n");
+            }
         }
     }
-}
 
 /**
  * Determine the type of a signaling UPDATE message.
@@ -957,37 +1028,38 @@ void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t *
  *
  * @return the signaling update type, or negative if this is no siganling update message
  */
-int signaling_get_update_type(const struct hip_common *msg)
-{
-    int                                             err                = -1;
-    const struct signaling_param_app_context       *param_app_ctx      = NULL;
-    const struct hip_seq                           *param_seq          = NULL;
-    const struct hip_ack                           *param_ack          = NULL;
-    const struct hip_cert                          *param_cert         = NULL;
-    const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
-    const struct signaling_param_cert_chain_id     *param_cer_chain_id = NULL;
+    int signaling_get_update_type(const struct hip_common *msg)
+    {
+        int                                             err                = -1;
+        const struct signaling_param_app_context       *param_app_ctx      = NULL;
+        const struct hip_seq                           *param_seq          = NULL;
+        const struct hip_ack                           *param_ack          = NULL;
+        const struct hip_cert                          *param_cert         = NULL;
+        const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
+        const struct signaling_param_cert_chain_id     *param_cer_chain_id = NULL;
 
-    param_app_ctx      = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    param_seq          = hip_get_param(msg, HIP_PARAM_SEQ);
-    param_ack          = hip_get_param(msg, HIP_PARAM_ACK);
-    param_cert         = hip_get_param(msg, HIP_PARAM_CERT);
-    param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S);
-    param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
+        //TODO check for the parameters to be put here
+        param_app_ctx      = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+        param_seq          = hip_get_param(msg, HIP_PARAM_SEQ);
+        param_ack          = hip_get_param(msg, HIP_PARAM_ACK);
+        param_cert         = hip_get_param(msg, HIP_PARAM_CERT);
+        param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S);
+        param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
 
-    if (param_app_ctx && param_seq && !param_ack) {
-        return SIGNALING_FIRST_BEX_UPDATE;
-    } else if (param_app_ctx && param_seq && param_ack) {
-        return SIGNALING_SECOND_BEX_UPDATE;
-    } else if (param_ack && !param_seq && !param_cer_chain_id) {
-        return SIGNALING_THIRD_BEX_UPDATE;
-    } else if (param_cert && param_seq && !param_ack && param_cer_chain_id) {
-        return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
-    } else if (param_ack && param_cer_chain_id) {
-        return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
+        if (param_app_ctx && param_seq && !param_ack) {
+            return SIGNALING_FIRST_BEX_UPDATE;
+        } else if (param_app_ctx && param_seq && param_ack) {
+            return SIGNALING_SECOND_BEX_UPDATE;
+        } else if (param_ack && !param_seq && !param_cer_chain_id) {
+            return SIGNALING_THIRD_BEX_UPDATE;
+        } else if (param_cert && param_seq && !param_ack && param_cer_chain_id) {
+            return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
+        } else if (param_ack && param_cer_chain_id) {
+            return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
+        }
+
+        return err;
     }
-
-    return err;
-}
 
 /**
  * Determine the free space left in a message.
@@ -1000,29 +1072,29 @@ int signaling_get_update_type(const struct hip_common *msg)
  * @return      the free space left in the message, excluding space for
  *              MAC and signature
  */
-int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha)
-{
-    const uint8_t *dst;
-    const uint8_t *max_dst          = ((const uint8_t *) msg) + 1400;
-    const int      param_mac_length = 24;
-    int            param_signature_length;
+    int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha)
+    {
+        const uint8_t *dst;
+        const uint8_t *max_dst          = ((const uint8_t *) msg) + 1400;
+        const int      param_mac_length = 24;
+        int            param_signature_length;
 
-    if (!ha || !msg) {
-        return -1;
+        if (!ha || !msg) {
+            return -1;
+        }
+
+        dst = (const uint8_t *) msg + hip_get_msg_total_len(msg);
+        switch (hip_get_host_id_algo(ha->our_pub)) {
+        case HIP_HI_ECDSA:
+            param_signature_length = ECDSA_size(ha->our_priv_key);
+            break;
+        case HIP_HI_RSA:
+            param_signature_length = RSA_size(ha->our_priv_key);
+            break;
+        default:
+            param_signature_length = 200;
+        }
+        param_signature_length += sizeof(struct hip_sig) + 7;
+
+        return MAX(max_dst - (dst + param_mac_length + param_signature_length + sizeof(struct signaling_param_connection_identifier)), 0);
     }
-
-    dst = (const uint8_t *) msg + hip_get_msg_total_len(msg);
-    switch (hip_get_host_id_algo(ha->our_pub)) {
-    case HIP_HI_ECDSA:
-        param_signature_length = ECDSA_size(ha->our_priv_key);
-        break;
-    case HIP_HI_RSA:
-        param_signature_length = RSA_size(ha->our_priv_key);
-        break;
-    default:
-        param_signature_length = 200;
-    }
-    param_signature_length += sizeof(struct hip_sig) + 7;
-
-    return MAX(max_dst - (dst + param_mac_length + param_signature_length + sizeof(struct signaling_param_connection_identifier)), 0);
-}

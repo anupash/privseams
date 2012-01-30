@@ -841,3 +841,11 @@ int policy_decision_check(struct policy_decision flags, int f)
         break;
     }
 }
+
+/*
+ * Verify the connection context with the policy. Request for information accordingly
+ *
+ */
+int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, struct signaling_connection_context *ctx)
+{
+}
