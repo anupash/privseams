@@ -679,6 +679,25 @@ int signaling_copy_port_pair(struct signaling_port_pair *const dst,
 }
 
 /**
+ * Copies a complete service offer parameter from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_service_offer(struct signaling_param_service_offer_u *const dst,
+                                 const struct signaling_param_service_offer_u *const src)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_param_service_offer_u));
+    return 0;
+}
+
+/**
  * Initializes the given connection context by stripping all
  * connection context information found in the message.
  * Values that are not given in the  message are initialized to default.

@@ -44,18 +44,27 @@ int hip_signaling_init(void)
     lmod_register_packet_type(HIP_I3, "HIP_I3");
 
     // register on the wire parameter types
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,      "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO,            "HIP_PARAM_SIGNALING_APPLICATION_CONTEXT");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USERINFO,           "HIP_PARAM_SIGNALING_USER_CONTEXT");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,     "HIP_PARAM_SIGNALING_USER_SIGNATURE");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_U,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_U");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_S,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_S");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CERT_CHAIN_ID,      "HIP_PARAM_SIGNALING_CERT_CHAIN_ID");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,         "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CERT_CHAIN_ID,         "HIP_PARAM_SIGNALING_CERT_CHAIN_ID");
+
+    // Information request parameters
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_ID,          "HIP_PARAM_SIGNALING_HOST_INFO_ID");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_OS,          "HIP_PARAM_SIGNALING_HOST_INFO_OS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_KERNEL,      "HIP_PARAM_SIGNALING_HOST_INFO_KERNEL");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_CERTS,       "HIP_PARAM_SIGNALING_HOST_INFO_CERTS");
+
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_INFO_ID,          "HIP_PARAM_SIGNALING_USER_INFO_ID");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_INFO_CERTS,       "HIP_PARAM_SIGNALING_USER_INFO_CERTS");
+
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_NAME,         "HIP_PARAM_SIGNALING_APP_INFO_NAME");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS,    "HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS,  "HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS, "HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS");
 
     // register internal parameter types
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,         "HIP_PARAM_SIGNALING_CONNECTION");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,              "HIP_PARAM_SIGNALING_PORTS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT,    "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,            "HIP_PARAM_SIGNALING_CONNECTION");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
 
 
     // register initialization function for port information per connection state in hadb

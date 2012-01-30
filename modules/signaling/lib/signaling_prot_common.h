@@ -661,6 +661,8 @@ struct signaling_param_host_info_certs {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |      HOST_INFO_OS             |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      Length OS                |        Length Version         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                       Operating System                        /
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                          OS Version                           /
@@ -670,8 +672,8 @@ struct signaling_param_host_info_certs {
 struct signaling_param_host_info_os {
     hip_tlv     type;
     hip_tlv_len length;
-    uint32_t    os;
-    uint32_t    os_version;
+    uint16_t    os_len;
+    uint32_t    os_version_len;
 } __attribute__((packed));
 
 
@@ -1180,7 +1182,8 @@ int signaling_init_ports_from_msg(struct signaling_port_pair *const ports,
                                   UNUSED enum direction dir);
 int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
-
+int signaling_copy_service_offer(struct signaling_param_service_offer_u *const dst,
+                                 const struct signaling_param_service_offer_u *const src);
 
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,

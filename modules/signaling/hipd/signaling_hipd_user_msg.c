@@ -338,8 +338,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
     /* Set host and user authentication flags.
      * These are trivially true. */
-    signaling_flag_set(&ctx_out.flags, HOST_AUTHED);
-    signaling_flag_set(&ctx_out.flags, USER_AUTHED);
+/*
+ *   signaling_flag_set(&ctx_out.flags, HOST_AUTHED);
+ *   signaling_flag_set(&ctx_out.flags, USER_AUTHED);
+ */
 
 
     /* Determine if we already have an association */

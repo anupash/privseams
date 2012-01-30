@@ -273,6 +273,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
+    //TODO check here if the hits refers to the hit of the initiator
     policy_check = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, matched_tuple);
     if (policy_check == -1) {
         // TODO add connection to scdb
@@ -282,47 +283,26 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         return 0;
     } else if (policy_check == 0) {
         // TODO add connection to scdb
+        HIP_DEBUG("Connection tracking table after receipt of R1\n");
         signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_ALLOWED);
         signaling_cdb_print();
-        return 0;
+        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+        return 1;
     } else {
         HIP_IFEL(signaling_add_service_offer_to_msg_u(&common, ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
         signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_PROCESSING);
         next_service_offer_id++;
+        HIP_DEBUG("Connection tracking table after receipt of R1\n");
+        signaling_cdb_print();
+        /* Let packet pass */
+        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+        return 1;
     }
 
     /* Step c) */
     // TODO Add more handlers for user and application information requests
-/*
- *   if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
- *       if (signaling_build_param_user_auth_req_u(common, 0)) {
- *           HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
- *           return 0;
- *       }
- *       ctx->modified = 1;
- *   }
- *   if (signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_ID) ||
- *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_OS) ||
- *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_KERNEL) ||
- *       signaling_flag_check(new_conn.ctx_in.flags, HOST_INFO_CERTS)) {
- *
- *        if (signaling_build_param_host_info_req_u(common, 0, new_conn.ctx_in.flags)) {
- *           HIP_ERROR("Could not add host info request. Dropping packet.\n");
- *           return 0;
- *       }
- *
- *       ctx->modified = 1;
- *   }
- */
 
     /* Step d) */
-    // TODO add connection to scdb
-    HIP_DEBUG("Connection tracking table after receipt of R1\n");
-    signaling_cdb_print();
-
-    /* Let packet pass */
-    printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
-    return 1;
 
 out_err:
     return err;
