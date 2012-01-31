@@ -48,7 +48,13 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
 
 int signaling_build_param_host_info_response(struct hip_common *msg,
                                              struct signaling_connection existing_conn,
+                                             struct signaling_connection_context *ctx,
                                              const uint8_t host_info_flag);
+
+int signaling_build_param_app_info_response(struct hip_common *msg,
+                                            struct signaling_connection existing_conn,
+                                            struct signaling_connection_context *ctx,
+                                            const uint8_t app_info_flag);
 
 /* Builders for internal state structures */
 int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
@@ -59,10 +65,16 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
                                  struct signaling_user_context *usr_ctx);
 int signaling_build_port_list(const struct signaling_param_user_context *param_usr_ctx,
                               struct signaling_port_pair *port_list);
-int signaling_build_response_to_service_offer_u(const struct signaling_param_service_offer_u *param_service_offer,
-                                                struct signaling_service_container *service_con);
+int signaling_build_response_to_service_offer_u(struct hip_common *msg,
+                                                struct signaling_connection conn,
+                                                const struct signaling_param_service_offer_u *offer);
+int signaling_build_response_to_service_offer_s(struct hip_common *msg,
+                                                struct signaling_connection conn,
+                                                const struct signaling_param_service_offer_u *offer);
 
 /* Utility functions */
+int signaling_get_connection_context(struct signaling_connection conn,
+                                     struct signaling_connection_context *ctx);
 int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
                                            struct signaling_port_pair *const port_list);
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);

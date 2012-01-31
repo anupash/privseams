@@ -894,7 +894,7 @@ struct signaling_param_service_ack {
     hip_tlv     type;
     hip_tlv_len length;
     uint16_t    service_offer_id;
-    uint16_t    service_type;
+    uint16_t    service_option;
 } __attribute__((packed));
 
 
@@ -984,16 +984,19 @@ struct signaling_user_context {
  *   All integers are in host-byte-order.
  */
 struct signaling_host_context {
-    char    *host_id;
-    uint16_t num_items;
+//  char    *host_id;
     int      host_kernel_len;
     int      host_name_len;
+    int      host_domain_name_len;
     int      host_os_len;
+    int      host_os_ver_len;
     long int host_certs_len;
 
     char host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char host_os_version[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char host_domain_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
     char host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
 };
 
