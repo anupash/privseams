@@ -75,10 +75,14 @@ void signaling_hipfw_oslayer_uninit(void)
 static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
-    int err = 0;
+    int                         err = 0;
+    struct signaling_connection new_conn;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
+
+    new_conn.src_port = src_port;
+    new_conn.dst_port = dst_port;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");
@@ -119,11 +123,11 @@ out_err:
  */
 int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
-    int                          err     = 0;
-    int                          verdict = VERDICT_DEFAULT;
-    uint16_t                     src_port, dest_port;
-    struct signaling_cdb_entry  *entry  = NULL;
-    int                          status = NULL;
+    int                         err     = 0;
+    int                         verdict = VERDICT_DEFAULT;
+    uint16_t                    src_port, dest_port;
+    struct signaling_cdb_entry *entry  = NULL;
+    int                         status = SIGNALING_CONN_NEW;
 
     /* Get ports from tcp header */
     // TODO this code should not depend on payload to be TCP
@@ -147,23 +151,23 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 
     /* We know the connection. So what is the status? */
     switch (entry->status) {
-        case SIGNALING_CONN_ALLOWED:
-            HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
-            verdict = VERDICT_ACCEPT;
-            break;
-        case SIGNALING_CONN_BLOCKED:
-            HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
-            verdict = VERDICT_DROP;
-            break;
-        case SIGNALING_CONN_PROCESSING:
-            HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
-            verdict = VERDICT_DROP;
-            break;
-        case SIGNALING_CONN_NEW:
-        default:
-            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
-            verdict = VERDICT_DROP;
-            break;
+    case SIGNALING_CONN_ALLOWED:
+        HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
+        verdict = VERDICT_ACCEPT;
+        break;
+    case SIGNALING_CONN_BLOCKED:
+        HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
+        verdict = VERDICT_DROP;
+        break;
+    case SIGNALING_CONN_PROCESSING:
+        HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
+        verdict = VERDICT_DROP;
+        break;
+    case SIGNALING_CONN_NEW:
+    default:
+        HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
+        verdict = VERDICT_DROP;
+        break;
     }
 
 out_err:

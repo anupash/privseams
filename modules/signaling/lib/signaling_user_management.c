@@ -270,8 +270,8 @@ struct userdb_user_entry *userdb_add_user_from_msg(const struct hip_common *cons
     /* This is no message from a firewall, so just init a connection
      * from the information in the message. */
     /* get connection and update flags */
-    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)) &&
-        hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID)) &&
+        hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
         signaling_init_user_context(&user);
         signaling_build_user_context((const struct signaling_param_user_context *) param, &user);
         user_ctx = &user;
@@ -700,7 +700,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey)
 #endif
 
     /* sanity checks */
-    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
+    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS)),
              -1, "Packet contains no user signature\n");
 
     /* Modify the packet to verify signature */
@@ -797,7 +797,7 @@ int userdb_handle_user_signature(struct hip_common *const msg,
     /* check if user's public key has already been authenticated */
     if (userdb_user_is_authed(conn_ctx->userdb_entry)) {
         HIP_DEBUG("User has been authenticated previously.\n");
-        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        //signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
         return 0;
     }
 
@@ -822,8 +822,8 @@ int userdb_handle_user_signature(struct hip_common *const msg,
     case X509_V_OK:
         /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
         HIP_DEBUG("User's public key has been authenticated successfully.\n");
-        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
-        conn_ctx->userdb_entry->flags |= USER_IS_AUTHED;
+        //signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        //conn_ctx->userdb_entry->flags |= USER_IS_AUTHED;
         return 0;
     case -1:
         /* In this case we just assume user auth has failed, we do not request his certificates,
@@ -831,7 +831,7 @@ int userdb_handle_user_signature(struct hip_common *const msg,
          * todo: Some retransmission of the received packet would be needed
          */
         HIP_DEBUG("Error while verifying user's public key. \n");
-        signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
+        //signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
         return -1;
     default:
         /* In this case, we need to request the user's certificate chain.
@@ -840,7 +840,7 @@ int userdb_handle_user_signature(struct hip_common *const msg,
          * doesn't care about the user. */
         HIP_DEBUG("Could not verify user's certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(v_err));
-        signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
+        //signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
         return 0;
     }
 }

@@ -1212,12 +1212,11 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
     case HIP_PARAM_ESP_PROT_BRANCH: return "HIP_PARAM_ESP_PROT_BRANCH";
     case HIP_PARAM_ESP_PROT_SECRET: return "HIP_PARAM_ESP_PROT_SECRET";
-    case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
+    case HIP_PARAM_ESP_PROT_ROOT:   return "HIP_PARAM_ESP_PROT_ROOT";
     case HIP_PARAM_LSI:             return "HIP_PARAM_LSI";
     case HIP_PARAM_SRC_TCP_PORT:    return "HIP_PARAM_SRC_TCP_PORT";
     case HIP_PARAM_DST_TCP_PORT:    return "HIP_PARAM_DST_TCP_PORT";
     case HIP_PARAM_HOSTNAME:        return "HIP_PARAM_HOSTNAME";
-    case HIP_PARAM_SIGNALING_APPINFO:   return "HIP_PARAM_SIGNALING_APPINFO";
     default:                        return lmod_get_parameter_identifier(param_type);
     }
     return "UNDEFINED";
@@ -1425,9 +1424,9 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param_contents().
  */
 int hip_build_generic_param(struct hip_common *msg,
-                                   const void *parameter_hdr,
-                                   hip_tlv_len param_hdr_size,
-                                   const void *contents)
+                            const void *parameter_hdr,
+                            hip_tlv_len param_hdr_size,
+                            const void *contents)
 {
     const struct hip_tlv_common *param   = parameter_hdr;
     const void                  *src     = NULL;

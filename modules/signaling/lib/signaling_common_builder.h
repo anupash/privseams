@@ -73,12 +73,13 @@ int signaling_build_response_to_service_offer_s(struct hip_common *msg,
                                                 const struct signaling_param_service_offer_u *offer);
 
 /* Utility functions */
-int signaling_get_connection_context(struct signaling_connection conn,
-                                     struct signaling_connection_context *ctx);
+void signaling_get_connection_context(struct signaling_connection conn,
+                                      struct signaling_connection_context *ctx);
 int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
                                            struct signaling_port_pair *const port_list);
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
 int signaling_get_update_type(const struct hip_common *msg);
 int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha);
 
+/*Utility function*/
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

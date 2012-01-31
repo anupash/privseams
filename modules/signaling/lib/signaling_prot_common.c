@@ -298,7 +298,7 @@ int signaling_init_host_context(struct signaling_host_context *const host_ctx)
     host_ctx->host_os_len     = -1;
     host_ctx->host_certs_len  = -1;
 
-    host_ctx->host_id[0]     = '\0';
+    //host_ctx->host_id[0]     = '\0';
     host_ctx->host_kernel[0] = '\0';
     host_ctx->host_name[0]   = '\0';
     host_ctx->host_os[0]     = '\0';
@@ -394,9 +394,8 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
                                        UNUSED enum direction dir)
 {
-    int                                  err         = 0;
-    const struct hip_tlv_common         *param       = NULL;
-    struct signaling_connection_context *ctx_to_init = NULL;
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
@@ -453,9 +452,8 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
                                          const struct hip_common *const msg,
                                          UNUSED enum direction dir)
 {
-    int                                  err           = 0;
-    const struct hip_tlv_common         *param         = NULL;
-    struct signaling_connection_context *ctx_to_update = NULL;
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
@@ -476,113 +474,83 @@ int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flag
                                          const struct hip_common *const msg,
                                          UNUSED enum direction dir)
 {
-    int                                  err           = 0;
-    const struct hip_tlv_common         *param         = NULL;
-    struct signaling_connection_context *ctx_to_update = NULL;
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
     flags = malloc(sizeof(struct signaling_connection_flags));
-    signaling_info_req_flag_init(flags->flag_info_requests);
-    signaling_service_info_flag_init(flags->flag_services);
+    signaling_info_req_flag_init(&flags->flag_info_requests);
+    signaling_service_info_flag_init(&flags->flag_services);
 
     /*paramters for the host information from the end-point*/
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_OS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, HOST_INFO_OS);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
-        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_ID);
+        signaling_info_req_flag_set(&flags->flag_info_requests, HOST_INFO_ID);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
-        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_KERNEL);
+        signaling_info_req_flag_set(&flags->flag_info_requests, HOST_INFO_KERNEL);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_CERTS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_CERTS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, HOST_INFO_CERTS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, HOST_INFO_CERTS);
     }
 
     /*paramters for the user information from the end-point*/
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
-        signaling_info_req_flag_set(flags->flag_info_requests, USER_INFO_ID);
+        signaling_info_req_flag_set(&flags->flag_info_requests, USER_INFO_ID);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, USER_INFO_CERTS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, USER_INFO_CERTS);
     }
 
     /*paramters for the application information from the end-point*/
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_NAME) {
-        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_NAME);
+        signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_NAME);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_CONNECTIONS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_CONNECTIONS);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_REQUIREMENTS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_REQUIREMENTS);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS) {
-        signaling_info_req_flag_set(flags->flag_info_requests, APP_INFO_QOS_CLASS);
+        signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_QOS_CLASS);
     }
 
     /*paramters for the response to service offer information from the end-point*/
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
-        signaling_info_req_flag_set(flags->flag_services, SERVICE_ACK);
+        signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_NACK);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_NACK) {
-        signaling_info_req_flag_set(flags->flag_services, SERVICE_NACK);
+        signaling_service_info_flag_set(&flags->flag_services, SERVICE_NACK);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
-        signaling_info_req_flag_set(flags->flag_services, SERVICE_OFFER);
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * Initializes the given port pair with the information found in the message
- *
- * @param ctx   a pointer to the port pair that should be initialized
- * @param msg   a msg that contains connection context information
- * @param dir   init the incoming (dir = IN), the outgoing (dir = OUT)
- *              or the first unassigned (dir = FWD) connection context from this message
- * @return negative value on error, 0 on success
- */
-int signaling_init_ports_from_msg(struct signaling_port_pair *const ports,
-                                  const struct hip_common *const msg,
-                                  UNUSED enum direction dir)
-{
-    int                          err               = 0;
-    const struct hip_tlv_common *param             = NULL;
-    struct signaling_port_pair  *port_pair_to_init = NULL;
-
-    /* sanity checks */
-    HIP_IFEL(!ports, -1, "Cannot initialize NULL-port pair\n");
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTS);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_PORTS) {
-        ports = (struct signaling_port_pair *) param;
+        signaling_service_info_flag_set(&flags->flag_services, SERVICE_OFFER);
     }
 
 out_err:
@@ -708,10 +676,10 @@ int signaling_copy_service_offer(struct signaling_param_service_offer_u *const d
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
-                                               const struct hip_common *const msg)
+                                               UNUSED const struct hip_common *const msg)
 {
-    int                          err   = 0;
-    const struct hip_tlv_common *param = NULL;
+    int err = 0;
+    //const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
@@ -719,14 +687,6 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection_context(ctx, IN), -1, "Failed to init connection context\n");
 
-
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
-        HIP_IFEL(signaling_build_host_context((const struct signaling_param_host_context *) param,
-                                              &ctx->host),
-                 -1, "Could not init host context from host ctx parameter \n");
-    }
 
 out_err:
     return err;
@@ -864,11 +824,11 @@ int signaling_flag_check(struct flags_connection_context flags, int f)
     case HOST_AUTHED:
         return (flags.HOST_AUTHED) ? 1 : 0;
         break;
-
     default:
         return 0;
         break;
     }
+    return 0;
 }
 
 /**

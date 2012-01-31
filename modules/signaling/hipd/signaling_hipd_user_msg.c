@@ -81,9 +81,9 @@ out_err:
  *
  * @return          0 on success, negative on error
  */
-static int signaling_send_connection_confirmation(const hip_hit_t *hits,
-                                                  const hip_hit_t *hitr,
-                                                  const struct signaling_connection *conn)
+UNUSED static int signaling_send_connection_confirmation(const hip_hit_t *hits,
+                                                         const hip_hit_t *hitr,
+                                                         const struct signaling_connection *conn)
 {
     struct hip_common *msg = NULL;
     int                err = 0;

@@ -640,6 +640,7 @@ int signaling_send_user_certificate_chain(struct hip_hadb_state *ha, struct sign
             break;
         default:
             next_id += sent;
+            break;
         }
 
         /* Add the connection identifier */
@@ -1431,58 +1432,15 @@ out_err:
     return err;
 }
 
-int signaling_i2_add_host_info(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int                                                 err           = 0;
-    const struct signaling_param_connection_identifier *conn_id       = NULL;
-    struct signaling_connection                        *existing_conn = NULL;
-    struct signaling_hipd_state                        *sig_state     = NULL;
-    struct signaling_port_pair                          ports;
-
-    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             0, "failed to retrieve state for signaling\n");
-    HIP_IFEL(!(conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
-             -1, "Could not find connection identifier in notification. \n");
-    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id->id, ports.src_port, ports.dst_port)),
-             -1, "Could not get state for existing connection\n");
-
-    HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
-             -1, "Could not update authentication flags from I3/U3 message \n");
-
-
-    if (!sig_state->pending_conn) {
-        HIP_DEBUG("We have no connection context for this host associtaion. \n");
-        return 0;
-    }
-
-/*
- *    if (signaling_build_param_host_context(ctx->output_msg, existing_conn, &sig_state->pending_conn->ctx_out.host)) {
- *       HIP_DEBUG("Building host info parameter failed.\n");
- *       err = 0;
- *   }
- */
-
-out_err:
-    return err;
-}
-
 /*
  * Receive the service offers from the service provider and respond to them.
  */
-int signaling_i2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                                                 err                 = 0;
-    const struct signaling_param_connection_identifier *conn_id             = NULL;
-    struct signaling_connection                        *existing_conn       = NULL;
-    struct signaling_hipd_state                        *sig_state           = NULL;
-    struct signaling_param_service_offer_u             *param_service_offer = NULL;
-    const struct hip_tlv_common                        *param;
-
-    uint16_t tmp_len;
-    int      tmp_items;
-    uint16_t tmp_info;
-    uint16_t tmp_param;
+    int                                     err                 = 0;
+    struct signaling_hipd_state            *sig_state           = NULL;
+    struct signaling_param_service_offer_u *param_service_offer = NULL;
+    const struct hip_tlv_common            *param;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -1499,14 +1457,8 @@ int signaling_i2_handle_service_offers(const uint8_t packet_type, const uint32_t
     HIP_IFEL(signaling_copy_service_offer(param_service_offer, (const struct signaling_param_service_offer_u *) (param + 1)),
              -1, "Could not copy connection context\n");
 
-
-    if (signaling_build_param_connection_identifier(ctx->output_msg, sig_state->pending_conn)) {
-        HIP_DEBUG("Building of connection identifier parameter failed\n");
-        err = 0;
-    }
-
     //TODO also add the handler for signed service offer parameter
-    if (signaling_build_response_to_service_offer_u(ctx->output_msg, sig_state->pending_conn, param_service_offer)) {
+    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, param_service_offer)) {
         HIP_DEBUG("Building of application context parameter failed.\n");
         err = 0;
     }
@@ -1553,13 +1505,10 @@ out_err:
 /*
  * Receive the service offers from the service provider with the R2 packet and respond to them
  */
-int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                                                 err           = 0;
-    const struct signaling_param_connection_identifier *conn_id       = NULL;
-    struct signaling_connection                        *existing_conn = NULL;
-    struct signaling_hipd_state                        *sig_state     = NULL;
-    struct signaling_port_pair                          ports;
+    int                          err       = 0;
+    struct signaling_hipd_state *sig_state = NULL;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),

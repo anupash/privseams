@@ -9,6 +9,8 @@
 #ifndef HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H
 #define HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H
 
+#include <unistd.h>
+
 #include <x509ac.h>
 #include <x509ac-supp.h>
 

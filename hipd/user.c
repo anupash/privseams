@@ -462,7 +462,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
         hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
         hip_relht_free_all_of_type(HIP_RELAY);
-
+        break;
     case HIP_MSG_CANCEL_FULLRELAY:
         hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
         hip_relht_free_all_of_type(HIP_FULLRELAY);
@@ -697,7 +697,8 @@ int hip_handle_user_msg(struct hip_common *msg,
                   hip_broadcast_status, HIP_MSG_BROADCAST_OFF);
         break;
     default:
-        if(hip_user_run_handles(msg_type, msg, src) < 0) {;
+        if (hip_user_run_handles(msg_type, msg, src) < 0) {
+            ;
             HIP_ERROR("Unknown socket option (%d)\n", msg_type);
             err = -ESOCKTNOSUPPORT;
         }

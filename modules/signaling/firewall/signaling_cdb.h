@@ -38,8 +38,10 @@
 
 #include <netinet/in.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "lib/core/protodefs.h"
+#include "lib/core/linkedlist.h"
 
 
 struct signaling_cdb_entry {
@@ -58,10 +60,10 @@ int signaling_cdb_add_connection(const struct in6_addr src_hit,
                                  const uint16_t        src_port,
                                  const uint16_t        dst_port,
                                  const int             status);
-struct signaling_cdb_entry * signaling_cdb_get_connection(const struct in6_addr src_hit,
-                                                          const struct in6_addr dst_hit,
-                                                          const uint16_t        src_port,
-                                                          const uint16_t        dst_port);
+struct signaling_cdb_entry *signaling_cdb_get_connection(const struct in6_addr src_hit,
+                                                         const struct in6_addr dst_hit,
+                                                         const uint16_t        src_port,
+                                                         const uint16_t        dst_port);
 void signaling_cdb_del_connection(const struct in6_addr src_hit,
                                   const struct in6_addr dst_hit,
                                   const uint16_t        src_port,

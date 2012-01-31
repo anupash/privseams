@@ -160,19 +160,19 @@ static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED const c
 
 static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 {
-    int                  err              = 0;
-    struct policy_tuple *entry            = NULL;
-    const char          *host_id          = NULL;
-    const char          *host_name        = NULL;
-    const char          *host_certs       = NULL;
-    const char          *host_kernel      = NULL;
-    const char          *host_os          = NULL;
-    const char          *user_id          = NULL;
-    const char          *app_name         = NULL;
-    const char          *app_issuer       = NULL;
-    const char          *app_requirements = NULL;
-    const char          *target_string    = NULL;
-    config_setting_t    *temp             = NULL;
+    int                  err         = 0;
+    struct policy_tuple *entry       = NULL;
+    const char          *host_id     = NULL;
+    const char          *host_name   = NULL;
+    const char          *host_certs  = NULL;
+    const char          *host_kernel = NULL;
+    const char          *host_os     = NULL;
+    const char          *user_id     = NULL;
+    const char          *app_name    = NULL;
+    //const char          *app_issuer       = NULL;
+    //const char          *app_requirements = NULL;
+    const char       *target_string = NULL;
+    config_setting_t *temp          = NULL;
 
 
     HIP_IFEL(!tuple, -1, "Got NULL-tuple\n");
@@ -455,7 +455,7 @@ static const struct policy_tuple *match_tuple_list(const struct policy_tuple *tu
  *                  in order for the connection to comply
  *                  -1 the connection would not comply even if every entity as given was authenticated
  */
-struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
+struct policy_tuple signaling_policy_check(UNUSED const struct in6_addr *const hit,
                                            const struct signaling_connection_context *const conn_ctx)
 {
     struct policy_tuple        ret;
@@ -469,7 +469,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
     /* Construct the authed and unauthed tuple for the current context.
      * Need to memset-0 because we want to use memcmp later. */
     //TODO do not know what the following line does
-    signaling_copy_connection_ctx_to_policy_tupe(conn_ctx, tuple_conn);
+    signaling_copy_connection_ctx_to_policy_tuple(conn_ctx, &tuple_conn);
 
     HIP_DEBUG("Checking connection context:\n");
 
@@ -495,7 +495,7 @@ struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
         printf_policy_tuple(tuple_match, "\t");
         return *tuple_match;
     } else {
-        policy_decision_set(ret.target, POLICY_REJECT);
+        policy_decision_set(&ret.target, POLICY_REJECT);
     }
     return ret;
 }
@@ -533,13 +533,13 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
          * Requesting for additional information from host based on the firewall policy
          */
         if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_ID)) {
-            signaling_service_info_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_ID);
+            signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_ID);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_ID_RECV);
         }
 
         if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_OS)) {
-            signaling_info_req_flag_set(&ctx_flags->flag_info_requests.HOST_INFO_OS, HOST_INFO_OS);
+            signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_OS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_OS_RECV);
         }
@@ -587,11 +587,13 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
             ;
         }
 
+        ret = &tuple_match;
         return 0;
     }
 }
 
-void signaling_copy_connection_ctx_to_policy_tupe(struct signaling_connection_context *ctx, struct policy_tuple *tuple)
+void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connection_context *const ctx,
+                                                   struct policy_tuple *tuple)
 {
     X509_NAME *x509_subj_name;
     policy_tuple_init(tuple);
@@ -600,24 +602,24 @@ void signaling_copy_connection_ctx_to_policy_tupe(struct signaling_connection_co
     if (strlen(ctx->host.host_kernel) > 0) {
         memcpy(tuple->host.host_kernel, ctx->host.host_kernel,  SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        tuple->host.host_kernel = '\0';
+        tuple->host.host_kernel[0] = '\0';
     }
 
     if (strlen(ctx->host.host_os) > 0) {
         memcpy(tuple->host.host_os,     ctx->host.host_os,      SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        tuple->host.host_os = '\0';
+        tuple->host.host_os[0] = '\0';
     }
 
     if (strlen(ctx->host.host_name) > 0) {
         memcpy(tuple->host.host_name,   ctx->host.host_name,    SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        tuple->host.host_name = '\0';
+        tuple->host.host_name[0] = '\0';
     }
     if (strlen(ctx->host.host_name) > 0) {
         memcpy(tuple->host.host_certs,  ctx->host.host_certs, SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        tuple->host.host_certs = '\0';
+        tuple->host.host_certs[0] = '\0';
     }
 
 
@@ -625,31 +627,31 @@ void signaling_copy_connection_ctx_to_policy_tupe(struct signaling_connection_co
     if (strlen(ctx->app.application_dn) > 0) {
         memcpy(tuple->application.application_dn, ctx->app.application_dn,  SIGNALING_APP_DN_MAX_LEN);
     } else {
-        tuple->application.application_dn = '\0';
+        tuple->application.application_dn[0] = '\0';
     }
 
     if (strlen(ctx->app.issuer_dn) > 0) {
         memcpy(tuple->application.issuer_dn, ctx->app.issuer_dn,  SIGNALING_APP_DN_MAX_LEN);
     } else {
-        tuple->application.issuer_dn = '\0';
+        tuple->application.issuer_dn[0] = '\0';
     }
 
     if (strlen(ctx->app.requirements) > 0) {
         memcpy(tuple->application.requirements, ctx->app.requirements,  SIGNALING_APP_DN_MAX_LEN);
     } else {
-        tuple->application.requirements = '\0';
+        tuple->application.requirements[0] = '\0';
     }
 
     /*Copying/Initialize the application information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {
-        X509_NAME_oneline(x509_subj_name, tuple.user.user_name, SIGNALING_USER_ID_MAX_LEN);
-        tuple.user.user_name[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
+        X509_NAME_oneline(x509_subj_name, tuple->user.user_name, SIGNALING_USER_ID_MAX_LEN);
+        tuple->user.user_name[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
     } else {
-        tuple.user.user_name[0] = '\0';
+        tuple->user.user_name[0] = '\0';
     }
 }
 
-int policy_tuple_init(struct policy_tuple *tuple)
+void policy_tuple_init(struct policy_tuple *tuple)
 {
     tuple = malloc(sizeof(struct policy_tuple));
 }
@@ -840,12 +842,14 @@ int policy_decision_check(struct policy_decision flags, int f)
         return 0;
         break;
     }
+    return 0;
 }
 
 /*
  * Verify the connection context with the policy. Request for information accordingly
  *
  */
-int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, struct signaling_connection_context *ctx)
+int signaling_hipfw_verify_connection_with_policy(UNUSED struct policy_tuple *tuple, UNUSED struct signaling_connection_context *ctx)
 {
+    return 0;
 }

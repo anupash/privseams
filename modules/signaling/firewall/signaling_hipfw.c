@@ -242,7 +242,6 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     int                                  err          = 0;
     int                                  policy_check = 0;
     struct signaling_connection          new_conn;
-    struct userdb_user_entry            *db_entry      = NULL;
     struct signaling_connection_context *ctx_in        = NULL;
     struct signaling_connection_context *ctx_out       = NULL;
     struct signaling_connection_flags   *ctx_flags     = NULL;
@@ -277,20 +276,20 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     policy_check = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, matched_tuple);
     if (policy_check == -1) {
         // TODO add connection to scdb
-        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_BLOCKED);
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
         signaling_cdb_print();
         signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
         return 0;
     } else if (policy_check == 0) {
         // TODO add connection to scdb
         HIP_DEBUG("Connection tracking table after receipt of R1\n");
-        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_ALLOWED);
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
         signaling_cdb_print();
         printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
         return 1;
     } else {
-        HIP_IFEL(signaling_add_service_offer_to_msg_u(&common, ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
-        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, new_conn.id, SIGNALING_CONN_PROCESSING);
+        HIP_IFEL(signaling_add_service_offer_to_msg_u(common, *ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
+        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
         next_service_offer_id++;
         HIP_DEBUG("Connection tracking table after receipt of R1\n");
         signaling_cdb_print();
@@ -327,7 +326,6 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     int                         err = 0;
     struct signaling_connection new_conn;
     struct userdb_user_entry   *db_entry = NULL;
-    int                         status   = SIGNALING_CONN_NEW;
 
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
 
@@ -403,7 +401,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection *conn = NULL;
     //const struct signaling_param_user_auth_request *auth_req = NULL;
     struct userdb_user_entry *db_entry = NULL;
-    int                       status   = SIGNALING_CONN_ALLOWED;
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
 
     /* sanity checks */
@@ -488,7 +485,6 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
     struct signaling_connection *existing_conn = NULL;
     //const struct signaling_param_user_auth_request *auth_req      = NULL;
     int wait_auth = 0;
-    int status    = SIGNALING_CONN_ALLOWED;
     printf("\033[22;34mReceived I3 packet\033[22;37m\n\033[01;37m");
 
     /* Step a) */
@@ -549,13 +545,11 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
     int                                         err           = 0;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
     X509                                       *cert          = NULL;
-    struct signaling_connection                *conn          = NULL;
     struct userdb_certificate_context          *cert_ctx      = NULL;
     uint32_t                                    network_id;
     uint32_t                                    conn_id;
     const struct hip_cert                      *param_cert = NULL;
     struct signaling_connection_context        *conn_ctx   = NULL;
-    int                                         status     = SIGNALING_CONN_ALLOWED;
 
     /* sanity checks */
     HIP_IFEL(!common,  0, "Message is NULL\n");
@@ -634,11 +628,8 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
 {
     int                                         err           = 1;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
-    struct signaling_connection                *conn          = NULL;
     uint32_t                                    network_id;
     uint32_t                                    conn_id;
-    struct signaling_connection_context        *conn_ctx = NULL;
-    int                                         status   = SIGNALING_CONN_ALLOWED;
 
     /* get connection identifier and context */
     HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),

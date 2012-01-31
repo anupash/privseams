@@ -122,7 +122,11 @@ void policy_decision_unset(struct policy_decision *flags, int f);
 void policy_decision_init(struct policy_decision *flags);
 int policy_decision_check(struct policy_decision flags, int f);
 
-int policy_tuple_init(struct policy_tuple *tuple);
+void policy_tuple_init(struct policy_tuple *tuple);
 
-int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, struct signaling_connection_context *ctx);
+int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple,
+                                                  struct signaling_connection_context *ctx);
+
+void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connection_context *const ctx,
+                                                   struct policy_tuple *tuple);
 #endif /* HIP_HIPFW_SIGNALING_POLICY_ENGINE_H */

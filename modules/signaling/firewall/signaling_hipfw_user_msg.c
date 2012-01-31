@@ -186,7 +186,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t             *src_hit = NULL;
     const hip_hit_t             *dst_hit = NULL;
-    struct signaling_cdb_entry  *entry = NULL;
+    struct signaling_cdb_entry  *entry   = NULL;
     struct signaling_connection  conn;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRMATION,
@@ -203,11 +203,11 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
     signaling_copy_connection(&conn,
                               (const struct signaling_connection *) (param + 1));
 
-    if ((entry = signaling_cdb_get_connection(src_hit, dst_hit,
+    if ((entry = signaling_cdb_get_connection(*src_hit, *dst_hit,
                                               conn.src_port, conn.dst_port)) != NULL) {
         entry->status = SIGNALING_CONN_PROCESSING;
     } else {
-        signaling_cdb_add_connection(src_hit, dst_hit,
+        signaling_cdb_add_connection(*src_hit, *dst_hit,
                                      conn.src_port, conn.dst_port,
                                      SIGNALING_CONN_PROCESSING);
     }
@@ -235,12 +235,13 @@ out_err:
  */
 int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
 {
-    int                          err       = 0;
-    const struct hip_tlv_common *param     = NULL;
-    const hip_hit_t             *src_hit   = NULL;
-    const hip_hit_t             *dst_hit   = NULL;
-    struct signaling_connection *conn = NULL;
-    int                          status = SIGNALING_CONN_ALLOWED;
+    int                          err     = 0;
+    const struct hip_tlv_common *param   = NULL;
+    const hip_hit_t             *src_hit = NULL;
+    const hip_hit_t             *dst_hit = NULL;
+    struct signaling_connection *conn    = NULL;
+    struct signaling_cdb_entry  *entry   = NULL;
+    struct signaling_port_pair   ports;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ1\n");
@@ -256,17 +257,20 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
+    ports.src_port = conn->src_port;
+    ports.dst_port = conn->dst_port;
 
-    if ((entry = signaling_cdb_get_connection(src_hit, dst_hit,
-                                              conn.src_port, conn.dst_port)) != NULL) {
+    if ((entry = signaling_cdb_get_connection(*src_hit, *dst_hit,
+                                              conn->src_port, conn->dst_port)) != NULL) {
         entry->status = SIGNALING_CONN_ALLOWED;
+        insert_iptables_rule(src_hit, dst_hit, &ports);
     } else {
-        signaling_cdb_add_connection(src_hit, dst_hit,
-                                     conn.src_port, conn.dst_port,
+        signaling_cdb_add_connection(*src_hit, *dst_hit,
+                                     conn->src_port, conn->dst_port,
                                      SIGNALING_CONN_ALLOWED);
     }
 
-    signaling_hipfw_send_connection_confirmation(hits, hitr, &conn);
+    signaling_hipfw_send_connection_confirmation(src_hit, dst_hit, conn);
 
 out_err:
     return err;
@@ -294,7 +298,6 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     //const struct signaling_connection       *recv_conn     = NULL;
     struct signaling_connection       *existing_conn = NULL;
     const struct signaling_connection *recv_conn;
-    int                                status = SIGNALING_CONN_ALLOWED;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -313,7 +316,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     recv_conn = (const struct signaling_connection *) (param + 1);
 
     /*HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
-             -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);*/
+     *       -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);*/
 
     /* Answer to HIPD */
     signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
@@ -327,14 +330,13 @@ out_err:
  */
 int signaling_hipfw_handle_connection_update_request(struct hip_common *msg)
 {
-    int                                err                  = 0;
-    const struct hip_tlv_common       *param                = NULL;
-    const hip_hit_t                   *hits                 = NULL;
-    const hip_hit_t                   *hitr                 = NULL;
-    const struct signaling_connection *recv_conn            = NULL;
-    struct signaling_connection       *existing_conn        = NULL;
-    uint32_t                          *existing_conn_id     = NULL;
-    const struct signaling_cdb_entry  *entry                = NULL;
+    int                                err           = 0;
+    const struct hip_tlv_common       *param         = NULL;
+    const hip_hit_t                   *hits          = NULL;
+    const hip_hit_t                   *hitr          = NULL;
+    const struct signaling_connection *recv_conn     = NULL;
+    struct signaling_connection       *existing_conn = NULL;
+    const struct signaling_cdb_entry  *entry         = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ3, PERF_HIPFW_I3_FINISH\n");

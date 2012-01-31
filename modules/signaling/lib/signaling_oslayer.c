@@ -394,11 +394,9 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
     int   err = 0;
     FILE *fp;
     char  callbuf[CALLBUF_SIZE];
-    char  symlinkbuf[SYMLINKBUF_SIZE];
     char  readbuf[NETSTAT_SIZE_OUTPUT];
     char *result;
-    char *temp_str;
-    int   tmp_len;
+    int   tmp_len = 0;
 
     sprintf(callbuf, "uname -r");
     memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
@@ -444,7 +442,8 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
 
     HIP_IFEL(!gethostname(readbuf, NETSTAT_SIZE_OUTPUT),
              -1, "Failed to make call to get the hostname\n");
-    if (strlen(readbuf) > 0) {
+    tmp_len = strlen(readbuf);
+    if (tmp_len > 0) {
         if (tmp_len > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
             ctx->host.host_name_len = tmp_len;
             memcpy(ctx->host.host_name, readbuf, strlen(readbuf));
@@ -454,26 +453,26 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
         }
     } else {
         ctx->host.host_name_len = 0;
-        ctx->host.host_name     = '\0';
+        ctx->host.host_name[0]  = '\0';
     }
 
-    HIP_IFEL(!getdomainname(readbuf, NETSTAT_SIZE_OUTPUT),
-             -1, "Failed to make call to get the domainname\n");
-    //TODO problem if the domain name is not set returns success with value (none)
-    // Hard coding the error checking part
-    if ((strlen(readbuf) > 0) && strcmp(readbuf, "(none)")) {
-        if (tmp_len > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
-            ctx->host.host_name_len = tmp_len;
-            memcpy(ctx->host.host_name, readbuf, strlen(readbuf));
-        } else {
-            ctx->host.host_name_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
-            memcpy(ctx->host.host_name, readbuf, SIGNALING_HOST_INFO_REQ_MAX_LEN);
-        }
-    } else {
-        ctx->host.host_domain_name_len = 0;
-        ctx->host.host_domain_name     = '\0';
-        tmp_len                        = strlen(readbuf);
-    }
+/*    HIP_IFEL(!getdomainname(readbuf, NETSTAT_SIZE_OUTPUT),
+ *           -1, "Failed to make call to get the domainname\n");
+ *  //TODO problem if the domain name is not set returns success with value (none)
+ *  // Hard coding the error checking part
+ *  if ((strlen(readbuf) > 0) && strcmp(readbuf, "(none)")) {
+ *      if (tmp_len > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
+ *          ctx->host.host_name_len = tmp_len;
+ *          memcpy(ctx->host.host_name, readbuf, strlen(readbuf));
+ *      } else {
+ *          ctx->host.host_name_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
+ *          memcpy(ctx->host.host_name, readbuf, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+ *      }
+ *  } else {*/
+    ctx->host.host_domain_name_len = 0;
+    ctx->host.host_domain_name[0]  = '\0';
+    tmp_len                        = strlen(readbuf);
+/*    }*/
 
     //TODO generate certs
 out_err:

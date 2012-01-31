@@ -13,7 +13,7 @@
 #include "lib/core/modularization.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/hashtable.h"
-
+#include "lib/core/linkedlist.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 struct user_certificate_context {
