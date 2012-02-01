@@ -1000,7 +1000,7 @@ int signaling_get_update_type(const struct hip_common *msg)
     const struct hip_seq                           *param_seq          = NULL;
     const struct hip_ack                           *param_ack          = NULL;
     const struct hip_cert                          *param_cert         = NULL;
-    const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
+    //const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
     const struct signaling_param_cert_chain_id     *param_cer_chain_id = NULL;
 
     //TODO check for the parameters to be put here
@@ -1008,7 +1008,7 @@ int signaling_get_update_type(const struct hip_common *msg)
     param_seq          = hip_get_param(msg, HIP_PARAM_SEQ);
     param_ack          = hip_get_param(msg, HIP_PARAM_ACK);
     param_cert         = hip_get_param(msg, HIP_PARAM_CERT);
-    param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
+    //param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
 
     if (param_app_ctx && param_seq && !param_ack) {
