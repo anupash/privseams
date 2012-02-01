@@ -616,6 +616,47 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
     return 0;
 }
 
+int signaling_build_param_user_info_response(struct hip_common *msg,
+                                             UNUSED struct signaling_connection existing_conn,
+                                             struct signaling_connection_context *ctx,
+                                             const uint8_t user_info_flag)
+{
+    int len_contents = 0;
+    //int                                     tmp_len;
+    uint8_t                            *p_tmp = NULL;
+    char                                param_buf[HIP_MAX_PACKET];
+    struct signaling_param_user_info_id user_info_id;
+    //struct signaling_param_user_info_certs   user_info_name;
+
+    p_tmp = (uint8_t *) param_buf;
+
+    switch (user_info_flag) {
+    case USER_INFO_ID:
+        user_info_id.user_dn_length = htons(ctx->user.subject_name_len);
+        user_info_id.prr_length     = htons(ctx->user.key_rr_len);
+        user_info_id.flags          = ctx->user.rdata.flags;
+        user_info_id.algorithm      = ctx->user.rdata.algorithm;
+        user_info_id.protocol       = ctx->user.rdata.protocol;
+        memcpy(user_info_id.subject_name, ctx->user.subject_name, ctx->user.subject_name_len);
+        memcpy(user_info_id.pkey,         ctx->user.pkey,         ctx->user.key_rr_len);
+
+        len_contents += sizeof(struct signaling_param_user_info_id) - -sizeof(struct hip_tlv_common);
+        hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
+        hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_APP_INFO_NAME);
+
+        /* Append the parameter to the message */
+        if (hip_build_generic_param(msg, &user_info_id, sizeof(struct signaling_param_user_info_id), param_buf)) {
+            HIP_ERROR("Failed to append application info name parameter to message.\n");
+            return -1;
+        }
+        break;
+    case USER_INFO_CERTS:
+        //TODO
+        break;
+    }
+    return 0;
+}
+
 static int build_param_user_auth(struct hip_common *msg,
                                  uint32_t network_id,
                                  uint16_t type)
@@ -804,9 +845,11 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                 break;
 
             case USER_INFO_ID:
+                signaling_build_param_user_info_response(msg, conn, &ctx_out, USER_INFO_ID);
                 i++;
                 break;
             case USER_INFO_CERTS:
+                signaling_build_param_user_info_response(msg, conn, &ctx_out, USER_INFO_CERTS);
                 i++;
                 break;
 
@@ -995,19 +1038,19 @@ void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t *
  */
 int signaling_get_update_type(const struct hip_common *msg)
 {
-    int                                             err                = -1;
-    const struct signaling_param_app_context       *param_app_ctx      = NULL;
-    const struct hip_seq                           *param_seq          = NULL;
-    const struct hip_ack                           *param_ack          = NULL;
-    const struct hip_cert                          *param_cert         = NULL;
+    int                                       err           = -1;
+    const struct signaling_param_app_context *param_app_ctx = NULL;
+    const struct hip_seq                     *param_seq     = NULL;
+    const struct hip_ack                     *param_ack     = NULL;
+    const struct hip_cert                    *param_cert    = NULL;
     //const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
-    const struct signaling_param_cert_chain_id     *param_cer_chain_id = NULL;
+    const struct signaling_param_cert_chain_id *param_cer_chain_id = NULL;
 
     //TODO check for the parameters to be put here
-    param_app_ctx      = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
-    param_seq          = hip_get_param(msg, HIP_PARAM_SEQ);
-    param_ack          = hip_get_param(msg, HIP_PARAM_ACK);
-    param_cert         = hip_get_param(msg, HIP_PARAM_CERT);
+    param_app_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
+    param_seq     = hip_get_param(msg, HIP_PARAM_SEQ);
+    param_ack     = hip_get_param(msg, HIP_PARAM_ACK);
+    param_cert    = hip_get_param(msg, HIP_PARAM_CERT);
     //param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
 

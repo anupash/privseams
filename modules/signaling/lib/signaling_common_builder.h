@@ -56,6 +56,10 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                                             struct signaling_connection_context *ctx,
                                             const uint8_t app_info_flag);
 
+int signaling_build_param_user_info_response(struct hip_common *msg,
+                                             struct signaling_connection existing_conn,
+                                             struct signaling_connection_context *ctx,
+                                             const uint8_t user_info_flag);
 /* Builders for internal state structures */
 int signaling_build_host_context(const struct signaling_param_host_context *param_host_ctx,
                                  struct signaling_host_context *host_ctx);

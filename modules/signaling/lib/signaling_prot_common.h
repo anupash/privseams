@@ -708,6 +708,12 @@ struct signaling_param_user_info_id {
     hip_tlv_len length;
     hip_tlv_len user_dn_length;
     hip_tlv_len prr_length;
+
+    uint16_t      flags;
+    uint8_t       protocol;
+    uint8_t       algorithm;
+    unsigned char pkey[SIGNALING_USER_KEY_MAX_LEN];
+    unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
 } __attribute__((packed));
 
 
