@@ -48,16 +48,22 @@ static X509AC *get_application_attribute_certificate_chain(const char *app_file,
     FILE   *fp = NULL;
     char    app_cert_file[PATH_MAX];
     X509AC *app_cert = NULL;
-    int     err      = 0;
 
-    HIP_IFEL(app_file == NULL, -1, "Got no path to application (NULL).\n");
+    if (app_file == NULL) {
+	HIP_ERROR("Got no path to application (NULL).\n");
+	return NULL;
+    }
 
     /* Get the application attribute certificate */
     sprintf(app_cert_file, "%s.cert", app_file);
-    HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
-             -1, "Application certificate could not be found at %s.\n", app_cert_file);
-    HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
-             -1, "Could not decode application certificate.\n");
+    if (!(fp = fopen(app_cert_file, "r"))) {
+	HIP_ERROR("Application certificate could not be found at %s.\n", app_cert_file);
+	return NULL;
+    }
+    if (!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL))) {
+        HIP_ERROR("Could not decode application certificate.\n");
+        return NULL;
+    }
     fclose(fp);
 
     /* Look if there is a chain for this certificate */
@@ -68,9 +74,6 @@ static X509AC *get_application_attribute_certificate_chain(const char *app_file,
     *chain = signaling_load_certificate_chain(app_cert_file);
 
     return app_cert;
-
-out_err:
-    return NULL;
 }
 
 /**
