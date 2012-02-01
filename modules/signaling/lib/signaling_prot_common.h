@@ -136,9 +136,16 @@
 /* Parameters for the information items
  * Information items is a data structure to store values requested by the middlebox
  */
-#define MAX_INFO_LENGTH 200
-#define MAX_NUM_INFO_ITEMS 10
-#define MAX_NUM_SERVICE_OFFER_ACCEPTABLE 10
+#define MAX_INFO_LENGTH                             200
+#define MAX_NUM_INFO_ITEMS                          10
+#define MAX_NUM_SERVICE_OFFER_ACCEPTABLE            10
+#define MAX_SIZE_HOST_KERNEL                        24
+#define MAX_SIZE_HOST_OS                            24
+#define MAX_SIZE_CERT_GRP                           64
+#define MAX_SIZE_APP_INFO_REQ_CLASS                 16
+#define MAX_SIZE_APP_VERSION                        16
+#define MAX_NUM_PORT_PAIR                           10
+
 /*
  * // Request types/ Profiles for host information
  * #define HOST_INFO_SHORT         30
@@ -607,6 +614,15 @@ struct signaling_param_host_info_id {
     hip_tlv_len host_id_length;
     uint8_t     domain_id_type;
     uint8_t     domain_id_length;
+
+    /* Host Identity is the Public Key
+     * Length = Size of rdata + length of the key
+     */
+    struct hip_host_id_key_rdata rdata;
+    unsigned char                host_id[HIP_MAX_RSA_KEY_LEN / 8 + 4];
+
+    //TODO clarify what to store here.
+    char domain_id[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 } __attribute__((packed));
 
 
@@ -620,14 +636,15 @@ struct signaling_param_host_info_id {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |      HOST_INFO_KERNEL         |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                    Length Kernel Version                      /
+ * |                             Kernel                            /
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
 
 struct signaling_param_host_info_kernel {
-    hip_tlv     type;
-    hip_tlv_len length;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    unsigned char kernel[MAX_SIZE_HOST_KERNEL];
 } __attribute__((packed));
 
 
@@ -646,8 +663,9 @@ struct signaling_param_host_info_kernel {
  *
  */
 struct signaling_param_host_info_certs {
-    hip_tlv     type;
-    hip_tlv_len length;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    unsigned char certificate_grp[MAX_SIZE_CERT_GRP];
 } __attribute__((packed));
 
 
@@ -670,10 +688,12 @@ struct signaling_param_host_info_certs {
  *
  */
 struct signaling_param_host_info_os {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    os_len;
-    uint32_t    os_version_len;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint16_t      os_len;
+    uint16_t      os_version_len;
+    unsigned char os_name[MAX_SIZE_HOST_OS];
+    unsigned char os_version[MAX_SIZE_HOST_OS];
 } __attribute__((packed));
 
 
@@ -733,8 +753,9 @@ struct signaling_param_user_info_id {
  */
 
 struct signaling_param_user_info_certs {
-    hip_tlv     type;
-    hip_tlv_len length;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    unsigned char certificate_group[MAX_SIZE_CERT_GRP];
 } __attribute__((packed));
 
 
@@ -761,10 +782,13 @@ struct signaling_param_user_info_certs {
  */
 
 struct signaling_param_app_info_name {
-    hip_tlv     type;
-    hip_tlv_len length;
-    hip_tlv_len app_dn_length;
-    hip_tlv_len issuer_dn_length;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    hip_tlv_len   app_dn_length;
+    hip_tlv_len   issuer_dn_length;
+    unsigned char application_dn[SIGNALING_APP_DN_MAX_LEN];
+    unsigned char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
+    unsigned char application_version[MAX_SIZE_APP_VERSION];
 } __attribute__((packed));
 
 
@@ -790,10 +814,11 @@ struct signaling_param_app_info_name {
  */
 
 struct signaling_param_app_info_connections {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    connection_count;
-    hip_tlv_len port_pair_length;
+    hip_tlv                    type;
+    hip_tlv_len                length;
+    uint16_t                   connection_count;
+    hip_tlv_len                port_pair_length;
+    struct signaling_port_pair sockets[MAX_NUM_PORT_PAIR];
 } __attribute__((packed));
 
 
@@ -816,6 +841,7 @@ struct signaling_param_app_info_connections {
 struct signaling_param_app_info_qos_class {
     hip_tlv     type;
     hip_tlv_len length;
+    unsigned char class[MAX_SIZE_APP_INFO_REQ_CLASS];
 } __attribute__((packed));
 
 
@@ -836,8 +862,9 @@ struct signaling_param_app_info_qos_class {
  */
 
 struct signaling_param_app_info_requirements {
-    hip_tlv     type;
-    hip_tlv_len length;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    unsigned char requirements[MAX_SIZE_APP_INFO_REQ_CLASS];
 } __attribute__((packed));
 
 
@@ -897,10 +924,11 @@ struct signaling_param_service_offer_u {
  */
 
 struct signaling_param_service_ack {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    service_offer_id;
-    uint16_t    service_option;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint16_t      service_offer_id;
+    uint16_t      service_option;
+    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
 } __attribute__((packed));
 
 
@@ -924,10 +952,11 @@ struct signaling_param_service_ack {
  */
 
 struct signaling_param_service_nack {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    service_offer_id;
-    uint16_t    nack_reason;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint16_t      service_offer_id;
+    uint16_t      nack_reason;
+    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
 } __attribute__((packed));
 
 

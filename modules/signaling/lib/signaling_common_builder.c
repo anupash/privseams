@@ -500,11 +500,10 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     switch (host_info_flag) {
     case HOST_INFO_KERNEL:
         HIP_DEBUG("Request for Information about Host Kernel found. Building host info kernel parameter.\n");
-        tmp_len = htons(ctx->host.host_kernel_len);
-        memcpy(param_buf, ctx->host.host_kernel, ctx->host.host_kernel_len);
+        (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? tmp_len = MAX_SIZE_HOST_KERNEL : tmp_len = ctx->host.host_kernel_len;
+        memcpy(host_info_kernel.kernel, ctx->host.host_kernel, tmp_len);
 
-        len_contents = ((sizeof(struct signaling_param_host_info_kernel) - sizeof(struct hip_tlv_common)) + tmp_len);
-        hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, len_contents);
+        hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, tmp_len);
         hip_set_param_type((struct hip_tlv_common *) &host_info_kernel, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
 
         /* Append the parameter to the message */
@@ -515,17 +514,17 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
         break;
     case HOST_INFO_OS:
         HIP_DEBUG("Request for Information about Host OS found. Building host info os parameter\n");
-        host_info_os.os_len = htons(ctx->host.host_os_len);
-        p_tmp               = (uint8_t *) param_buf;
-        memcpy(p_tmp, ctx->host.host_os, ctx->host.host_os_len);
-        len_contents += ctx->host.host_os_len;
+        (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? tmp_len = MAX_SIZE_HOST_OS : tmp_len = ctx->host.host_os_len;
+        host_info_os.os_len                                  = htons(tmp_len);
+        memcpy(host_info_os.os_name, ctx->host.host_os, tmp_len);
+        len_contents += tmp_len;
 
-        host_info_os.os_version_len = htons(ctx->host.host_os_len);
-        p_tmp                      += len_contents;
-        memcpy(p_tmp, ctx->host.host_os, host_info_os.os_version_len);
-        len_contents += host_info_os.os_version_len;
+        (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? tmp_len = MAX_SIZE_HOST_OS : tmp_len = ctx->host.host_os_ver_len;
+        host_info_os.os_version_len                              = htons(tmp_len);
+        memcpy(host_info_os.os_version, ctx->host.host_os_version, tmp_len);
+        len_contents += tmp_len;
 
-        len_contents += (sizeof(struct signaling_param_host_info_os) - sizeof(struct hip_tlv_common));
+        len_contents += sizeof(host_info_os.os_len) + sizeof(host_info_os.os_version_len) + len_contents;
         hip_set_param_contents_len((struct hip_tlv_common *) &host_info_os, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &host_info_os, HIP_PARAM_SIGNALING_HOST_INFO_OS);
 
@@ -536,27 +535,34 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
         }
         break;
     case HOST_INFO_ID:
+        //TODO right now the assumption is HOST_ID parameter is sent already in the I2 and R2 packet
+        //TODO change the code when blinding occurs
+
         HIP_DEBUG("Request for Information about Host ID found. Building host info ID parameter\n");
-        host_info_id.host_id_length = htons(ctx->host.host_name_len);
-        p_tmp                       = (uint8_t *) param_buf;
-        memcpy(p_tmp, ctx->host.host_name, ctx->host.host_name_len);
-        len_contents += ctx->host.host_name_len;
 
-        host_info_id.domain_id_length = htons(ctx->host.host_domain_name_len);
-        p_tmp                         = (uint8_t *) param_buf;
-        memcpy(p_tmp, ctx->host.host_domain_name, ctx->host.host_domain_name_len);
-        len_contents += ctx->host.host_domain_name_len;
-
-        len_contents += sizeof(struct signaling_param_host_info_id) - -sizeof(struct hip_tlv_common);
-        hip_set_param_contents_len((struct hip_tlv_common *) &host_info_id, len_contents);
-        hip_set_param_type((struct hip_tlv_common *) &host_info_id, HIP_PARAM_SIGNALING_HOST_INFO_ID);
-
-        /* Append the parameter to the message */
-        if (hip_build_generic_param(msg, &host_info_kernel, sizeof(struct signaling_param_host_info_id), param_buf)) {
-            HIP_ERROR("Failed to append host info kernel parameter to message.\n");
-            return -1;
-            break;
-        }
+/*
+ *       host_info_id.host_id_length = htons(ctx->host.host_name_len);
+ *       p_tmp                       = (uint8_t *) param_buf;
+ *       memcpy(p_tmp, ctx->host.host_name, ctx->host.host_name_len);
+ *       len_contents += ctx->host.host_name_len;
+ *
+ *       host_info_id.domain_id_length = htons(ctx->host.host_domain_name_len);
+ *       p_tmp                         = (uint8_t *) param_buf;
+ *       memcpy(p_tmp, ctx->host.host_domain_name, ctx->host.host_domain_name_len);
+ *       len_contents += ctx->host.host_domain_name_len;
+ *
+ *       len_contents += sizeof(struct signaling_param_host_info_id) - -sizeof(struct hip_tlv_common);
+ *       hip_set_param_contents_len((struct hip_tlv_common *) &host_info_id, len_contents);
+ *       hip_set_param_type((struct hip_tlv_common *) &host_info_id, HIP_PARAM_SIGNALING_HOST_INFO_ID);
+ *
+ *        Append the parameter to the message
+ *       if (hip_build_generic_param(msg, &host_info_kernel, sizeof(struct signaling_param_host_info_id), param_buf)) {
+ *           HIP_ERROR("Failed to append host info kernel parameter to message.\n");
+ *           return -1;
+ *           break;
+ *       }
+ */
+        break;
     case HOST_INFO_CERTS:
         HIP_DEBUG("Request for Information about Host OS found. Building host info context\n");
         //TODO handler for the certificate request of host
@@ -586,19 +592,19 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
     case APP_INFO_NAME:
         tmp_len                        = strlen(ctx->app.issuer_dn);
         app_info_name.issuer_dn_length = htons(tmp_len);
-        memcpy(p_tmp, ctx->app.issuer_dn, tmp_len);
+        memcpy(app_info_name.issuer_dn, ctx->app.issuer_dn, tmp_len);
         len_contents = tmp_len;
 
-        p_tmp                      += tmp_len;
         tmp_len                     = strlen(ctx->app.application_dn);
         app_info_name.app_dn_length = htons(tmp_len);
-        memcpy(p_tmp, ctx->app.application_dn, tmp_len);
+        memcpy(app_info_name.application_dn, ctx->app.application_dn, tmp_len);
         len_contents += tmp_len;
 
-        len_contents += sizeof(struct signaling_param_app_info_name) - -sizeof(struct hip_tlv_common);
+        len_contents += sizeof(app_info_name.app_dn_length) + sizeof(app_info_name.issuer_dn_length);
         hip_set_param_contents_len((struct hip_tlv_common *) &app_info_name, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &app_info_name, HIP_PARAM_SIGNALING_APP_INFO_NAME);
 
+        //TODO do not have the version parameter set. Leaving it to null character.
         /* Append the parameter to the message */
         if (hip_build_generic_param(msg, &app_info_name, sizeof(struct signaling_param_app_info_name), param_buf)) {
             HIP_ERROR("Failed to append application info name parameter to message.\n");
@@ -633,14 +639,16 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
     switch (user_info_flag) {
     case USER_INFO_ID:
         user_info_id.user_dn_length = htons(ctx->user.subject_name_len);
+        len_contents               += ctx->user.subject_name_len;
         user_info_id.prr_length     = htons(ctx->user.key_rr_len);
+        len_contents               += ctx->user.key_rr_len;
         user_info_id.flags          = ctx->user.rdata.flags;
         user_info_id.algorithm      = ctx->user.rdata.algorithm;
         user_info_id.protocol       = ctx->user.rdata.protocol;
         memcpy(user_info_id.subject_name, ctx->user.subject_name, ctx->user.subject_name_len);
         memcpy(user_info_id.pkey,         ctx->user.pkey,         ctx->user.key_rr_len);
 
-        len_contents += sizeof(struct signaling_param_user_info_id) - -sizeof(struct hip_tlv_common);
+        len_contents += sizeof(user_info_id.user_dn_length) + sizeof(user_info_id.prr_length) + sizeof(struct hip_host_id_key_rdata) + len_contents;
         hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_APP_INFO_NAME);
 
@@ -783,14 +791,13 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                 struct signaling_connection conn,
                                                 const struct signaling_param_service_offer_u *offer)
 {
-    int           err                = 0;
-    int           num_req_info_items = 0;
-    int           i                  = 0;
-    uint16_t      tmp_len;
-    int           len_contents = 0;
-    uint16_t      tmp_info;
-    unsigned char ibf[offer->length];
-    unsigned char obf[offer->length];
+    int                           err                = 0;
+    int                           num_req_info_items = 0;
+    int                           i                  = 0;
+    uint16_t                      tmp_len;
+    int                           len_contents = 0;
+    uint16_t                      tmp_info;
+    const struct  hip_tlv_common *param;
 
     char                                param_buf[HIP_MAX_PACKET];
     struct signaling_param_service_ack  ack;
@@ -801,30 +808,26 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER);
 
-    num_req_info_items = (hip_get_param_type(offer) - (sizeof(struct hip_tlv_common) +
-                                                       sizeof(offer->service_offer_id) +
-                                                       sizeof(offer->service_type) +
-                                                       sizeof(offer->service_description))) / sizeof(uint16_t);
+    num_req_info_items = (hip_get_param_total_len(offer) - (sizeof(struct hip_tlv_common) +
+                                                            sizeof(offer->service_offer_id) +
+                                                            sizeof(offer->service_type) +
+                                                            sizeof(offer->service_description))) / sizeof(uint16_t);
 
+    param = (const struct  hip_tlv_common *) offer;
     signaling_get_connection_context(conn, &ctx_out);
 
 
-    /*All the work to generate the hash of the service offer*/
-    memcpy(&ibf, &offer->service_offer_id, sizeof(offer->service_offer_id));
-    tmp_len = sizeof(offer->service_offer_id);
-    memcpy(&ibf[tmp_len], &offer->service_type, sizeof(offer->service_type));
-    tmp_len += sizeof(offer->service_type);
-    memcpy(&ibf[tmp_len], &offer->service_description, sizeof(offer->service_description));
-    tmp_len += sizeof(offer->service_description);
-    memcpy(&ibf[tmp_len], &offer->endpoint_info_req, num_req_info_items * sizeof(uint16_t));
-    tmp_len += num_req_info_items * sizeof(uint16_t);
-    SHA1(ibf, tmp_len, obf);
 
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
+        /* Creating the acknowledgment of the service offer*/
         ack.service_offer_id = offer->service_offer_id;
         ack.service_option   = 0;
+        /*Generate the hash of the service offer*/
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (offer + 1), offer->length, ack.service_offer_hash),
+                 -1, "Could not build hash of the service offer \n");
 
+        /*Processing the information requests in the service offer*/
         while ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0) {
             switch (tmp_info) {
             case HOST_INFO_OS:
@@ -872,9 +875,8 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
             }
         }
         //TODO add the service offer hash to the acknowledgment
-        memcpy(param_buf, obf, tmp_len);
 
-        len_contents = ((sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common)) + strlen(param_buf));
+        len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
         hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
 
