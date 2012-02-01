@@ -485,7 +485,6 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
 {
     int                                     err          = 0;
     int                                     len_contents = 0;
-    int                                     num_items    = 0;
     int                                     tmp_len;
     uint8_t                                *p_tmp = NULL;
     char                                    param_buf[HIP_MAX_PACKET];
@@ -498,8 +497,6 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     HIP_IFEL(msg        == NULL,    -1, "Got no msg context. (msg == NULL)\n");
 
     /*BUILD THE PARAMETER CONTENTS*/
-    num_items = 0;
-
     switch (host_info_flag) {
     case HOST_INFO_KERNEL:
         HIP_DEBUG("Request for Information about Host Kernel found. Building host info kernel parameter.\n");
