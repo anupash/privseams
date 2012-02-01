@@ -718,7 +718,7 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
     int tmp_len = 0;
 //    const struct signaling_param_user_auth_request *param_usr_auth;
     const struct signaling_param_service_offer_u *param_service_offer;
-    const uint8_t                                *p_contents;
+    //const uint8_t                                *p_contents;
 
     /* sanity checks */
     HIP_IFEL(!conn,           -1, "Cannot update flags of NULL-connection\n");
@@ -748,9 +748,9 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
                               sizeof(param_service_offer->service_type) +
                               sizeof(param_service_offer->service_description)))
                   / sizeof(param_service_offer->endpoint_info_req[0]);
-        p_contents = (const uint8_t *) param_service_offer + sizeof(param_service_offer->service_offer_id) +
-                     sizeof(param_service_offer->service_type) +
-                     sizeof(param_service_offer->service_description);
+        //p_contents = (const uint8_t *) param_service_offer + sizeof(param_service_offer->service_offer_id) +
+        //             sizeof(param_service_offer->service_type) +
+        //             sizeof(param_service_offer->service_description);
 
 /*        for (i = 0; i < tmp_len; i++) {
  *          memcpy(&tmp_info, p_contents, sizeof(param_service_offer->endpoint_info_req[i]));
