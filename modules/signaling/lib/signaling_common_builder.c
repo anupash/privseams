@@ -623,12 +623,12 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
 {
     int len_contents = 0;
     //int                                     tmp_len;
-    uint8_t                            *p_tmp = NULL;
+    //uint8_t                            *p_tmp = NULL;
     char                                param_buf[HIP_MAX_PACKET];
     struct signaling_param_user_info_id user_info_id;
     //struct signaling_param_user_info_certs   user_info_name;
 
-    p_tmp = (uint8_t *) param_buf;
+    //p_tmp = (uint8_t *) param_buf;
 
     switch (user_info_flag) {
     case USER_INFO_ID:
