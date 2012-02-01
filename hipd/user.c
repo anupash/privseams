@@ -698,7 +698,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         break;
     default:
         if (hip_user_run_handles(msg_type, msg, src) < 0) {
-            ;
             HIP_ERROR("Unknown socket option (%d)\n", msg_type);
             err = -ESOCKTNOSUPPORT;
         }
