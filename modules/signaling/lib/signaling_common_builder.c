@@ -581,14 +581,12 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
     int                                         len_contents = 0;
     int                                         i            = 0;
     int                                         tmp_len;
-    uint8_t                                    *p_tmp = NULL;
     char                                        param_buf[HIP_MAX_PACKET];
     struct signaling_param_app_info_name        app_info_name;
     struct signaling_param_app_info_connections app_info_conn;
     //struct signaling_param_app_info_qos_class    app_info_qos;
     //struct signaling_param_app_info_requirements app_info_req;
 
-    p_tmp = (uint8_t *) param_buf;
     switch (app_info_flag) {
     case APP_INFO_NAME:
         tmp_len                        = strlen(ctx->app.issuer_dn);
