@@ -107,7 +107,6 @@ struct signaling_connection *signaling_hipd_state_get_connection(struct signalin
 struct signaling_connection *signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
                                                                  const struct signaling_connection *const conn)
 {
-    int                          err       = 0;
     struct signaling_connection *new_entry = NULL;
 
     /* allocate new entry and copy contents */
@@ -117,8 +116,10 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
     }
 
     signaling_copy_connection(new_entry, conn);
-    HIP_IFEL(hip_ll_add_last(state->connections, new_entry), -1,
-             "Could not add the connection context to the signaling state");
+    if (hip_ll_add_last(state->connections, new_entry)) {
+        HIP_ERROR("Could not add the connection context to the signaling state");
+	return NULL;
+    }
 
     /* Remember this for BEX */
     if (!state->pending_conn) {
@@ -126,9 +127,6 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
         HIP_DEBUG("Set pending context.. \n");
     }
     return new_entry;
-
-out_err:
-    return NULL;
 }
 
 void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, struct signaling_connection *conn)
