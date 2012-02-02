@@ -830,7 +830,6 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
     int                           i                  = 0;
     int                           len_contents       = 0;
     uint16_t                      tmp_info;
-    const struct  hip_tlv_common *param;
 
     char                               param_buf[HIP_MAX_PACKET];
     struct signaling_param_service_ack ack;
@@ -845,7 +844,6 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                             sizeof(offer->service_type) +
                                                             sizeof(offer->service_description))) / sizeof(uint16_t);
 
-    param = (const struct  hip_tlv_common *) offer;
     signaling_get_connection_context(conn, ctx_out);
 
     /* number of service offers to be accepted, if more than the limit drop it */
