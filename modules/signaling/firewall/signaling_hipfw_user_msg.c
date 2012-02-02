@@ -297,7 +297,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     const hip_hit_t             *hitr  = NULL;
     //const struct signaling_connection       *recv_conn     = NULL;
     struct signaling_connection       *existing_conn = NULL;
-    const struct signaling_connection *recv_conn;
+    //const struct signaling_connection *recv_conn;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -313,7 +313,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection parameter from connection request \n");
-    recv_conn = (const struct signaling_connection *) (param + 1);
+    //recv_conn = (const struct signaling_connection *) (param + 1);
 
     /*HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
      *       -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);*/
