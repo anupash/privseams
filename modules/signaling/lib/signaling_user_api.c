@@ -54,8 +54,8 @@ STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid) {
     homedir = get_user_homedir(uid);
     sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
     if (!(ret = signaling_load_certificate_chain(filebuf))) {
-	HIP_ERROR("Could not get user certificate \n");
-	sk_free(ret);
+        HIP_ERROR("Could not get user certificate \n");
+        sk_X509_free(ret);
         return NULL;
     }
 
