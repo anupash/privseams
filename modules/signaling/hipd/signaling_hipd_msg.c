@@ -117,32 +117,42 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
                                                const uint32_t seq,
                                                const uint32_t ack)
 {
-    int                err     = 0;
     uint16_t           mask    = 0;
     struct hip_common *msg_buf = NULL;
 
     /* sanity checks */
-    HIP_IFEL(!conn, -1, "Cannot build update message from NULL-connection \n");
+    HIP_ASSERT(conn);
 
     /* Allocate and build message */
-    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-             -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+    if (!(msg_buf = hip_msg_alloc())) {
+	HIP_ERROR("Out of memory while allocation memory for the bex update packet\n");
+	return NULL;
+    }
     hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
 
     /* Add sequence number in U1 and U2 */
     if (type == SIGNALING_FIRST_BEX_UPDATE || type == SIGNALING_SECOND_BEX_UPDATE) {
-        HIP_IFEL(hip_build_param_seq(msg_buf, seq),
-                 -1, "Building of SEQ parameter failed\n");
+        if (hip_build_param_seq(msg_buf, seq)) {
+	    HIP_ERROR("Building of SEQ parameter failed\n");
+	    free(msg_buf);
+	    return NULL;
+        }
     }
     /* Add ACK paramater in U2 and U3 */
     if (type == SIGNALING_SECOND_BEX_UPDATE || type == SIGNALING_THIRD_BEX_UPDATE) {
-        HIP_IFEL(hip_build_param_ack(msg_buf, ack),
-                 -1, "Building of ACK parameter failed\n");
+        if (hip_build_param_ack(msg_buf, ack)) {
+            HIP_ERROR("Building of ACK parameter failed\n");
+            free(msg_buf);
+	    return NULL;
+	}
     }
 
     /* Add connection id, this paremeter is critical. */
-    HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
-             -1, "Building of connection identifier parameter failed\n");
+    if (signaling_build_param_connection_identifier(msg_buf, conn)) {
+	HIP_ERROR("Building of connection identifier parameter failed\n");
+	free(msg_buf);
+	return NULL;
+    }
 
     /* Add application and user context.
      * These parameters (as well as the user's signature are non-critical */
@@ -168,8 +178,11 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     }
 
     /* Add host authentication */
-    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
-             -1, "Building of HMAC failed\n");
+    if (hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out)) {
+	HIP_ERROR("Building of HMAC failed\n");
+	free(msg_buf);
+	return NULL;
+    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
@@ -177,8 +190,11 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
     hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
 #endif
-    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
-             -EINVAL, "Could not sign UPDATE. Failing\n");
+    if (ha->sign(ha->our_priv_key, msg_buf)) {
+        HIP_ERROR("Could not sign UPDATE. Failing\n");
+	free(msg_buf);
+	return NULL;
+    }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
@@ -204,10 +220,6 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 #endif
 
     return msg_buf;
-
-out_err:
-    free(msg_buf);
-    return NULL;
 }
 
 /**
