@@ -547,7 +547,6 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
     X509                                       *cert          = NULL;
     struct userdb_certificate_context          *cert_ctx      = NULL;
     uint32_t                                    network_id;
-    uint32_t                                    conn_id;
     const struct hip_cert                      *param_cert = NULL;
     struct signaling_connection_context        *conn_ctx   = NULL;
 
@@ -557,7 +556,6 @@ static int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_c
     /* get connection identifier and context */
     HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
-    conn_id    =  ntohl(param_cert_id->connection_id);
     network_id = ntohl(param_cert_id->network_id);
     /*HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, conn_id, &status)),
      *       -1, "No connection context for connection id \n");*/
@@ -628,14 +626,14 @@ static int signaling_hipfw_handle_incoming_certificate_update_ack(const struct h
 {
     int                                         err           = 1;
     const struct signaling_param_cert_chain_id *param_cert_id = NULL;
-    uint32_t                                    network_id;
-    uint32_t                                    conn_id;
+    //uint32_t                                    network_id;
+    //uint32_t                                    conn_id;
 
     /* get connection identifier and context */
     HIP_IFEL(!(param_cert_id = hip_get_param(common, HIP_PARAM_SIGNALING_CERT_CHAIN_ID)),
              0, "No connection identifier found in the message, cannot handle certificates.\n");
-    conn_id    =  ntohl(param_cert_id->connection_id);
-    network_id = ntohl(param_cert_id->network_id);
+    //conn_id    =  ntohl(param_cert_id->connection_id);
+    //network_id = ntohl(param_cert_id->network_id);
     /*HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &conn_id, &status)),
      *       0, "No connection context for connection id \n");*/
 /*
