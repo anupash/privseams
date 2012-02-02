@@ -1237,14 +1237,7 @@ static int handle_i2(struct hip_common *const common,
                      struct tuple *const tuple,
                      struct hip_fw_context *const ctx)
 {
-    struct tuple                    *other_dir = NULL;
     const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
-
-    if (tuple->direction == ORIGINAL_DIR) {
-        other_dir = &tuple->connection->reply;
-    } else {
-        other_dir = &tuple->connection->original;
-    }
 
     if (hip_fw_verify_and_store_host_id(common, tuple)) {
         HIP_ERROR("unable to create security state from I2 packet\n");
@@ -1288,14 +1281,7 @@ static int handle_r2(struct hip_common *const common,
                      struct tuple *const tuple,
                      struct hip_fw_context *const ctx)
 {
-    const struct tuple              *other_dir = NULL;
     const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
-
-    if (tuple->direction == ORIGINAL_DIR) {
-        other_dir = &tuple->connection->reply;
-    } else {
-        other_dir = &tuple->connection->original;
-    }
 
     if (!hip_fw_verify_packet(common, tuple)) {
         HIP_ERROR("failed to verify R2 packet\n");
@@ -1572,7 +1558,6 @@ static int handle_update(struct hip_common *const common,
     const struct hip_locator  *locator   = NULL;
     const struct hip_seq      *seq       = NULL;
     const struct hip_ack      *ack       = NULL;
-    struct tuple              *other_dir = NULL;
 
     /* classify UPDATE message */
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -1592,11 +1577,7 @@ static int handle_update(struct hip_common *const common,
             *tuple = get_tuple_by_hits(&common->hits, &common->hitr);
         }
     } else if (esp_info && seq && ack) {
-        if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
-            other_dir = &(*tuple)->connection->reply;
-        } else if (*tuple) {
-            other_dir = &(*tuple)->connection->original;
-        } else {
+        if (!(*tuple)) {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
             return 0;
         }
@@ -1611,11 +1592,7 @@ static int handle_update(struct hip_common *const common,
             return 0;
         }
     } else if (ack) {
-        if (*tuple && (*tuple)->direction == ORIGINAL_DIR) {
-            other_dir = &(*tuple)->connection->reply;
-        } else if (*tuple) {
-            other_dir = &(*tuple)->connection->original;
-        } else {
+        if (!(*tuple)) {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
             return 0;
         }
