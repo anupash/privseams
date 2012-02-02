@@ -121,7 +121,6 @@ static int hip_handle_nat_input(struct hip_packet_context *ctx)
 static int hip_handle_user_sock(struct hip_packet_context *ctx)
 {
     int                 err      = 0, send_response = 0, n = 0, len = 0;
-    uint8_t             msg_type = 0;
     struct sockaddr_in6 app_src;
 
     HIP_DEBUG("received on: hip_user_sock\n");
@@ -132,7 +131,6 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
              -1,
              "Reading user msg failed\n");
 
-    msg_type      = hip_get_msg_type(ctx->input_msg);
     send_response = hip_get_msg_response(ctx->input_msg);
 
     err = hip_handle_user_msg(ctx->input_msg, &app_src);
