@@ -362,6 +362,125 @@ out_err:
     return err;
 }
 
+int signaling_init_app_context_from_msg(struct signaling_application_context *const ctx,
+                                        const struct hip_common *const msg,
+                                        UNUSED enum direction dir)
+{
+    int                          err     = 0;
+    int                          tmp_len = 0;
+    int                          i       = 0;
+    const struct hip_tlv_common *param   = NULL;
+
+
+    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_NAME) {
+        memcpy(ctx->application_dn, ((const struct signaling_param_app_info_name *) param)->application_dn,
+               ((const struct signaling_param_app_info_name *) param)->app_dn_length);
+        memcpy(ctx->issuer_dn, ((const struct signaling_param_app_info_name *) param)->issuer_dn,
+               ((const struct signaling_param_app_info_name *) param)->issuer_dn_length);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
+        tmp_len = ((const struct signaling_param_app_info_connections *) param)->port_pair_length;
+        for (i = 0; i < tmp_len; i++) {
+            ctx->sockets[i].src_port = ((const struct signaling_param_app_info_connections *) param)->sockets[2 * i];
+            ctx->sockets[i].dst_port = ((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1];
+        }
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS) {
+        //TODO handler for the packet type APP_INFO_QOS_CLASS
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS) {
+        //TODO handler for the packet type APP_INFO_REQUIREMENTS
+        ctx->requirements[0] = '\0';
+    }
+
+out_err:
+    return err;
+}
+
+int signaling_init_host_context_from_msg(struct signaling_host_context *const ctx,
+                                         const struct hip_common *const msg,
+                                         UNUSED enum direction dir)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+
+    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
+        //TODO left for now because the case is not trivial. HIP_PARAM_HOST_ID is also the same
+    }
+
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
+        ctx->host_kernel_len = param->length;
+        memcpy(ctx->host_kernel, ((const struct signaling_param_host_info_kernel *) param)->kernel,
+               param->length);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
+        ctx->host_os_len = ((const struct signaling_param_host_info_os *) param)->os_len;
+        memcpy(ctx->host_os, ((const struct signaling_param_host_info_os *) param)->os_name,
+               ((const struct signaling_param_host_info_os *) param)->os_len);
+        ctx->host_os_ver_len = ((const struct signaling_param_host_info_os *) param)->os_version_len;
+        memcpy(ctx->host_os_version, ((const struct signaling_param_host_info_os *) param)->os_version,
+               ((const struct signaling_param_host_info_os *) param)->os_version_len);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_CERTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_CERTS) {
+        //TODO handler for this case left for later
+    }
+
+out_err:
+    return err;
+}
+
+int signaling_init_user_context_from_msg(struct signaling_user_context *const ctx,
+                                         const struct hip_common *const msg,
+                                         UNUSED enum direction dir)
+{
+    int                          err        = 0;
+    const struct hip_tlv_common *param      = NULL;
+    const uint8_t               *p_contents = NULL;
+    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
+
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
+        p_contents            = (const uint8_t *) (param + 1);
+        ctx->subject_name_len = ((const struct signaling_param_user_info_id *) param)->user_dn_length;
+        p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->user_dn_length);
+        ctx->key_rr_len       = ((const struct signaling_param_user_info_id *) param)->prr_length;
+        p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->prr_length);
+
+        memcpy(&ctx->rdata, ((const struct signaling_param_user_info_id *) (param + 2)), sizeof(struct hip_host_id_key_rdata));
+        p_contents += sizeof(sizeof(struct hip_host_id_key_rdata));
+        memcpy(ctx->subject_name, p_contents, ctx->subject_name_len);
+        p_contents += ctx->subject_name_len;
+        memcpy(ctx->pkey, p_contents, ctx->key_rr_len);
+    }
+
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
+        //TODO handler for this case
+    }
+out_err:
+    return err;
+}
+
 /**
  * Initializes the given signaling connection to default values.
  *
@@ -382,8 +501,7 @@ out_err:
 }
 
 /**
- * Initializes the given connection context by stripping all
- * connection context information found in the message.
+ * Initializes the given signaling connection from information found in the message.
  * Values that are not given in the  message are initialized to default.
  *
  * @param ctx   a pointer to the connection context that should be initialized
@@ -400,52 +518,13 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
 
-    /* sanity checks */
-    HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
-
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection(conn), -1, "Failed to init connection context\n");
-
-/*
- *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
- *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
- *      conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
- *  }
- */
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
         signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
     }
-
-
-/*
- *
- *  signaling_update_flags_from_connection_id(msg, conn);
- *
- *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_U);
- *  while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_U) {
- *      signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
- *      param = hip_get_next_param(msg, param);
- *  }
- *
- *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
- *  while (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER_S) {
- *      signaling_build_service_state((const struct signaling_param_service_offer_u *) param, &ctx_to_init->service);
- *      param = hip_get_next_param(msg, param);
- *  }
- *
- *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
- *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
- *      signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
- *      //signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
- *  }
- *
- *  param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
- *  if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
- *      signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
- *  }
- */
 
 out_err:
     return err;
@@ -679,17 +758,23 @@ int signaling_copy_service_offer(struct signaling_param_service_offer_u *const d
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
-                                               UNUSED const struct hip_common *const msg)
+                                               UNUSED const struct hip_common *const msg,
+                                               enum direction dir)
 {
-    int err = 0;
-    //const struct hip_tlv_common *param = NULL;
+    int                                  err = 0;
+    struct signaling_application_context app_ctx;
+    struct signaling_user_context        user_ctx;
+    struct signaling_host_context        host_ctx;
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
 
     /* init and fill the connection context */
-    HIP_IFEL(signaling_init_connection_context(ctx, IN), -1, "Failed to init connection context\n");
+    HIP_IFEL(signaling_init_connection_context(ctx, dir), -1, "Failed to init connection context\n");
 
+    signaling_init_app_context_from_msg(&app_ctx,   msg, dir);
+    signaling_init_host_context_from_msg(&host_ctx, msg, dir);
+    signaling_init_user_context_from_msg(&user_ctx, msg, dir);
 
 out_err:
     return err;

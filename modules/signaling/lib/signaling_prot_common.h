@@ -1202,7 +1202,8 @@ int signaling_init_application_context(struct signaling_application_context *con
 int signaling_init_connection_context(struct signaling_connection_context *const ctx,
                                       enum direction dir);
 int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
-                                               const struct hip_common *const msg);
+                                               const struct hip_common *const msg,
+                                               enum direction dir);
 int signaling_copy_connection_context(struct signaling_connection_context *const dst,
                                       const struct signaling_connection_context *const src);
 
@@ -1210,6 +1211,15 @@ int signaling_init_connection(struct signaling_connection *const conn);
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
                                        enum direction dir);
+int signaling_init_app_context_from_msg(struct signaling_application_context *const ctx,
+                                        const struct hip_common *const msg,
+                                        UNUSED enum direction dir);
+int signaling_init_host_context_from_msg(struct signaling_host_context *const ctx,
+                                         const struct hip_common *const msg,
+                                         UNUSED enum direction dir);
+int signaling_init_user_context_from_msg(struct signaling_user_context *const ctx,
+                                         const struct hip_common *const msg,
+                                         UNUSED enum direction dir);
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
                                          const struct hip_common *const msg,
                                          enum direction dir);

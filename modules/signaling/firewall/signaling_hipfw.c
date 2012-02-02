@@ -323,9 +323,10 @@ out_err:
  */
 int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                         err = 0;
-    struct signaling_connection new_conn;
-    struct userdb_user_entry   *db_entry = NULL;
+    int                                 err = 0;
+    struct signaling_connection         new_conn;
+    struct userdb_user_entry           *db_entry = NULL;
+    struct signaling_connection_context conn_ctx;
 
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
 
@@ -337,6 +338,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         HIP_ERROR("Could not init connection context from I2 \n");
         return -1;
     }
+
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, common, IN), -1, "Could not initialize the connection context from the message\n");
+
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
