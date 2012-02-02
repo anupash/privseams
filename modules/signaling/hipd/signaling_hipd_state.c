@@ -104,6 +104,34 @@ struct signaling_connection *signaling_hipd_state_get_connection(struct signalin
     return NULL;
 }
 
+/**
+ * return NULL if no such entry, or the matching entry
+ */
+int signaling_hipd_state_get_connections_by_app_name(struct signaling_hipd_state *state,
+                                                     char *app_name, struct hip_ll *ret_list)
+{
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
+    hip_ll_init(ret_list);
+
+    if (state->connections) {
+        while ((iter = hip_ll_iterate(state->connections, iter))) {
+            if (!strcmp(((struct signaling_connection *) (iter->ptr))->application_name, app_name)) {
+                HIP_IFEL(hip_ll_add_last(ret_list, iter->ptr), -1,
+                         "Could not add the connection context to the list");
+            }
+        }
+
+        return 0;
+    } else {
+        return -1;
+    }
+    return -1;
+
+out_err:
+    return err;
+}
+
 struct signaling_connection *signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
                                                                  const struct signaling_connection *const conn)
 {
@@ -118,7 +146,7 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
     signaling_copy_connection(new_entry, conn);
     if (hip_ll_add_last(state->connections, new_entry)) {
         HIP_ERROR("Could not add the connection context to the signaling state");
-	return NULL;
+        return NULL;
     }
 
     /* Remember this for BEX */
@@ -179,4 +207,23 @@ void signaling_hipd_state_print(struct signaling_hipd_state *state)
     }
     //hip_ht_doall(state->connections, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(connections_print));
     HIP_DEBUG("------------------ HIPD SIGNALING STATE END   ------------------\n");
+}
+
+void signaling_port_pairs_from_hipd_state_by_app_name(struct signaling_hipd_state *state, char *app_name, struct signaling_port_pair *ports)
+{
+    const struct hip_ll_node *iter = NULL;
+    int                       i    = 0;
+    HIP_DEBUG("------------------ HIPD SIGNALING STATE START ------------------\n");
+    if (state->connections) {
+        while ((iter = hip_ll_iterate(state->connections, iter)) != NULL) {
+            if (!strcmp(((struct signaling_connection *) (iter->ptr))->application_name, app_name)) {
+                if (i < SIGNALING_MAX_SOCKETS) {
+                    (ports + i)->src_port = ((struct signaling_connection *) iter->ptr)->src_port;
+                    (ports + i)->dst_port = ((struct signaling_connection *) iter->ptr)->dst_port;
+                } else {
+                    return;
+                }
+            }
+        }
+    }
 }

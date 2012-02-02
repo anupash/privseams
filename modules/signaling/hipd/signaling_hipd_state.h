@@ -42,9 +42,13 @@ struct signaling_hipd_state {
 int signaling_hipd_init_state(struct modular_state *state);
 struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id,
                                                                  uint16_t src_port, uint16_t dst_port);
+int signaling_hipd_state_get_connections_by_app_name(struct signaling_hipd_state *state,
+                                                     char *app_name, struct hip_ll *ret_list);
 void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, struct signaling_connection *conn);
 struct signaling_connection *signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
                                                                  const struct signaling_connection *const conn);
 void signaling_hipd_state_print(struct signaling_hipd_state *state);
 
+/* Utility functions*/
+void signaling_port_pairs_from_hipd_state_by_app_name(struct signaling_hipd_state *state, char *app_name, struct signaling_port_pair *ports);
 #endif /*HIP_HIPD_SIGNALING_HIPD_STATE_H*/

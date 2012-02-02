@@ -483,12 +483,12 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
                                              struct signaling_connection_context *ctx,
                                              const uint8_t host_info_flag)
 {
-    int                                     err          = 0;
-    int                                     len_contents = 0;
-    int                                     tmp_len;
-    uint8_t                                *p_tmp = NULL;
-    char                                    param_buf[HIP_MAX_PACKET];
-    struct signaling_param_host_info_id     host_info_id;
+    int err          = 0;
+    int len_contents = 0;
+    int tmp_len;
+    //uint8_t                                *p_tmp = NULL;
+    char param_buf[HIP_MAX_PACKET];
+    //struct signaling_param_host_info_id     host_info_id;
     struct signaling_param_host_info_os     host_info_os;
     struct signaling_param_host_info_kernel host_info_kernel;
     //struct signaling_param_host_info_certs  host_info_certs;
@@ -500,7 +500,7 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     switch (host_info_flag) {
     case HOST_INFO_KERNEL:
         HIP_DEBUG("Request for Information about Host Kernel found. Building host info kernel parameter.\n");
-        (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? tmp_len = MAX_SIZE_HOST_KERNEL : tmp_len = ctx->host.host_kernel_len;
+        (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? (tmp_len = MAX_SIZE_HOST_KERNEL) : (tmp_len = ctx->host.host_kernel_len);
         memcpy(host_info_kernel.kernel, ctx->host.host_kernel, tmp_len);
 
         hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, tmp_len);
@@ -514,13 +514,13 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
         break;
     case HOST_INFO_OS:
         HIP_DEBUG("Request for Information about Host OS found. Building host info os parameter\n");
-        (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? tmp_len = MAX_SIZE_HOST_OS : tmp_len = ctx->host.host_os_len;
-        host_info_os.os_len                                  = htons(tmp_len);
+        (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? (tmp_len = MAX_SIZE_HOST_OS) : (tmp_len = ctx->host.host_os_len);
+        host_info_os.os_len = htons(tmp_len);
         memcpy(host_info_os.os_name, ctx->host.host_os, tmp_len);
         len_contents += tmp_len;
 
-        (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? tmp_len = MAX_SIZE_HOST_OS : tmp_len = ctx->host.host_os_ver_len;
-        host_info_os.os_version_len                              = htons(tmp_len);
+        (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? (tmp_len = MAX_SIZE_HOST_OS) : (tmp_len = ctx->host.host_os_ver_len);
+        host_info_os.os_version_len = htons(tmp_len);
         memcpy(host_info_os.os_version, ctx->host.host_os_version, tmp_len);
         len_contents += tmp_len;
 
@@ -578,12 +578,13 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                                             struct signaling_connection_context *ctx,
                                             const uint8_t app_info_flag)
 {
-    int                                  len_contents = 0;
-    int                                  tmp_len;
-    uint8_t                             *p_tmp = NULL;
-    char                                 param_buf[HIP_MAX_PACKET];
-    struct signaling_param_app_info_name app_info_name;
-    //struct signaling_param_app_info_connections  app_info_conn;
+    int                                         len_contents = 0;
+    int                                         i            = 0;
+    int                                         tmp_len;
+    uint8_t                                    *p_tmp = NULL;
+    char                                        param_buf[HIP_MAX_PACKET];
+    struct signaling_param_app_info_name        app_info_name;
+    struct signaling_param_app_info_connections app_info_conn;
     //struct signaling_param_app_info_qos_class    app_info_qos;
     //struct signaling_param_app_info_requirements app_info_req;
 
@@ -614,11 +615,45 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
     case APP_INFO_REQUIREMENTS:
         break;
     case APP_INFO_CONNECTIONS:
+        for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+            if ((ctx->app.sockets[i].src_port != 0) && (ctx->app.sockets[i].dst_port != 0)) {
+                app_info_conn.sockets[i]     = ctx->app.sockets[i].src_port;
+                app_info_conn.sockets[i + 1] = ctx->app.sockets[i].dst_port;
+                len_contents                += sizeof(struct signaling_port_pair);
+            } else {
+                app_info_conn.port_pair_length = 0;
+                len_contents                   = sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
+                hip_set_param_contents_len((struct hip_tlv_common *) &app_info_conn, len_contents);
+                hip_set_param_type((struct hip_tlv_common *) &app_info_conn, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
+
+                //TODO do not have the version parameter set. Leaving it to null character.
+                /* Append the parameter to the message */
+                if (hip_build_generic_param(msg, &app_info_conn, sizeof(struct signaling_param_app_info_connections), param_buf)) {
+                    HIP_ERROR("Failed to append application info connection parameter to message.\n");
+                    return -1;
+                }
+                return 0;
+            }
+            i += 2;
+        }
+
+        app_info_conn.connection_count = 0;
+        app_info_conn.port_pair_length = i / 2;
+
+        len_contents += sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
+        hip_set_param_contents_len((struct hip_tlv_common *) &app_info_conn, len_contents);
+        hip_set_param_type((struct hip_tlv_common *) &app_info_conn, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
+
+        //TODO do not have the version parameter set. Leaving it to null character.
+        /* Append the parameter to the message */
+        if (hip_build_generic_param(msg, &app_info_conn, sizeof(struct signaling_param_app_info_connections), param_buf)) {
+            HIP_ERROR("Failed to append application info connection parameter to message.\n");
+            return -1;
+        }
         break;
     case APP_INFO_QOS_CLASS:
         break;
     }
-
     return 0;
 }
 
@@ -789,19 +824,18 @@ int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
 //TODO no different parameter types for signed and unsigned service offers. Need to update
 int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                 struct signaling_connection conn,
+                                                struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer_u *offer)
 {
     int                           err                = 0;
     int                           num_req_info_items = 0;
     int                           i                  = 0;
-    uint16_t                      tmp_len;
-    int                           len_contents = 0;
+    int                           len_contents       = 0;
     uint16_t                      tmp_info;
     const struct  hip_tlv_common *param;
 
-    char                                param_buf[HIP_MAX_PACKET];
-    struct signaling_param_service_ack  ack;
-    struct signaling_connection_context ctx_out;
+    char                               param_buf[HIP_MAX_PACKET];
+    struct signaling_param_service_ack ack;
 
     /* sanity checks */
     HIP_IFEL(!offer, -1, "Got NULL service offer parameter\n");
@@ -814,9 +848,7 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                             sizeof(offer->service_description))) / sizeof(uint16_t);
 
     param = (const struct  hip_tlv_common *) offer;
-    signaling_get_connection_context(conn, &ctx_out);
-
-
+    signaling_get_connection_context(conn, ctx_out);
 
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
@@ -831,50 +863,49 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
         while ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0) {
             switch (tmp_info) {
             case HOST_INFO_OS:
-                signaling_build_param_host_info_response(msg, conn, &ctx_out, HOST_INFO_OS);
+                signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_OS);
                 i++;
                 break;
             case HOST_INFO_KERNEL:
-                signaling_build_param_host_info_response(msg, conn, &ctx_out, HOST_INFO_KERNEL);
+                signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_KERNEL);
                 i++;
                 break;
             case HOST_INFO_ID:
-                signaling_build_param_host_info_response(msg, conn, &ctx_out, HOST_INFO_ID);
+                signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_ID);
                 i++;
                 break;
             case HOST_INFO_CERTS:
-                signaling_build_param_host_info_response(msg, conn, &ctx_out, HOST_INFO_CERTS);
+                signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_CERTS);
                 i++;
                 break;
 
             case USER_INFO_ID:
-                signaling_build_param_user_info_response(msg, conn, &ctx_out, USER_INFO_ID);
+                signaling_build_param_user_info_response(msg, conn, ctx_out, USER_INFO_ID);
                 i++;
                 break;
             case USER_INFO_CERTS:
-                signaling_build_param_user_info_response(msg, conn, &ctx_out, USER_INFO_CERTS);
+                signaling_build_param_user_info_response(msg, conn, ctx_out, USER_INFO_CERTS);
                 i++;
                 break;
 
             case APP_INFO_NAME:
-                signaling_build_param_app_info_response(msg, conn, &ctx_out, APP_INFO_NAME);
+                signaling_build_param_app_info_response(msg, conn, ctx_out, APP_INFO_NAME);
                 i++;
                 break;
             case APP_INFO_QOS_CLASS:
-                signaling_build_param_app_info_response(msg, conn, &ctx_out, APP_INFO_QOS_CLASS);
+                signaling_build_param_app_info_response(msg, conn, ctx_out, APP_INFO_QOS_CLASS);
                 i++;
                 break;
             case APP_INFO_REQUIREMENTS:
-                signaling_build_param_app_info_response(msg, conn, &ctx_out, APP_INFO_REQUIREMENTS);
+                signaling_build_param_app_info_response(msg, conn, ctx_out, APP_INFO_REQUIREMENTS);
                 i++;
                 break;
             case APP_INFO_CONNECTIONS:
-                signaling_build_param_app_info_response(msg, conn, &ctx_out, APP_INFO_CONNECTIONS);
+                signaling_build_param_app_info_response(msg, conn, ctx_out, APP_INFO_CONNECTIONS);
                 i++;
                 break;
             }
         }
-        //TODO add the service offer hash to the acknowledgment
 
         len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
         hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);

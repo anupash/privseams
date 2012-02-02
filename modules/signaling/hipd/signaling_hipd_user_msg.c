@@ -305,6 +305,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     //struct signaling_connection_context ctx_in;
     int                       err      = 0;
     struct userdb_user_entry *db_entry = NULL;
+    struct system_app_context sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
@@ -317,32 +318,14 @@ int signaling_handle_connection_request(struct hip_common *msg,
              -1, "Could not copy connection context\n");
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
+    HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
+             -1, "Could not init connection context\n");
+    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx),
+             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", conn->src_port, conn->dst_port);
+    memcpy(conn->application_name, sys_ctx.progname, strlen(sys_ctx.progname));
 
     //TODO check if I need to do ntohs here
     new_conn.id = conn->id;
-
-    /* Look up the host context */
-    //TODO write the handler for verification of host identifier
-    if (signaling_get_verified_application_context_by_ports(conn->src_port, conn->dst_port, &ctx_out)) {
-        HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
-        signaling_init_host_context(&ctx_out.host);
-    }
-    if (signaling_get_verified_application_context_by_ports(conn->src_port, conn->dst_port, &ctx_out)) {
-        HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
-        signaling_init_application_context(&ctx_out.app);
-    }
-    if (signaling_user_api_get_uname(ctx_out.user.uid, &ctx_out.user)) {
-        HIP_DEBUG("Could not get user name, assuming ANY USER. \n");
-        signaling_init_user_context(&ctx_out.user);
-    }
-
-    /* Set host and user authentication flags.
-     * These are trivially true. */
-/*
- *   signaling_flag_set(&ctx_out.flags, HOST_AUTHED);
- *   signaling_flag_set(&ctx_out.flags, USER_AUTHED);
- */
-
 
     /* Determine if we already have an association */
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);

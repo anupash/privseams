@@ -81,8 +81,9 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
 
-    new_conn.src_port = src_port;
-    new_conn.dst_port = dst_port;
+    new_conn.src_port            = src_port;
+    new_conn.dst_port            = dst_port;
+    new_conn.application_name[0] = '\0';
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");

@@ -145,6 +145,7 @@
 #define MAX_SIZE_APP_INFO_REQ_CLASS                 16
 #define MAX_SIZE_APP_VERSION                        16
 #define MAX_NUM_PORT_PAIR                           10
+#define MAX_SIZE_PROGNAME                           20
 
 /*
  * // Request types/ Profiles for host information
@@ -813,12 +814,14 @@ struct signaling_param_app_info_name {
  *
  */
 
+//TODO check this structure with Rene
+// Done because of this error: array type has incomplete element type
 struct signaling_param_app_info_connections {
-    hip_tlv                    type;
-    hip_tlv_len                length;
-    uint16_t                   connection_count;
-    hip_tlv_len                port_pair_length;
-    struct signaling_port_pair sockets[MAX_NUM_PORT_PAIR];
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    connection_count;
+    hip_tlv_len port_pair_length;
+    uint16_t    sockets[2 * SIGNALING_MAX_SOCKETS];
 } __attribute__((packed));
 
 
@@ -984,10 +987,11 @@ struct signaling_port_pair {
  *   All integers are in host-byte-order.
  */
 struct signaling_application_context {
-    char application_dn[SIGNALING_APP_DN_MAX_LEN];
-    char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
-    char requirements[SIGNALING_APP_REQ_MAX_LEN];
-    char groups[SIGNALING_APP_GRP_MAX_LEN];
+    char                       application_dn[SIGNALING_APP_DN_MAX_LEN];
+    char                       issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
+    char                       requirements[SIGNALING_APP_REQ_MAX_LEN];
+    char                       groups[SIGNALING_APP_GRP_MAX_LEN];
+    struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
 };
 
 /*
@@ -1153,6 +1157,7 @@ struct signaling_connection {
     uint32_t id;
     uint16_t src_port;
     uint16_t dst_port;
+    char     application_name[MAX_SIZE_PROGNAME];
 };
 
 

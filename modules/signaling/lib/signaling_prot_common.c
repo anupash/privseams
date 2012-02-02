@@ -319,13 +319,17 @@ out_err:
 int signaling_init_application_context(struct signaling_application_context *const app_ctx)
 {
     int err = 0;
-
+    int i   = 0;
     HIP_IFEL(!app_ctx, -1, "Application context has to be allocated before initialization\n");
 
     app_ctx->application_dn[0] = '\0';
     app_ctx->issuer_dn[0]      = '\0';
     app_ctx->groups[0]         = '\0';
     app_ctx->requirements[0]   = '\0';
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        app_ctx->sockets[i].src_port = 0;
+        app_ctx->sockets[i].dst_port = 0;
+    }
 
 out_err:
     return err;
@@ -359,10 +363,9 @@ out_err:
 }
 
 /**
- * Initializes the given connection context to default values.
- * Memory for context has to be allocated and freed by the caller.
+ * Initializes the given signaling connection to default values.
  *
- * @param ctx a pointer to the connection context that should be initialized
+ * @param conn a pointer to the connection context to be initialized
  *
  * @return negative value on error, 0 on success
  */

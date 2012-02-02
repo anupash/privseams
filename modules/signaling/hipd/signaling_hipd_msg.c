@@ -125,17 +125,17 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 
     /* Allocate and build message */
     if (!(msg_buf = hip_msg_alloc())) {
-	HIP_ERROR("Out of memory while allocation memory for the bex update packet\n");
-	return NULL;
+        HIP_ERROR("Out of memory while allocation memory for the bex update packet\n");
+        return NULL;
     }
     hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
 
     /* Add sequence number in U1 and U2 */
     if (type == SIGNALING_FIRST_BEX_UPDATE || type == SIGNALING_SECOND_BEX_UPDATE) {
         if (hip_build_param_seq(msg_buf, seq)) {
-	    HIP_ERROR("Building of SEQ parameter failed\n");
-	    free(msg_buf);
-	    return NULL;
+            HIP_ERROR("Building of SEQ parameter failed\n");
+            free(msg_buf);
+            return NULL;
         }
     }
     /* Add ACK paramater in U2 and U3 */
@@ -143,15 +143,15 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
         if (hip_build_param_ack(msg_buf, ack)) {
             HIP_ERROR("Building of ACK parameter failed\n");
             free(msg_buf);
-	    return NULL;
-	}
+            return NULL;
+        }
     }
 
     /* Add connection id, this paremeter is critical. */
     if (signaling_build_param_connection_identifier(msg_buf, conn)) {
-	HIP_ERROR("Building of connection identifier parameter failed\n");
-	free(msg_buf);
-	return NULL;
+        HIP_ERROR("Building of connection identifier parameter failed\n");
+        free(msg_buf);
+        return NULL;
     }
 
     /* Add application and user context.
@@ -179,9 +179,9 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 
     /* Add host authentication */
     if (hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out)) {
-	HIP_ERROR("Building of HMAC failed\n");
-	free(msg_buf);
-	return NULL;
+        HIP_ERROR("Building of HMAC failed\n");
+        free(msg_buf);
+        return NULL;
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -192,8 +192,8 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 #endif
     if (ha->sign(ha->our_priv_key, msg_buf)) {
         HIP_ERROR("Could not sign UPDATE. Failing\n");
-	free(msg_buf);
-	return NULL;
+        free(msg_buf);
+        return NULL;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
@@ -1453,11 +1453,11 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
+    struct signaling_connection_context    ctx_out;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-
     if (!sig_state->pending_conn) {
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
@@ -1466,11 +1466,17 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     //TODO check for signed and unsigned service offer parameters
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER)),
              -1, "No service offer from the middleboxes\n");
-    HIP_IFEL(signaling_copy_service_offer(param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+    HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
              -1, "Could not copy connection context\n");
 
+    HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
+             -1, "Could not init connection context\n");
+
+    signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
+    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+
     //TODO also add the handler for signed service offer parameter
-    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &param_service_offer)) {
+    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
         HIP_DEBUG("Building of application context parameter failed.\n");
         err = 0;
     }

@@ -71,9 +71,11 @@ int signaling_build_port_list(const struct signaling_param_user_context *param_u
                               struct signaling_port_pair *port_list);
 int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                 struct signaling_connection conn,
+                                                struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer_u *offer);
 int signaling_build_response_to_service_offer_s(struct hip_common *msg,
                                                 struct signaling_connection conn,
+                                                struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer_u *offer);
 
 /* Utility functions */
