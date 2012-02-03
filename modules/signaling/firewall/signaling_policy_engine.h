@@ -122,8 +122,6 @@ void policy_decision_unset(struct policy_decision *flags, int f);
 void policy_decision_init(struct policy_decision *flags);
 int policy_decision_check(struct policy_decision flags, int f);
 
-void policy_tuple_init(struct policy_tuple *tuple);
-
 int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple,
                                                   struct signaling_connection_context *ctx);
 

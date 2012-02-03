@@ -596,7 +596,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
                                                    struct policy_tuple *tuple)
 {
     X509_NAME *x509_subj_name;
-    policy_tuple_init(tuple);
+    tuple = malloc(sizeof(struct policy_tuple));
 
     /*Copying/Initialize the host information in the policy tuple*/
     if (strlen(ctx->host.host_kernel) > 0) {
@@ -649,11 +649,6 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     } else {
         tuple->user.user_name[0] = '\0';
     }
-}
-
-void policy_tuple_init(struct policy_tuple *tuple)
-{
-    tuple = malloc(sizeof(struct policy_tuple));
 }
 
 void signaling_policy_engine_print_rule_set(UNUSED const char *prefix)
