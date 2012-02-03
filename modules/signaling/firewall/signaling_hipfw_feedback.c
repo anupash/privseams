@@ -458,5 +458,5 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
     free(msg_buf2);
 
 out_err:
-    return 0;
+    return err;
 }
