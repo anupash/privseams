@@ -73,9 +73,8 @@ static void insert_iptables_rule(const struct in6_addr *const s,
  *
  * @return          0 on sucess, negative on error
  */
-//TODO remove the signaling_connection parameter from the function.
-int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                            const struct signaling_connection *const conn)
+int signaling_hipfw_send_connection_request(hip_hit_t src_hit, hip_hit_t dst_hit,
+                                            uint16_t src_port, uint16_t dst_port)
 {
     int                err = 0;
     struct hip_common *msg = NULL;
@@ -83,12 +82,14 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, 0),
              -1, "build hdr failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (dst hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+    HIP_IFEL(hip_build_param_contents(msg, &src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-             -1, "build connection parameter failed \n");
+    HIP_IFEL(hip_build_param_contents(msg, &dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (dst hit) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, &src_port, HIP_PARAM_PORT, sizeof(uint16_t)),
+             -1, "build param contents (src port) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, &dst_port, HIP_PARAM_PORT, sizeof(uint16_t)),
+             -1, "build param contents (dst port) failed\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_SEND_CONN_REQUEST\n");
@@ -102,7 +103,10 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
 #endif
 
     HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
-    signaling_connection_print(conn, "");
+    HIP_DEBUG_HIT("Src HIT:\t\t", &src_hit);
+    HIP_DEBUG_HIT("Dst HIT:\t\t", &dst_hit);
+    HIP_DEBUG("Src Port:\t\t%u\n", src_port);
+    HIP_DEBUG("Dst Port:\t\t%u\n", dst_port);
 
 out_err:
     free(msg);

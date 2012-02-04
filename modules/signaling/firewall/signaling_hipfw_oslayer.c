@@ -76,14 +76,9 @@ static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
     int                         err = 0;
-    struct signaling_connection new_conn;
 
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
-
-    new_conn.src_port            = src_port;
-    new_conn.dst_port            = dst_port;
-    new_conn.application_name[0] = '\0';
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_NEW_CONN, PERF_NEW_UPDATE_CONN, PERF_CONN_REQUEST\n");
@@ -93,13 +88,16 @@ static int handle_new_connection(struct hip_fw_context *ctx,
 #endif
 
     /* Since this is a new connection we have to add an entry to the scdb */
-    HIP_IFEL(signaling_cdb_add_connection(ctx->src, ctx->dst,
+    if (signaling_cdb_add_connection(ctx->src, ctx->dst,
                                           src_port, dst_port,
-                                          SIGNALING_CONN_PROCESSING),
-             -1, "Could not add entry to scdb.\n");
+                                          SIGNALING_CONN_PROCESSING)) {
+        HIP_ERROR("Could not add entry to scdb.\n");
+        return -1;
+    }
 
     HIP_DEBUG("Sending connection request to hipd.\n");
-    signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, &new_conn);
+    signaling_hipfw_send_connection_request(ctx->src, ctx->dst,
+                                            src_port, dst_port);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
@@ -144,7 +142,6 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
         HIP_DEBUG("Unknown connection, need to tell hipd.\n");
         if (handle_new_connection(ctx, src_port, dest_port)) {
             HIP_ERROR("Failed to handle new connection\n");
-            return -1;
         }
         return VERDICT_DROP;
     }

@@ -1187,7 +1187,7 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_KEYS:            return "HIP_PARAM_KEYS";
     case HIP_PARAM_LOCATOR:         return "HIP_PARAM_LOCATOR";
     case HIP_PARAM_NOTIFICATION:    return "HIP_PARAM_NOTIFICATION";
-    case HIP_PARAM_PORTPAIR:        return "HIP_PARAM_PORTPAIR";
+    case HIP_PARAM_PORT:            return "HIP_PARAM_PORT";
     case HIP_PARAM_PUZZLE:          return "HIP_PARAM_PUZZLE";
     case HIP_PARAM_R1_COUNTER:      return "HIP_PARAM_R1_COUNTER";
     case HIP_PARAM_REG_FAILED:      return "HIP_PARAM_REG_FAILED";
