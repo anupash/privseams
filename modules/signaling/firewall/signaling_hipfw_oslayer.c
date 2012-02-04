@@ -124,10 +124,8 @@ out_err:
  */
 int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
-    int                         err     = 0;
-    int                         verdict = VERDICT_DEFAULT;
     uint16_t                    src_port, dest_port;
-    struct signaling_cdb_entry *entry  = NULL;
+    const struct signaling_cdb_entry *entry  = NULL;
     int                         status = SIGNALING_CONN_NEW;
 
     /* Get ports from tcp header */
@@ -144,36 +142,27 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
     entry = signaling_cdb_get_connection(ctx->src, ctx->dst, src_port, dest_port);
     if (entry == NULL) {
         HIP_DEBUG("Unknown connection, need to tell hipd.\n");
-        HIP_IFEL(handle_new_connection(ctx, src_port, dest_port),
-                 -1, "Failed to handle new connection\n");
-        verdict = VERDICT_DROP;
-        goto out_err;
+        if (handle_new_connection(ctx, src_port, dest_port)) {
+            HIP_ERROR("Failed to handle new connection\n");
+            return -1;
+        }
+        return VERDICT_DROP;
     }
 
     /* We know the connection. So what is the status? */
     switch (entry->status) {
     case SIGNALING_CONN_ALLOWED:
         HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
-        verdict = VERDICT_ACCEPT;
-        break;
+        return VERDICT_ACCEPT;
     case SIGNALING_CONN_BLOCKED:
         HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
-        verdict = VERDICT_DROP;
-        break;
+        return VERDICT_DROP;
     case SIGNALING_CONN_PROCESSING:
         HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
-        verdict = VERDICT_DROP;
-        break;
+        return VERDICT_DROP;
     case SIGNALING_CONN_NEW:
     default:
         HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
-        verdict = VERDICT_DROP;
-        break;
-    }
-
-out_err:
-    if (err) {
         return VERDICT_DROP;
     }
-    return verdict;
 }
