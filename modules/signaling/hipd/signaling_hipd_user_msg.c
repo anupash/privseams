@@ -312,10 +312,19 @@ int signaling_handle_connection_request(struct hip_common *msg,
     hip_perf_start_benchmark(perf_set, PERF_TRIGGER_CONN);
 #endif
 
+    /* TODO the user message does not contain a HIP_PARAM_SIGNALING_CONNECTION
+     * but instead contains HITs and ports directly. This has to be read here
+     * accordingly. */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Missing application_port_pair parameter\n");
     HIP_IFEL(signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1)),
              -1, "Could not copy connection context\n");
+
+    /* TODO this parts seems broken. Contexts are looked up in
+     * signaling_init_connection_context() and
+     * signaling_netstat_get_application_system_info_by_ports().
+     * Furthermore, the connection context should be looked up only after
+     * sending the I1 message. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
