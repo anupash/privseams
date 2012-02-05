@@ -296,6 +296,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
 {
     const hip_hit_t                    *our_hit  = NULL;
     const hip_hit_t                    *peer_hit = NULL;
+    const uint16_t                     *our_port = 0;
+    const uint16_t                     *peer_port = 0;
     const struct hip_tlv_common        *param;
     struct hip_hadb_state              *entry     = NULL;
     struct signaling_hipd_state        *sig_state = NULL;
@@ -312,11 +314,20 @@ int signaling_handle_connection_request(struct hip_common *msg,
     hip_perf_start_benchmark(perf_set, PERF_TRIGGER_CONN);
 #endif
 
-    /* TODO the user message does not contain a HIP_PARAM_SIGNALING_CONNECTION
-     * but instead contains HITs and ports directly. This has to be read here
-     * accordingly. */
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-             -1, "Missing application_port_pair parameter\n");
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIT)),
+             -1, "Missing (dst HIT) parameter\n");
+    our_hit = hip_get_param_contents_direct(param);
+    HIP_IFEL(!(param = hip_get_next_param(msg, param)),
+             -1, "Missing (src HIT) parameter\n");
+    peer_hit = hip_get_param_contents_direct(param);
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_PORT)),
+             -1, "Missing (dst port) parameter\n");
+    peer_port = hip_get_param_contents_direct(param);
+    HIP_IFEL(!(param = hip_get_next_param(msg, param)),
+             -1, "Missing (src port) parameter\n");
+    our_port = hip_get_param_contents_direct(param);
+
+    // TODO remove this once conn is not used below
     HIP_IFEL(signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1)),
              -1, "Could not copy connection context\n");
 
@@ -329,15 +340,14 @@ int signaling_handle_connection_request(struct hip_common *msg,
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx),
-             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", conn->src_port, conn->dst_port);
+    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
+             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
     memcpy(conn->application_name, sys_ctx.progname, strlen(sys_ctx.progname));
 
     //TODO check if I need to do ntohs here
     new_conn.id = conn->id;
 
     /* Determine if we already have an association */
-    signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
 
     /* Now check whether we need to trigger a BEX or an UPDATE */
@@ -404,10 +414,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_print(conn, "");
     }
-
-    /* send status for new connection to os layer */
-    //TODO can be removed bcause not so important
-    // also the handling of the connection_confirmation
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
