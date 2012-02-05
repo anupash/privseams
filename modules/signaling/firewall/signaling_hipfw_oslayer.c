@@ -75,8 +75,6 @@ void signaling_hipfw_oslayer_uninit(void)
 static int handle_new_connection(struct hip_fw_context *ctx,
                                  uint16_t src_port, uint16_t dst_port)
 {
-    int                         err = 0;
-
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
 
@@ -111,8 +109,7 @@ static int handle_new_connection(struct hip_fw_context *ctx,
     hip_perf_write_benchmark(perf_set, PERF_HASH);
 #endif
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
