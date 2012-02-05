@@ -82,14 +82,14 @@ int signaling_hipfw_send_connection_request(hip_hit_t src_hit, hip_hit_t dst_hit
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST, 0),
              -1, "build hdr failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, &src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, &dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (dst hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, &src_port, HIP_PARAM_PORT, sizeof(uint16_t)),
-             -1, "build param contents (src port) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, &src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, &dst_port, HIP_PARAM_PORT, sizeof(uint16_t)),
              -1, "build param contents (dst port) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, &src_port, HIP_PARAM_PORT, sizeof(uint16_t)),
+             -1, "build param contents (src port) failed\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_SEND_CONN_REQUEST\n");
