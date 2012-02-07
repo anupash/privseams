@@ -376,18 +376,23 @@ int signaling_init_app_context_from_msg(struct signaling_application_context *co
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_NAME) {
+        tmp_len = ntohs(((const struct signaling_param_app_info_name *) param)->app_dn_length);
         memcpy(ctx->application_dn, ((const struct signaling_param_app_info_name *) param)->application_dn,
-               ((const struct signaling_param_app_info_name *) param)->app_dn_length);
+               tmp_len);
+        ctx->application_dn[tmp_len - 1] = '\0';
+
+        tmp_len = ntohs(((const struct signaling_param_app_info_name *) param)->issuer_dn_length);
         memcpy(ctx->issuer_dn, ((const struct signaling_param_app_info_name *) param)->issuer_dn,
-               ((const struct signaling_param_app_info_name *) param)->issuer_dn_length);
+               tmp_len);
+        ctx->issuer_dn[tmp_len - 1] = '\0';
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
         tmp_len = ((const struct signaling_param_app_info_connections *) param)->port_pair_length;
         for (i = 0; i < tmp_len; i++) {
-            ctx->sockets[i].src_port = ((const struct signaling_param_app_info_connections *) param)->sockets[2 * i];
-            ctx->sockets[i].dst_port = ((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1];
+            ctx->sockets[i].src_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i]);
+            ctx->sockets[i].dst_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1]);
         }
     }
 
@@ -412,6 +417,7 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
 {
     int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
+    //const uint8_t               *p_contents = NULL;
 
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
@@ -423,19 +429,23 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
-        ctx->host_kernel_len = param->length;
+        ctx->host_kernel_len = ntohs(param->length);
         memcpy(ctx->host_kernel, ((const struct signaling_param_host_info_kernel *) param)->kernel,
                param->length);
+        ctx->host_kernel[ctx->host_kernel_len - 1] = '\0';
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
-        ctx->host_os_len = ((const struct signaling_param_host_info_os *) param)->os_len;
+        ctx->host_os_len = ntohs(((const struct signaling_param_host_info_os *) param)->os_len);
         memcpy(ctx->host_os, ((const struct signaling_param_host_info_os *) param)->os_name,
-               ((const struct signaling_param_host_info_os *) param)->os_len);
-        ctx->host_os_ver_len = ((const struct signaling_param_host_info_os *) param)->os_version_len;
+               ctx->host_os_len);
+        ctx->host_os[ctx->host_os_len - 1] = '\0';
+
+        ctx->host_os_ver_len = ntohs(((const struct signaling_param_host_info_os *) param)->os_version_len);
         memcpy(ctx->host_os_version, ((const struct signaling_param_host_info_os *) param)->os_version,
                ((const struct signaling_param_host_info_os *) param)->os_version_len);
+        ctx->host_os_version[ctx->host_os_ver_len - 1] = '\0';
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_CERTS);
@@ -460,16 +470,20 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
         p_contents            = (const uint8_t *) (param + 1);
-        ctx->subject_name_len = ((const struct signaling_param_user_info_id *) param)->user_dn_length;
+        ctx->subject_name_len = ntohs(((const struct signaling_param_user_info_id *) param)->user_dn_length);
         p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->user_dn_length);
-        ctx->key_rr_len       = ((const struct signaling_param_user_info_id *) param)->prr_length;
+        ctx->key_rr_len       = ntohs(((const struct signaling_param_user_info_id *) param)->prr_length);
         p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->prr_length);
 
-        memcpy(&ctx->rdata, ((const struct signaling_param_user_info_id *) (param + 2)), sizeof(struct hip_host_id_key_rdata));
-        p_contents += sizeof(sizeof(struct hip_host_id_key_rdata));
+        ctx->rdata.algorithm = ((const struct signaling_param_user_info_id *) param)->algorithm;
+        ctx->rdata.protocol  = ((const struct signaling_param_user_info_id *) param)->protocol;
+        ctx->rdata.flags     = ntohs(((const struct signaling_param_user_info_id *) param)->flags);
+        p_contents          += sizeof(sizeof(struct hip_host_id_key_rdata));
         memcpy(ctx->subject_name, p_contents, ctx->subject_name_len);
-        p_contents += ctx->subject_name_len;
+        ctx->subject_name[ctx->subject_name_len - 1] = '\0';
+        p_contents                                  += ctx->subject_name_len;
         memcpy(ctx->pkey, p_contents, ctx->key_rr_len);
+        ctx->pkey[ctx->key_rr_len - 1] = '\0';
     }
 
 

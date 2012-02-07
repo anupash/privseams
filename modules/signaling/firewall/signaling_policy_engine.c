@@ -370,6 +370,15 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
             return 0;
         }
     }
+
+    /* Check if host with any name is allowed */
+    if (strlen(tuple_rule->host.host_name) > 0) {
+        if (strcmp(tuple_rule->host.host_name, tuple_conn->host.host_name) != 0) {
+            HIP_DEBUG("Hosts with the name %s is not allowed\n", tuple_rule->host.host_name);
+            return 0;
+        }
+    }
+
     /* Check if host with any kernel version is allowed */
     if (strlen(tuple_rule->host.host_kernel) > 0) {
         if (strcmp(tuple_rule->host.host_kernel, tuple_conn->host.host_kernel) > 0) {
@@ -386,17 +395,8 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
         }
     }
 
-    /* Check if host with any name is allowed */
-    if (strlen(tuple_rule->host.host_name) > 0) {
-        if (strcmp(tuple_rule->host.host_name, tuple_conn->host.host_name) != 0) {
-            HIP_DEBUG("Hosts with the name %s is not allowed\n", tuple_rule->host.host_name);
-            return 0;
-        }
-    }
-
 
     /* Check if user ids match or if rule allows any user */
-
     if (strlen(tuple_rule->user.user_name) > 0) {
         if (strcmp(tuple_rule->user.user_name, tuple_conn->user.user_name) != 0) {
             HIP_DEBUG("User does not match\n");
@@ -411,12 +411,14 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
             return 0;
         }
     }
+
     if (strlen(tuple_rule->application.issuer_dn) != 0) {
         if (strcmp(tuple_rule->application.issuer_dn, tuple_conn->application.issuer_dn) != 0) {
             HIP_DEBUG("App Issued DN does not match\n");
             return 0;
         }
     }
+
     if (strlen(tuple_rule->application.requirements) != 0) {
         if (strcmp(tuple_rule->application.requirements, tuple_conn->application.requirements) != 0) {
             HIP_DEBUG("Application Requirements not match\n");
@@ -455,21 +457,20 @@ static const struct policy_tuple *match_tuple_list(const struct policy_tuple *tu
  *                  in order for the connection to comply
  *                  -1 the connection would not comply even if every entity as given was authenticated
  */
-struct policy_tuple signaling_policy_check(UNUSED const struct in6_addr *const hit,
-                                           const struct signaling_connection_context *const conn_ctx)
+struct policy_tuple *signaling_policy_check(UNUSED const struct in6_addr *const hit,
+                                            const struct signaling_connection_context *const conn_ctx)
 {
-    struct policy_tuple        ret;
-    struct policy_tuple        tuple_conn;
+    struct policy_tuple       *tuple_conn;
     const struct policy_tuple *tuple_match = NULL;
     struct slist              *rule_list   = NULL;
 
-
-    policy_decision_init(&ret.target);
+    tuple_conn = malloc(sizeof(struct policy_tuple));
+    policy_decision_init(&tuple_conn->target);
 
     /* Construct the authed and unauthed tuple for the current context.
      * Need to memset-0 because we want to use memcmp later. */
     //TODO do not know what the following line does
-    signaling_copy_connection_ctx_to_policy_tuple(conn_ctx, &tuple_conn);
+    signaling_copy_connection_ctx_to_policy_tuple(conn_ctx, tuple_conn);
 
     HIP_DEBUG("Checking connection context:\n");
 
@@ -487,17 +488,18 @@ struct policy_tuple signaling_policy_check(UNUSED const struct in6_addr *const h
     }
 
     /* Find a match for authed tuple */
-    if ((tuple_match = match_tuple_list(&tuple_conn, rule_list))) {
+    if ((tuple_match = match_tuple_list(tuple_conn, rule_list))) {
         printf("\033[22;32mConnection could be matched to firewall rules:\033[22;37m\n");
         printf("Connection tuple:\n");
-        printf_policy_tuple(&tuple_conn, "\t");
+        printf_policy_tuple(tuple_match, "\t");
         printf("is matched by rule tuple:\n");
         printf_policy_tuple(tuple_match, "\t");
-        return *tuple_match;
+        policy_tuple_copy(tuple_match, tuple_conn);
+        return tuple_conn;
     } else {
-        policy_decision_set(&ret.target, POLICY_REJECT);
+        policy_decision_set(&tuple_conn->target, POLICY_REJECT);
     }
-    return ret;
+    return tuple_conn;
 }
 
 /**
@@ -508,87 +510,84 @@ struct policy_tuple signaling_policy_check(UNUSED const struct in6_addr *const h
  *           -1 if the context will be rejected no matter what authentication takes place
  */
 // TODO previously only two values .. have to make compatible with mutiple return values
-int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
-                                           struct signaling_connection_context *const conn_ctx,
-                                           struct signaling_connection_flags   *ctx_flags,
-                                           struct policy_tuple                 *ret)
+struct policy_tuple *signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
+                                                            struct signaling_connection_context *const conn_ctx,
+                                                            struct signaling_connection_flags   *ctx_flags,
+                                                            int                                 *ret)
 {
-    struct policy_tuple tuple_match = signaling_policy_check(hit, conn_ctx);
+    struct policy_tuple *tuple_match = signaling_policy_check(hit, conn_ctx);
 
     //req_auth_types = signaling_policy_check(hit, conn_ctx);
-    if (policy_decision_check(tuple_match.target, POLICY_REJECT)) {
+    if (policy_decision_check(tuple_match->target, POLICY_REJECT)) {
         HIP_DEBUG("Connection request has been rejected by local policy. \n");
         printf("\033[22;31m Connection request has been rejected by local policy.\n\033[22;37m");
-        return -1;
-    } else if (policy_decision_check(tuple_match.target, POLICY_ACCEPT)) {
+        *ret = -1;
+        free(tuple_match);
+        return NULL;
+    } else if (policy_decision_check(tuple_match->target, POLICY_ACCEPT)) {
         HIP_DEBUG("Connection request has been accepted as is by local policy. \n");
         /* tell the HIPD that it needs not request for any end-point information*/
-        return 0;
+        *ret = 0;
+        free(tuple_match);
+        return NULL;
     } else {
+        *ret = 1;
         HIP_DEBUG("Connection request will be accepted by local policy if further the host responds to the service offer: \n");
         /* Set those flags for which we need no user authentication */
-
         /*
          * Making service offers here
          * Requesting for additional information from host based on the firewall policy
          */
-        if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_ID)) {
+        if (policy_decision_check(tuple_match->target, POLICY_HOST_INFO_ID)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_ID);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_ID_RECV);
         }
 
-        if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_OS)) {
+        if (policy_decision_check(tuple_match->target, POLICY_HOST_INFO_OS)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_OS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_OS_RECV);
         }
 
-        if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_KERNEL)) {
+        if (policy_decision_check(tuple_match->target, POLICY_HOST_INFO_KERNEL)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_KERNEL);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_KERNEL_RECV);
         }
 
-
-        if (policy_decision_check(tuple_match.target, POLICY_HOST_INFO_CERTS)) {
+        if (policy_decision_check(tuple_match->target, POLICY_HOST_INFO_CERTS)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_CERTS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, HOST_INFO_CERTS_RECV);
-            ;
         }
 
-        if (policy_decision_check(tuple_match.target, POLICY_USER_INFO_ID)) {
+
+        if (policy_decision_check(tuple_match->target, POLICY_USER_INFO_ID)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_ID);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_ID);
-            ;
         }
 
-        if (policy_decision_check(tuple_match.target, POLICY_USER_INFO_CERTS)) {
+        if (policy_decision_check(tuple_match->target, POLICY_USER_INFO_CERTS)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
-            ;
         }
 
-
-        if (policy_decision_check(tuple_match.target, POLICY_USER_INFO_CERTS)) {
+        if (policy_decision_check(tuple_match->target, POLICY_USER_INFO_CERTS)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
-            ;
         }
 
-        if (policy_decision_check(tuple_match.target, POLICY_APP_INFO_NAME)) {
+
+        if (policy_decision_check(tuple_match->target, POLICY_APP_INFO_NAME)) {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
         } else {
             signaling_info_req_flag_set(&ctx_flags->flag_info_requests, USER_INFO_CERTS);
-            ;
         }
-
-        ret = &tuple_match;
-        return 0;
+        return tuple_match;
     }
 }
 
@@ -598,26 +597,28 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     X509_NAME *x509_subj_name;
     tuple = malloc(sizeof(struct policy_tuple));
 
+    policy_decision_init(&tuple->target);
+
     /*Copying/Initialize the host information in the policy tuple*/
     if (strlen(ctx->host.host_kernel) > 0) {
-        memcpy(tuple->host.host_kernel, ctx->host.host_kernel,  SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        strcpy(tuple->host.host_kernel, ctx->host.host_kernel);
     } else {
         tuple->host.host_kernel[0] = '\0';
     }
 
     if (strlen(ctx->host.host_os) > 0) {
-        memcpy(tuple->host.host_os,     ctx->host.host_os,      SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        strcpy(tuple->host.host_os,     ctx->host.host_os);
     } else {
         tuple->host.host_os[0] = '\0';
     }
 
     if (strlen(ctx->host.host_name) > 0) {
-        memcpy(tuple->host.host_name,   ctx->host.host_name,    SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        strcpy(tuple->host.host_name,   ctx->host.host_name);
     } else {
         tuple->host.host_name[0] = '\0';
     }
     if (strlen(ctx->host.host_name) > 0) {
-        memcpy(tuple->host.host_certs,  ctx->host.host_certs, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        strcpy(tuple->host.host_certs,  ctx->host.host_certs);
     } else {
         tuple->host.host_certs[0] = '\0';
     }
@@ -625,19 +626,19 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
 
     /*Copying/Initialize the application information in the policy tuple*/
     if (strlen(ctx->app.application_dn) > 0) {
-        memcpy(tuple->application.application_dn, ctx->app.application_dn,  SIGNALING_APP_DN_MAX_LEN);
+        strcpy(tuple->application.application_dn, ctx->app.application_dn);
     } else {
         tuple->application.application_dn[0] = '\0';
     }
 
     if (strlen(ctx->app.issuer_dn) > 0) {
-        memcpy(tuple->application.issuer_dn, ctx->app.issuer_dn,  SIGNALING_APP_DN_MAX_LEN);
+        strcpy(tuple->application.issuer_dn, ctx->app.issuer_dn);
     } else {
         tuple->application.issuer_dn[0] = '\0';
     }
 
     if (strlen(ctx->app.requirements) > 0) {
-        memcpy(tuple->application.requirements, ctx->app.requirements,  SIGNALING_APP_DN_MAX_LEN);
+        strcpy(tuple->application.requirements, ctx->app.requirements);
     } else {
         tuple->application.requirements[0] = '\0';
     }
@@ -688,6 +689,16 @@ void signaling_policy_engine_print_rule_set(UNUSED const char *prefix)
         listentry = listentry->next;
     }
     HIP_DEBUG("%s--------------            END RULES         ----------------\n", prefix);
+}
+
+int policy_tuple_copy(const struct policy_tuple *src, struct policy_tuple *dst)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct policy_tuple));
+    return 0;
 }
 
 void policy_decision_set(struct policy_decision *flags, int f)

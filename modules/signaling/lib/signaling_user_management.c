@@ -201,12 +201,12 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
     X509_NAME                *uname = NULL;
-    struct userdb_user_entry *new   = NULL;
+    struct userdb_user_entry *new = NULL;
 
     /* Check if we already have that user */
     if (signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname)) {
-	HIP_ERROR("Could not get X509 Name from DER encoding\n");
-	return NULL;
+        HIP_ERROR("Could not get X509 Name from DER encoding\n");
+        return NULL;
     }
     new = userdb_get_user(uname);
     if (new && !replace) {
@@ -220,13 +220,13 @@ struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *u
 
     /* Now build and add */
     if (!(new = malloc(sizeof(struct userdb_user_entry)))) {
-	HIP_ERROR("Could not allocate memory for new userdb entry \n");
-	return NULL;
+        HIP_ERROR("Could not allocate memory for new userdb entry \n");
+        return NULL;
     }
     if (!(new->cert_contexts = malloc(sizeof(struct hip_ll)))) {
-	HIP_ERROR("Could not allocate empty new list\n");
-	free(new);
-	return NULL;
+        HIP_ERROR("Could not allocate empty new list\n");
+        free(new);
+        return NULL;
     }
     hip_ll_init(new->cert_contexts);
     new->uname = uname;
@@ -260,30 +260,31 @@ struct userdb_user_entry *userdb_add_user_from_msg(const struct hip_common *cons
 
     /* sanity checks */
     if (!msg) {
-	HIP_ERROR("Cannot add user from  NULL-message\n");
-	return NULL;
+        HIP_ERROR("Cannot add user from  NULL-message\n");
+        return NULL;
     }
 
     /* First check if there is a connection context,
      * This is the case if the message was sent by the firewall. */
-    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)) &&
-        hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
-        //conn = (const struct signaling_connection *) (param + 1);
-        //user_ctx = &conn->ctx_out.user;
-    }
+/*    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)) &&
+ *       hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
+ *        //conn = (const struct signaling_connection *) (param + 1);
+ *        //user_ctx = &conn->ctx_out.user;
+ *    }
+ */
     /* This is no message from a firewall, so just init a connection
      * from the information in the message. */
     /* get connection and update flags */
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID)) &&
-        hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
+        hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
         signaling_init_user_context(&user);
         signaling_build_user_context((const struct signaling_param_user_context *) param, &user);
         user_ctx = &user;
     }
     /* By now we should have a user context. */
     if (!user_ctx) {
-	HIP_ERROR("There is no user context information inside the message\n");
-	return NULL;
+        HIP_ERROR("There is no user context information inside the message\n");
+        return NULL;
     }
 
     /* User does not exist, so add his context. */
@@ -304,8 +305,8 @@ struct userdb_certificate_context *userdb_add_certificate_context(struct userdb_
     HIP_ASSERT(src_hit && dst_hit);
 
     if (!(new_ctx = malloc(sizeof(struct userdb_certificate_context)))) {
-	HIP_ERROR("Could not allocate new certificate context \n");
-	return NULL;
+        HIP_ERROR("Could not allocate new certificate context \n");
+        return NULL;
     }
 
     new_ctx->count        = first_cert->cert_count;
@@ -315,14 +316,14 @@ struct userdb_certificate_context *userdb_add_certificate_context(struct userdb_
     memcpy(&new_ctx->src_hit, src_hit, sizeof(struct in6_addr));
     memcpy(&new_ctx->dst_hit, dst_hit, sizeof(struct in6_addr));
     if (!(new_ctx->cert_chain = sk_X509_new_null())) {
-    	HIP_ERROR("memory allocation failure\n");
-	free(new_ctx);
-	return NULL;
+        HIP_ERROR("memory allocation failure\n");
+        free(new_ctx);
+        return NULL;
     }
     if (hip_ll_add_first(user->cert_contexts, new_ctx)) {
-    	HIP_ERROR("Error adding to list\n");
-	free(new_ctx);
-	return NULL;
+        HIP_ERROR("Error adding to list\n");
+        free(new_ctx);
+        return NULL;
     }
 
     return new_ctx;

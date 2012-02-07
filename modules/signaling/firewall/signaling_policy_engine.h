@@ -109,13 +109,14 @@ int signaling_policy_engine_uninit(void);
 
 void signaling_policy_engine_print_rule_set(const char *prefix);
 
-struct policy_tuple signaling_policy_check(const struct in6_addr *const hit,
-                                           const struct signaling_connection_context *const conn_ctx);
+struct policy_tuple *signaling_policy_check(const struct in6_addr *const hit,
+                                            const struct signaling_connection_context *const conn_ctx);
 
-int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
-                                           struct signaling_connection_context *const conn_ctx,
-                                           struct signaling_connection_flags   *ctx_flags,
-                                           struct policy_tuple                 *ret);
+struct policy_tuple *signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
+                                                            struct signaling_connection_context *const conn_ctx,
+                                                            struct signaling_connection_flags   *ctx_flags,
+                                                            int                                 *ret);
+int policy_tuple_copy(const struct policy_tuple *src, struct policy_tuple *dst);
 
 void policy_decision_set(struct policy_decision *flags, int f);
 void policy_decision_unset(struct policy_decision *flags, int f);
