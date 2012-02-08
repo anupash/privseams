@@ -855,7 +855,84 @@ int policy_decision_check(struct policy_decision flags, int f)
  * Verify the connection context with the policy. Request for information accordingly
  *
  */
-int signaling_hipfw_verify_connection_with_policy(UNUSED struct policy_tuple *tuple, UNUSED struct signaling_connection_context *ctx)
+int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, struct signaling_connection_context *ctx)
 {
+    struct policy_tuple tuple_conn;
+    policy_decision_init(&tuple_conn.target);
+
+    signaling_copy_connection_ctx_to_policy_tuple(ctx, &tuple_conn);
+
+    /* Check if hits match or if rule allows any hit */
+    if (policy_decision_check(tuple->target, POLICY_HOST_INFO_ID)) {
+        if (ipv6_addr_cmp(&tuple->host.host_id, &in6addr_any) != 0) {
+            if (ipv6_addr_cmp(&tuple->host.host_id, &tuple_conn.host.host_id) != 0) {
+                HIP_DEBUG("Host does not match\n");
+                return -1;
+            }
+        }
+
+        /* Check if host with any name is allowed */
+        if (strcmp(tuple->host.host_name, tuple_conn.host.host_name) != 0) {
+            HIP_DEBUG("Hosts with the name %s is not allowed\n", tuple->host.host_name);
+            return -1;
+        }
+    }
+
+    if (policy_decision_check(tuple->target, POLICY_HOST_INFO_KERNEL)) {
+        /* Check if host with any kernel version is allowed */
+        if (strlen(tuple->host.host_kernel) > 0) {
+            if (strcmp(tuple->host.host_kernel, tuple_conn.host.host_kernel) > 0) {
+                HIP_DEBUG("Kernel version below %s is not allowed\n", tuple->host.host_kernel);
+                return -1;
+            }
+        }
+    }
+
+    if (policy_decision_check(tuple->target, POLICY_HOST_INFO_OS)) {
+        /* Check if host with any operating system is allowed */
+        if (strlen(tuple->host.host_os) > 0) {
+            if (strcmp(tuple->host.host_os, tuple_conn.host.host_os) != 0) {
+                HIP_DEBUG("Operating system %s is not allowed\n", tuple->host.host_os);
+                return -1;
+            }
+        }
+    }
+
+    if (policy_decision_check(tuple->target, POLICY_USER_INFO_ID)) {
+        /* Check if user ids match or if rule allows any user */
+        if (strlen(tuple->user.user_name) > 0) {
+            if (strcmp(tuple->user.user_name, tuple_conn.user.user_name) != 0) {
+                HIP_DEBUG("User does not match\n");
+                return -1;
+            }
+        }
+    }
+
+    if (policy_decision_check(tuple->target, POLICY_APP_INFO_NAME)) {
+        /* Check if app ids match or if rule allows any app */
+        if (strlen(tuple->application.application_dn) != 0) {
+            if (strcmp(tuple->application.application_dn, tuple_conn.application.application_dn) != 0) {
+                HIP_DEBUG("Application Name does not match\n");
+                return -1;
+            }
+        }
+
+        if (strlen(tuple->application.issuer_dn) != 0) {
+            if (strcmp(tuple->application.issuer_dn, tuple_conn.application.issuer_dn) != 0) {
+                HIP_DEBUG("App Issued DN does not match\n");
+                return -1;
+            }
+        }
+    }
+
+    if (policy_decision_check(tuple->target, POLICY_APP_INFO_REQUIREMENTS)) {
+        if (strlen(tuple->application.requirements) != 0) {
+            if (strcmp(tuple->application.requirements, tuple_conn.application.requirements) != 0) {
+                HIP_DEBUG("Application Requirements not match\n");
+                return -1;
+            }
+        }
+    }
+
     return 0;
 }
