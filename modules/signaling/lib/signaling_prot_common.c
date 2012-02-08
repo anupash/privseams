@@ -421,6 +421,8 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
 
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
+    memcpy(&ctx->host_id, &msg->hits, sizeof(struct in6_addr));
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
         //TODO left for now because the case is not trivial. HIP_PARAM_HOST_ID is also the same

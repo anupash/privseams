@@ -1031,12 +1031,13 @@ struct signaling_host_context {
     int      host_os_ver_len;
     long int host_certs_len;
 
-    char host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char host_os_version[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char host_domain_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
-    char host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
+    char            host_kernel[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_os_version[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_domain_name[SIGNALING_HOST_INFO_REQ_MAX_LEN];
+    char            host_certs[SIGNALING_HOST_CERTS_MAX_LEN];
+    struct in6_addr host_id;
 };
 
 

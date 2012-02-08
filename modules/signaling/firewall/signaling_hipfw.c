@@ -273,6 +273,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
     //TODO check here if the hits refers to the hit of the initiator
+    //TODO check here if ctx_in or ctx_out should be used
     if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, &policy_check))) {
         HIP_IFEL(signaling_add_service_offer_to_msg_u(common, *ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
         signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
@@ -284,13 +285,11 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         return 1;
     } else {
         if (policy_check == -1) {
-            // TODO add connection to scdb
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
             signaling_cdb_print();
             signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
             return 0;
         } else if (policy_check == 0) {
-            // TODO add connection to scdb
             HIP_DEBUG("Connection tracking table after receipt of R1\n");
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
             signaling_cdb_print();
@@ -327,9 +326,11 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     int                                  err           = 0;
     int                                  policy_check  = 0;
     int                                  policy_verify = 0;
+    int                                  ret           = 0;
     struct signaling_connection          new_conn;
     struct userdb_user_entry            *db_entry = NULL;
     struct signaling_connection_context *ctx_in   = NULL;
+    struct signaling_connection_context *ctx_out  = NULL;
 
     struct signaling_connection_flags *ctx_flags     = NULL;
     struct policy_tuple               *matched_tuple = NULL;
@@ -341,67 +342,110 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
+    // Here in because the firewall has to check for the incoming policies
+    // for the message from the responder
+    if (signaling_init_connection_context(ctx_out, IN)) {
+        HIP_ERROR("Could not init connection context for the OUT SIDE \n");
+        return -1;
+    }
+
+    /*
+     * Handle the incoming response parameters from the Initiator
+     */
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
         HIP_ERROR("Could not init connection context from I2 \n");
-        return -1;
+        ret = -1;
     }
 
     old_conn = signaling_cdb_get_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port);
     if (old_conn->status == SIGNALING_CONN_BLOCKED) {
         signaling_cdb_print();
         signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-        return 1;
+        ret = -1;
     } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
         printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
-        return 1;
+        ret = 1;
     } else {
-        HIP_IFEL(signaling_init_connection_context_from_msg(ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
+        //Check for acknowledgement
+        if (signaling_verify_service_ack(common)) {
+            HIP_IFEL(signaling_init_connection_context_from_msg(ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
 
-        /* add/update user in user db */
-        if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-            HIP_ERROR("Could not add user from message\n");
-        }
+            /* add/update user in user db */
+            if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+                HIP_ERROR("Could not add user from message\n");
+            }
 
-        /* Step b) */
-        HIP_DEBUG("Connection after receipt of i2\n");
-        signaling_connection_print(&new_conn, "\t");
+            /* Step b) */
+            HIP_DEBUG("Connection after receipt of i2\n");
+            signaling_connection_print(&new_conn, "\t");
 
-        if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, &policy_check))) {
-            policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, ctx_in);
-            if (policy_verify == -1) {
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                signaling_cdb_print();
-                //TODO confirm with Rene if we need it or not.
-                //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                return 0;
+            if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, &policy_check))) {
+                policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, ctx_in);
+                if (policy_verify == -1) {
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                    signaling_cdb_print();
+                    //TODO confirm with Rene if we need it or not.
+                    //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                    ret = 0;
+                } else {
+                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_print();
+                    ret = 1;
+                }
             } else {
-                HIP_DEBUG("Connection tracking table after receipt of I2\n");
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                signaling_cdb_print();
-            }
-        } else {
-            if (policy_check == -1) {
-                // TODO add connection to scdb
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                signaling_cdb_print();
-                signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                return 0;
-            } else if (policy_check == 0) {
-                // TODO add connection to scdb
-                HIP_DEBUG("Connection tracking table after receipt of I2\n");
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                signaling_cdb_print();
+                if (policy_check == -1) {
+                    // TODO add connection to scdb
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                    signaling_cdb_print();
+                    signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                    ret = 0;
+                } else if (policy_check == 0) {
+                    // TODO add connection to scdb
+                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_print();
+                    ret = 1;
+                }
             }
         }
-
-        /* Step d) */
-        // TODO add connection to scdb
     }
 
     /* Let packet pass */
     printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
-    return 1;
+
+    if (ret == -1) {
+        return -1;
+    }
+
+    /*
+     * Add the info request parameters to the outgoing
+     */
+    signaling_update_info_flags_from_msg(ctx_flags, common, IN);
+    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hitr, ctx_out, ctx_flags, &policy_check))) {
+        HIP_IFEL(signaling_add_service_offer_to_msg_u(common, *ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
+        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
+        next_service_offer_id++;
+        HIP_DEBUG("Connection tracking table after receipt of I2\n");
+        signaling_cdb_print();
+        ret = 1;
+    } else {
+        if (policy_check == -1) {
+            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+            signaling_cdb_print();
+            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+            ret = 0;
+        } else if (policy_check == 0) {
+            HIP_DEBUG("Connection tracking table after receipt of I2\n");
+            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+            signaling_cdb_print();
+            printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+            ret = 1;
+        }
+    }
+
+    return ret;
 
 out_err:
     return err;
@@ -420,73 +464,119 @@ out_err:
  */
 int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                          err = 0;
-    struct signaling_connection  recv_conn;
-    struct signaling_connection *conn = NULL;
-    //const struct signaling_param_user_auth_request *auth_req = NULL;
-    struct userdb_user_entry *db_entry = NULL;
+    int err           = 0;
+    int policy_check  = 0;
+    int policy_verify = 0;
+    int ret           = 0;
+
+    struct signaling_connection          new_conn;
+    struct userdb_user_entry            *db_entry = NULL;
+    struct signaling_connection_context *ctx_in   = NULL;
+
+    struct signaling_connection_flags *ctx_flags     = NULL;
+    struct policy_tuple               *matched_tuple = NULL;
+    struct signaling_cdb_entry        *old_conn;
+
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
 
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
     /* Step a) */
-    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
-             0, "Could not init connection context from R2/U2 \n");
-    /* HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id, &status)),
-     *       0, "Could not get connection state for connection-tracking table\n");*/
-    HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
-             0, "Could not update connection state with information from R2\n");
-    //conn->ctx_out.direction = FWD;
-
-    /* add/update user in user db */
-    if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-        HIP_ERROR("Could not add user from message\n");
-    }
-    //conn->ctx_out.userdb_entry = db_entry;
-
-    /* Try to auth the user and set flags accordingly */
-    userdb_handle_user_signature(common, conn, OUT);
-    /* The host is authed because this packet went through all the default hip checking functions */
-    //signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
-
-
-
-    /* Step b) */
 /*
- *  if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
- *      if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
- *          HIP_ERROR("Requested authentication in I2, but R2 is missing signed request parameter. \n");
- *          signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
- *          return 0;
- *      }
- *  }
+ *   HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
+ *            0, "Could not init connection context from R2/U2 \n");
+ *    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, recv_conn.id, &status)),
+ *    *       0, "Could not get connection state for connection-tracking table\n");
+ *   HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
+ *            0, "Could not update connection state with information from R2\n");
  *
- *   Step c)
- *  if (signaling_policy_engine_check_and_flag(&common->hits, &conn->ctx_out)) {
- *      conn->status = SIGNALING_CONN_BLOCKED;
- *      signaling_cdb_add(&common->hits, &common->hitr, conn);
- *      signaling_cdb_print();
- *      signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, conn);
- *      return 0;
- *  }
- *
- *   Step d)
- *  if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
- *      if (signaling_build_param_user_auth_req_u(common, 0)) {
- *          HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
- *          return 0;
- *      }
- *      ctx->modified = 1;
- *  }
+ *    add/update user in user db
+ *   if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+ *       HIP_ERROR("Could not add user from message\n");
+ *   }
  */
+
+    // Here in because the firewall has to check for the incoming policies
+    // for the message from the responder
+    if (signaling_init_connection_context(ctx_in, IN)) {
+        HIP_ERROR("Could not init connection context for the OUT SIDE \n");
+        return -1;
+    }
+
+    /*
+     * Handle the incoming response parameters from the Initiator
+     */
+    /* Step a) */
+    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+        HIP_ERROR("Could not init connection context from I2 \n");
+        ret = -1;
+    }
+
+    old_conn = signaling_cdb_get_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port);
+    if (old_conn->status == SIGNALING_CONN_BLOCKED) {
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+        ret = -1;
+    } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
+        printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+        ret = 1;
+    } else {
+        //Check for acknowledgement
+        if (signaling_verify_service_ack(common)) {
+            HIP_IFEL(signaling_init_connection_context_from_msg(ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
+
+            /* add/update user in user db */
+            if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+                HIP_ERROR("Could not add user from message\n");
+            }
+
+            /* Step b) */
+            HIP_DEBUG("Connection after receipt of R2\n");
+            signaling_connection_print(&new_conn, "\t");
+
+            if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, ctx_in, ctx_flags, &policy_check))) {
+                policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, ctx_in);
+                if (policy_verify == -1) {
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                    signaling_cdb_print();
+                    //TODO confirm with Rene if we need it or not.
+                    //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                    ret = -1;
+                } else {
+                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_print();
+                    ret = 1;
+                }
+            } else {
+                if (policy_check == -1) {
+                    // TODO add connection to scdb
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                    signaling_cdb_print();
+                    signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                    ret = -1;
+                } else if (policy_check == 0) {
+                    // TODO add connection to scdb
+                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_print();
+                    ret = 1;
+                }
+            }
+        }
+    }
+
+    if (ret == -1) {
+        return ret;
+    }
 
     HIP_DEBUG("Connection tracking table after receipt of R2\n");
     signaling_cdb_print();
 
     /* Let packet pass */
     printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[22;37m");
-    return 1;
+    return ret;
 
 out_err:
     return err;

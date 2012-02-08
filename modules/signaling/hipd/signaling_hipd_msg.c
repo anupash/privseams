@@ -1525,20 +1525,35 @@ out_err:
  */
 int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                          err       = 0;
-    struct signaling_hipd_state *sig_state = NULL;
+    int                                    err       = 0;
+    struct signaling_hipd_state           *sig_state = NULL;
+    struct signaling_param_service_offer_u param_service_offer;
+    const struct hip_tlv_common           *param;
+    struct signaling_connection_context    ctx_out;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-
     if (!sig_state->pending_conn) {
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
     }
 
-    if (signaling_build_param_connection_identifier(ctx->output_msg, sig_state->pending_conn)) {
-        HIP_DEBUG("Building of connection identifier parameter failed\n");
+    //TODO check for signed and unsigned service offer parameters
+    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER)),
+             -1, "No service offer from the middleboxes\n");
+    HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+             -1, "Could not copy connection context\n");
+
+    HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
+             -1, "Could not init connection context\n");
+
+    signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
+    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+
+    //TODO also add the handler for signed service offer parameter
+    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
+        HIP_DEBUG("Building of application context parameter failed.\n");
         err = 0;
     }
 

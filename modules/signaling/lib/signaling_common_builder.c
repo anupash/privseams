@@ -814,6 +814,21 @@ int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
     return 0;
 }
 
+int signaling_verify_service_ack(struct hip_common *msg)
+{
+    int                          err = 0;
+    const struct hip_tlv_common *param;
+    //TODO check for signed and unsigned service offer parameters
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK)),
+             -1, "No service ack for the middlebox to process\n");
+
+    //TODO add the rest of the code after discussing with Rene
+    return 1;
+
+out_err:
+    return err;
+}
+
 /*
  * Building response to the service offer
  *
@@ -825,11 +840,11 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                 struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer_u *offer)
 {
-    int                           err                = 0;
-    int                           num_req_info_items = 0;
-    int                           i                  = 0;
-    int                           len_contents       = 0;
-    uint16_t                      tmp_info;
+    int      err                = 0;
+    int      num_req_info_items = 0;
+    int      i                  = 0;
+    int      len_contents       = 0;
+    uint16_t tmp_info;
 
     char                               param_buf[HIP_MAX_PACKET];
     struct signaling_param_service_ack ack;

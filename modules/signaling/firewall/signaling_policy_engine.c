@@ -599,6 +599,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
 
     policy_decision_init(&tuple->target);
 
+    memcpy(&tuple->host.host_id, &ctx->host.host_id, sizeof(struct in6_addr));
     /*Copying/Initialize the host information in the policy tuple*/
     if (strlen(ctx->host.host_kernel) > 0) {
         strcpy(tuple->host.host_kernel, ctx->host.host_kernel);
@@ -642,6 +643,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     } else {
         tuple->application.requirements[0] = '\0';
     }
+
 
     /*Copying/Initialize the application information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {
