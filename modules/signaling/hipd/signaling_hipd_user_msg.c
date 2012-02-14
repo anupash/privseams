@@ -135,51 +135,47 @@ out_err:
  */
 static int signaling_handle_connection_confirmation(struct hip_common *msg,
                                                     UNUSED struct sockaddr_in6 *src,
-                                                    const struct signaling_connection *r2_conn)
+                                                    UNUSED const struct signaling_connection *r2_conn)
 {
-    int                                err           = 0;
-    const hip_hit_t                   *our_hit       = NULL;
-    const hip_hit_t                   *peer_hit      = NULL;
-    struct signaling_hipd_state       *sig_state     = NULL;
-    const struct hip_tlv_common       *param         = NULL;
-    struct hip_hadb_state             *entry         = NULL;
-    const struct signaling_connection *recv_conn     = NULL;
-    struct signaling_connection       *existing_conn = NULL;
-    struct userdb_user_entry          *db_entry      = NULL;
+    int                                err       = 0;
+    const hip_hit_t                   *our_hit   = NULL;
+    const hip_hit_t                   *peer_hit  = NULL;
+    struct signaling_hipd_state       *sig_state = NULL;
+    const struct hip_tlv_common       *param     = NULL;
+    struct hip_hadb_state             *entry     = NULL;
+    const struct signaling_connection *recv_conn = NULL;
+    //struct userdb_user_entry          *db_entry      = NULL;
 
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
              -1, "hadb entry has not been set up\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-/*
- *  HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
- *           -1, "Missing connection parameter\n");
- */
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-             -1, "Missing connection short parameter\n");
 
-    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+             -1, "Missing connection parameter\n");
     recv_conn = (const struct signaling_connection *) (param + 1);
 
-    // TODO check with Rene what to do here
-    // We do not receive the whole signaling_connection but instead signaling_connection_short
-    existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id, recv_conn->src_port, recv_conn->dst_port);
-    if (!existing_conn) {
-        HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, r2_conn)),
-                 -1, "Could not save connection in local state\n");
-    } else {
-        HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
-                 -1, "Could not copy connection context to state \n");
-    }
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    // No need to update the hipd state db. It was already updates upon receipt of R2.
+/*
+ *  existing_conn = signaling_hipd_state_get_connection(sig_state, recv_conn->id, recv_conn->src_port, recv_conn->dst_port);
+ *  if (!existing_conn) {
+ *      HIP_IFEL(!(existing_conn = signaling_hipd_state_add_connection(sig_state, r2_conn)),
+ *               -1, "Could not save connection in local state\n");
+ *  } else {
+ *      HIP_IFEL(signaling_copy_connection(existing_conn, recv_conn),
+ *               -1, "Could not copy connection context to state \n");
+ *  }
+ */
 
     /* add/update user in user db */
-    if ((db_entry = userdb_add_user_from_msg(msg, 0))) {
-        HIP_ERROR("Added new user from message\n");
-    }
+/*    if ((db_entry = userdb_add_user_from_msg(msg, 0))) {
+ *      HIP_ERROR("Added new user from message\n");
+ *  }*/
 
     HIP_DEBUG("Saved/updated state for connection received from hipfw:\n");
-    signaling_connection_print(existing_conn, "");
+    signaling_connection_print(recv_conn, "");
 
 out_err:
     return err;
@@ -294,9 +290,9 @@ int signaling_send_connection_update_request(const hip_hit_t *src_hit,
 int signaling_handle_connection_request(struct hip_common *msg,
                                         struct sockaddr_in6 *src)
 {
-    const hip_hit_t                    *our_hit  = NULL;
-    const hip_hit_t                    *peer_hit = NULL;
-    const uint16_t                     *our_port = 0;
+    const hip_hit_t                    *our_hit   = NULL;
+    const hip_hit_t                    *peer_hit  = NULL;
+    const uint16_t                     *our_port  = 0;
     const uint16_t                     *peer_port = 0;
     const struct hip_tlv_common        *param;
     struct hip_hadb_state              *entry     = NULL;
@@ -305,8 +301,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_out;
     //struct signaling_connection_context ctx_in;
-    int                       err      = 0;
-    struct userdb_user_entry *db_entry = NULL;
+    int err = 0;
+//    struct userdb_user_entry *db_entry = NULL;
     struct system_app_context sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -328,8 +324,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
     our_port = hip_get_param_contents_direct(param);
 
     // TODO remove this once conn is not used below
-    HIP_IFEL(signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1)),
-             -1, "Could not copy connection context\n");
+/*
+ *  HIP_IFEL(signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1)),
+ *           -1, "Could not copy connection context\n");
+ */
 
     /* TODO this parts seems broken. Contexts are looked up in
      * signaling_init_connection_context() and
@@ -342,10 +340,13 @@ int signaling_handle_connection_request(struct hip_common *msg,
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
              -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
-    memcpy(conn->application_name, sys_ctx.progname, strlen(sys_ctx.progname));
+    memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
 
     //TODO check if I need to do ntohs here
-    new_conn.id = conn->id;
+    new_conn.id = 0; //some random initiatialization .. will remove it later
+                     //conn->id;
+    new_conn.src_port = *our_port;
+    new_conn.dst_port = *peer_port;
 
     /* Determine if we already have an association */
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
@@ -359,12 +360,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could save connection in local state\n");
 
-        /* add/update user in user db */
-        //TODO discuss about the user db thing
-        if (!(db_entry = userdb_add_user_from_msg(msg, 0))) {
-            HIP_ERROR("Could not add user from message\n");
-        }
-        ctx_out.userdb_entry = db_entry;
 
         /* now trigger the UPDATE */
         //TODO talk to Rene about this
@@ -395,21 +390,18 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "hadb entry has not been set up\n");
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
-        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
-                 -1, "Missing application_context parameter\n");
-        // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-        HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
-                 -1, "Could not copy connection\n");
+/*
+ *      HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
+ *               -1, "Missing application_context parameter\n");
+ *      // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+ *      HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
+ *               -1, "Could not copy connection\n");
+ */
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not save connection in local state\n");
 
-        /* add/update user in user db */
-        if (!(db_entry = userdb_add_user_from_msg(msg, 0))) {
-            HIP_ERROR("Could not add user from message\n");
-        }
-        ctx_out.userdb_entry = db_entry;
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_print(conn, "");

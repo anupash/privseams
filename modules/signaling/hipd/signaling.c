@@ -110,8 +110,6 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add application context to I2 */
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_add_application_context, OUTBOUND_I2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
 
     /* Handle Service Offer to I2*/
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
@@ -126,8 +124,6 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add application context to in R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_application_context, OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
 
 
     // register user message handler

@@ -75,11 +75,10 @@ int signaling_cdb_add_connection(const struct in6_addr src_hit,
     entry->dst_port = dst_port;
     entry->status   = status;
 
-    if (!hip_ll_add_last(&scdb, entry)) {
+    if (hip_ll_add_last(&scdb, entry)) {
         HIP_ERROR("Failed to add new connection to scdb\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -98,11 +97,11 @@ struct signaling_cdb_entry *signaling_cdb_get_connection(const struct in6_addr s
 
         /* depending on whether we were the initiator or responder,
          * src_entry->src_hit may match either src_hit or dst_hit */
-        if ((memcmp(&entry->src_hit, &src_hit, sizeof(struct in6_addr))    &&
-             memcmp(&entry->dst_hit, &dst_hit, sizeof(struct in6_addr))    &&
-             entry->src_port == src_port && entry->dst_port == dst_port)   ||
-            (memcmp(&entry->dst_hit, &src_hit, sizeof(struct in6_addr))    &&
-             memcmp(&entry->src_hit, &dst_hit, sizeof(struct in6_addr))    &&
+        if ((!memcmp(&entry->src_hit, &src_hit, sizeof(struct in6_addr))    &&
+             !memcmp(&entry->dst_hit, &dst_hit, sizeof(struct in6_addr))    &&
+             entry->src_port == src_port && entry->dst_port == dst_port)    ||
+            (!memcmp(&entry->dst_hit, &src_hit, sizeof(struct in6_addr))    &&
+             !memcmp(&entry->src_hit, &dst_hit, sizeof(struct in6_addr))    &&
              entry->dst_port == src_port && entry->src_port == dst_port)) {
             return entry;
         }
@@ -126,11 +125,11 @@ void signaling_cdb_del_connection(const struct in6_addr src_hit,
 
         /* depending on whether we were the initiator or responder,
          * src_entry->src_hit may match either src_hit or dst_hit */
-        if ((memcmp(&entry->src_hit, &src_hit, sizeof(struct in6_addr))    &&
-             memcmp(&entry->dst_hit, &dst_hit, sizeof(struct in6_addr))    &&
+        if ((!memcmp(&entry->src_hit, &src_hit, sizeof(struct in6_addr))    &&
+             !memcmp(&entry->dst_hit, &dst_hit, sizeof(struct in6_addr))    &&
              entry->src_port == src_port && entry->dst_port == dst_port)   ||
-            (memcmp(&entry->dst_hit, &src_hit, sizeof(struct in6_addr))    &&
-             memcmp(&entry->src_hit, &dst_hit, sizeof(struct in6_addr))    &&
+            (!memcmp(&entry->dst_hit, &src_hit, sizeof(struct in6_addr))    &&
+             !memcmp(&entry->src_hit, &dst_hit, sizeof(struct in6_addr))    &&
              entry->dst_port == src_port && entry->src_port == dst_port)) {
             hip_ll_del(&scdb, index, free);
         }
@@ -154,9 +153,9 @@ void signaling_cdb_print(void)
         HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
         HIP_DEBUG_HIT("\tSrc Hit:\t", &entry->src_hit);
         HIP_DEBUG_HIT("\tDst Hit:\t", &entry->dst_hit);
-        HIP_DEBUG("\tSrc Port: %u\t", entry->src_port);
-        HIP_DEBUG("\tDst Port: %u\t", entry->dst_port);
-        HIP_DEBUG("\tStatus: %i\t", entry->status);
+        HIP_DEBUG("\tSrc Port: %u\t\n", entry->src_port);
+        HIP_DEBUG("\tDst Port: %u\t\n", entry->dst_port);
+        HIP_DEBUG("\tStatus: %i\t\n", entry->status);
         HIP_DEBUG("\t----- SCDB ELEMENT END   ------\n");
     }
 

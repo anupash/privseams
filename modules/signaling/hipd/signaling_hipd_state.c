@@ -69,6 +69,11 @@ int signaling_hipd_init_state(struct modular_state *state)
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) malloc(sizeof(struct signaling_hipd_state))),
              -1, "Error on allocating memory for a signaling_hipd_state instance.\n");
 
+    if (!(sig_state->connections = malloc(sizeof(struct hip_ll)))) {
+        HIP_ERROR("Could not allocate empty new list\n");
+        free(sig_state);
+        return -1;
+    }
     hip_ll_init(sig_state->connections);
 
     sig_state->pending_conn = NULL;
@@ -148,6 +153,7 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
         HIP_ERROR("Could not add the connection context to the signaling state");
         return NULL;
     }
+    HIP_DEBUG(" Added new HIPD state to the HIP State DB. \n");
 
     /* Remember this for BEX */
     if (!state->pending_conn) {

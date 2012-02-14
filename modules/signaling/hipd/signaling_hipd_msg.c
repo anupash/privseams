@@ -716,7 +716,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state *sig_state = NULL;
     struct signaling_connection  new_conn;
     struct signaling_connection *conn;
-    struct userdb_user_entry    *db_entry = NULL;
 
     /* Sanity checks */
     if (packet_type == HIP_I2) {
@@ -729,10 +728,6 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
         goto out_err;
     }
 
-    /* add/update user in user db */
-    if (!(db_entry = userdb_add_user_from_msg(ctx->input_msg, 0))) {
-        HIP_ERROR("Could not add user from message\n");
-    }
 
     /* Since this is a new connection, we have to setup new state as a responder
      * and fill the new state with the information in the I2 */
@@ -743,9 +738,8 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
 
-    /* Try to authenticate the user and set flags accordingly */
-    userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
+    HIP_DEBUG("Done initializing the connection from msg and adding it to the HIPD State. Now sending first connection request. \n");
     /* Tell the firewall/oslayer about the new connection and await it's decision */
     HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
@@ -767,8 +761,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state *sig_state = NULL;
     struct signaling_connection  recv_conn;
     struct signaling_connection *conn = NULL;
-    //const struct signaling_param_user_auth_request *param_usr_auth = NULL;
-    struct userdb_user_entry *db_entry = NULL;
 
     /* sanity checks */
     if (packet_type == HIP_R2) {
@@ -781,10 +773,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
         goto out_err;
     }
 
-    /* add/update user in user db */
-    if (!(db_entry = userdb_add_user_from_msg(ctx->input_msg, 0))) {
-        HIP_ERROR("Could not add user from message\n");
-    }
 
     /* Get the connection from state and update it with the information in the R2. */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -793,16 +781,13 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not init connection context from R2/U2 \n");
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id, recv_conn.src_port, recv_conn.dst_port)),
              -1, "Could not get connection state for connection in R2\n");
-    HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg, IN),
-             -1, "Could not update connection state with information from R2\n", IN);
+    signaling_copy_connection(conn, &recv_conn);
+    signaling_connection_print(conn, "\t");
 
-    /* Try to authenticate the user and set flags accordingly */
-    userdb_handle_user_signature(ctx->input_msg, conn, IN);
 
     /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
-
 
     //TODO no sending of I3 anymore
     /* Send an I3 if connection has not been blocked by the oslayer.
@@ -1458,29 +1443,34 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    if (!sig_state->pending_conn) {
+    if (sig_state->pending_conn) {
+        HIP_IFEL(hip_build_param_contents(ctx->output_msg, sig_state->pending_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "build signaling_connection failed \n");
+    } else {
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
     }
 
     //TODO check for signed and unsigned service offer parameters
-    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER)),
-             -1, "No service offer from the middleboxes\n");
-    HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
-             -1, "Could not copy connection context\n");
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                 -1, "Could not copy connection context\n");
 
-    HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
-             -1, "Could not init connection context\n");
+        HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
+                 -1, "Could not init connection context\n");
 
-    signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
-    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+        signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
+        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
 
-    //TODO also add the handler for signed service offer parameter
-    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
-        HIP_DEBUG("Building of application context parameter failed.\n");
-        err = 0;
+        //TODO also add the handler for signed service offer parameter
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
+            HIP_DEBUG("Building of application context parameter failed.\n");
+            err = 0;
+        }
+        return err;
+    } else {
+        HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
-
 out_err:
     return err;
 }
@@ -1534,27 +1524,32 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    if (!sig_state->pending_conn) {
+    if (sig_state->pending_conn) {
+        HIP_IFEL(hip_build_param_contents(ctx->output_msg, sig_state->pending_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "build signaling_connection failed \n");
+    } else {
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
     }
 
     //TODO check for signed and unsigned service offer parameters
-    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER)),
-             -1, "No service offer from the middleboxes\n");
-    HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
-             -1, "Could not copy connection context\n");
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                 -1, "Could not copy connection context\n");
 
-    HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
-             -1, "Could not init connection context\n");
+        HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
+                 -1, "Could not init connection context\n");
 
-    signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
-    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+        signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
+        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
 
-    //TODO also add the handler for signed service offer parameter
-    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
-        HIP_DEBUG("Building of application context parameter failed.\n");
-        err = 0;
+        //TODO also add the handler for signed service offer parameter
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
+            HIP_DEBUG("Building of application context parameter failed.\n");
+            err = 0;
+        }
+    } else {
+        HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
 
 out_err:

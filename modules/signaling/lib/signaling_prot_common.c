@@ -557,9 +557,11 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
+        conn->id       = ntohl(((const struct signaling_connection *) param)->id);
+        conn->src_port = ntohl(((const struct signaling_connection *) param)->src_port);
+        conn->dst_port = ntohl(((const struct signaling_connection *) param)->dst_port);
     }
 
     signaling_update_flags_from_connection_id(msg, conn);

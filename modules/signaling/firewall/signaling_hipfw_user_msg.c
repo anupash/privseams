@@ -51,7 +51,7 @@ static void insert_iptables_rule(const struct in6_addr *const s,
     hip_perf_start_benchmark(perf_set, PERF_IP6TABLES);
 #endif
     while (i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
-        sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT &&"
+        sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT && "
                      "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
                 src_hit, dst_hit, ports[i].src_port, ports[i].dst_port, src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
         //system_print(buf);
@@ -141,7 +141,7 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
     HIP_IFEL(hip_build_param_contents(msg, conn,
                                       HIP_PARAM_SIGNALING_CONNECTION,
                                       sizeof(struct signaling_connection)),
-             -1, "build shorter application context failed \n");
+             -1, "build signaling connection failed \n");
 
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
@@ -204,8 +204,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg)
              -1, "No HIP_PARAM_SIGNALING_CONNECTION_SHORT parameter in message.\n");
     /* "param + 1" because we need to skip the hip_tlv_common header to get to
      * the connection context struct */
-    signaling_copy_connection(&conn,
-                              (const struct signaling_connection *) (param + 1));
+    signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
     if ((entry = signaling_cdb_get_connection(*src_hit, *dst_hit,
                                               conn.src_port, conn.dst_port)) != NULL) {
@@ -243,8 +242,8 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t             *src_hit = NULL;
     const hip_hit_t             *dst_hit = NULL;
-    struct signaling_connection *conn    = NULL;
-    struct signaling_cdb_entry  *entry   = NULL;
+    struct signaling_connection  conn;
+    struct signaling_cdb_entry  *entry = NULL;
     struct signaling_port_pair   ports;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -258,23 +257,24 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
     /* Establish a new connection state from the incoming connection context */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection short parameter from connection request \n");
-    signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
+    signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
     signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
-    ports.src_port = conn->src_port;
-    ports.dst_port = conn->dst_port;
+    ports.src_port = conn.src_port;
+    ports.dst_port = conn.dst_port;
 
     if ((entry = signaling_cdb_get_connection(*src_hit, *dst_hit,
-                                              conn->src_port, conn->dst_port)) != NULL) {
+                                              ports.src_port, ports.dst_port)) != NULL) {
         entry->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(src_hit, dst_hit, &ports);
     } else {
         signaling_cdb_add_connection(*src_hit, *dst_hit,
-                                     conn->src_port, conn->dst_port,
+                                     ports.src_port, ports.dst_port,
                                      SIGNALING_CONN_ALLOWED);
+        insert_iptables_rule(src_hit, dst_hit, &ports);
     }
 
-    signaling_hipfw_send_connection_confirmation(src_hit, dst_hit, conn);
+    signaling_hipfw_send_connection_confirmation(src_hit, dst_hit, &conn);
 
 out_err:
     return err;
@@ -299,9 +299,10 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     const struct hip_tlv_common *param = NULL;
     const hip_hit_t             *hits  = NULL;
     const hip_hit_t             *hitr  = NULL;
-    //const struct signaling_connection       *recv_conn     = NULL;
-    struct signaling_connection       *existing_conn = NULL;
-    //const struct signaling_connection *recv_conn;
+    struct signaling_connection  recv_conn;
+    //struct signaling_connection *existing_conn = NULL;
+    struct signaling_cdb_entry *entry = NULL;
+    struct signaling_port_pair  ports;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -313,17 +314,30 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     HIP_IFEL(!msg, -1, "Msg is NULL \n");
 
     /* Get and update the local connection state */
-    signaling_get_hits_from_msg(msg, &hitr, &hits);
+    signaling_get_hits_from_msg(msg, &hits, &hitr);
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
              -1, "Could not get connection parameter from connection request \n");
-    //recv_conn = (const struct signaling_connection *) (param + 1);
+    signaling_copy_connection(&recv_conn, (const struct signaling_connection *) (param + 1));
 
-    /*HIP_IFEL(!(existing_conn->id = signaling_cdb_entry_get_connection(hits, hitr, &recv_conn->src_port, &recv_conn->dst_port)),
-     *       -1, "Received second connection request for non-existant connection id %d \n", recv_conn->id);*/
+    HIP_DEBUG_HIT("Src Hit: \t ", hits);
+    HIP_DEBUG_HIT("Dst Hit: \t ", hitr);
+    ports.src_port = recv_conn.src_port;
+    ports.dst_port = recv_conn.dst_port;
+
+    if ((entry = signaling_cdb_get_connection(*hits, *hitr,
+                                              recv_conn.src_port, recv_conn.dst_port)) != NULL) {
+        entry->status = SIGNALING_CONN_ALLOWED;
+        insert_iptables_rule(hits, hitr, &ports);
+    } else {
+        signaling_cdb_add_connection(*hits, *hitr,
+                                     recv_conn.src_port, recv_conn.dst_port,
+                                     SIGNALING_CONN_ALLOWED);
+        insert_iptables_rule(hits, hitr, &ports);
+    }
 
     /* Answer to HIPD */
-    signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);
+    signaling_hipfw_send_connection_confirmation(hits, hitr, &recv_conn);
 
 out_err:
     return err;
