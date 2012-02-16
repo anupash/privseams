@@ -194,6 +194,7 @@ int signaling_hipfw_feedback_uninit(void)
 {
     HIP_DEBUG("Uninit signaling firewall feedback module \n");
     EC_KEY_free(priv_key);
+    RSA_free(rsa_key);
     X509_free(cert);
     return 0;
 }

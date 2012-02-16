@@ -355,8 +355,8 @@ int signaling_init_user_context(struct signaling_user_context *const user_ctx)
     user_ctx->rdata.algorithm  = 0;      // no user public key algorithm
     user_ctx->rdata.flags      = 0;      // unused
     user_ctx->rdata.protocol   = 0;      // unused
-    memset(user_ctx->pkey,          0, sizeof(user_ctx->pkey));
-    memset(user_ctx->subject_name,  0, sizeof(user_ctx->subject_name));
+    user_ctx->pkey[0]          = '\0';
+    user_ctx->subject_name[0]  = '\0';
 
 out_err:
     return err;
@@ -421,6 +421,8 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
 
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
+    // In case of R1 we have to check the policy for the packet from Initiator
+    // In case of I2 we have to check the policy for the packet from Responder
     memcpy(&ctx->host_id, &msg->hits, sizeof(struct in6_addr));
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
@@ -433,7 +435,7 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
         ctx->host_kernel_len = ntohs(param->length);
         memcpy(ctx->host_kernel, ((const struct signaling_param_host_info_kernel *) param)->kernel,
-               param->length);
+               ctx->host_kernel_len);
         ctx->host_kernel[ctx->host_kernel_len - 1] = '\0';
     }
 
@@ -578,9 +580,8 @@ int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flag
     const struct hip_tlv_common *param = NULL;
 
     /* sanity checks */
-    HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
-
-    flags = malloc(sizeof(struct signaling_connection_flags));
+    HIP_IFEL(!msg,      -1, "Cannot initialize from NULL-msg\n");
+    HIP_IFEL(!flags,    -1, "Cannot initialize NULL flags\n");
     signaling_info_req_flag_init(&flags->flag_info_requests);
     signaling_service_info_flag_init(&flags->flag_services);
 
@@ -779,21 +780,18 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
                                                UNUSED const struct hip_common *const msg,
                                                enum direction dir)
 {
-    int                                  err = 0;
-    struct signaling_application_context app_ctx;
-    struct signaling_user_context        user_ctx;
-    struct signaling_host_context        host_ctx;
+    int err = 0;
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
-
-    /* init and fill the connection context */
-    HIP_IFEL(signaling_init_connection_context(ctx, dir), -1, "Failed to init connection context\n");
-
-    signaling_init_app_context_from_msg(&app_ctx,   msg, dir);
-    signaling_init_host_context_from_msg(&host_ctx, msg, dir);
-    signaling_init_user_context_from_msg(&user_ctx, msg, dir);
-
+    if (dir == IN) {
+        signaling_init_app_context_from_msg(&ctx->app,   msg, dir);
+        signaling_init_host_context_from_msg(&ctx->host, msg, dir);
+        signaling_init_user_context_from_msg(&ctx->user, msg, dir);
+    } else if (dir == OUT) {
+        //There should be no information in the channel without requesting for it.
+        memcpy(&ctx->host.host_id, &msg->hitr, sizeof(struct in6_addr));
+    }
 out_err:
     return err;
 }
@@ -1082,7 +1080,7 @@ int signaling_info_req_flag_check(struct signaling_flags_info_req flags, int f)
         return (flags.APP_INFO_REQUIREMENTS_RECV) ? 1 : 0;
         break;
     default:
-        return -1;
+        return 0;
     }
 }
 
@@ -1278,7 +1276,7 @@ int signaling_service_info_flag_check(struct signaling_flags_service_info *flags
         return (flags->SERVICE_NACK_RECV)  ? 1 : 0;
         break;
     default:
-        return -1;
+        return 0;
     }
 }
 

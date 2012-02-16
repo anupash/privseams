@@ -147,6 +147,27 @@ int signaling_hipfw_init(const char *policy_file)
 
     // register I3
     lmod_register_packet_type(HIP_I3, "HIP_I3");
+    // Information request parameter types
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_ID,          "HIP_PARAM_SIGNALING_HOST_INFO_ID");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_OS,          "HIP_PARAM_SIGNALING_HOST_INFO_OS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_KERNEL,      "HIP_PARAM_SIGNALING_HOST_INFO_KERNEL");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_CERTS,       "HIP_PARAM_SIGNALING_HOST_INFO_CERTS");
+
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_INFO_ID,          "HIP_PARAM_SIGNALING_USER_INFO_ID");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_INFO_CERTS,       "HIP_PARAM_SIGNALING_USER_INFO_CERTS");
+
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_NAME,         "HIP_PARAM_SIGNALING_APP_INFO_NAME");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS,    "HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS,  "HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS, "HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS");
+
+    // register internal parameter types
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT,    "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,            "HIP_PARAM_SIGNALING_CONNECTION");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,           "HIP_PARAM_SIGNALING_SERVICE_ACK");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
+
 
     signaling_cdb_init();
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
@@ -172,8 +193,9 @@ int signaling_hipfw_init(const char *policy_file)
     HIP_IFEL(signaling_policy_engine_init(cfg),
              -1, "Failed to start policy engine \n");
 
+    HIP_DEBUG("Policy Engine started successfully.\n");
     /* Init firewall identity */
-    signaling_hipfw_feedback_init(path_key_file, path_cert_file);
+    HIP_IFEL(signaling_hipfw_feedback_init(path_key_file, path_cert_file), -1, "Problem installing the middlebox key and certificate.\n");
 
 out_err:
     return err;
@@ -237,14 +259,14 @@ out_err:
  *
  * @return          the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
+int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
     int                                 err          = 0;
     int                                 policy_check = 0;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_in;
     struct signaling_connection_context ctx_out;
-    struct signaling_connection_flags  *ctx_flags     = NULL;
+    struct signaling_connection_flags   ctx_flags;
     const struct policy_tuple          *matched_tuple = NULL;
     printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
 
@@ -262,27 +284,36 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         return -1;
     }
 
-    if (signaling_init_connection_context(&ctx_out, OUT)) {
-        HIP_ERROR("Could not init connection context for the OUT SIDE \n");
+    if (signaling_init_connection_context(&ctx_out, IN)) {
+        HIP_ERROR("Could not init connection context for the IN SIDE \n");
         return -1;
     }
 
-    signaling_update_info_flags_from_msg(ctx_flags, common, IN);
+    signaling_update_info_flags_from_msg(&ctx_flags, common, IN);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
     signaling_connection_print(&new_conn, "\t");
     //TODO check here if the hits refers to the hit of the initiator
     //TODO check here if ctx_in or ctx_out should be used
-    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, ctx_flags, &policy_check))) {
-        HIP_IFEL(signaling_add_service_offer_to_msg_u(common, *ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
-        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-        next_service_offer_id++;
-        HIP_DEBUG("Connection tracking table after receipt of R1\n");
-        signaling_cdb_print();
-        /* Let packet pass */
-        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
-        return 1;
+    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
+    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_out, &ctx_flags, &policy_check))) {
+        HIP_DEBUG("Found matching policy tuple\n");
+        if (policy_check == 1) {
+            HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
+            hip_dump_msg(common);
+            HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
+            HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
+            hip_dump_msg(common);
+            ctx->modified = 1;
+            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
+            next_service_offer_id++;
+            HIP_DEBUG("Connection tracking table after receipt of R1\n");
+            signaling_cdb_print();
+            /* Let packet pass */
+            printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+            return 1;
+        }
     } else {
         if (policy_check == -1) {
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -328,13 +359,12 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     int                                 policy_verify = 0;
     int                                 ret           = 0;
     struct signaling_connection         new_conn;
-    struct userdb_user_entry           *db_entry = NULL;
     struct signaling_connection_context ctx_in;
     struct signaling_connection_context ctx_out;
 
-    struct signaling_connection_flags *ctx_flags     = NULL;
-    struct policy_tuple               *matched_tuple = NULL;
-    struct signaling_cdb_entry        *old_conn;
+    struct signaling_connection_flags ctx_flags;
+    struct policy_tuple              *matched_tuple = NULL;
+    struct signaling_cdb_entry       *old_conn;
 
 
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
@@ -344,6 +374,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 
     // Here in because the firewall has to check for the incoming policies
     // for the message from the responder
+    if (signaling_init_connection_context(&ctx_in, IN)) {
+        HIP_ERROR("Could not init connection context for the IN SIDE \n");
+        return -1;
+    }
     if (signaling_init_connection_context(&ctx_out, IN)) {
         HIP_ERROR("Could not init connection context for the IN SIDE \n");
         return -1;
@@ -369,18 +403,15 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         }
     } else {
         //Check for acknowledgement
+        HIP_DEBUG("Verifying Ack to Service Offer.\n");
         if (signaling_verify_service_ack(common) != -1) {
             HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
-            /* add/update user in user db */
-            if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-                HIP_ERROR("Could not add user from message\n");
-            }
 
             /* Step b) */
             HIP_DEBUG("Connection after receipt of I2\n");
             signaling_connection_print(&new_conn, "\t");
 
-            if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, ctx_flags, &policy_check))) {
+            if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
                 policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in);
                 if (policy_verify == -1) {
                     signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -390,7 +421,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                     ret = 0;
                 } else {
                     HIP_DEBUG("Connection tracking table after receipt of I2\n");
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
                     signaling_cdb_print();
                     ret = 1;
                 }
@@ -404,37 +435,47 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 } else if (policy_check == 0) {
                     // TODO add connection to scdb
                     HIP_DEBUG("Connection tracking table after receipt of I2\n");
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
                     signaling_cdb_print();
                     ret = 1;
                 }
             }
         } else {
-            HIP_DEBUG("No Service Offer Sent in R1 hence the connection is allowed.\n");
-            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+            HIP_DEBUG("No Service Offer Sent in R1, but will wait for the info response from Responder.\n");
+            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
             signaling_cdb_print();
             ret = 1;
         }
     }
 
     /* Let packet pass */
-    printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+    printf("\033[22;32mAccepted I2 packet. Checking for information required from Responder\033[22;37m\n\n\033[01;37m");
 
     if (ret == -1) {
-        return -1;
+        return ret;
     }
 
     /*
      * Add the info request parameters to the outgoing
      */
-    signaling_update_info_flags_from_msg(ctx_flags, common, IN);
-    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hitr, &ctx_out, ctx_flags, &policy_check))) {
-        HIP_IFEL(signaling_add_service_offer_to_msg_u(common, *ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
-        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-        next_service_offer_id++;
-        HIP_DEBUG("Connection tracking table after receipt of I2\n");
-        signaling_cdb_print();
-        ret = 1;
+    HIP_DEBUG("Policy check for the Responder.\n");
+    signaling_info_req_flag_init(&ctx_flags.flag_info_requests);
+    signaling_service_info_flag_init(&ctx_flags.flag_services);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
+    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hitr, &ctx_out, &ctx_flags, &policy_check))) {
+        if (policy_check == 1) {
+            HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
+            hip_dump_msg(common);
+            HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id), -1, "Could not add service offer to the message\n");
+            HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
+            hip_dump_msg(common);
+            ctx->modified = 1;
+            signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
+            next_service_offer_id++;
+            HIP_DEBUG("Connection tracking table after receipt of I2\n");
+            signaling_cdb_print();
+            ret = 1;
+        }
     } else {
         if (policy_check == -1) {
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -526,48 +567,48 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
         } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
             printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[01;37m");
             ret = 1;
-        }
-    } else {
-        //Check for acknowledgement
-        if (signaling_verify_service_ack(common)) {
-            HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
+        } else if (old_conn->status == SIGNALING_CONN_PROCESSING) {
+            //Check for acknowledgement
+            if (signaling_verify_service_ack(common)) {
+                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
 
-            /* add/update user in user db */
-            if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-                HIP_ERROR("Could not add user from message\n");
-            }
-
-            /* Step b) */
-            HIP_DEBUG("Connection after receipt of R2\n");
-            signaling_connection_print(&new_conn, "\t");
-
-            if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, ctx_flags, &policy_check))) {
-                policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in);
-                if (policy_verify == -1) {
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                    signaling_cdb_print();
-                    //TODO confirm with Rene if we need it or not.
-                    //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                    ret = -1;
-                } else {
-                    HIP_DEBUG("Connection tracking table after receipt of R2\n");
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                    signaling_cdb_print();
-                    ret = 1;
+                /* add/update user in user db */
+                if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
+                    HIP_ERROR("Could not add user from message\n");
                 }
-            } else {
-                if (policy_check == -1) {
-                    // TODO add connection to scdb
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                    signaling_cdb_print();
-                    signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                    ret = -1;
-                } else if (policy_check == 0) {
-                    // TODO add connection to scdb
-                    HIP_DEBUG("Connection tracking table after receipt of R2\n");
-                    signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                    signaling_cdb_print();
-                    ret = 1;
+
+                /* Step b) */
+                HIP_DEBUG("Connection after receipt of R2\n");
+                signaling_connection_print(&new_conn, "\t");
+
+                if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, ctx_flags, &policy_check))) {
+                    policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in);
+                    if (policy_verify == -1) {
+                        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                        signaling_cdb_print();
+                        //TODO confirm with Rene if we need it or not.
+                        //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                        ret = -1;
+                    } else {
+                        HIP_DEBUG("Connection tracking table after receipt of R2\n");
+                        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                        signaling_cdb_print();
+                        ret = 1;
+                    }
+                } else {
+                    if (policy_check == -1) {
+                        // TODO add connection to scdb
+                        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                        signaling_cdb_print();
+                        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                        ret = -1;
+                    } else if (policy_check == 0) {
+                        // TODO add connection to scdb
+                        HIP_DEBUG("Connection tracking table after receipt of R2\n");
+                        signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                        signaling_cdb_print();
+                        ret = 1;
+                    }
                 }
             }
         }

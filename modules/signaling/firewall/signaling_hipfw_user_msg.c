@@ -335,7 +335,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
                                      SIGNALING_CONN_ALLOWED);
         insert_iptables_rule(hits, hitr, &ports);
     }
-
+    signaling_cdb_print();
     /* Answer to HIPD */
     signaling_hipfw_send_connection_confirmation(hits, hitr, &recv_conn);
 

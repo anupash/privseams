@@ -57,31 +57,33 @@
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
 #define HIP_PARAM_SIGNALING_CERT_CHAIN_ID       5008
 
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER     62504
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     62505
-#define HIP_PARAM_SIGNALING_SERVICE_ACK         62507
-#define HIP_PARAM_SIGNALING_SERVICE_NACK        62508
-
-/*Parameter types for the end-point information*/
-//TODO check for the values for these parameters
-//TODO paramters such as CERTS should be in the signed part
-#define HIP_PARAM_SIGNALING_HOST_INFO_OS            5010
-#define HIP_PARAM_SIGNALING_HOST_INFO_KERNEL        5011
-#define HIP_PARAM_SIGNALING_HOST_INFO_ID            5012
-#define HIP_PARAM_SIGNALING_HOST_INFO_CERTS         5013
-
-#define HIP_PARAM_SIGNALING_USER_INFO_ID            5014
-#define HIP_PARAM_SIGNALING_USER_INFO_CERTS         5015
-
-#define HIP_PARAM_SIGNALING_APP_INFO_NAME           5016
-#define HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS      5017
-#define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5018
-#define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5019
-
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
 #define HIP_PARAM_SIGNALING_CONNECTION          5102
 #define HIP_PARAM_SIGNALING_PORTS               5103
+
+#define HIP_PARAM_SIGNALING_SERVICE_ACK         5107
+#define HIP_PARAM_SIGNALING_SERVICE_NACK        5108
+
+/*Parameter types for the end-point information*/
+//TODO check for the values for these parameters
+//TODO paramters such as CERTS should be in the signed part
+#define HIP_PARAM_SIGNALING_HOST_INFO_OS            5110
+#define HIP_PARAM_SIGNALING_HOST_INFO_KERNEL        5111
+#define HIP_PARAM_SIGNALING_HOST_INFO_ID            5112
+#define HIP_PARAM_SIGNALING_HOST_INFO_CERTS         5113
+
+#define HIP_PARAM_SIGNALING_USER_INFO_ID            5114
+#define HIP_PARAM_SIGNALING_USER_INFO_CERTS         5115
+
+#define HIP_PARAM_SIGNALING_APP_INFO_NAME           5116
+#define HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS      5117
+#define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5118
+#define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5119
+
+/* Have to be in unsigned part as Middlebox can't sign the message.*/
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER       62504
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     62505
 
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE              33001

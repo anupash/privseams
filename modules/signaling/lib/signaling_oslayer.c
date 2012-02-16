@@ -36,7 +36,7 @@
 #include "signaling_user_management.h"
 #include "signaling_x509_api.h"
 
-struct hip_ll *verified_apps = NULL;
+struct hip_ll verified_apps;
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
@@ -50,15 +50,15 @@ static X509AC *get_application_attribute_certificate_chain(const char *app_file,
     X509AC *app_cert = NULL;
 
     if (app_file == NULL) {
-	HIP_ERROR("Got no path to application (NULL).\n");
-	return NULL;
+        HIP_ERROR("Got no path to application (NULL).\n");
+        return NULL;
     }
 
     /* Get the application attribute certificate */
     sprintf(app_cert_file, "%s.cert", app_file);
     if (!(fp = fopen(app_cert_file, "r"))) {
-	HIP_ERROR("Application certificate could not be found at %s.\n", app_cert_file);
-	return NULL;
+        HIP_ERROR("Application certificate could not be found at %s.\n", app_cert_file);
+        return NULL;
     }
     if (!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL))) {
         HIP_ERROR("Could not decode application certificate.\n");
@@ -280,7 +280,7 @@ int signaling_verify_application(const char *app_path)
 {
     int                       err = 0;
     unsigned char             md[SHA_DIGEST_LENGTH];
-    struct hip_ll            *verified_app = verified_apps;
+    struct hip_ll            *verified_app = &verified_apps;
     char                     *hash         = NULL;
     const struct hip_ll_node *iter         = NULL;
 
@@ -313,6 +313,7 @@ int signaling_verify_application(const char *app_path)
     HIP_IFEL(0 > verify_application_hash(app_cert, md),
              -1, "Hash of application doesn't match hash in certificate.\n");
 
+
     /* Now verify the chain */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_X509AC_VERIFY_CERT_CHAIN\n");   // test 1.1.2
@@ -329,7 +330,7 @@ int signaling_verify_application(const char *app_path)
     hash = malloc(SHA_DIGEST_LENGTH);
     memcpy(hash, md, SHA_DIGEST_LENGTH);
 
-    HIP_IFEL(hip_ll_add_last(verified_apps, hash), -1,
+    HIP_IFEL(hip_ll_add_last(&verified_apps, hash), -1,
              "Could not add the connection context to the signaling state");
 
     HIP_DEBUG("Added hash of application to verified apps. \n", hash);
@@ -443,7 +444,7 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
     }
 
 
-    HIP_IFEL(!gethostname(readbuf, NETSTAT_SIZE_OUTPUT),
+    HIP_IFEL(gethostname(readbuf, NETSTAT_SIZE_OUTPUT),
              -1, "Failed to make call to get the hostname\n");
     tmp_len = strlen(readbuf);
     if (tmp_len > 0) {
