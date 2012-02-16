@@ -55,14 +55,15 @@
 #include "modules/signaling/lib/signaling_common_builder.h"
 
 /* The identity of the firewall */
-static EC_KEY *priv_key = NULL;
-static X509 *cert = NULL;
+static RSA            *rsa_key  = NULL;
+static EC_KEY         *priv_key = NULL;
+static X509           *cert     = NULL;
 static struct in6_addr our_hit;
 
 /* Sockets for output */
-static int hipfw_nat_sock_output_udp = 0;
-UNUSED static int hipfw_raw_sock_output_v4 = 0;
-UNUSED static int hipfw_raw_sock_output_v6 = 0;
+static int        hipfw_nat_sock_output_udp = 0;
+UNUSED static int hipfw_raw_sock_output_v4  = 0;
+UNUSED static int hipfw_raw_sock_output_v6  = 0;
 
 struct rtnl_handle hipfw_nl_route;
 
@@ -86,10 +87,10 @@ static int set_cloexec_flag(int desc, int value)
 
 static int select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
-    int err                   = 0;
-    int family                = AF_INET;
-    struct idxmap *idxmap[16] = { 0 };
-    struct in6_addr lpback    = IN6ADDR_LOOPBACK_INIT;
+    int             err        = 0;
+    int             family     = AF_INET;
+    struct idxmap  *idxmap[16] = { 0 };
+    struct in6_addr lpback     = IN6ADDR_LOOPBACK_INIT;
 
     HIP_DEBUG_IN6ADDR("dst", dst);
 
@@ -109,7 +110,7 @@ out_err:
 
 static int init_raw_sock_v4(int proto)
 {
-    int on  = 1, off = 0, err = 0;
+    int on = 1, off = 0, err = 0;
     int sock;
 
     sock = socket(AF_INET, SOCK_RAW, proto);
@@ -142,13 +143,18 @@ out_err:
  *
  * @return              0 on success, negative on error
  */
-int signaling_hipfw_feedback_init(const char *key_file, const char *cert_file) {
+int signaling_hipfw_feedback_init(const char *key_file, const char *cert_file)
+{
     int err = 0;
 
     /* Load the host identity */
-    load_ecdsa_private_key(key_file, &priv_key);
+    load_rsa_private_key(key_file, &rsa_key);
+    //load_ecdsa_private_key(key_file, &priv_key);
+    HIP_DEBUG("Successfully Loaded the MiddleBox RSA key. Should not crash anymore.\n");
+
     cert = load_x509_certificate(cert_file);
-    hip_any_key_to_hit(priv_key, &our_hit, 0, HIP_HI_ECDSA);
+    //hip_any_key_to_hit(priv_key, &our_hit, 0, HIP_HI_ECDSA);
+    hip_any_key_to_hit(rsa_key, &our_hit, 0, HIP_HI_RSA);
     HIP_INFO_HIT("Our hit: ", &our_hit);
 
     /* Sockets */
@@ -184,7 +190,8 @@ out_err:
  *
  * @return 0 on success, negative on error
  */
-int signaling_hipfw_feedback_uninit(void) {
+int signaling_hipfw_feedback_uninit(void)
+{
     HIP_DEBUG("Uninit signaling firewall feedback module \n");
     EC_KEY_free(priv_key);
     X509_free(cert);
@@ -192,19 +199,19 @@ int signaling_hipfw_feedback_uninit(void) {
 }
 
 static int send_raw_from_one_src(const struct in6_addr *local_addr,
-                                     const struct in6_addr *peer_addr,
-                                     const in_port_t src_port,
-                                     const in_port_t dst_port,
-                                     struct hip_common *msg)
+                                 const struct in6_addr *peer_addr,
+                                 const in_port_t src_port,
+                                 const in_port_t dst_port,
+                                 struct hip_common *msg)
 {
-    int err                   = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
+    int                     err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
     struct sockaddr_storage src, dst;
-    int src_is_ipv4           = 0, dst_is_ipv4 = 0, memmoved = 0;
-    struct sockaddr_in6 *src6 = NULL, *dst6 = NULL;
-    struct sockaddr_in *src4  = NULL, *dst4 = NULL;
-    struct in6_addr my_addr;
+    int                     src_is_ipv4 = 0, dst_is_ipv4 = 0, memmoved = 0;
+    struct sockaddr_in6    *src6        = NULL, *dst6 = NULL;
+    struct sockaddr_in     *src4        = NULL, *dst4 = NULL;
+    struct in6_addr         my_addr;
     /* Points either to v4 or v6 raw sock */
-    int hipfw_raw_sock_output   = 0;
+    int hipfw_raw_sock_output = 0;
 
     /* Verify the existence of obligatory parameters. */
     HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -228,10 +235,10 @@ static int send_raw_from_one_src(const struct in6_addr *local_addr,
 
     /* Some convinient short-hands to avoid too much casting (could be
      * an union as well) */
-    src6        = (struct sockaddr_in6 *) &src;
-    dst6        = (struct sockaddr_in6 *) &dst;
-    src4        = (struct sockaddr_in *)  &src;
-    dst4        = (struct sockaddr_in *)  &dst;
+    src6 = (struct sockaddr_in6 *) &src;
+    dst6 = (struct sockaddr_in6 *) &dst;
+    src4 = (struct sockaddr_in *) &src;
+    dst4 = (struct sockaddr_in *) &dst;
 
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));
@@ -239,8 +246,8 @@ static int send_raw_from_one_src(const struct in6_addr *local_addr,
     if (dst_port && dst_is_ipv4) {
         HIP_DEBUG("Using IPv4 UDP socket\n");
         hipfw_raw_sock_output = hipfw_nat_sock_output_udp;
-        sa_size             = sizeof(struct sockaddr_in);
-        udp                 = 1;
+        sa_size               = sizeof(struct sockaddr_in);
+        udp                   = 1;
     } else if (dst_is_ipv4) {
         HIP_DEBUG("Using IPv4 raw socket\n");
         //hipfw_raw_sock_output = hipfw_raw_sock_output_v4;
@@ -323,7 +330,7 @@ static int send_raw_from_one_src(const struct in6_addr *local_addr,
         /* Insert 32 bits of zero bytes between UDP and HIP */
         memmove(((char *) msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
         memset(((char *) msg), 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
-        len       += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
+        len += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
         uh->source = htons(src_port);
         uh->dest   = htons(dst_port);
@@ -364,7 +371,7 @@ out_err:
         struct in6_addr any = IN6ADDR_ANY_INIT;
         src6->sin6_family = AF_INET6;
         ipv6_addr_copy(&src6->sin6_addr, &any);
-        sa_size           = sizeof(struct sockaddr_in6);
+        sa_size = sizeof(struct sockaddr_in6);
     }
     bind(hipfw_raw_sock_output, (struct sockaddr *) &src, sa_size);
 
@@ -402,20 +409,21 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
                                                UNUSED struct tuple *tuple,
                                                const struct hip_fw_context *ctx,
                                                const int reason,
-                                               const struct signaling_connection *conn) {
-    int err                 = 0;
-    uint16_t mask           = 0;
-    struct hip_common *msg_buf    = NULL;
-    struct hip_common *msg_buf2   = NULL;
-    unsigned char *buf;
-    int cert_len = 0;
+                                               const struct signaling_connection *conn)
+{
+    int                err      = 0;
+    uint16_t           mask     = 0;
+    struct hip_common *msg_buf  = NULL;
+    struct hip_common *msg_buf2 = NULL;
+    unsigned char     *buf;
+    int                cert_len = 0;
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-            -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
+             -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
     hip_build_network_hdr(msg_buf, HIP_NOTIFY, mask, &our_hit, &common->hits);
     HIP_IFEL(!(msg_buf2 = hip_msg_alloc()),
-            -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
+             -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
     hip_build_network_hdr(msg_buf2, HIP_NOTIFY, mask, &our_hit, &common->hitr);
 
     /* Append certificate */
@@ -448,11 +456,11 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
              -1, "Could not sign notification for destination host\n");
 
     /* Send to source and destination of the connection */
-    if(send_pkt(NULL, &ctx->src, 10500, 10500, msg_buf)) {
+    if (send_pkt(NULL, &ctx->src, 10500, 10500, msg_buf)) {
         HIP_ERROR("Could not notify the source of a connection reject \n");
     }
     free(msg_buf);
-    if(send_pkt(NULL, &ctx->dst, 10500, 10500, msg_buf2)) {
+    if (send_pkt(NULL, &ctx->dst, 10500, 10500, msg_buf2)) {
         HIP_ERROR("Could not notify the destination of a connection reject \n");
     }
     free(msg_buf2);
