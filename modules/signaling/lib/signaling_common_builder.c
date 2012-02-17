@@ -591,24 +591,27 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
 
     switch (app_info_flag) {
     case APP_INFO_NAME:
-        tmp_len                        = strlen(ctx->app.issuer_dn);
-        app_info_name.issuer_dn_length = htons(tmp_len);
-        memcpy(app_info_name.issuer_dn, ctx->app.issuer_dn, tmp_len);
-        len_contents = tmp_len;
-
+        HIP_DEBUG("Adding APP_INFO_NAME request to the service offer.\n");
         tmp_len                     = strlen(ctx->app.application_dn);
         app_info_name.app_dn_length = htons(tmp_len);
-        memcpy(app_info_name.application_dn, ctx->app.application_dn, tmp_len);
+        memcpy(&app_info_name.application_dn, &ctx->app.application_dn, tmp_len);
         len_contents += tmp_len;
 
-        len_contents += sizeof(app_info_name.app_dn_length) + sizeof(app_info_name.issuer_dn_length);
+        HIP_DEBUG("Application DN : %s.\n", ctx->app.application_dn);
+        tmp_len                        = strlen(ctx->app.issuer_dn);
+        app_info_name.issuer_dn_length = htons(tmp_len);
+        memcpy(&app_info_name.issuer_dn, &ctx->app.issuer_dn, tmp_len);
+        len_contents += tmp_len;
+
+        len_contents += (sizeof(app_info_name.app_dn_length) + sizeof(app_info_name.issuer_dn_length));
         hip_set_param_contents_len((struct hip_tlv_common *) &app_info_name, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &app_info_name, HIP_PARAM_SIGNALING_APP_INFO_NAME);
 
+        HIP_DEBUG("All information about the app_info_name parameteres set. Building the HIP Parameter.\n");
         //TODO do not have the version parameter set. Leaving it to null character.
         /* Append the parameter to the message */
-        if (hip_build_generic_param(msg, &app_info_name, sizeof(struct signaling_param_app_info_name), param_buf)) {
-            HIP_ERROR("Failed to append application info name parameter to message.\n");
+        if (hip_build_param(msg, &app_info_name)) {
+            HIP_ERROR("Failed to APP_INFO_NAME parameter to message.\n");
             return -1;
         }
         break;
@@ -746,7 +749,8 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  */
 int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
                                          struct signaling_connection_flags flags,
-                                         int service_offer_id)
+                                         int service_offer_id,
+                                         unsigned char *hash)
 {
     int                                    err = 0;
     int                                    len;
@@ -803,9 +807,17 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
     }
     HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
     len = sizeof(struct signaling_param_service_offer_u) - (sizeof(struct hip_tlv_common) + sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx));
+    //Computing the hash of the service offer and storing it in tuple
     hip_set_param_contents_len((struct hip_tlv_common *) &param_service_offer_u, len);
+
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer_u, len, hash),
+             -1, "Could not build hash of the service offer \n");
+
+    //print_hash(hash);
+
     HIP_IFEL(hip_build_param(msg, &param_service_offer_u),
              -1, "Could not build notification parameter into message \n");
+
 
 out_err:
     return err;
@@ -813,22 +825,41 @@ out_err:
 
 int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
                                          UNUSED struct signaling_connection_flags flags,
-                                         UNUSED int service_offer_id)
+                                         UNUSED int service_offer_id,
+                                         UNUSED unsigned char *hash)
 {
     return 0;
 }
 
-int signaling_verify_service_ack(struct hip_common *msg)
+int signaling_verify_service_ack(struct hip_common *msg,
+                                 unsigned char *stored_hash)
 {
-    int                          err = 0;
-    const struct hip_tlv_common *param;
+    int                                 err     = 0;
+    int                                 tmp_len = 0;
+    const struct hip_tlv_common        *param;
+    const struct signaling_service_ack *ack;
+
     HIP_DEBUG("Ack received corresponding to the service offer.\n");
     //TODO check for signed and unsigned service offer parameters
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK)),
              -1, "No service ack for the middlebox to process\n");
+    tmp_len = hip_get_param_contents_len(param);
+    ack     = (const struct signaling_service_ack *) (param + 1);
 
-    //TODO add the rest of the code after discussing with Rene
-    return 1;
+
+    if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {
+        HIP_DEBUG("The two hashes match.\n");
+        return 1;
+    } else {
+        HIP_DEBUG("The stored hash and the acked hash do not match.\n");
+        printf("Stored hash: ");
+        print_hash(stored_hash);
+
+        printf("Acked hash: ");
+        print_hash(ack->service_offer_hash);
+
+        return 0;
+    }
 
 out_err:
     return err;
@@ -871,8 +902,10 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
         ack.service_offer_id = offer->service_offer_id;
         ack.service_option   = 0;
         /*Generate the hash of the service offer*/
-        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (offer + 1), offer->length, ack.service_offer_hash),
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, offer, hip_get_param_contents_len(offer), ack.service_offer_hash),
                  -1, "Could not build hash of the service offer \n");
+
+        print_hash(ack.service_offer_hash);
 
         len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
         hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
@@ -883,11 +916,11 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
             HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
             return -1;
         }
-        HIP_DEBUG("Service Acknowledgement Added. \n");
-        HIP_DEBUG("Number of parameters received in the Service Offer = %d.", num_req_info_items);
+        HIP_DEBUG("Service Acknowledgement Added. Hash Also added\n");
+        HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
 
         /*Processing the information requests in the service offer*/
-        while ((i < num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
+        while ((i <= num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
             switch (tmp_info) {
             case HOST_INFO_OS:
                 signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_OS);
@@ -1156,4 +1189,15 @@ int signaling_get_free_message_space(const struct hip_common *msg, struct hip_ha
     param_signature_length += sizeof(struct hip_sig) + 7;
 
     return MAX(max_dst - (dst + param_mac_length + param_signature_length + sizeof(struct signaling_param_connection_identifier)), 0);
+}
+
+void print_hash(const unsigned char *hash)
+{
+    int i = 0;
+    //Printing hash
+    printf("Printing the Generated hash: ");
+    for (i = 0; i < HIP_AH_SHA_LEN; i++) {
+        printf("%02x ", hash[i]);
+    }
+    printf("\n");
 }

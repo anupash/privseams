@@ -41,11 +41,14 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
 //TODO need to check if we will continue to use network_id for the certs parameter
 int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
                                          struct signaling_connection_flags flags,
-                                         int service_offer_id);
+                                         int service_offer_id,
+                                         unsigned char *hash);
 int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
                                          struct signaling_connection_flags flags,
-                                         int service_offer_id);
-int signaling_verify_service_ack(struct hip_common *msg);
+                                         int service_offer_id,
+                                         unsigned char *hash);
+int signaling_verify_service_ack(struct hip_common *msg,
+                                 unsigned char *stored_hash);
 
 int signaling_build_param_host_info_response(struct hip_common *msg,
                                              struct signaling_connection existing_conn,
@@ -89,4 +92,6 @@ int signaling_get_update_type(const struct hip_common *msg);
 int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha);
 
 /*Utility function*/
+
+void print_hash(const unsigned char *hash);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

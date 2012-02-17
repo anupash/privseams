@@ -141,7 +141,8 @@ struct tuple {
     struct in6_addr    esp_relay_daddr;
     in_port_t          esp_relay_dport;
     /* Signaling module */
-    struct slist      *connection_contexts;
+    struct slist *connection_contexts;
+    unsigned char offer_hash[HIP_AH_SHA_LEN];
 };
 
 struct connection {

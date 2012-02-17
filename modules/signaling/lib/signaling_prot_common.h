@@ -1128,9 +1128,9 @@ struct signaling_service_offer {
  *   All integers are in host-byte-order.
  */
 struct signaling_service_ack {
-    uint16_t service_offer_id;
-    uint16_t service_option;
-    char     service_offer_hash[];
+    uint16_t      service_offer_id;
+    uint16_t      service_option;
+    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
 };
 
 
@@ -1142,9 +1142,9 @@ struct signaling_service_ack {
  *   All integers are in host-byte-order.
  */
 struct signaling_service_nack {
-    uint16_t service_offer_id;
-    uint16_t nack_reason;
-    char     service_offer_hash[];
+    uint16_t      service_offer_id;
+    uint16_t      nack_reason;
+    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
 };
 
 
