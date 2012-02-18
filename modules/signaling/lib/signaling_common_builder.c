@@ -748,7 +748,7 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  * }
  */
 int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
-                                         struct signaling_connection_flags flags,
+                                         struct signaling_connection_flags *flags,
                                          int service_offer_id,
                                          unsigned char *hash)
 {
@@ -765,43 +765,43 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
     param_service_offer_u.service_description = htonl(0);
     param_service_offer_u.service_type        = htons(0);
 
-    if (signaling_info_req_flag_check(flags.flag_info_requests, HOST_INFO_ID)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_ID)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_ID);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, HOST_INFO_KERNEL)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_KERNEL)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_KERNEL);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, HOST_INFO_OS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_OS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_OS);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, HOST_INFO_CERTS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_CERTS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_CERTS);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, USER_INFO_ID)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, USER_INFO_ID)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(USER_INFO_ID);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, USER_INFO_CERTS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, USER_INFO_CERTS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(USER_INFO_CERTS);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, APP_INFO_NAME)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, APP_INFO_NAME)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(APP_INFO_NAME);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, APP_INFO_CONNECTIONS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(APP_INFO_CONNECTIONS);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, APP_INFO_QOS_CLASS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, APP_INFO_QOS_CLASS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(APP_INFO_QOS_CLASS);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags.flag_info_requests, APP_INFO_REQUIREMENTS)) {
+    if (signaling_info_req_flag_check(flags->flag_info_requests, APP_INFO_REQUIREMENTS)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(APP_INFO_REQUIREMENTS);
         idx++;
     }
@@ -824,7 +824,7 @@ out_err:
 }
 
 int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
-                                         UNUSED struct signaling_connection_flags flags,
+                                         UNUSED struct signaling_connection_flags *flags,
                                          UNUSED int service_offer_id,
                                          UNUSED unsigned char *hash)
 {

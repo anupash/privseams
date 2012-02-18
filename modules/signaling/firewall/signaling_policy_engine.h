@@ -107,14 +107,16 @@ int signaling_policy_engine_init(config_t *cfg);
 int signaling_policy_engine_init_from_file(const char *const policy_file);
 int signaling_policy_engine_uninit(void);
 
-void signaling_policy_engine_print_rule_set(const char *prefix);
+void signaling_policy_engine_print_rule_set(const char *prefix,
+                                            struct signaling_connection_flags *flags);
 
 struct policy_tuple *signaling_policy_check(const struct in6_addr *const hit,
-                                            const struct signaling_connection_context *const conn_ctx);
+                                            const struct signaling_connection_context *const conn_ctx,
+                                            struct signaling_connection_flags         *ctx_flags);
 
 struct policy_tuple *signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
                                                             struct signaling_connection_context *const conn_ctx,
-                                                            struct signaling_connection_flags   *ctx_flags,
+                                                            struct signaling_connection_flags  **ctx_flags,
                                                             int                                 *ret);
 int policy_tuple_copy(const struct policy_tuple *src, struct policy_tuple *dst);
 
@@ -124,7 +126,8 @@ void policy_decision_init(struct policy_decision *flags);
 int policy_decision_check(struct policy_decision flags, int f);
 
 int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple,
-                                                  struct signaling_connection_context *ctx);
+                                                  struct signaling_connection_context      *ctx,
+                                                  struct signaling_connection_flags        *flags);
 
 void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connection_context *const ctx,
                                                    struct policy_tuple *tuple);

@@ -40,11 +40,11 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
 
 //TODO need to check if we will continue to use network_id for the certs parameter
 int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
-                                         struct signaling_connection_flags flags,
+                                         struct signaling_connection_flags *flags,
                                          int service_offer_id,
                                          unsigned char *hash);
 int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
-                                         struct signaling_connection_flags flags,
+                                         struct signaling_connection_flags *flags,
                                          int service_offer_id,
                                          unsigned char *hash);
 int signaling_verify_service_ack(struct hip_common *msg,
