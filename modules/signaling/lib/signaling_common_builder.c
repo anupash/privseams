@@ -848,7 +848,7 @@ int signaling_verify_service_ack(struct hip_common *msg,
 
 
     if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {
-        HIP_DEBUG("The two hashes match.\n");
+        HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer.\n");
         return 1;
     } else {
         HIP_DEBUG("The stored hash and the acked hash do not match.\n");

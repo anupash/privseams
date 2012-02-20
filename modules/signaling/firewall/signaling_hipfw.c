@@ -285,17 +285,17 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
     /* Step a) */
-    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+    if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
         HIP_ERROR("Could not init connection context from R1 \n");
         return -1;
     }
 
-    if (signaling_init_connection_context(&ctx_in, IN)) {
+    if (signaling_init_connection_context(&ctx_in, FWD)) {
         HIP_ERROR("Could not init connection context for the IN side \n");
         return -1;
     }
 
-    if (signaling_init_connection_context(&ctx_out, IN)) {
+    if (signaling_init_connection_context(&ctx_out, FWD)) {
         HIP_ERROR("Could not init connection context for the IN SIDE \n");
         return -1;
     }
@@ -304,7 +304,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
 
-    signaling_update_info_flags_from_msg(ctx_flags, common, IN);
+    signaling_update_info_flags_from_msg(ctx_flags, common, FWD);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of R1 \n");
@@ -397,11 +397,11 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 
     // Here in because the firewall has to check for the incoming policies
     // for the message from the responder
-    if (signaling_init_connection_context(&ctx_in, IN)) {
+    if (signaling_init_connection_context(&ctx_in, FWD)) {
         HIP_ERROR("Could not init connection context for the IN SIDE \n");
         return -1;
     }
-    if (signaling_init_connection_context(&ctx_out, IN)) {
+    if (signaling_init_connection_context(&ctx_out, FWD)) {
         HIP_ERROR("Could not init connection context for the IN SIDE \n");
         return -1;
     }
@@ -414,7 +414,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
      * Handle the incoming response parameters from the Initiator
      */
     /* Step a) */
-    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+    if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
         HIP_ERROR("Could not init connection context from I2 \n");
         ret = -1;
     }
@@ -432,7 +432,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         //Check for acknowledgement
         HIP_DEBUG("Verifying Ack to Service Offer.\n");
         if (signaling_verify_service_ack(common, tuple->offer_hash) != -1) {
-            HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
+            HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
 
             /* Step b) */
             HIP_DEBUG("Connection after receipt of I2\n");
@@ -576,7 +576,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 
     // Here in because the firewall has to check for the incoming policies
     // for the message from the responder
-    if (signaling_init_connection_context(&ctx_in, IN)) {
+    if (signaling_init_connection_context(&ctx_in, FWD)) {
         HIP_ERROR("Could not init connection context for the OUT SIDE \n");
         return -1;
     }
@@ -585,7 +585,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
      * Handle the incoming response parameters from the Initiator
      */
     /* Step a) */
-    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+    if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
         HIP_ERROR("Could not init connection context from R2 \n");
         ret = -1;
     }
@@ -605,7 +605,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
         } else if (old_conn->status == SIGNALING_CONN_PROCESSING) {
             //Check for acknowledgement
             if (signaling_verify_service_ack(common, other_dir->offer_hash)) {
-                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, IN), -1, "Could not initialize the connection context from the message\n");
+                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
 
                 /* add/update user in user db */
                 if (!(db_entry = userdb_add_user_from_msg(common, 0))) {

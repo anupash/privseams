@@ -784,7 +784,7 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
 
     /* sanity checks */
     HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
-    if (dir == IN) {
+    if (dir == FWD) {
         signaling_init_app_context_from_msg(&ctx->app,   msg, dir);
         signaling_init_host_context_from_msg(&ctx->host, msg, dir);
         signaling_init_user_context_from_msg(&ctx->user, msg, dir);
