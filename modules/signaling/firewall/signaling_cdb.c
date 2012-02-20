@@ -62,22 +62,25 @@ int signaling_cdb_add_connection(const struct in6_addr src_hit,
                                  const uint16_t        dst_port,
                                  const int             status)
 {
-    struct signaling_cdb_entry *entry = malloc(sizeof(struct signaling_cdb_entry));
-
-    if (!entry) {
-        HIP_ERROR("Could not allocate memory for new scdb entry\n");
-        return -1;
-    }
-
-    entry->src_hit  = src_hit;
-    entry->dst_hit  = dst_hit;
-    entry->src_port = src_port;
-    entry->dst_port = dst_port;
-    entry->status   = status;
-
-    if (hip_ll_add_last(&scdb, entry)) {
-        HIP_ERROR("Failed to add new connection to scdb\n");
-        return -1;
+    if (!src_port || !dst_port) {
+        HIP_DEBUG("No information about src and dst port: Entry could not be added.\n");
+    } else {
+        struct signaling_cdb_entry *entry = signaling_cdb_get_connection(src_hit, dst_hit,
+                                                                         src_port, dst_port);
+        if (!entry) {
+            entry           = malloc(sizeof(struct signaling_cdb_entry));
+            entry->src_hit  = src_hit;
+            entry->dst_hit  = dst_hit;
+            entry->src_port = src_port;
+            entry->dst_port = dst_port;
+            entry->status   = status;
+            if (hip_ll_add_last(&scdb, entry)) {
+                HIP_ERROR("Failed to add new connection to scdb\n");
+                return -1;
+            }
+        } else {
+            entry->status = status;
+        }
     }
     return 0;
 }
@@ -153,9 +156,9 @@ void signaling_cdb_print(void)
         HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
         HIP_DEBUG_HIT("\tSrc Hit:\t", &entry->src_hit);
         HIP_DEBUG_HIT("\tDst Hit:\t", &entry->dst_hit);
-        HIP_DEBUG("\tSrc Port: %u\t\n", entry->src_port);
-        HIP_DEBUG("\tDst Port: %u\t\n", entry->dst_port);
-        HIP_DEBUG("\tStatus: %i\t\n", entry->status);
+        HIP_DEBUG("\tSrc Port: \t: %u\n", entry->src_port);
+        HIP_DEBUG("\tDst Port: \t: %u\n", entry->dst_port);
+        HIP_DEBUG("\tStatus: \t: %i\n", entry->status);
         HIP_DEBUG("\t----- SCDB ELEMENT END   ------\n");
     }
 
