@@ -448,7 +448,7 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
              -1, "Failed to make call to get the hostname\n");
     tmp_len = strlen(readbuf);
     if (tmp_len > 0) {
-        if (tmp_len > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
+        if (tmp_len < SIGNALING_HOST_INFO_REQ_MAX_LEN) {
             ctx->host.host_name_len = tmp_len;
             memcpy(ctx->host.host_name, readbuf, strlen(readbuf));
         } else {

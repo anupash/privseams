@@ -241,15 +241,15 @@ UNUSED static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED 
 
 static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 {
-    int                  err         = 0;
-    struct policy_tuple *entry       = NULL;
-    const char          *host_id     = NULL;
-    const char          *host_name   = NULL;
-    const char          *host_certs  = NULL;
-    const char          *host_kernel = NULL;
-    const char          *host_os     = NULL;
-    const char          *user_id     = NULL;
-    const char          *app_name    = NULL;
+    int                  err     = 0;
+    struct policy_tuple *entry   = NULL;
+    const char          *host_id = NULL;
+    //const char          *host_name   = NULL;
+    const char *host_certs  = NULL;
+    const char *host_kernel = NULL;
+    const char *host_os     = NULL;
+    const char *user_id     = NULL;
+    const char *app_name    = NULL;
     //const char          *app_issuer       = NULL;
     //const char          *app_requirements = NULL;
     const char       *target_string = NULL;
@@ -293,7 +293,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             HIP_DEBUG("No HOST OS information in the policy file \n");
             entry->host.host_os[0] = '\0';
         } else {
-            strncpy(entry->host.host_os, host_name, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
+            strncpy(entry->host.host_os, host_os, SIGNALING_HOST_INFO_REQ_MAX_LEN - 1);
             entry->host.host_os[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
             policy_decision_set(&entry->target, POLICY_HOST_INFO_OS);
         }
@@ -306,6 +306,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             entry->host.host_certs[SIGNALING_HOST_INFO_REQ_MAX_LEN - 1] = '\0';
             policy_decision_set(&entry->target, POLICY_HOST_INFO_CERTS);
         }
+        entry->host.host_name[0] = '\0';
     }
 
 
@@ -600,7 +601,7 @@ struct policy_tuple *signaling_policy_check(UNUSED const struct in6_addr *const 
      * Need to memset-0 because we want to use memcmp later. */
     //TODO do not know what the following line does
     signaling_copy_connection_ctx_to_policy_tuple(conn_ctx, tuple_conn);
-    //print_policy_tuple(tuple_conn,"\t", ctx_flags);
+    print_policy_tuple(tuple_conn, "\t", ctx_flags);
     HIP_DEBUG("Checking connection context:\n");
 
     /* Determine which rule set to apply */
@@ -662,11 +663,6 @@ struct policy_tuple *signaling_policy_engine_check_and_flag(const hip_hit_t *hit
     } else {
         *ret = 1;
         HIP_DEBUG("Connection request will be accepted by local policy if further the host responds to the service offer: \n");
-        /* Set those flags for which we need no user authentication */
-        /*
-         * Making service offers here
-         * Requesting for additional information from host based on the firewall policy
-         */
         return tuple_match;
     }
 }
@@ -682,6 +678,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
 
     policy_decision_init(&tuple->target);
     memcpy(&tuple->host.host_id, &ctx->host.host_id, sizeof(struct in6_addr));
+
     /*Copying/Initialize the host information in the policy tuple*/
     if (strlen(ctx->host.host_kernel) > 0) {
         strcpy(tuple->host.host_kernel, ctx->host.host_kernel);
@@ -700,6 +697,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     } else {
         tuple->host.host_name[0] = '\0';
     }
+
     if (strlen(ctx->host.host_name) > 0) {
         strcpy(tuple->host.host_certs,  ctx->host.host_certs);
     } else {
@@ -727,11 +725,11 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     }
 
 
-    /*Copying/Initialize the application information in the policy tuple*/
+    /*Copying/Initialize the user information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {
         X509_NAME_oneline(x509_subj_name, tuple->user.user_name, SIGNALING_USER_ID_MAX_LEN);
         tuple->user.user_name[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
-        HIP_DEBUG("Appication dn found in the connection context : %s \n", tuple->user.user_name);
+        HIP_DEBUG("USER Distinguished Name found in the context : %s \n", tuple->user.user_name);
     } else {
         tuple->user.user_name[0] = '\0';
     }

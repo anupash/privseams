@@ -90,7 +90,7 @@ int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_cont
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
 int signaling_get_update_type(const struct hip_common *msg);
 int signaling_get_free_message_space(const struct hip_common *msg, struct hip_hadb_state *ha);
-
+int signaling_get_verified_user_context(struct signaling_connection_context *ctx);
 /*Utility function*/
 
 void print_hash(const unsigned char *hash);

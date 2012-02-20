@@ -487,7 +487,7 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     int len_contents = 0;
     int tmp_len;
     //uint8_t                                *p_tmp = NULL;
-    char param_buf[HIP_MAX_PACKET];
+    //char param_buf[HIP_MAX_PACKET];
     //struct signaling_param_host_info_id     host_info_id;
     struct signaling_param_host_info_os     host_info_os;
     struct signaling_param_host_info_kernel host_info_kernel;
@@ -500,9 +500,10 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     switch (host_info_flag) {
     case HOST_INFO_KERNEL:
         HIP_DEBUG("Request for Information about Host Kernel found. Building host info kernel parameter.\n");
-        (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? (tmp_len = MAX_SIZE_HOST_KERNEL) : (tmp_len = ctx->host.host_kernel_len);
+        tmp_len = (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? MAX_SIZE_HOST_KERNEL : ctx->host.host_kernel_len;
         HIP_DEBUG("Host Kernel Length set to be %d.\n", tmp_len);
         memcpy(host_info_kernel.kernel, ctx->host.host_kernel, tmp_len);
+        host_info_kernel.kernel[tmp_len] = '\0';
         HIP_DEBUG("Host Kernel value copied \n");
 
         hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, tmp_len);
@@ -516,23 +517,21 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
         break;
     case HOST_INFO_OS:
         HIP_DEBUG("Request for Information about Host OS found. Building host info os parameter\n");
-        (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? (tmp_len = MAX_SIZE_HOST_OS) : (tmp_len = ctx->host.host_os_len);
+        tmp_len             = (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_len;
         host_info_os.os_len = htons(tmp_len);
-        memcpy(host_info_os.os_name, ctx->host.host_os, tmp_len);
-        len_contents += tmp_len;
+        memcpy(&host_info_os.os_name, &ctx->host.host_os, tmp_len);
 
-        (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? (tmp_len = MAX_SIZE_HOST_OS) : (tmp_len = ctx->host.host_os_ver_len);
+        tmp_len                     = (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_ver_len;
         host_info_os.os_version_len = htons(tmp_len);
-        memcpy(host_info_os.os_version, ctx->host.host_os_version, tmp_len);
-        len_contents += tmp_len;
+        memcpy(&host_info_os.os_version, &ctx->host.host_os_version, tmp_len);
 
-        len_contents += sizeof(host_info_os.os_len) + sizeof(host_info_os.os_version_len) + len_contents;
+        len_contents = sizeof(struct signaling_param_host_info_os) - (sizeof(hip_tlv) + sizeof(hip_tlv_len));
         hip_set_param_contents_len((struct hip_tlv_common *) &host_info_os, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &host_info_os, HIP_PARAM_SIGNALING_HOST_INFO_OS);
 
         /* Append the parameter to the message */
-        if (hip_build_generic_param(msg, &host_info_kernel, sizeof(struct signaling_param_host_info_kernel), param_buf)) {
-            HIP_ERROR("Failed to append host info kernel parameter to message.\n");
+        if (hip_build_param(msg, &host_info_os)) {
+            HIP_ERROR("Failed to append host info os parameter to message.\n");
             return -1;
         }
         break;
@@ -591,7 +590,7 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
 
     switch (app_info_flag) {
     case APP_INFO_NAME:
-        HIP_DEBUG("Adding APP_INFO_NAME request to the service offer.\n");
+        HIP_DEBUG("Adding APP_INFO_NAME response to the Service Offer.\n");
         tmp_len                     = strlen(ctx->app.application_dn);
         app_info_name.app_dn_length = htons(tmp_len);
         memcpy(&app_info_name.application_dn, &ctx->app.application_dn, tmp_len);
@@ -618,6 +617,7 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
     case APP_INFO_REQUIREMENTS:
         break;
     case APP_INFO_CONNECTIONS:
+        HIP_DEBUG("Adding APP_INFO_CONNECTIONS response to the Service Offer.\n");
         for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
             if ((ctx->app.sockets[i].src_port != 0) && (ctx->app.sockets[i].dst_port != 0)) {
                 app_info_conn.sockets[i]     = ctx->app.sockets[i].src_port;
@@ -666,9 +666,9 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
                                              const uint8_t user_info_flag)
 {
     int len_contents = 0;
-    //int                                     tmp_len;
+    int tmp_len;
     //uint8_t                            *p_tmp = NULL;
-    char                                param_buf[HIP_MAX_PACKET];
+    //char                                param_buf[HIP_MAX_PACKET];
     struct signaling_param_user_info_id user_info_id;
     //struct signaling_param_user_info_certs   user_info_name;
 
@@ -676,23 +676,26 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
 
     switch (user_info_flag) {
     case USER_INFO_ID:
-        user_info_id.user_dn_length = htons(ctx->user.subject_name_len);
-        len_contents               += ctx->user.subject_name_len;
-        user_info_id.prr_length     = htons(ctx->user.key_rr_len);
-        len_contents               += ctx->user.key_rr_len;
-        user_info_id.flags          = ctx->user.rdata.flags;
-        user_info_id.algorithm      = ctx->user.rdata.algorithm;
-        user_info_id.protocol       = ctx->user.rdata.protocol;
-        memcpy(user_info_id.subject_name, ctx->user.subject_name, ctx->user.subject_name_len);
-        memcpy(user_info_id.pkey,         ctx->user.pkey,         ctx->user.key_rr_len);
+        HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
+        tmp_len                     = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
+        user_info_id.user_dn_length = htons(tmp_len);
+        memcpy(&user_info_id.subject_name, &ctx->user.subject_name, tmp_len);
 
-        len_contents += sizeof(user_info_id.user_dn_length) + sizeof(user_info_id.prr_length) + sizeof(struct hip_host_id_key_rdata) + len_contents;
+        user_info_id.flags     = htons(ctx->user.rdata.flags);
+        user_info_id.algorithm = ctx->user.rdata.algorithm;
+        user_info_id.protocol  = ctx->user.rdata.protocol;
+        tmp_len                = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
+                                 ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+        memcpy(&user_info_id.pkey, &ctx->user.pkey, tmp_len);
+        user_info_id.prr_length = htons(tmp_len + sizeof(struct hip_host_id_key_rdata));
+
+        len_contents = sizeof(struct signaling_param_user_info_id) - (sizeof(hip_tlv) + sizeof(hip_tlv_len));
         hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
-        hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_APP_INFO_NAME);
+        hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
 
         /* Append the parameter to the message */
-        if (hip_build_generic_param(msg, &user_info_id, sizeof(struct signaling_param_user_info_id), param_buf)) {
-            HIP_ERROR("Failed to append application info name parameter to message.\n");
+        if (hip_build_param(msg, &user_info_id)) {
+            HIP_ERROR("Failed to USER_INFO_ID parameter to message.\n");
             return -1;
         }
         break;
@@ -765,16 +768,16 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
     param_service_offer_u.service_description = htonl(0);
     param_service_offer_u.service_type        = htons(0);
 
-    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_ID)) {
-        param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_ID);
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_OS)) {
+        param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_OS);
         idx++;
     }
     if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_KERNEL)) {
         param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_KERNEL);
         idx++;
     }
-    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_OS)) {
-        param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_OS);
+    if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_ID)) {
+        param_service_offer_u.endpoint_info_req[idx] = htons(HOST_INFO_ID);
         idx++;
     }
     if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_CERTS)) {
@@ -1075,6 +1078,8 @@ out_err:
 void signaling_get_connection_context(UNUSED struct signaling_connection conn,
                                       struct signaling_connection_context *ctx)
 {
+    HIP_ASSERT(ctx);
+
     if (signaling_get_verified_host_context(ctx)) {
         HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
         signaling_init_host_context(&ctx->host);
@@ -1084,8 +1089,8 @@ void signaling_get_connection_context(UNUSED struct signaling_connection conn,
         signaling_init_application_context(&ctx->app);
     }
 
-    if (signaling_user_api_get_uname(ctx->user.uid, &ctx->user)) {
-        HIP_DEBUG("Could not get user name, assuming ANY USER. \n");
+    if (signaling_get_verified_user_context(ctx) == -1) {
+        HIP_DEBUG("USER lookup/verification failed, assuming ANY USER.\n");
         signaling_init_user_context(&ctx->user);
     }
 }
@@ -1189,6 +1194,35 @@ int signaling_get_free_message_space(const struct hip_common *msg, struct hip_ha
     param_signature_length += sizeof(struct hip_sig) + 7;
 
     return MAX(max_dst - (dst + param_mac_length + param_signature_length + sizeof(struct signaling_param_connection_identifier)), 0);
+}
+
+int signaling_get_verified_user_context(struct signaling_connection_context *ctx)
+{
+    int            err       = 0;
+    EVP_PKEY      *user_pkey = NULL;
+    unsigned char *key_rr;
+
+    /* Sanity checks */
+    HIP_ASSERT(ctx);
+
+    HIP_DEBUG("Getting User context.\n");
+    HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
+    if (ctx->user.key_rr_len <= 0) {
+        HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(ctx->user.uid)),
+                 -1, "Could not obtain users public key \n");
+        PEM_write_PUBKEY(stdout, user_pkey);
+        HIP_IFEL((ctx->user.key_rr_len = any_key_to_key_rr(user_pkey, &ctx->user.rdata.algorithm, &key_rr)) < 0,
+                 -1, "Could not serialize key \n");
+        HIP_DEBUG("GOT keyy rr of length %d\n", ctx->user.key_rr_len);
+        memcpy(ctx->user.pkey, key_rr, ctx->user.key_rr_len);
+
+        // necessary because any_key_to_rr returns only the length of the key rrwithout the header
+        ctx->user.key_rr_len += sizeof(struct hip_host_id_key_rdata);
+        free(key_rr);
+    }
+
+out_err:
+    return err;
 }
 
 void print_hash(const unsigned char *hash)

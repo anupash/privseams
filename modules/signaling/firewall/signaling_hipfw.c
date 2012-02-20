@@ -435,8 +435,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
 
             /* Step b) */
-            HIP_DEBUG("Connection after receipt of I2\n");
-            signaling_connection_print(&new_conn, "\t");
+            //HIP_DEBUG("Connection after receipt of I2\n");
+            //signaling_connection_print(&new_conn, "\t");
 
             if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
                 policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);

@@ -415,8 +415,9 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
                                          const struct hip_common *const msg,
                                          UNUSED enum direction dir)
 {
-    int                          err   = 0;
-    const struct hip_tlv_common *param = NULL;
+    int                                        err         = 0;
+    const struct hip_tlv_common               *param       = NULL;
+    const struct signaling_param_host_info_os *tmp_info_os = NULL;
     //const uint8_t               *p_contents = NULL;
 
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
@@ -425,11 +426,17 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
     // In case of I2 we have to check the policy for the packet from Responder
     memcpy(&ctx->host_id, &msg->hits, sizeof(struct in6_addr));
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
-        //TODO left for now because the case is not trivial. HIP_PARAM_HOST_ID is also the same
-    }
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
+        tmp_info_os      = (const struct signaling_param_host_info_os *) param;
+        ctx->host_os_len = ntohs(tmp_info_os->os_len);
+        memcpy(&ctx->host_os, &tmp_info_os->os_name, ctx->host_os_len);
+        ctx->host_os[ctx->host_os_len - 1] = '\0';
 
+        ctx->host_os_ver_len = ntohs(tmp_info_os->os_version_len);
+        memcpy(&ctx->host_os_version, &tmp_info_os->os_version, ctx->host_os_ver_len);
+        ctx->host_os_version[ctx->host_os_ver_len - 1] = '\0';
+    }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_KERNEL) {
@@ -439,24 +446,15 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
         ctx->host_kernel[ctx->host_kernel_len - 1] = '\0';
     }
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_OS);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_OS) {
-        ctx->host_os_len = ntohs(((const struct signaling_param_host_info_os *) param)->os_len);
-        memcpy(ctx->host_os, ((const struct signaling_param_host_info_os *) param)->os_name,
-               ctx->host_os_len);
-        ctx->host_os[ctx->host_os_len - 1] = '\0';
-
-        ctx->host_os_ver_len = ntohs(((const struct signaling_param_host_info_os *) param)->os_version_len);
-        memcpy(ctx->host_os_version, ((const struct signaling_param_host_info_os *) param)->os_version,
-               ((const struct signaling_param_host_info_os *) param)->os_version_len);
-        ctx->host_os_version[ctx->host_os_ver_len - 1] = '\0';
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_ID);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_ID) {
+        //TODO left for now because the case is not trivial. HIP_PARAM_HOST_ID is also the same
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_HOST_INFO_CERTS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_HOST_INFO_CERTS) {
         //TODO handler for this case left for later
     }
-
 out_err:
     return err;
 }
@@ -465,36 +463,36 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
                                          const struct hip_common *const msg,
                                          UNUSED enum direction dir)
 {
-    int                          err        = 0;
-    const struct hip_tlv_common *param      = NULL;
-    const uint8_t               *p_contents = NULL;
+    int                                        err      = 0;
+    const struct hip_tlv_common               *param    = NULL;
+    int                                        tmp_len  = 0;
+    const struct signaling_param_user_info_id *user_ctx = NULL;
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
-        p_contents            = (const uint8_t *) (param + 1);
-        ctx->subject_name_len = ntohs(((const struct signaling_param_user_info_id *) param)->user_dn_length);
-        p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->user_dn_length);
-        ctx->key_rr_len       = ntohs(((const struct signaling_param_user_info_id *) param)->prr_length);
-        p_contents           += sizeof(((const struct signaling_param_user_info_id *) param)->prr_length);
+        user_ctx              = (const struct signaling_param_user_info_id *) param;
+        ctx->subject_name_len = ntohs(user_ctx->user_dn_length);
+        ctx->key_rr_len       = ntohs(user_ctx->prr_length);
 
-        ctx->rdata.algorithm = ((const struct signaling_param_user_info_id *) param)->algorithm;
-        ctx->rdata.protocol  = ((const struct signaling_param_user_info_id *) param)->protocol;
-        ctx->rdata.flags     = ntohs(((const struct signaling_param_user_info_id *) param)->flags);
-        p_contents          += sizeof(sizeof(struct hip_host_id_key_rdata));
-        memcpy(ctx->subject_name, p_contents, ctx->subject_name_len);
-        ctx->subject_name[ctx->subject_name_len - 1] = '\0';
-        p_contents                                  += ctx->subject_name_len;
-        memcpy(ctx->pkey, p_contents, ctx->key_rr_len);
-        ctx->pkey[ctx->key_rr_len - 1] = '\0';
+        ctx->rdata.algorithm = user_ctx->algorithm;
+        ctx->rdata.protocol  = user_ctx->protocol;
+        ctx->rdata.flags     = ntohs(user_ctx->flags);
+
+        tmp_len = ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata);
+        memcpy(ctx->pkey, user_ctx->pkey, tmp_len);
+        ctx->pkey[tmp_len] = '\0';
+
+        memcpy(ctx->subject_name, user_ctx->subject_name, ctx->subject_name_len);
+        ctx->subject_name[ctx->subject_name_len] = '\0';
     }
-
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_CERTS) {
         //TODO handler for this case
     }
+
 out_err:
     return err;
 }
