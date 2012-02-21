@@ -529,10 +529,11 @@ out_err:
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
-                                       UNUSED enum direction dir)
+                                       enum direction dir)
 {
-    int                          err   = 0;
-    const struct hip_tlv_common *param = NULL;
+    int                          err      = 0;
+    uint16_t                     tmp_port = 0;
+    const struct hip_tlv_common *param    = NULL;
 
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection(conn), -1, "Failed to init connection context\n");
@@ -542,6 +543,13 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
         signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
     }
 
+    // Swapping port entries in case when received by the end-points
+    if (dir == IN) {
+        //Very dirty swapping, have to find a better way.
+        tmp_port       = conn->src_port;
+        conn->src_port = conn->dst_port;
+        conn->dst_port = tmp_port;
+    }
 out_err:
     return err;
 }

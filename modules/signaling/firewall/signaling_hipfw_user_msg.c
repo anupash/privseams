@@ -259,9 +259,13 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg)
              -1, "Could not get connection short parameter from connection request \n");
     signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
-    signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
+    signaling_get_hits_from_msg(msg, &dst_hit, &src_hit);
     ports.src_port = conn.src_port;
     ports.dst_port = conn.dst_port;
+    HIP_DEBUG_HIT("Src Hit: \t ", src_hit);
+    HIP_DEBUG_HIT("Dst Hit: \t ", dst_hit);
+    HIP_DEBUG("Src Port = %u, dst_port = %u.\n", ports.src_port, ports.dst_port);
+
 
     if ((entry = signaling_cdb_get_connection(*src_hit, *dst_hit,
                                               ports.src_port, ports.dst_port)) != NULL) {
@@ -324,6 +328,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg)
     HIP_DEBUG_HIT("Dst Hit: \t ", hitr);
     ports.src_port = recv_conn.src_port;
     ports.dst_port = recv_conn.dst_port;
+    HIP_DEBUG("Src Port = %u, dst_port = %u.\n", ports.src_port, ports.dst_port);
 
     if ((entry = signaling_cdb_get_connection(*hits, *hitr,
                                               recv_conn.src_port, recv_conn.dst_port)) != NULL) {
