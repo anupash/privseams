@@ -620,10 +620,10 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
         HIP_DEBUG("Adding APP_INFO_CONNECTIONS response to the Service Offer.\n");
         for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
             if ((ctx->app.sockets[i].src_port != 0) && (ctx->app.sockets[i].dst_port != 0)) {
-                app_info_conn.sockets[i]     = ctx->app.sockets[i].src_port;
-                app_info_conn.sockets[i + 1] = ctx->app.sockets[i].dst_port;
-                len_contents                += sizeof(struct signaling_port_pair);
-            } else {
+                app_info_conn.sockets[2 * i]     = ctx->app.sockets[i].src_port;
+                app_info_conn.sockets[2 * i + 1] = ctx->app.sockets[i].dst_port;
+                len_contents                    += sizeof(struct signaling_port_pair);
+            } else if (i == 0) {
                 app_info_conn.port_pair_length = 0;
                 len_contents                   = sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
                 hip_set_param_contents_len((struct hip_tlv_common *) &app_info_conn, len_contents);
@@ -636,20 +636,19 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                     return -1;
                 }
                 return 0;
+            } else {
+                break;
             }
-            i += 2;
         }
-
-        app_info_conn.connection_count = 0;
-        app_info_conn.port_pair_length = i / 2;
+        app_info_conn.connection_count = htons(0);
+        app_info_conn.port_pair_length = htons(i);
 
         len_contents += sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
         hip_set_param_contents_len((struct hip_tlv_common *) &app_info_conn, len_contents);
         hip_set_param_type((struct hip_tlv_common *) &app_info_conn, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
 
-        //TODO do not have the version parameter set. Leaving it to null character.
         /* Append the parameter to the message */
-        if (hip_build_generic_param(msg, &app_info_conn, sizeof(struct signaling_param_app_info_connections), param_buf)) {
+        if (hip_build_param(msg, &app_info_conn)) {
             HIP_ERROR("Failed to append application info connection parameter to message.\n");
             return -1;
         }

@@ -250,7 +250,8 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     const char *host_os     = NULL;
     const char *user_id     = NULL;
     const char *app_name    = NULL;
-    //const char          *app_issuer       = NULL;
+    const char *app_issuer  = NULL;
+    const char *app_conn    = NULL;
     //const char          *app_requirements = NULL;
     const char       *target_string = NULL;
     config_setting_t *temp          = NULL;
@@ -345,17 +346,26 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             policy_decision_set(&entry->target, POLICY_APP_INFO_NAME);
         }
 
-        if (CONFIG_FALSE == config_setting_lookup_string(temp, "issuer", &app_name)) {
+        if (CONFIG_FALSE == config_setting_lookup_string(temp, "issuer", &app_issuer)) {
             HIP_DEBUG("No Information about Issuer DN in the policy file \n");
             entry->application.issuer_dn[0] = '\0';
         } else {
-            strncpy(entry->application.issuer_dn, app_name, SIGNALING_APP_DN_MAX_LEN - 1);
+            strncpy(entry->application.issuer_dn, app_issuer, SIGNALING_APP_DN_MAX_LEN - 1);
             entry->application.issuer_dn[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
             policy_decision_set(&entry->target, POLICY_APP_INFO_NAME);
         }
 
         //TODO Still to add logic for setting of app req in policy configuration
         entry->application.requirements[0] = '\0';
+
+        if (CONFIG_FALSE == config_setting_lookup_string(temp, "connections", &app_conn)) {
+            HIP_DEBUG("No Information about Application COnnections in the policy file \n");
+            entry->application.connections[0] = '\0';
+        } else {
+            strncpy(entry->application.connections, app_conn, SIGNALING_APP_CONN_MAX_LEN - 1);
+            entry->application.connections[SIGNALING_APP_CONN_MAX_LEN - 1] = '\0';
+            policy_decision_set(&entry->target, POLICY_APP_INFO_CONNECTIONS);
+        }
     }
 
     if (CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
@@ -543,6 +553,22 @@ static int match_tuples(struct policy_tuple                 *tuple_conn,
             ret = 0;
         }
     }
+
+    if (ret && strlen(tuple_rule->application.connections) != 0) {
+        tmp_len = strlen(tuple_conn->application.connections);
+        if (tmp_len <= 0) {
+            signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_CONNECTIONS);
+            ret = -1;
+        } else {
+            HIP_DEBUG("Dummy case always returning true.\n");
+        }
+        /*
+         * else if (strncmp(tuple_rule->application.connections, tuple_conn->application.connections, tmp_len) != 0) {
+         * HIP_DEBUG("Application Connections not match\n");
+         * ret = 0;
+         * }
+         */
+    }
     return ret;
 }
 
@@ -671,6 +697,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
                                                    struct policy_tuple *tuple)
 {
     X509_NAME *x509_subj_name;
+    //int i = 0;
 
     /*Sanity check*/
     HIP_ASSERT(tuple);
@@ -724,6 +751,14 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
         tuple->application.requirements[0] = '\0';
     }
 
+/*
+ *    HIP_DEBUG("============Printing Sockets===============\n");
+ *   for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+ *       if ( (ctx->app.sockets[i].src_port == 0) || (ctx->app.sockets[i].dst_port == 0) )
+ *           break;
+ *       HIP_DEBUG("Src port = %u, Dst port = %u\n", ctx->app.sockets[i].src_port, ctx->app.sockets[i].dst_port);
+ *   }
+ */
 
     /*Copying/Initialize the user information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {

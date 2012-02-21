@@ -219,17 +219,20 @@ void signaling_port_pairs_from_hipd_state_by_app_name(struct signaling_hipd_stat
 {
     const struct hip_ll_node *iter = NULL;
     int                       i    = 0;
-    HIP_DEBUG("------------------ HIPD SIGNALING STATE START ------------------\n");
+    HIP_DEBUG("------------------ HIPD SIGNALING STATE COPYING PORT PAIRS ------------------\n");
     if (state->connections) {
         while ((iter = hip_ll_iterate(state->connections, iter)) != NULL) {
             if (!strcmp(((struct signaling_connection *) (iter->ptr))->application_name, app_name)) {
                 if (i < SIGNALING_MAX_SOCKETS) {
                     (ports + i)->src_port = ((struct signaling_connection *) iter->ptr)->src_port;
                     (ports + i)->dst_port = ((struct signaling_connection *) iter->ptr)->dst_port;
+                    i++;
                 } else {
                     return;
                 }
             }
         }
     }
+
+    HIP_DEBUG("Number of Port pairs copied = %d \n", i);
 }

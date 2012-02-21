@@ -92,6 +92,7 @@ struct app_info {
     char application_dn[SIGNALING_APP_DN_MAX_LEN];
     char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
     char requirements[SIGNALING_APP_REQ_MAX_LEN];
+    char connections[SIGNALING_APP_CONN_MAX_LEN];
 };
 
 //TODO modify all the info parameters according protocol design

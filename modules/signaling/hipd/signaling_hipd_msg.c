@@ -738,6 +738,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
 
+    HIP_DEBUG("Application Name: %s\n", new_conn.application_name);
 
     HIP_DEBUG("Done initializing the connection from msg and adding it to the HIPD State. Now sending first connection request. \n");
     /* Tell the firewall/oslayer about the new connection and await it's decision */
@@ -1463,6 +1464,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
 
+        HIP_DEBUG("Application Name: %s\n", sig_state->pending_conn->application_name);
         //TODO also add the handler for signed service offer parameter
         if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
             HIP_DEBUG("Building of application context parameter failed.\n");
