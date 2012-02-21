@@ -36,7 +36,7 @@
 #include "signaling_user_management.h"
 #include "signaling_x509_api.h"
 
-struct hip_ll verified_apps;
+static struct hip_ll verified_apps;
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
@@ -340,6 +340,9 @@ out_err:
     if (app_cert) {
         X509AC_free(app_cert);
     }
+    if (hash) {
+        free(hash);
+    }
     return err;
 }
 
@@ -396,10 +399,10 @@ out_err:
 int signaling_get_verified_host_context(struct signaling_connection_context *const ctx)
 {
     int   err = 0;
-    FILE *fp;
+    FILE *fp  = NULL;
     char  callbuf[CALLBUF_SIZE];
     char  readbuf[NETSTAT_SIZE_OUTPUT];
-    char *result;
+    char *result  = NULL;
     int   tmp_len = 0;
 
     sprintf(callbuf, "uname -r");

@@ -39,6 +39,10 @@ static void insert_iptables_rule(const struct in6_addr *const s,
     char src_hit[41];
     char dst_hit[41];
 
+    if (!ports) {
+        HIP_DEBUG("Cannot Inset IP Table rules. Null ports.\n");
+        return;
+    }
     if (!inet_ntop(AF_INET6, s, src_hit, sizeof(src_hit))) {
         return;
     }

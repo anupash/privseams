@@ -264,11 +264,12 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 {
     int                                 err          = 0;
     int                                 policy_check = 0;
+    int                                 ret          = 0;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_in;
     struct signaling_connection_context ctx_out;
     struct signaling_connection_flags  *ctx_flags     = NULL;
-    const struct policy_tuple          *matched_tuple = NULL;
+    struct policy_tuple                *matched_tuple = NULL;
 
     //This tuple is different from above
     struct tuple *other_dir = NULL;
@@ -287,17 +288,17 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
         HIP_ERROR("Could not init connection context from R1 \n");
-        return -1;
+        ret = -1;
     }
 
     if (signaling_init_connection_context(&ctx_in, FWD)) {
         HIP_ERROR("Could not init connection context for the IN side \n");
-        return -1;
+        ret = -1;
     }
 
     if (signaling_init_connection_context(&ctx_out, FWD)) {
         HIP_ERROR("Could not init connection context for the IN SIDE \n");
-        return -1;
+        ret = -1;
     }
 
     ctx_flags = malloc(sizeof(struct signaling_connection_flags));
@@ -312,44 +313,53 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     //TODO check here if the hits refers to the hit of the initiator
     //TODO check here if ctx_in or ctx_out should be used
     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
-    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_out, &ctx_flags, &policy_check))) {
-        HIP_DEBUG("Found matching policy tuple\n");
-        if (policy_check == 1) {
-            HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
-            hip_dump_msg(common);
-            HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
-            HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
-            hip_dump_msg(common);
-            ctx->modified = 1;
-            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-            next_service_offer_id++;
-            HIP_DEBUG("Connection tracking table after receipt of R1\n");
-            signaling_cdb_print();
-            /* Let packet pass */
-            printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
-            return 1;
-        }
-    } else {
-        if (policy_check == -1) {
-            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-            signaling_cdb_print();
-            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-            return 0;
-        } else if (policy_check == 0) {
-            HIP_DEBUG("Connection tracking table after receipt of R1\n");
-            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-            signaling_cdb_print();
-            printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
-            return 1;
+    if (!ret && ret != -1) {
+        if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_out, &ctx_flags, &policy_check))) {
+            HIP_DEBUG("Found matching policy tuple\n");
+            if (policy_check == 1) {
+                HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
+                hip_dump_msg(common);
+                HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
+                HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
+                hip_dump_msg(common);
+                ctx->modified = 1;
+                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
+                next_service_offer_id++;
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+                signaling_cdb_print();
+                /* Let packet pass */
+                ret = 1;
+            }
+        } else {
+            if (policy_check == -1) {
+                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                signaling_cdb_print();
+                signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+                ret = 0;
+            } else if (policy_check == 0) {
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                signaling_cdb_print();
+                ret = 1;
+            }
         }
     }
 
+    if (ret) {
+        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+    }
+
+    free(ctx_flags);
+    free(matched_tuple);
+    return ret;
     /* Step c) */
     // TODO Add more handlers for user and application information requests
 
     /* Step d) */
 
 out_err:
+    free(ctx_flags);
+    free(matched_tuple);
     return err;
 }
 
@@ -476,6 +486,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     if (!ret) {
+        free(matched_tuple);
+        free(ctx_flags);
         return ret;
     }
     /* Let packet pass */
@@ -517,9 +529,13 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         }
     }
 
+    free(ctx_flags);
+    free(matched_tuple);
     return ret;
 
 out_err:
+    free(ctx_flags);
+    free(matched_tuple);
     return err;
 }
 
@@ -654,14 +670,20 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     if (!ret) {
+        free(ctx_flags);
+        free(matched_tuple);
         return ret;
     }
 
     /* Let packet pass */
     printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[22;37m");
+    free(ctx_flags);
+    free(matched_tuple);
     return ret;
 
 out_err:
+    free(ctx_flags);
+    free(matched_tuple);
     return err;
 }
 

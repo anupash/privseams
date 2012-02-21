@@ -219,6 +219,11 @@ void signaling_port_pairs_from_hipd_state_by_app_name(struct signaling_hipd_stat
 {
     const struct hip_ll_node *iter = NULL;
     int                       i    = 0;
+    if (!app_name) {
+        HIP_DEBUG("No Application name provided. Can't add corresponding socket information\n");
+        return;
+    }
+
     HIP_DEBUG("------------------ HIPD SIGNALING STATE COPYING PORT PAIRS ------------------\n");
     if (state->connections) {
         while ((iter = hip_ll_iterate(state->connections, iter)) != NULL) {
