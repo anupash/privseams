@@ -983,11 +983,11 @@ int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, st
     signaling_copy_connection_ctx_to_policy_tuple(ctx, &tuple_conn);
 
     HIP_DEBUG("Verifying for the requested parameters with the firewall policy rule.\n");
-    HIP_DEBUG("Connection tuple.\n");
-    print_policy_tuple(&tuple_conn, "\t", flags);
+    //HIP_DEBUG("Connection tuple.\n");
+    //print_policy_tuple(&tuple_conn, "\t", flags);
 
-    HIP_DEBUG("Matching with policy ruple tuple.\n");
-    print_policy_tuple(tuple, "\t", flags);
+    //HIP_DEBUG("Matching with policy rule tuple.\n");
+    //print_policy_tuple(tuple, "\t", flags);
 
     /* Check if hits match or if rule allows any hit */
     if (signaling_info_req_flag_check(flags->flag_info_requests, HOST_INFO_ID)) {

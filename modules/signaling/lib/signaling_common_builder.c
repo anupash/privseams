@@ -900,8 +900,6 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                                                                sizeof(offer->service_type) +
                                                                sizeof(offer->service_description))) / sizeof(uint16_t);
 
-    signaling_get_connection_context(conn, ctx_out);
-
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
         /* Creating the acknowledgment of the service offer*/

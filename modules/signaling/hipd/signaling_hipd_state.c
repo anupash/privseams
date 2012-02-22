@@ -153,7 +153,7 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
         HIP_ERROR("Could not add the connection context to the signaling state");
         return NULL;
     }
-    HIP_DEBUG(" Added new HIPD state to the HIP State DB. \n");
+    HIP_DEBUG("Added new HIPD state to the HIP State DB.\n");
 
     /* Remember this for BEX */
     if (!state->pending_conn) {

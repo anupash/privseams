@@ -710,12 +710,14 @@ out_err:
  * and expect our own connection context from the hipfw to send it in the R2.
  * We have to wait for the I3 to fully open the connection.
  */
-int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, UNUSED struct hip_packet_context *ctx)
 {
-    int                          err       = 0;
-    struct signaling_hipd_state *sig_state = NULL;
-    struct signaling_connection  new_conn;
-    struct signaling_connection *conn;
+    int err = 0;
+/*
+ *  struct signaling_hipd_state *sig_state = NULL;
+ *  struct signaling_connection  new_conn;
+ *  struct signaling_connection *conn;
+ */
 
     /* Sanity checks */
     if (packet_type == HIP_I2) {
@@ -731,19 +733,22 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
 
     /* Since this is a new connection, we have to setup new state as a responder
      * and fill the new state with the information in the I2 */
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
-             -1, "Could not init connection context from I2 \n");
-    HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
-             -1, "Could not add new connection to hipd state. \n");
-
-    HIP_DEBUG("Application Name: %s\n", new_conn.application_name);
-
-    HIP_DEBUG("Done initializing the connection from msg and adding it to the HIPD State. Now sending first connection request. \n");
-    /* Tell the firewall/oslayer about the new connection and await it's decision */
-    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
-             -1, "Failed to communicate new connection received in I2 to HIPFW\n");
+    //TODO a little bit of optimization. If we remove this functionality we can definitely remove this function.
+/*
+ *  HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+ *           -1, "failed to retrieve state for signaling module\n");
+ *  HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
+ *           -1, "Could not init connection context from I2 \n");
+ *  HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
+ *           -1, "Could not add new connection to hipd state. \n");
+ *
+ *  HIP_DEBUG("Application Name: %s\n", new_conn.application_name);
+ *
+ *  HIP_DEBUG("Done initializing the connection from msg and adding it to the HIPD State. Now sending first connection request. \n");
+ *  // Tell the firewall/oslayer about the new connection and await it's decision
+ *  HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+ *           -1, "Failed to communicate new connection received in I2 to HIPFW\n");
+ */
 
 out_err:
     return err;
@@ -1523,17 +1528,17 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
     struct signaling_connection_context    ctx_out;
+    struct signaling_connection            new_conn;
+    struct signaling_connection           *conn;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             0, "failed to retrieve state for signaling\n");
-    if (sig_state->pending_conn) {
-        HIP_IFEL(hip_build_param_contents(ctx->output_msg, sig_state->pending_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-                 -1, "build signaling_connection failed \n");
-    } else {
-        HIP_DEBUG("We have no connection context for this host associtaion. \n");
-        return 0;
-    }
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling module\n");
+    HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
+             -1, "Could not init connection context from I2 \n");
+    HIP_IFEL(hip_build_param_contents(ctx->output_msg, &new_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build signaling_connection failed \n");
+
 
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
@@ -1543,17 +1548,25 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
                  -1, "Could not init connection context\n");
 
-        signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
-        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+        signaling_get_connection_context(new_conn, &ctx_out);
+        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, ctx_out.app.sockets);
 
         //TODO also add the handler for signed service offer parameter
-        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn, &ctx_out, &param_service_offer)) {
             HIP_DEBUG("Building of application context parameter failed.\n");
             err = 0;
         }
     } else {
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
+
+    HIP_DEBUG("Adding the connection information to the hipd state.\n");
+    HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
+             -1, "Could not add new connection to hipd state. \n");
+    HIP_DEBUG("Added requests to Service Offer. Sending the request to end-point firewall (hipfw)\n");
+    // Tell the firewall/oslayer about the new connection and await it's decision
+    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+             -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
 out_err:
     return err;
