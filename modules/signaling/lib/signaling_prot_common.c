@@ -389,7 +389,8 @@ int signaling_init_app_context_from_msg(struct signaling_application_context *co
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
-        tmp_len = ntohs(((const struct signaling_param_app_info_connections *) param)->port_pair_length);
+        ctx->connections = ntohs(((const struct signaling_param_app_info_connections *) param)->connection_count);
+        tmp_len          = ntohs(((const struct signaling_param_app_info_connections *) param)->port_pair_length);
         for (i = 0; i < tmp_len; i++) {
             ctx->sockets[i].src_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i]);
             ctx->sockets[i].dst_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1]);

@@ -166,7 +166,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
 {
     FILE *fp;
     int   err = 0, UNUSED scanerr;
-    char *res;
+    char *res = NULL;
     char  callbuf[CALLBUF_SIZE];
     char  symlinkbuf[SYMLINKBUF_SIZE];
     char  readbuf[NETSTAT_SIZE_OUTPUT];
@@ -190,7 +190,8 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
                  -1, "Failed to make call to nestat.\n");
         res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
         pclose(fp);
-    } else {
+    }
+    if (!res) {
         sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
         memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")),

@@ -138,7 +138,9 @@ static void print_policy_tuple(const struct policy_tuple *tuple, UNUSED const ch
     HIP_DEBUG("%s  HOST NAME:\t\t %s\n", prefix, strlen(tuple->host.host_name) == 0 ? "ANY HOST" : tuple->host.host_name);
 
     HIP_DEBUG("%s  USER:\t\t\t %s\n", prefix, strlen(tuple->user.user_name) == 0 ? "ANY USER" : tuple->user.user_name);
-    HIP_DEBUG("%s  APP:\t\t\t %s\n",  prefix, strlen(tuple->application.application_dn)  == 0 ? "ANY APPLICATION" : tuple->application.application_dn);
+    HIP_DEBUG("%s  APP NAME:\t\t %s\n",  prefix, strlen(tuple->application.application_dn)  == 0 ? "ANY APPLICATION" : tuple->application.application_dn);
+    HIP_DEBUG("%s  APP ISS:\t\t %s\n",  prefix, strlen(tuple->application.issuer_dn)  == 0 ? "ANY ISSUER" : tuple->application.issuer_dn);
+    HIP_DEBUG("%s  APP CONN:\t\t %d\n",  prefix, tuple->application.connections < 0 ? -1 : tuple->application.connections);
 
     if (policy_decision_check(tuple->target, POLICY_ACCEPT) || policy_decision_check(tuple->target, POLICY_REJECT)) {
         HIP_DEBUG("%s  TRGT:\t\t\t %s\n",  prefix, policy_decision_check(tuple->target, POLICY_ACCEPT) ? "ALLOW" : "DROP");
@@ -198,6 +200,8 @@ UNUSED static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED 
 
     printf("%s  USER:\t %s\n", prefix, strlen(tuple->user.user_name) == 0 ? "ANY USER" : tuple->user.user_name);
     printf("%s  APP:\t %s\n",  prefix, strlen(tuple->application.application_dn)  == 0 ? "ANY APPLICATION" : tuple->application.application_dn);
+    printf("%s  APP ISS:\t\t %s\n",  prefix, strlen(tuple->application.issuer_dn)  == 0 ? "ANY ISSUER" : tuple->application.issuer_dn);
+    printf("%s  APP CONN:\t\t %d\n",  prefix, tuple->application.connections < 0 ? -1 : tuple->application.connections);
 
     if (policy_decision_check(tuple->target, POLICY_ACCEPT) || policy_decision_check(tuple->target, POLICY_REJECT)) {
         printf("%s  TRGT:\t\t\t %s\n",  prefix, policy_decision_check(tuple->target, POLICY_ACCEPT) ? "ALLOW" : "DROP");
@@ -251,7 +255,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
     const char *user_id     = NULL;
     const char *app_name    = NULL;
     const char *app_issuer  = NULL;
-    const char *app_conn    = NULL;
+    long  int   app_conn    = -1;
     //const char          *app_requirements = NULL;
     const char       *target_string = NULL;
     config_setting_t *temp          = NULL;
@@ -336,6 +340,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
         entry->application.application_dn[0] = '\0';
         entry->application.issuer_dn[0]      = '\0';
         entry->application.requirements[0]   = '\0';
+        entry->application.connections       = -1;
     } else {
         if (CONFIG_FALSE == config_setting_lookup_string(temp, "name", &app_name)) {
             HIP_DEBUG("No Information about Application DN in the policy file \n");
@@ -350,7 +355,7 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
             HIP_DEBUG("No Information about Issuer DN in the policy file \n");
             entry->application.issuer_dn[0] = '\0';
         } else {
-            strncpy(entry->application.issuer_dn, app_issuer, SIGNALING_APP_DN_MAX_LEN - 1);
+            strncpy(entry->application.issuer_dn, app_issuer, SIGNALING_ISS_DN_MAX_LEN - 1);
             entry->application.issuer_dn[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
             policy_decision_set(&entry->target, POLICY_APP_INFO_NAME);
         }
@@ -358,12 +363,12 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
         //TODO Still to add logic for setting of app req in policy configuration
         entry->application.requirements[0] = '\0';
 
-        if (CONFIG_FALSE == config_setting_lookup_string(temp, "connections", &app_conn)) {
-            HIP_DEBUG("No Information about Application COnnections in the policy file \n");
-            entry->application.connections[0] = '\0';
+        if (CONFIG_FALSE == config_setting_lookup_int(temp, "connections", &app_conn)) {
+            HIP_DEBUG("No Information about Application Connections in the policy file \n");
+            entry->application.connections = -1;
         } else {
-            strncpy(entry->application.connections, app_conn, SIGNALING_APP_CONN_MAX_LEN - 1);
-            entry->application.connections[SIGNALING_APP_CONN_MAX_LEN - 1] = '\0';
+            entry->application.connections = app_conn;
+            HIP_DEBUG("Max Application connections allowed = %d \n ", entry->application.connections);
             policy_decision_set(&entry->target, POLICY_APP_INFO_CONNECTIONS);
         }
     }
@@ -554,20 +559,14 @@ static int match_tuples(struct policy_tuple                 *tuple_conn,
         }
     }
 
-    if (ret && strlen(tuple_rule->application.connections) != 0) {
-        tmp_len = strlen(tuple_conn->application.connections);
-        if (tmp_len <= 0) {
+    if (ret && tuple_rule->application.connections >= 0) {
+        if (tuple_conn->application.connections < 0) {
             signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_CONNECTIONS);
             ret = -1;
-        } else {
-            HIP_DEBUG("Dummy case always returning true.\n");
+        } else if (tuple_rule->application.connections < tuple_conn->application.connections) {
+            HIP_DEBUG("Number of connections for the application exceeds the allowed limit.\n");
+            ret = 0;
         }
-        /*
-         * else if (strncmp(tuple_rule->application.connections, tuple_conn->application.connections, tmp_len) != 0) {
-         * HIP_DEBUG("Application Connections not match\n");
-         * ret = 0;
-         * }
-         */
     }
     return ret;
 }
@@ -697,7 +696,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
                                                    struct policy_tuple *tuple)
 {
     X509_NAME *x509_subj_name;
-    //int i = 0;
+    int        i = 0;
 
     /*Sanity check*/
     HIP_ASSERT(tuple);
@@ -751,14 +750,22 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
         tuple->application.requirements[0] = '\0';
     }
 
-/*
- *    HIP_DEBUG("============Printing Sockets===============\n");
- *   for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
- *       if ( (ctx->app.sockets[i].src_port == 0) || (ctx->app.sockets[i].dst_port == 0) )
- *           break;
- *       HIP_DEBUG("Src port = %u, Dst port = %u\n", ctx->app.sockets[i].src_port, ctx->app.sockets[i].dst_port);
- *   }
- */
+
+    if (ctx->app.connections > 0) {
+        tuple->application.connections = ctx->app.connections;
+    } else {
+        tuple->application.connections = -1;
+        ;
+    }
+
+    HIP_DEBUG("============Printing Sockets===============\n");
+    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+        if ((ctx->app.sockets[i].src_port == 0) || (ctx->app.sockets[i].dst_port == 0)) {
+            break;
+        }
+        HIP_DEBUG("Src port = %u, Dst port = %u\n", ctx->app.sockets[i].src_port, ctx->app.sockets[i].dst_port);
+    }
+
 
     /*Copying/Initialize the user information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {
@@ -1053,6 +1060,15 @@ int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, st
         if ((strlen(tuple->application.issuer_dn) != 0) && (strlen(tuple_conn.application.issuer_dn) != 0)) {
             if (strcmp(tuple->application.issuer_dn, tuple_conn.application.issuer_dn) != 0) {
                 HIP_DEBUG("App Issued DN does not match\n");
+                return -1;
+            }
+        }
+    }
+
+    if (signaling_info_req_flag_check(flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
+        if ((tuple->application.connections >= 0) && (tuple_conn.application.connections >= 0)) {
+            if (tuple->application.connections < tuple_conn.application.connections) {
+                HIP_DEBUG("Num of connections more than the allowed number of connections\n");
                 return -1;
             }
         }

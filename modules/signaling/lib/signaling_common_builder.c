@@ -640,7 +640,7 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                 break;
             }
         }
-        app_info_conn.connection_count = htons(0);
+        app_info_conn.connection_count = htons(i);
         app_info_conn.port_pair_length = htons(i);
 
         len_contents += sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
@@ -673,7 +673,7 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
 
     //p_tmp = (uint8_t *) param_buf;
 
-    if (ctx->user.uid > 0) {
+    if (ctx->user.uid >= 0) {
         switch (user_info_flag) {
         case USER_INFO_ID:
             HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
@@ -924,7 +924,7 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
         HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
 
         /*Processing the information requests in the service offer*/
-        while ((i <= num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
+        while ((i < num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
             switch (tmp_info) {
             case HOST_INFO_OS:
                 signaling_build_param_host_info_response(msg, conn, ctx_out, HOST_INFO_OS);
@@ -1207,7 +1207,7 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     HIP_ASSERT(ctx);
 
     HIP_DEBUG("Getting User context.\n");
-    if (ctx->user.uid > 0) {
+    if (ctx->user.uid >= 0) {
         HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
         if (ctx->user.key_rr_len <= 0) {
             HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(ctx->user.uid)),

@@ -558,7 +558,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     int ret           = 0;
 
     struct signaling_connection         new_conn;
-    struct userdb_user_entry           *db_entry = NULL;
     struct signaling_connection_context ctx_in;
 
     struct signaling_connection_flags *ctx_flags     = NULL;
@@ -623,11 +622,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             //Check for acknowledgement
             if (signaling_verify_service_ack(common, other_dir->offer_hash)) {
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
-
-                /* add/update user in user db */
-                if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
-                    HIP_ERROR("Could not add user from message\n");
-                }
 
                 if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
                     policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);

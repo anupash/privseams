@@ -995,6 +995,7 @@ struct signaling_application_context {
     char                       requirements[SIGNALING_APP_REQ_MAX_LEN];
     char                       groups[SIGNALING_APP_GRP_MAX_LEN];
     struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
+    int                        connections; // Maximum num of permissible connections
 };
 
 /*
