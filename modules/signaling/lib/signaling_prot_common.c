@@ -16,6 +16,7 @@
 #include "signaling_common_builder.h"
 #include "signaling_x509_api.h"
 #include "signaling_user_management.h"
+#include "signaling_user_api.h"
 
 
 const char *signaling_connection_status_name(int status)
@@ -461,12 +462,11 @@ out_err:
 }
 
 int signaling_init_user_context_from_msg(struct signaling_user_context *const ctx,
-                                         const struct hip_common *const msg,
+                                         struct hip_common *msg,
                                          UNUSED enum direction dir)
 {
     int                                        err      = 0;
     const struct hip_tlv_common               *param    = NULL;
-    int                                        tmp_len  = 0;
     const struct signaling_param_user_info_id *user_ctx = NULL;
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
@@ -477,16 +477,23 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
         ctx->subject_name_len = ntohs(user_ctx->user_dn_length);
         ctx->key_rr_len       = ntohs(user_ctx->prr_length);
 
-        ctx->rdata.algorithm = user_ctx->algorithm;
-        ctx->rdata.protocol  = user_ctx->protocol;
-        ctx->rdata.flags     = ntohs(user_ctx->flags);
-
-        tmp_len = ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata);
-        memcpy(ctx->pkey, user_ctx->pkey, tmp_len);
-        ctx->pkey[tmp_len] = '\0';
+        ctx->rdata.algorithm = user_ctx->rdata.algorithm;
+        ctx->rdata.protocol  = user_ctx->rdata.protocol;
+        ctx->rdata.flags     = ntohs(user_ctx->rdata.flags);
 
         memcpy(ctx->subject_name, user_ctx->subject_name, ctx->subject_name_len);
         ctx->subject_name[ctx->subject_name_len] = '\0';
+
+        memcpy(ctx->pkey, user_ctx->pkey, ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
+
+        /*All the above information is not valid without verification of signature*/
+        if (!signaling_verify_user_signature_from_msg(msg, ctx)) {
+            HIP_DEBUG("User Signature Verified.\n");
+        } else {
+            HIP_DEBUG("User Signature Verification failed. Cannot accept the user information as true.\n");
+            HIP_IFEL(signaling_init_user_context(ctx),
+                     -1, "Could not init user context\n");
+        }
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
@@ -784,7 +791,7 @@ int signaling_copy_service_offer(struct signaling_param_service_offer_u *const d
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
-                                               UNUSED const struct hip_common *const msg,
+                                               struct hip_common *msg,
                                                enum direction dir)
 {
     int err = 0;

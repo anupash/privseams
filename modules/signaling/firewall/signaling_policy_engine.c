@@ -696,7 +696,7 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
                                                    struct policy_tuple *tuple)
 {
     X509_NAME *x509_subj_name;
-    int        i = 0;
+    //int        i = 0;
 
     /*Sanity check*/
     HIP_ASSERT(tuple);
@@ -757,21 +757,21 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
         tuple->application.connections = -1;
         ;
     }
-
-    HIP_DEBUG("============Printing Sockets===============\n");
-    for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
-        if ((ctx->app.sockets[i].src_port == 0) || (ctx->app.sockets[i].dst_port == 0)) {
-            break;
-        }
-        HIP_DEBUG("Src port = %u, Dst port = %u\n", ctx->app.sockets[i].src_port, ctx->app.sockets[i].dst_port);
-    }
+/*
+ *  HIP_DEBUG("============Printing Sockets===============\n");
+ *  for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
+ *      if ((ctx->app.sockets[i].src_port == 0) || (ctx->app.sockets[i].dst_port == 0)) {
+ *          break;
+ *      }
+ *      HIP_DEBUG("Src port = %u, Dst port = %u\n", ctx->app.sockets[i].src_port, ctx->app.sockets[i].dst_port);
+ *  }*/
 
 
     /*Copying/Initialize the user information in the policy tuple*/
     if (!signaling_DER_to_X509_NAME(ctx->user.subject_name, ctx->user.subject_name_len, &x509_subj_name)) {
         X509_NAME_oneline(x509_subj_name, tuple->user.user_name, SIGNALING_USER_ID_MAX_LEN);
         tuple->user.user_name[SIGNALING_USER_ID_MAX_LEN - 1] = '\0';
-        HIP_DEBUG("USER Distinguished Name found in the context : %s \n", tuple->user.user_name);
+        //HIP_DEBUG("USER Distinguished Name found in the context : %s \n", tuple->user.user_name);
     } else {
         tuple->user.user_name[0] = '\0';
     }
@@ -981,7 +981,8 @@ int policy_decision_check(struct policy_decision flags, int f)
  * Verify the connection context with the policy. Request for information accordingly
  *
  */
-int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple, struct signaling_connection_context *ctx,
+int signaling_hipfw_verify_connection_with_policy(struct policy_tuple *tuple,
+                                                  struct signaling_connection_context *ctx,
                                                   struct signaling_connection_flags *flags)
 {
     struct policy_tuple tuple_conn;

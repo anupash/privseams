@@ -29,18 +29,18 @@ enum userdb_flags {
 struct userdb_certificate_context {
     struct in6_addr src_hit;  //  We need one certificate context,
     struct in6_addr dst_hit;  //  per host associtaion and
-    uint32_t network_id;     //  network.
-    int group;
-    int count;
-    int next_cert_id;
-    STACK_OF(X509) *cert_chain;
+    uint32_t        network_id; //  network.
+    int             group;
+    int             count;
+    int             next_cert_id;
+                    STACK_OF(X509) *cert_chain;
 };
 
 struct userdb_user_entry {
-    long int uid;          // this is only well-defined if this is a local user
-    X509_NAME *uname;
-    uint8_t flags;
-    EVP_PKEY *pub_key;
+    long int       uid;    // this is only well-defined if this is a local user
+    X509_NAME     *uname;
+    uint8_t        flags;
+    EVP_PKEY      *pub_key;
     struct hip_ll *cert_contexts;
 };
 
@@ -53,7 +53,7 @@ void userdb_print(void);
 int userdb_entry_print(struct userdb_user_entry *e);
 
 /* Get from user database */
-struct userdb_user_entry *userdb_get_user(X509_NAME *uname);
+struct userdb_user_entry          *userdb_get_user(X509_NAME *uname);
 struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_user_entry *const user,
                                                                   const struct in6_addr *const src_hit,
                                                                   const struct in6_addr *const dst_hit,
@@ -61,8 +61,8 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_certificate_context *userdb_get_certificate_context_by_key(const struct userdb_user_entry *const user,
                                                                          const EVP_PKEY *pubkey);
 /* Add to user database */
-struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace);
-struct userdb_user_entry *userdb_add_user_from_msg(const struct hip_common *const msg, int replace);
+struct userdb_user_entry          *userdb_add_user(const struct signaling_user_context *user, int replace);
+struct userdb_user_entry          *userdb_add_user_from_msg(const struct hip_common *const msg, int replace);
 struct userdb_certificate_context *userdb_add_certificate_context(struct userdb_user_entry *const user,
                                                                   const struct in6_addr *const src_hit,
                                                                   const struct in6_addr *const dst_hit,
@@ -73,23 +73,25 @@ int userdb_add_certifiate(struct userdb_certificate_context *cert_ctx,
 int userdb_add_certificates_from_msg(const struct hip_common *const msg,
                                      struct userdb_user_entry *user);
 int userdb_add_key_from_rr(struct userdb_user_entry *user,
-                   const struct hip_host_id_key_rdata *const key_rr_header,
-                   const unsigned int key_rr_len,
-                   const unsigned char *key_rr);
+                           const struct hip_host_id_key_rdata *const key_rr_header,
+                           const unsigned int key_rr_len,
+                           const unsigned char *key_rr);
 
 /* Interface to certificate index directory */
-int userdb_save_user_certificate_chain(STACK_OF(X509) *cert_chain);
+int userdb_save_user_certificate_chain(STACK_OF(X509) * cert_chain);
 
 /* Util functions */
 int userdb_user_is_authed(const struct userdb_user_entry *const user);
 void userdb_apply_func(int(*func)(struct userdb_user_entry *));
 int userdb_handle_user_signature(struct hip_common *const msg,
-                                    struct signaling_connection *const conn,
-                                    enum direction dir);
+                                 struct signaling_connection *const conn,
+                                 enum direction dir);
 int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key);
 
 /* Verify a user signature */
 int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey);
-
+int signaling_verify_user_signature_ecdsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest);
+int signaling_verify_user_signature_rsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest);
+int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx);
 
 #endif /* HIP_HIPD_SIGNALING_USER_MANAGEMENT_H */

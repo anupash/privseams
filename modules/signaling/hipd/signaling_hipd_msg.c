@@ -1404,15 +1404,20 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
 {
     int                          err = 0;
     struct signaling_hipd_state *sig_state;
+    struct system_app_context    sys_ctx;
 
-    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             0, "failed to retrieve state for signaling\n");
-/*
- *  HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->ctx_out.user.uid),
- *           0, "User failed to sign packet.\n");
- */
+    if (signaling_check_if_user_info_req(ctx) == 1) {
+        HIP_DEBUG("Request for the user to sign this packet.\n");
+        HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
+        HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+                 0, "failed to retrieve state for signaling\n");
 
+        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(sig_state->pending_conn->src_port, sig_state->pending_conn->dst_port, &sys_ctx),
+                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", sig_state->pending_conn->src_port, sig_state->pending_conn->src_port);
+
+        HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sys_ctx.uid),
+                 0, "User failed to sign packet.\n");
+    }
 out_err:
     return err;
 }

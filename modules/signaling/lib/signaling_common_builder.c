@@ -319,7 +319,7 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
              -1, "Unsupported signature type: %d\n", sig_type);
 
     /* build the signature parameter */
-    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
+    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_SIGNATURE);
     hip_calc_generic_param_len((struct hip_tlv_common *) &sig, sizeof(struct hip_sig), sig_len);
     sig.algorithm = sig_type;     // algo is 8 bits, no htons necessary
     HIP_IFEL(hip_build_generic_param(msg, &sig, sizeof(struct hip_sig), signature_buf),
@@ -681,11 +681,11 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
             user_info_id.user_dn_length = htons(tmp_len);
             memcpy(user_info_id.subject_name, ctx->user.subject_name, tmp_len);
 
-            user_info_id.flags     = htons(ctx->user.rdata.flags);
-            user_info_id.algorithm = ctx->user.rdata.algorithm;
-            user_info_id.protocol  = ctx->user.rdata.protocol;
-            tmp_len                = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
-                                     ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+            user_info_id.rdata.flags     = htons(ctx->user.rdata.flags);
+            user_info_id.rdata.algorithm = ctx->user.rdata.algorithm;
+            user_info_id.rdata.protocol  = ctx->user.rdata.protocol;
+            tmp_len                      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
+                                           ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
             memcpy(user_info_id.pkey, ctx->user.pkey, tmp_len);
             user_info_id.prr_length = htons(tmp_len + sizeof(struct hip_host_id_key_rdata));
 
@@ -1226,6 +1226,39 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
         HIP_DEBUG("User information (UID)could not be obtained. Hence cannot build user context.\n");
         return 0;
     }
+
+out_err:
+    return err;
+}
+
+int signaling_check_if_user_info_req(struct hip_packet_context *ctx)
+{
+    int                                    err                = 0;
+    int                                    num_req_info_items = 0;
+    int                                    i                  = 0;
+    const struct hip_tlv_common           *param;
+    struct signaling_param_service_offer_u param_service_offer;
+    uint16_t                               tmp_info;
+
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        HIP_DEBUG("Service Offers from Middleboxes received.\n");
+        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                 -1, "Could not copy connection context\n");
+        num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
+                              (sizeof(param_service_offer.service_offer_id) +
+                               sizeof(param_service_offer.service_type) +
+                               sizeof(param_service_offer.service_description))) / sizeof(uint16_t);
+        while (i < num_req_info_items) {
+            tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
+            if (tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
+                return 1;
+            }
+            i++;
+        }
+    }
+
+    HIP_DEBUG("No need for the user to sign this packet as no USER INFO request\n");
+    return 0;
 
 out_err:
     return err;

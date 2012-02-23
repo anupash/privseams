@@ -43,6 +43,7 @@
 #include <linux/limits.h>
 
 #include "config.h"
+#include <openssl/pem.h>
 
 #include "lib/core/protodefs.h"
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -81,9 +82,13 @@
 #define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5118
 #define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5119
 
+/*Parameter type for user signature*/
+#define HIP_PARAM_SIGNALING_USER_SIGNATURE      62504
+
 /* Have to be in unsigned part as Middlebox can't sign the message.*/
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER       62504
-#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     62505
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER       62505
+#define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     62506
+
 
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE              33001
@@ -149,25 +154,6 @@
 #define MAX_SIZE_APP_VERSION                        16
 #define MAX_NUM_PORT_PAIR                           10
 #define MAX_SIZE_PROGNAME                           20
-
-/*
- * // Request types/ Profiles for host information
- * #define HOST_INFO_SHORT         30
- * #define HOST_INFO_LONG          31
- * #define HOST_INFO_CERTS         32
- *
- * // Request types/ Profiles for user information
- * #define USER_SIGN               40
- * #define USER_INFO_SHORT         41
- * #define USER_INFO_LONG          42
- * #define USER_INFO_CERTS         43
- * #define USER_INFO_SHORT_SIGN    45
- * #define USER_INFO_LONG_SIGN     46
- *
- * // Request types/ Profiles for application information
- * #define APP_INFO_SHORT          50
- * #define APP_INFO_LONG           51
- */
 
 
 /* Direction for connections */
@@ -733,11 +719,9 @@ struct signaling_param_user_info_id {
     hip_tlv_len user_dn_length;
     hip_tlv_len prr_length;
 
-    uint16_t      flags;
-    uint8_t       protocol;
-    uint8_t       algorithm;
-    unsigned char pkey[SIGNALING_USER_KEY_MAX_LEN];
-    unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
+    struct hip_host_id_key_rdata rdata;
+    unsigned char                pkey[SIGNALING_USER_KEY_MAX_LEN];
+    unsigned char                subject_name[SIGNALING_USER_ID_MAX_LEN];
 } __attribute__((packed));
 
 
@@ -1207,7 +1191,7 @@ int signaling_init_application_context(struct signaling_application_context *con
 int signaling_init_connection_context(struct signaling_connection_context *const ctx,
                                       enum direction dir);
 int signaling_init_connection_context_from_msg(struct signaling_connection_context *const ctx,
-                                               const struct hip_common *const msg,
+                                               struct hip_common *msg,
                                                enum direction dir);
 int signaling_copy_connection_context(struct signaling_connection_context *const dst,
                                       const struct signaling_connection_context *const src);
@@ -1223,7 +1207,7 @@ int signaling_init_host_context_from_msg(struct signaling_host_context *const ct
                                          const struct hip_common *const msg,
                                          UNUSED enum direction dir);
 int signaling_init_user_context_from_msg(struct signaling_user_context *const ctx,
-                                         const struct hip_common *const msg,
+                                         struct hip_common *msg,
                                          UNUSED enum direction dir);
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
                                          const struct hip_common *const msg,

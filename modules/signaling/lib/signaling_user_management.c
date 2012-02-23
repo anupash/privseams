@@ -708,7 +708,7 @@ int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey)
 #endif
 
     /* sanity checks */
-    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS)),
+    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
              -1, "Packet contains no user signature\n");
 
     /* Modify the packet to verify signature */
@@ -851,4 +851,229 @@ int userdb_handle_user_signature(struct hip_common *const msg,
         //signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
         return 0;
     }
+}
+
+/* Verify RSA Signature
+ * return zero on success
+ */
+int signaling_verify_user_signature_rsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest)
+{
+    int                   err    = 0;
+    RSA                  *rsa    = NULL;
+    int                   offset = 0;
+    struct hip_rsa_keylen keylen;
+    int                   bytes;
+
+    /*Generating RSA key from the user context*/
+    /* Have a look at hip_key_rr_to_rsa if u want to know more*/
+    const uint8_t *tmp   = (const uint8_t *) &user_ctx->pkey;
+    int            e_len = tmp[offset++];
+
+    /* Check for public exponent longer than 255 bytes (see RFC 3110) */
+    if (e_len == 0) {
+        e_len   = ntohs((uint16_t) tmp[offset]);
+        offset += 2;
+    }
+    bytes = user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata) -
+            offset - e_len;
+
+    keylen.e_len = offset;
+    keylen.e     = e_len;
+    keylen.n     = bytes;
+
+    rsa = RSA_new();
+    if (!rsa) {
+        HIP_ERROR("Failed to allocate RSA\n");
+        return -1;
+    }
+
+    offset  = keylen.e_len;
+    rsa->e  = BN_bin2bn(&user_ctx->pkey[offset], keylen.e, 0);
+    offset += keylen.e;
+    rsa->n  = BN_bin2bn(&user_ctx->pkey[offset], keylen.n, 0);
+
+    /*Signature verification*/
+    HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length) - 1,
+             -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", RSA_size(rsa), ntohs(param_user_signature->length));
+    HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, param_user_signature->signature, RSA_size(rsa), rsa),
+             -1, "RSA user signature did not verify correctly\n");
+    RSA_free(rsa);
+    return 0;
+out_err:
+    RSA_free(rsa);
+    return err;
+}
+
+/* Verify ECDSA Signature
+ * return zero on success
+ */
+int signaling_verify_user_signature_ecdsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest)
+{
+    int                     err     = 0;
+    int                     nid     = 0;
+    EC_POINT               *pub_key = NULL;
+    EC_GROUP               *group   = NULL;
+    struct hip_ecdsa_keylen key_lens;
+    EC_KEY                 *ecdsa;
+    enum hip_cuve_id        curve_id;
+    int                     curve_size;
+
+
+    if (!user_ctx) {
+        HIP_ERROR("NULL host id\n");
+        return -1;
+    }
+
+    /*Generating ECDSA key from the user context*/
+    /* Have a look at hip_key_rr_to_ecdsa if u want to know more*/
+    curve_id = ntohs(*(const uint16_t *) user_ctx->pkey);
+    HIP_DEBUG("Got curve id %d \n", curve_id);
+    switch (curve_id) {
+    case NIST_ECDSA_160:
+        HIP_DEBUG("Using curve secp160r1\n");
+        nid = NID_secp160r1;
+        break;
+    case NIST_ECDSA_256:
+        HIP_DEBUG("Using curve secp256r1/prime256v1 \n");
+        nid = NID_X9_62_prime256v1;
+        break;
+    case NIST_ECDSA_384:
+        HIP_DEBUG("Using curve secp384r1 \n");
+        nid = NID_secp384r1;
+        break;
+    default:
+        HIP_DEBUG("Curve not supported.\n");
+        return -1;
+    }
+
+    switch (nid) {
+    case NID_secp160r1:
+        curve_size = 160;
+        break;
+    case NID_X9_62_prime256v1:
+        curve_size = 256;
+        break;
+    case NID_secp384r1:
+        curve_size = 384;
+        break;
+    default:
+        HIP_DEBUG("Curve not supported.\n");
+        return -1;
+    }
+
+    key_lens.private = (curve_size + 7) >> 3;
+    key_lens.public  = key_lens.private * 2 + 1;
+
+
+    /* Build public key structure from key rr */
+    if (!(ecdsa = EC_KEY_new())) {
+        HIP_ERROR("Failed to init new key. \n");
+        return -1;
+    }
+    if (!(group = EC_GROUP_new_by_curve_name(nid))) {
+        HIP_ERROR("Failed building the group.\n");
+        return -1;
+    }
+    EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
+
+    if (!(pub_key = EC_POINT_new(group))) {
+        HIP_ERROR("Failed to init public key (point).\n");
+        return -1;
+    }
+    if (!EC_KEY_set_group(ecdsa, group)) {
+        HIP_ERROR("Failed setting the group for key.\n");
+        return -1;
+    }
+    if (!EC_POINT_oct2point(group, pub_key, user_ctx->pkey + HIP_CURVE_ID_LENGTH, key_lens.public, NULL)) {
+        HIP_ERROR("Failed deserializing public key.\n");
+        return -1;
+    }
+    if (!EC_KEY_set_public_key(ecdsa, pub_key)) {
+        HIP_ERROR("Failed setting public key.\n");
+        return -1;
+    }
+
+
+    /*Signature verification*/
+    HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
+             -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
+    HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
+             -1, "ECDSA user signature did not verify correctly\n");
+
+    EC_KEY_free(ecdsa);
+    return 0;
+out_err:
+    EC_KEY_free(ecdsa);
+    return err;
+}
+
+/**
+ * @return 0 if signature verified correctly, < 0 otherwise
+ */
+int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx)
+{
+    int             err = 0;
+    int             hash_range_len;
+    struct hip_sig *param_user_signature = NULL;
+    unsigned char   sha1_digest[HIP_AH_SHA_LEN];
+    const int       orig_len = hip_get_msg_total_len(msg);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n"); // test 2.1.1
+    hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+#endif
+
+    /* sanity checks */
+    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
+             -1, "Packet contains no user signature\n");
+    /* Modify the packet to verify signature */
+    hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) msg);
+    hip_zero_msg_checksum(msg);
+    HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
+    hip_set_msg_total_len(msg, hash_range_len);
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
+             -1, "Could not build message digest \n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
+#endif
+
+
+    switch (user_ctx->rdata.algorithm) {
+    case HIP_HI_RSA:
+        return signaling_verify_user_signature_rsa(user_ctx, param_user_signature, sha1_digest);
+        break;
+    case HIP_HI_ECDSA:
+        HIP_DEBUG("Verifying ECDSA \n");
+        return signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
+        break;
+    }
+
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+#endif
+
+out_err:
+    hip_set_msg_total_len(msg, orig_len);
+    return err;
 }
