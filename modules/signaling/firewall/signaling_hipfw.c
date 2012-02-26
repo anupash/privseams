@@ -146,8 +146,6 @@ int signaling_hipfw_init(const char *policy_file)
     int       err = 0;
     config_t *cfg = NULL;
 
-    // register I3
-    lmod_register_packet_type(HIP_I3, "HIP_I3");
     // Information request parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_ID,          "HIP_PARAM_SIGNALING_HOST_INFO_ID");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_HOST_INFO_OS,          "HIP_PARAM_SIGNALING_HOST_INFO_OS");
@@ -680,71 +678,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 out_err:
     free(ctx_flags);
     free(matched_tuple);
-    return err;
-}
-
-/*
- * Handles an I3 packet observed by the firewall.
- * We have to
- *   a) Check for a corressponding entry in the conntracking table.
- *   b) If we appended a auth_req_s parameter in R2, check for auth_req_s parameter in this message.
- *   c) Handle certificates contained in this message, if we requested auth of initiator user,
- *   d) Allow connection if no further authentication is required.
- *
- * @return the verdict, i.e. 1 for pass, 0 for drop
- */
-int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const struct hip_fw_context *ctx)
-{
-    int                          err = 0;
-    struct signaling_connection  recv_conn;
-    struct signaling_connection *existing_conn = NULL;
-    //const struct signaling_param_user_auth_request *auth_req      = NULL;
-    int wait_auth = 0;
-    printf("\033[22;34mReceived I3 packet\033[22;37m\n\033[01;37m");
-
-    /* Step a) */
-    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
-             0, "Could not init connection context from I3 \n");
-    /* HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, &tuple->src_port, &tuple->dst_port, &recv_conn.id, &status)),
-     *       0, "Could not get connection state for connection-tracking table\n"); */
-    HIP_IFEL(signaling_update_flags_from_connection_id(common, existing_conn),
-             -1, "Could not update authentication flags from I3/U3 message \n");
-
-    /* Step b) */
-/*
- *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
- *      if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
- *          HIP_ERROR("Requested authentication in R2, but I3 is missing signed request parameter. \n");
- *          // todo: [user auth] send notification
- *          return 0;
- *      }
- *  }
- */
-
-    /* Try to auth the user and set flags accordingly */
-    userdb_handle_user_signature(common, existing_conn, IN);
-
-/*
- *   Check if we're done with this connection or if we have to wait for addition authentication
- *  if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
- *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
- *      wait_auth = 1;
- *  }
- *  if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
- *      HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of responder user.\n");
- *      wait_auth = 1;
- *  }
- */
-    if (!wait_auth) {
-        HIP_DEBUG("Auth completed after I3/U3 \n");
-        //existing_conn->status = SIGNALING_CONN_ALLOWED;
-    }
-
-    signaling_cdb_print();
-    printf("\033[22;32mAccepted I3 packet\033[22;37m\n\n\033[01;37m");
-    return 1;
-
-out_err:
     return err;
 }
 

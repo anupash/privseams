@@ -223,71 +223,6 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 }
 
 /**
- * Send an I3.
- *
- * @param src_hit   the HIT of the initiator of the BEX
- * @param dst_hit   the HIT of the responder of the BEX
- * @param ctx       the connection context, of the responder which is confirmed in the I3
- *
- * @return 0 on success, negative on error
- */
-int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *conn)
-{
-    int                err     = 0;
-    uint16_t           mask    = 0;
-    struct hip_common *msg_buf = NULL;
-
-    /* sanity tests */
-    HIP_IFEL(!ha,       -1, "No host association given \n");
-    HIP_IFEL(!conn,     -1, "No connection context given \n");
-
-    /* Allocate and build message */
-    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-             -ENOMEM, "Out of memory while allocation memory for the I3 packet\n");
-    hip_build_network_hdr(msg_buf, HIP_I3, mask, &ha->hit_our, &ha->hit_peer);
-
-    /* Add certificates if required */
-
-    /* Add connection id. This parameter is critical. */
-    HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
-             -1, "Building of connection identifier parameter failed\n");
-
-    /* Add user_auth_request parameter, if received in R2
-     * This parameter is critical, if flagged. */
-/*
- *  if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
- *      HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
- *               -1, "Failed to build signed user authentication request\n");
- *  }
- */
-
-    /* Add host authentication. */
-    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
-             -1, "Building of HMAC failed\n");
-
-    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
-             -EINVAL, "Could not sign I3. Failing\n");
-
-/*
- *  if (signaling_build_param_user_signature(msg_buf, conn->ctx_out.user.uid)) {
- *      HIP_DEBUG("User failed to sign packet.\n");
- *  }
- */
-
-    err = hip_send_pkt(NULL,
-                       &ha->peer_addr,
-                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ha->peer_udp_port,
-                       msg_buf,
-                       ha,
-                       1);
-
-out_err:
-    free(msg_buf);
-    return err;
-}
-
-/**
  * Send the first UPDATE message for an application that wants to establish a new connection.
  *
  * @param src_hit   the HIT of the initiator of the update exchange
@@ -795,18 +730,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
-    //TODO no sending of I3 anymore
-    /* Send an I3 if connection has not been blocked by the oslayer.
-     * otherwise send an error notification with the reason and discard the R2. */
-/*
- *
- *    if (packet_type == HIP_R2) {
- *      signaling_send_I3(ctx->hadb_entry, conn);
- *   } else {
- *      signaling_send_third_update(ctx->input_msg);
- *
- */
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
@@ -818,7 +741,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
     hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
 #endif
-
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -841,88 +763,6 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
         hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
         hip_perf_write_benchmark(perf_set, PERF_HMAC);
-    }
-#endif
-
-    return err;
-}
-
-/*
- * Handles an incoming I3 packet.
- *
- * We have to confirm the status of the connection to the firewall.
- */
-int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int                          wait_auth = 0;
-    int                          err       = 0;
-    struct signaling_connection  conn;
-    struct signaling_connection *existing_conn = NULL;
-    struct signaling_hipd_state *sig_state     = NULL;
-    //const struct signaling_param_user_auth_request *param_usr_auth = NULL;
-
-    /* sanity checks */
-    if (packet_type == HIP_I3) {
-        HIP_DEBUG("Handling an I3\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_R2_I3\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2_I3);
-        HIP_DEBUG("Start PERF_HIPD_I3_FINISH, PERF_I3\n");
-        hip_perf_start_benchmark(perf_set, PERF_I3);
-        hip_perf_start_benchmark(perf_set, PERF_HIPD_I3_FINISH);
-#endif
-    } else if (packet_type == HIP_UPDATE) {
-        HIP_DEBUG("Handling a third bex update like I3\n");
-    } else {
-        HIP_ERROR("Packet is neither I3 nor third bex update.\n");
-        err = -1;
-        goto out_err;
-    }
-
-    /* get connection and update flags */
-    HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg, IN),
-             -1, "Could not init connection context from I3/U3 \n");
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id, conn.src_port, conn.dst_port)),
-             -1, "Could not get state for existing connection\n");
-    HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
-             -1, "Could not update authentication flags from I3/U3 message \n");
-
-    /* Signature validation */
-    userdb_handle_user_signature(ctx->input_msg, existing_conn, IN);
-
-    conn.id = existing_conn->id;
-
-    if (!wait_auth) {
-        HIP_DEBUG("Auth completed after I3/U3 \n");
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_NEW_CONN, PERF_I3, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I3);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-#endif
-    }
-
-out_err:
-#ifdef CONFIG_HIP_PERFORMANCE
-    if (existing_conn->id <= 0) {
-        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG, PERF_HIPD_I3_FINISH, PERF_I3, PERF_SEND_CERT_CHAIN\n");
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-        hip_perf_write_benchmark(perf_set, PERF_R2_I3);
-        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_USER_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_HIPD_I3_FINISH);
-        hip_perf_write_benchmark(perf_set, PERF_I3);
-        hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);
-    } else {
-        HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN, PERF_USER_COMM_UPDATE\n");
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
-        hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
     }
 #endif
 
@@ -1161,8 +1001,11 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
 #endif
         /* This can be handled like an I3 */
         HIP_DEBUG("Received THIRD BEX Update... \n");
-        HIP_IFEL(signaling_handle_incoming_i3(packet_type, ha_state, ctx),
-                 -1, "Could not process third bex update \n");
+        /* TODO Re-implement handling of third update message.
+         *      Was before:
+         * HIP_IFEL(signaling_handle_incoming_i3(packet_type, ha_state, ctx),
+         *         -1, "Could not process third bex update \n");
+         */
         break;
 
     case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:

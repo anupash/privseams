@@ -45,7 +45,6 @@
 /* Handler for incoming messages */
 int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_handle_incoming_i3(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_notification(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
@@ -61,9 +60,6 @@ int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_s
 int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_auth_resp(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-/* Function for prolonged BEX */
-int signaling_send_I3(struct hip_hadb_state *ha, struct signaling_connection *conn);
 
 /* Functions for initiating and answering to a bex update */
 int signaling_send_first_update(const struct in6_addr *src_hit,
