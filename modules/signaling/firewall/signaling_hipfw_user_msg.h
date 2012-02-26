@@ -17,8 +17,10 @@
 int signaling_hipfw_request_connection_by_ports(hip_hit_t *src_hit, hip_hit_t *dst_hit,
                                                 uint16_t src_port, uint16_t dst_port);
 
-int signaling_hipfw_send_connection_request(hip_hit_t src_hit, hip_hit_t dst_hit,
-                                            uint16_t src_port, uint16_t dst_port);
+int signaling_hipfw_send_connection_request(const hip_hit_t src_hit,
+                                            const hip_hit_t dst_hit,
+                                            const uint16_t src_port,
+                                            const uint16_t dst_port);
 
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg);
 

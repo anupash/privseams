@@ -77,8 +77,10 @@ static void insert_iptables_rule(const struct in6_addr *const s,
  *
  * @return          0 on sucess, negative on error
  */
-int signaling_hipfw_send_connection_request(hip_hit_t src_hit, hip_hit_t dst_hit,
-                                            uint16_t src_port, uint16_t dst_port)
+int signaling_hipfw_send_connection_request(const hip_hit_t src_hit,
+                                            const hip_hit_t dst_hit,
+                                            const uint16_t src_port,
+                                            const uint16_t dst_port)
 {
     int                err = 0;
     struct hip_common *msg = NULL;
