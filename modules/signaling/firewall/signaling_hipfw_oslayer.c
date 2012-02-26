@@ -59,6 +59,7 @@ int signaling_hipfw_oslayer_init(void)
 {
     signaling_cdb_init();
 
+    // TODO can this be removed?
     if (signaling_policy_engine_init_from_file(HIPFW_SIGNALING_CONF_FILE)) {
         HIP_ERROR("Could not init connection tracking database \n");
         return -1;
