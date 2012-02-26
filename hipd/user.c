@@ -223,6 +223,33 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
                   0, dst, hip_sockaddr_len(dst));
 }
 
+/** generic send function used to send messages to hipfw
+ *
+ * @param msg   the message to be sent
+ * @return      0, if correct, else -1
+ */
+int hip_send_to_hipfw(const struct hip_common *msg)
+{
+    struct sockaddr_in6 hip_fw_addr;
+    const struct in6_addr loopback = in6addr_loopback;
+
+    HIP_ASSERT(msg != NULL);
+
+    // destination is firewall
+    hip_fw_addr.sin6_family = AF_INET6;
+    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    ipv6_addr_copy(&hip_fw_addr.sin6_addr, &loopback);
+
+    if (hip_sendto_user(msg, (struct sockaddr *) &hip_fw_addr) < 0) {
+        HIP_ERROR("sending of message to firewall failed\n");
+        return -1;
+    }
+
+    HIP_DEBUG("sending of message to firewall successful\n");
+
+    return 0;
+}
+
 /**
  * Handles a user message.
  *

@@ -40,6 +40,7 @@ int hip_user_run_handles(const uint8_t msg_type,
                          struct sockaddr_in6 *src);
 void hip_user_uninit_handles(void);
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
+int hip_send_to_hipfw(const struct hip_common *msg);
 int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src);
 
