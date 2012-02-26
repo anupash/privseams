@@ -1162,37 +1162,7 @@ out_err:
     return err;
 }
 
-int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int                          err       = 0;
-    struct signaling_hipd_state *sig_state = NULL;
-
-    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             0, "failed to retrieve state for signaling\n");
-
-    if (!sig_state->pending_conn) {
-        HIP_DEBUG("We have no connection context for this host associtaion. \n");
-        return 0;
-    }
-
-    if (signaling_build_param_connection_identifier(ctx->output_msg, sig_state->pending_conn)) {
-        HIP_DEBUG("Building of connection identifier parameter failed\n");
-        err = 0;
-    }
-
-/*
- *  if (signaling_build_param_application_context(ctx->output_msg, sig_state->pending_conn->sockets, &sig_state->pending_conn->ctx_out.app)) {
- *      HIP_DEBUG("Building of application context parameter failed.\n");
- *      err = 0;
- *  }
- */
-
-out_err:
-    return err;
-}
-
-int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int                          err = 0;
     struct signaling_hipd_state *sig_state;
@@ -1210,24 +1180,6 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
         HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sys_ctx.uid),
                  0, "User failed to sign packet.\n");
     }
-out_err:
-    return err;
-}
-
-int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int                          err = 0;
-    struct signaling_hipd_state *sig_state;
-
-    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             0, "failed to retrieve state for signaling\n");
-/*
- *  if (signaling_build_param_user_context(ctx->output_msg, &sig_state->pending_conn->ctx_out.user, sig_state->pending_conn->ctx_out.userdb_entry)) {
- *      HIP_ERROR("Building of user context parameter failed.\n");
- *  }
- */
-
 out_err:
     return err;
 }
@@ -1276,41 +1228,6 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     } else {
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
-out_err:
-    return err;
-}
-
-int signaling_r2_add_application_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    return signaling_i2_add_application_context(packet_type, ha_state, ctx);
-}
-
-int signaling_r2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    return signaling_i2_add_user_context(packet_type, ha_state, ctx);
-}
-
-int signaling_r2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    return signaling_i2_add_user_signature(packet_type, ha_state, ctx);
-}
-
-int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int                          err = 0;
-    struct signaling_hipd_state *sig_state;
-
-    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             -1, "failed to retrieve state for signaling\n");
-    /* check if we must include a user auth req_s parameter */
-/*
- *  if (signaling_flag_check(sig_state->pending_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
- *      HIP_IFEL(signaling_build_param_user_auth_req_s(ctx->output_msg, 0),
- *               -1, "Building of user context parameter failed.\n");
- *  }
- */
-
 out_err:
     return err;
 }
