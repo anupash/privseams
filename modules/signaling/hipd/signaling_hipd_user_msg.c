@@ -300,9 +300,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     struct signaling_connection        *conn      = NULL;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_out;
-    //struct signaling_connection_context ctx_in;
     int err = 0;
-//    struct userdb_user_entry *db_entry = NULL;
     struct system_app_context sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -322,12 +320,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
     HIP_IFEL(!(param = hip_get_next_param(msg, param)),
              -1, "Missing (src port) parameter\n");
     our_port = hip_get_param_contents_direct(param);
-
-    // TODO remove this once conn is not used below
-/*
- *  HIP_IFEL(signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1)),
- *           -1, "Could not copy connection context\n");
- */
 
     /* TODO this parts seems broken. Contexts are looked up in
      * signaling_init_connection_context() and
@@ -390,13 +382,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "hadb entry has not been set up\n");
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
-/*
- *      HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
- *               -1, "Missing application_context parameter\n");
- *      // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
- *      HIP_IFEL(signaling_copy_connection(&new_conn, (const struct signaling_connection *) (param + 1)),
- *               -1, "Could not copy connection\n");
- */
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),

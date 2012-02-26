@@ -638,58 +638,6 @@ out_err:
 }
 
 /*
- * Handles an incoming I2 packet.
- *
- * Process connection context information in an I2 packet.
- * We have to send a request to the firewall for the connection with this context,
- * and expect our own connection context from the hipfw to send it in the R2.
- * We have to wait for the I3 to fully open the connection.
- */
-int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, UNUSED struct hip_packet_context *ctx)
-{
-    int err = 0;
-/*
- *  struct signaling_hipd_state *sig_state = NULL;
- *  struct signaling_connection  new_conn;
- *  struct signaling_connection *conn;
- */
-
-    /* Sanity checks */
-    if (packet_type == HIP_I2) {
-        HIP_DEBUG("Handling an I2\n");
-    } else if (packet_type == HIP_UPDATE) {
-        HIP_DEBUG("Handling an first bex update like I2\n");
-    } else {
-        HIP_ERROR("Packet is neither I2 nor first bex update.\n");
-        err = -1;
-        goto out_err;
-    }
-
-
-    /* Since this is a new connection, we have to setup new state as a responder
-     * and fill the new state with the information in the I2 */
-    //TODO a little bit of optimization. If we remove this functionality we can definitely remove this function.
-/*
- *  HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
- *           -1, "failed to retrieve state for signaling module\n");
- *  HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
- *           -1, "Could not init connection context from I2 \n");
- *  HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
- *           -1, "Could not add new connection to hipd state. \n");
- *
- *  HIP_DEBUG("Application Name: %s\n", new_conn.application_name);
- *
- *  HIP_DEBUG("Done initializing the connection from msg and adding it to the HIPD State. Now sending first connection request. \n");
- *  // Tell the firewall/oslayer about the new connection and await it's decision
- *  HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
- *           -1, "Failed to communicate new connection received in I2 to HIPFW\n");
- */
-
-out_err:
-    return err;
-}
-
-/*
  * Handles an incoming R2 packet.
  *
  * Process connection context in an R2 packet.
@@ -973,8 +921,9 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
 #endif
         /* This can be handled like an I2 */
         HIP_DEBUG("Received FIRST BEX Update... \n");
-        HIP_IFEL(signaling_handle_incoming_i2(packet_type, ha_state, ctx),
-                 -1, "Could not process first bex update \n");
+        /* TODO Re-implement this for update handling. Previously looked like this:
+         * HIP_IFEL(signaling_handle_incoming_i2(packet_type, ha_state, ctx),
+         *         -1, "Could not process first bex update \n"); */
         HIP_IFEL(signaling_send_second_update(ctx->input_msg),
                  -1, "failed to trigger second bex update. \n");
 #ifdef CONFIG_HIP_PERFORMANCE
