@@ -22,8 +22,6 @@
 const char *signaling_connection_status_name(int status)
 {
     switch (status) {
-    case SIGNALING_CONN_NEW:
-        return "NEW";
     case SIGNALING_CONN_PROCESSING:
         return "PROCESSING";
     case SIGNALING_CONN_BLOCKED:

@@ -35,19 +35,11 @@
 
 #include "firewall/firewall_defines.h"
 
-#include "lib/core/protodefs.h"
-
 #define VERDICT_DROP    0;
 #define VERDICT_ACCEPT  1;
-
-/* Defines what is done in case of errors. */
-#define VERDICT_DEFAULT VERDICT_ACCEPT
 
 int signaling_hipfw_oslayer_init(void);
 void signaling_hipfw_oslayer_uninit(void);
 int signaling_hipfw_handle_packet(struct hip_fw_context *ctx);
-
-/* Generic maintenance callback. */
-int signaling_firewall_maintenance(void);
 
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_OSLAYER_H*/

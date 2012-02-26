@@ -50,10 +50,6 @@
 #include "lib/core/performance.h"
 #endif
 
-// definition of additional packet I3,
-// which we need for user authentication
-#define HIP_I3                                      6
-
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
 #define HIP_PARAM_SIGNALING_CERT_CHAIN_ID       5008
@@ -98,13 +94,10 @@
 #define SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE 33011
 
 /* User message types (adds to icomm.h)*/
-#define HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST        138
-#define HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST       139
-#define HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST       140
-#define HIP_MSG_SIGNALING_CONFIRMATION                    141
+#define HIP_MSG_SIGNALING_HIPFW_CONNECTION_REQUEST        138
+#define HIP_MSG_SIGNALING_HIPD_CONNECTION_CONFIRMATION    139
 
 /* Connection status types */
-#define SIGNALING_CONN_NEW      0
 #define SIGNALING_CONN_PROCESSING  1
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11

@@ -45,42 +45,6 @@
 #include "user_ipsec_hipd_msg.h"
 #include "user_ipsec_sadb_api.h"
 
-
-/** generic send function used to send the below created messages
- *
- * @param msg   the message to be sent
- * @return      0, if correct, else != 0
- */
-static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
-{
-    struct sockaddr_in6 hip_fw_addr;
-    struct in6_addr     loopback = in6addr_loopback;
-    int                 err      = 0;
-
-    HIP_ASSERT(msg != NULL);
-
-    // destination is firewall
-    hip_fw_addr.sin6_family = AF_INET6;
-    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    ipv6_addr_copy(&hip_fw_addr.sin6_addr, &loopback);
-
-    err = hip_sendto_user(msg, (struct sockaddr *) &hip_fw_addr);
-    if (err < 0) {
-        HIP_ERROR("sending of message to firewall failed\n");
-
-        err = -1;
-        goto out_err;
-    } else {
-        HIP_DEBUG("sending of message to firewall successful\n");
-
-        // this is needed if we want to use HIP_IFEL
-        err = 0;
-    }
-
-out_err:
-    return err;
-}
-
 /** adds a new SA entry for the specified direction to the sadb in userspace ipsec
  * @note  If you make changes to this function, please change also hip_add_sa()
  *
@@ -126,7 +90,7 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
                                        authkey, retransmission, direction, update, entry)), -1,
              "failed to create add_sa message\n");
 
-    HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+    HIP_IFEL(hip_send_to_hipfw(msg), -1, "failed to send msg to fw\n");
 
 out_err:
     return err;

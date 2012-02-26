@@ -50,6 +50,7 @@
 #include "firewall_control.h"
 
 #include "modules/signaling/firewall/signaling_hipfw_user_msg.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
 
 /**
  * Change the state of hadb state cache in the firewall
@@ -152,17 +153,8 @@ int hip_handle_msg(struct hip_common *msg)
         HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
                  "Couldn't notify daemon of firewall presence\n");
         break;
-    case HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST:
-        signaling_hipfw_handle_first_connection_request(msg);
-        break;
-    case HIP_MSG_SIGNALING_SECOND_CONNECTION_REQUEST:
-        signaling_hipfw_handle_second_connection_request(msg);
-        break;
-    case HIP_MSG_SIGNALING_CONNECTION_UPDATE_REQUEST:
-        signaling_hipfw_handle_connection_update_request(msg);
-        break;
-    case HIP_MSG_SIGNALING_CONFIRMATION:
-        signaling_hipfw_handle_connection_confirmation(msg);
+    case HIP_MSG_SIGNALING_HIPD_CONNECTION_CONFIRMATION:
+        signaling_handle_hipd_connection_confirmation(msg);
         break;
     default:
         HIP_ERROR("Unhandled message type %d\n", type);

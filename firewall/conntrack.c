@@ -1735,8 +1735,6 @@ static int check_packet(struct hip_common *common,
         goto out_err;
     } else if (common->type_hdr == HIP_LUPDATE) {
         err = esp_prot_conntrack_lupdate(common, tuple, ctx);
-    } else if (common->type_hdr == HIP_I3) {
-        err = signaling_hipfw_handle_i3(common, tuple, ctx);
     } else {
         HIP_ERROR("unknown packet type\n");
         err = 0;
