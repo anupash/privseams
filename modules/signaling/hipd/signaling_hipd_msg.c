@@ -642,7 +642,6 @@ out_err:
  *
  * Process connection context in an R2 packet.
  * This completes a BEX with application context for which this HIPD process was the initiator.
- * So, we have to confirm the new connection to the hipfw/oslayer and send the I3.
  */
 int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
@@ -675,7 +674,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
 
     /* Ask the firewall for a decision on the remote connection context */
-    HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
+    HIP_IFEL(signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1130,7 +1129,8 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
 
     /* Adapt connection status */
     //conn->status = SIGNALING_CONN_BLOCKED;
-    signaling_send_connection_update_request(our_hit, peer_hit, conn);
+    /* TODO handle this */
+    //signaling_send_connection_update_request(our_hit, peer_hit, conn);
 
 out_err:
     return err;
@@ -1279,7 +1279,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
              -1, "Could not add new connection to hipd state. \n");
     HIP_DEBUG("Added requests to Service Offer. Sending the request to end-point firewall (hipfw)\n");
     // Tell the firewall/oslayer about the new connection and await it's decision
-    HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
+    HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
 out_err:
