@@ -72,8 +72,9 @@ void signaling_hipfw_oslayer_uninit(void)
     signaling_cdb_uninit();
 }
 
-static int handle_new_connection(struct hip_fw_context *ctx,
-                                 uint16_t src_port, uint16_t dst_port)
+static int handle_new_connection(const struct hip_fw_context *const ctx,
+                                 const uint16_t src_port,
+                                 const uint16_t dst_port)
 {
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src));
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->dst));
