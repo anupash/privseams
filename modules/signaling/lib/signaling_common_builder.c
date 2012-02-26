@@ -841,7 +841,6 @@ int signaling_verify_service_ack(struct hip_common *msg,
                                  unsigned char *stored_hash)
 {
     int                                 err     = 0;
-    int                                 tmp_len = 0;
     const struct hip_tlv_common        *param;
     const struct signaling_service_ack *ack;
 
@@ -849,7 +848,6 @@ int signaling_verify_service_ack(struct hip_common *msg,
     //TODO check for signed and unsigned service offer parameters
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK)),
              -1, "No service ack for the middlebox to process\n");
-    tmp_len = hip_get_param_contents_len(param);
     ack     = (const struct signaling_service_ack *) (param + 1);
 
 
