@@ -50,6 +50,7 @@
 #include "firewall_control.h"
 
 #include "modules/signaling/firewall/signaling_hipfw_user_msg.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
 
 /**
  * Change the state of hadb state cache in the firewall

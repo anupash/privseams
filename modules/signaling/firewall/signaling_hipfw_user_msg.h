@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 #include "lib/core/protodefs.h"
-#include "modules/signaling/lib/signaling_prot_common.h"
 
 int signaling_hipfw_send_connection_request(const hip_hit_t src_hit,
                                             const hip_hit_t dst_hit,
