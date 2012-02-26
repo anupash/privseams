@@ -673,7 +673,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_connection_print(conn, "\t");
 
 
-    /* Ask the firewall for a decision on the remote connection context */
+    /* Notify hipfw about the completed exchange */
     HIP_IFEL(signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 

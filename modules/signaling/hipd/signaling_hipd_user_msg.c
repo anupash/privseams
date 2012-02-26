@@ -28,7 +28,7 @@
 #include "signaling_hipd_user_msg.h"
 
 /**
- * HIPD sends a HIP_MSG_SIGNALING_REQUEST_CONNECTION message to the firewall,
+ * HIPD sends a HIP_MSG_SIGNALING_HIPD_CONNECTION_CONFIRMATION message to hipfw,
  * when it receives the remote connection context or updates of it.
  * With this message, HIPD tells HIPFW about the incoming connection
  * and gives HIPFW the chance to check this connection against the policy.
