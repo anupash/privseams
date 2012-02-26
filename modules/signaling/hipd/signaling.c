@@ -69,7 +69,7 @@ int hip_signaling_init(void)
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);
 
-    /* Handle Service Offer to I2*/
+    /* Handle Service Offer in R1*/
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_handle_service_offers, OUTBOUND_I2_HANDLE_SERVICE_OFFER_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_i2_handle_service_offers, OUTBOUND_I2_HANDLE_SERVICE_OFFER_PRIO),
@@ -81,17 +81,21 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,         &signaling_add_user_signature, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
-    /* Handle Service Offer to I2*/
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_handle_service_offers, OUTBOUND_R2_CREATE_APPINFO_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
+    /* Handle Service Offer in I2*/
+    const int service_offer_I2_states[] = { HIP_STATE_UNASSOCIATED,
+                                            HIP_STATE_I1_SENT,
+                                            HIP_STATE_I2_SENT,
+                                            HIP_STATE_R2_SENT,
+                                            HIP_STATE_NONE };
+    for (unsigned i = 0; i < ARRAY_SIZE(service_offer_I2_states); i++) {
+        if (hip_register_handle_function(HIP_I2,
+                                         service_offer_I2_states[i],
+                                         &signaling_r2_handle_service_offers,
+                                         OUTBOUND_R2_CREATE_APPINFO_PRIO)) {
+            HIP_ERROR("Error on registering Signaling handle function.\n");
+            return -1;
+        }
+    }
 
     /* Add user signature to R2 */
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
