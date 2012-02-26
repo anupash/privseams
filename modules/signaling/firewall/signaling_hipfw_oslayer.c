@@ -121,7 +121,6 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
     uint16_t                          src_port, dest_port;
     const struct signaling_cdb_entry *entry   = NULL;
-    int                               status  = SIGNALING_CONN_NEW;
     int                               verdict = VERDICT_DEFAULT;
 
     /* Get ports from tcp header */
@@ -157,10 +156,9 @@ int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
             HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
             verdict = VERDICT_DROP;
             break;
-        case SIGNALING_CONN_NEW:
-            break;
         default:
-            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", status);
+            HIP_DEBUG("Invalid connection state %d. Drop packet.\n",
+                      entry->status);
             verdict = VERDICT_DROP;
             break;
         }

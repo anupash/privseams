@@ -104,7 +104,6 @@
 #define HIP_MSG_SIGNALING_CONFIRMATION                    141
 
 /* Connection status types */
-#define SIGNALING_CONN_NEW      0
 #define SIGNALING_CONN_PROCESSING  1
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11
