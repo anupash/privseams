@@ -149,15 +149,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
-             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
-    memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
-
-    //TODO check if I need to do ntohs here
-    new_conn.id = 0; //some random initiatialization .. will remove it later
-                     //conn->id;
-    new_conn.src_port = *our_port;
-    new_conn.dst_port = *peer_port;
 
     /* Determine if we already have an association */
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
@@ -166,6 +157,17 @@ int signaling_handle_connection_request(struct hip_common *msg,
     if (entry) {   // UPDATE
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
+
+        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
+                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
+        memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
+
+        //TODO check if I need to do ntohs here
+        new_conn.id = 0; //some random initiatialization .. will remove it later
+                         //conn->id;
+        new_conn.src_port = *our_port;
+        new_conn.dst_port = *peer_port;
+        new_conn.uid      = sys_ctx.uid;
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
@@ -202,6 +204,16 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
+        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
+                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
+        memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
+
+        //TODO check if I need to do ntohs here
+        new_conn.id = 0; //some random initiatialization .. will remove it later
+                         //conn->id;
+        new_conn.src_port = *our_port;
+        new_conn.dst_port = *peer_port;
+        new_conn.uid      = sys_ctx.uid;
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not save connection in local state\n");

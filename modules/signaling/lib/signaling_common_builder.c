@@ -1093,7 +1093,7 @@ out_err:
     return err;
 }
 
-void signaling_get_connection_context(UNUSED struct signaling_connection conn,
+void signaling_get_connection_context(struct signaling_connection *conn,
                                       struct signaling_connection_context *ctx)
 {
     HIP_ASSERT(ctx);
@@ -1102,7 +1102,7 @@ void signaling_get_connection_context(UNUSED struct signaling_connection conn,
         HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
         signaling_init_host_context(&ctx->host);
     }
-    if (signaling_get_verified_application_context_by_ports(conn.src_port, conn.dst_port, ctx)) {
+    if (signaling_get_verified_application_context_by_ports(conn, ctx)) {
         HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
         signaling_init_application_context(&ctx->app);
     }

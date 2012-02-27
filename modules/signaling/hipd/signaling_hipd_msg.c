@@ -696,7 +696,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
-
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_USER_COMM PERF_X509_VERIFY_CERT_CHAIN, PERF_I3_HOST_SIGN, PERF_SEND_CERT_CHAIN, \n");
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
@@ -712,6 +711,10 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
         hip_perf_write_benchmark(perf_set, PERF_HMAC);
     }
+    HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN, PERF_NEW_CONN\n");
+    hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
 #endif
 
     return err;
@@ -1167,7 +1170,6 @@ int signaling_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const 
 {
     int                          err = 0;
     struct signaling_hipd_state *sig_state;
-    struct system_app_context    sys_ctx;
 
     if (signaling_check_if_user_info_req(ctx) == 1) {
         HIP_DEBUG("Request for the user to sign this packet.\n");
@@ -1175,10 +1177,7 @@ int signaling_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const 
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  0, "failed to retrieve state for signaling\n");
 
-        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(sig_state->pending_conn->src_port, sig_state->pending_conn->dst_port, &sys_ctx),
-                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", sig_state->pending_conn->src_port, sig_state->pending_conn->src_port);
-
-        HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sys_ctx.uid),
+        HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->uid),
                  0, "User failed to sign packet.\n");
     }
 out_err:
@@ -1215,15 +1214,18 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 
         HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
                  -1, "Could not init connection context\n");
-
-        signaling_get_connection_context(*sig_state->pending_conn, &ctx_out);
+        signaling_get_connection_context(sig_state->pending_conn, &ctx_out);
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
 
-        HIP_DEBUG("Application Name: %s\n", sig_state->pending_conn->application_name);
-        //TODO also add the handler for signed service offer parameter
-        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
-            HIP_DEBUG("Building of application context parameter failed.\n");
-            err = 0;
+        /*Sanity Checking*/
+        if (sig_state->pending_conn->uid == ctx_out.user.uid) {
+            //TODO also add the handler for signed service offer parameter
+            if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
+                HIP_DEBUG("Building of application context parameter failed.\n");
+                err = 0;
+            }
+        } else {
+            HIP_DEBUG("Building User context for a different user.\n");
         }
         return err;
     } else {
@@ -1251,9 +1253,6 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I2 \n");
-    HIP_IFEL(hip_build_param_contents(ctx->output_msg, &new_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-             -1, "build signaling_connection failed \n");
-
 
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
@@ -1263,8 +1262,11 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
                  -1, "Could not init connection context\n");
 
-        signaling_get_connection_context(new_conn, &ctx_out);
+        signaling_get_connection_context(&new_conn, &ctx_out);
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, ctx_out.app.sockets);
+
+        HIP_IFEL(hip_build_param_contents(ctx->output_msg, &new_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "build signaling_connection failed \n");
 
         //TODO also add the handler for signed service offer parameter
         if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn, &ctx_out, &param_service_offer)) {

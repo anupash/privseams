@@ -1140,6 +1140,7 @@ struct signaling_connection {
     uint16_t src_port;
     uint16_t dst_port;
     char     application_name[MAX_SIZE_PROGNAME];
+    uid_t    uid;
 };
 
 

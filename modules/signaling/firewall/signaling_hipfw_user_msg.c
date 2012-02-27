@@ -174,6 +174,13 @@ int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
 
     signaling_cdb_print();
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Writing PERF_NEW_CONN, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+    hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
+
     return 0;
 out_err:
     return err;

@@ -237,6 +237,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
         HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
     } else {
         HIP_DEBUG("No program found!\n");
+        return -1;
     }
 out_err:
     return err;
@@ -356,8 +357,7 @@ out_err:
 /*
  * Just a wrapper.
  */
-int signaling_get_verified_application_context_by_ports(uint16_t src_port,
-                                                        uint16_t dst_port,
+int signaling_get_verified_application_context_by_ports(struct signaling_connection *conn,
                                                         struct signaling_connection_context *const ctx)
 {
     int                       err = 0;
@@ -372,9 +372,12 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     hip_perf_start_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
 #endif
 
-    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(src_port, dst_port, &sys_ctx),
-             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", src_port, dst_port);
+    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx),
+             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", conn->src_port, conn->dst_port);
     ctx->user.uid = sys_ctx.uid;
+
+    conn->uid = sys_ctx.uid;
+    memcpy(&conn->application_name, &sys_ctx.progname, strlen(sys_ctx.progname));
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_NETSTAT_LOOKUP\n");

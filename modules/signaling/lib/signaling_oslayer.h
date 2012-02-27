@@ -50,8 +50,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
 int signaling_get_application_context_from_certificate(X509AC *ac,
                                                        struct signaling_application_context *const app_ctx);
 
-int signaling_get_verified_application_context_by_ports(uint16_t src_port,
-                                                        uint16_t dst_port,
+int signaling_get_verified_application_context_by_ports(struct signaling_connection *conn,
                                                         struct signaling_connection_context *const ctx);
 
 int signaling_get_verified_host_context(struct signaling_connection_context *const ctx);
