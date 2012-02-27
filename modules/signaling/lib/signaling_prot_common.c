@@ -463,15 +463,34 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
                                          struct hip_common *msg,
                                          UNUSED enum direction dir)
 {
-    int                                        err      = 0;
-    const struct hip_tlv_common               *param    = NULL;
-    const struct signaling_param_user_info_id *user_ctx = NULL;
+    int                                        err          = 0;
+    const struct hip_tlv_common               *param        = NULL;
+    const struct signaling_param_user_info_id *user_ctx     = NULL;
+    uint16_t                                   header_len   = 0;
+    uint16_t                                   key_len      = 0;
+    uint16_t                                   sub_name_len = 0;
+
     HIP_IFEL(!msg,  -1, "Cannot initialize from NULL-msg\n");
 
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_ID);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USER_INFO_ID) {
-        user_ctx              = (const struct signaling_param_user_info_id *) param;
+        user_ctx   = (const struct signaling_param_user_info_id *) param;
+        header_len = sizeof(struct signaling_param_user_info_id) -
+                     sizeof(ctx->pkey) -
+                     sizeof(ctx->subject_name);
+        key_len = ntohs(user_ctx->prr_length) -
+                  sizeof(struct hip_host_id_key_rdata);
+        sub_name_len = ntohs(user_ctx->user_dn_length);
+
+        /*Sanity Checking*/
+        HIP_IFEL(sub_name_len >= SIGNALING_USER_ID_MAX_LEN,
+                 -1, "Got bad length for domain identifier: %d\n", sub_name_len);
+        HIP_IFEL(key_len > SIGNALING_USER_KEY_MAX_LEN,
+                 -1, "Got bad key length: %d\n", key_len);
+        HIP_IFEL(header_len + key_len + sub_name_len > hip_get_param_contents_len(param) + 4,
+                 -1, "Header+ Key + Sub Name length exceeds parameter size: %d\n", header_len + key_len + sub_name_len);
+
         ctx->subject_name_len = ntohs(user_ctx->user_dn_length);
         ctx->key_rr_len       = ntohs(user_ctx->prr_length);
 
@@ -479,10 +498,9 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
         ctx->rdata.protocol  = user_ctx->rdata.protocol;
         ctx->rdata.flags     = ntohs(user_ctx->rdata.flags);
 
-        memcpy(ctx->subject_name, user_ctx->subject_name, ctx->subject_name_len);
-        ctx->subject_name[ctx->subject_name_len] = '\0';
 
-        memcpy(ctx->pkey, user_ctx->pkey, ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
+        memcpy(&ctx->pkey, &user_ctx->pkey[0], key_len);
+        memcpy(&ctx->subject_name, &user_ctx->pkey[key_len], sub_name_len);
 
         /*All the above information is not valid without verification of signature*/
         /*Later when we add certificates we should also verify user key with the certificates*/
@@ -536,11 +554,11 @@ out_err:
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const struct hip_common *const msg,
-                                       enum direction dir)
+                                       UNUSED enum direction dir)
 {
-    int                          err      = 0;
-    uint16_t                     tmp_port = 0;
-    const struct hip_tlv_common *param    = NULL;
+    int err = 0;
+    //uint16_t                     tmp_port = 0;
+    const struct hip_tlv_common *param = NULL;
 
     /* init and fill the connection context */
     HIP_IFEL(signaling_init_connection(conn), -1, "Failed to init connection context\n");
@@ -550,13 +568,7 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
         signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
     }
 
-    // Swapping port entries in case when received by the end-points
-    if (dir == IN) {
-        //Very dirty swapping, have to find a better way.
-        tmp_port       = conn->src_port;
-        conn->src_port = conn->dst_port;
-        conn->dst_port = tmp_port;
-    }
+    return 0;
 out_err:
     return err;
 }

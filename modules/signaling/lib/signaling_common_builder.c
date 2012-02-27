@@ -665,31 +665,41 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
                                              const uint8_t user_info_flag)
 {
     int len_contents = 0;
-    int tmp_len;
     //uint8_t                            *p_tmp = NULL;
     //char                                param_buf[HIP_MAX_PACKET];
     struct signaling_param_user_info_id user_info_id;
+    struct signaling_param_user_info_id temp_param;
     //struct signaling_param_user_info_certs   user_info_name;
+    uint16_t header_len   = 0;
+    uint16_t key_len      = 0;
+    uint16_t sub_name_len = 0;
 
     //p_tmp = (uint8_t *) param_buf;
 
     if (ctx->user.uid >= 0) {
         switch (user_info_flag) {
         case USER_INFO_ID:
+            /*Dirty Work here to keep the parameter as short as possible in length.*/
             HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
-            tmp_len                     = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
-            user_info_id.user_dn_length = htons(tmp_len);
-            memcpy(user_info_id.subject_name, ctx->user.subject_name, tmp_len);
+            sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
+            key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
+                           ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
 
-            user_info_id.rdata.flags     = htons(ctx->user.rdata.flags);
-            user_info_id.rdata.algorithm = ctx->user.rdata.algorithm;
-            user_info_id.rdata.protocol  = ctx->user.rdata.protocol;
-            tmp_len                      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
-                                           ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
-            memcpy(user_info_id.pkey, ctx->user.pkey, tmp_len);
-            user_info_id.prr_length = htons(tmp_len + sizeof(struct hip_host_id_key_rdata));
+            /*Building header of the USER_INFO_ID parameter*/
+            temp_param.user_dn_length  = htons(sub_name_len);
+            temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
+            temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
+            temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
+            temp_param.rdata.protocol  = ctx->user.rdata.protocol;
 
-            len_contents = sizeof(struct signaling_param_user_info_id) - (sizeof(hip_tlv) + sizeof(hip_tlv_len));
+            header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
+
+            /*Preparing the USER_INFO_ID parameter to be sent*/
+            memcpy(&user_info_id, &temp_param, header_len);
+            memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
+            memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
+
+            len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
             hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
             hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
 
@@ -1248,7 +1258,6 @@ int signaling_check_if_user_info_req(struct hip_packet_context *ctx)
     uint16_t                               tmp_info;
 
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
-        HIP_DEBUG("Service Offers from Middleboxes received.\n");
         HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
                  -1, "Could not copy connection context\n");
         num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
