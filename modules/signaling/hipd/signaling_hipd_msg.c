@@ -669,13 +669,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not init connection context from R2/U2 \n");
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id, recv_conn.src_port, recv_conn.dst_port)),
              -1, "Could not get connection state for connection in R2\n");
-    signaling_copy_connection(conn, &recv_conn);
-    signaling_connection_print(conn, "\t");
-
-
-    /* Notify hipfw about the completed exchange */
-    HIP_IFEL(signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
-             -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2\n");
@@ -683,7 +676,19 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U2);
 #endif
 
+    signaling_copy_connection(conn, &recv_conn);
+    signaling_connection_print(conn, "\t");
+
+    /* Notify hipfw about the completed exchange */
+    HIP_IFEL(signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
+             -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
+
 #ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_NEW_CONN, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
+    hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+
     HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
     hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
     hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
@@ -691,18 +696,14 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2_I3\n");
-    hip_perf_start_benchmark(perf_set, PERF_R2_I3);
 
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_USER_COMM PERF_X509_VERIFY_CERT_CHAIN, PERF_I3_HOST_SIGN, PERF_SEND_CERT_CHAIN, \n");
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);
     if (conn->id <= 0) {
-        HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_I3_HOST_SIGN, PERF_USER_COMM\n");
+        HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_USER_COMM\n");
         hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-        hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_I3_USER_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_R2);
         hip_perf_write_benchmark(perf_set, PERF_I2_R2);
         hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);

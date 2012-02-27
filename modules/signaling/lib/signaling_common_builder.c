@@ -816,9 +816,18 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
     //Computing the hash of the service offer and storing it in tuple
     hip_set_param_contents_len((struct hip_tlv_common *) &param_service_offer_u, len);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
+#endif
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer_u, len, hash),
              -1, "Could not build hash of the service offer \n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
+#endif
     //print_hash(hash);
 
     HIP_IFEL(hip_build_param(msg, &param_service_offer_u),
@@ -840,7 +849,7 @@ int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
 int signaling_verify_service_ack(struct hip_common *msg,
                                  unsigned char *stored_hash)
 {
-    int                                 err     = 0;
+    int                                 err = 0;
     const struct hip_tlv_common        *param;
     const struct signaling_service_ack *ack;
 
@@ -848,7 +857,7 @@ int signaling_verify_service_ack(struct hip_common *msg,
     //TODO check for signed and unsigned service offer parameters
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK)),
              -1, "No service ack for the middlebox to process\n");
-    ack     = (const struct signaling_service_ack *) (param + 1);
+    ack = (const struct signaling_service_ack *) (param + 1);
 
 
     if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {

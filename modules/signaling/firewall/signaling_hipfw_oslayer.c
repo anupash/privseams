@@ -95,20 +95,21 @@ static int handle_new_connection(const struct hip_fw_context *const ctx,
         return -1;
     }
 
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    hip_perf_start_benchmark(perf_set, PERF_CONN_REQUEST);
+#endif
+
     HIP_DEBUG("Sending connection request to hipd.\n");
     signaling_hipfw_send_connection_request(ctx->src, ctx->dst,
                                             src_port, dst_port);
 
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_REQUEST);
-    HIP_DEBUG("Write PERF_CONN_REQUEST, PERF_CONN_REQUEST, PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_HASH, PERF_CTX_LOOKUP, PERF_X509AC_VERIFY_CERT_CHAIN\n");
+    HIP_DEBUG("Write PERF_CONN_REQUEST\n");
     hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
-    hip_perf_write_benchmark(perf_set, PERF_NETSTAT_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
-    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
-    hip_perf_write_benchmark(perf_set, PERF_HASH);
 #endif
 
     return 0;
@@ -122,7 +123,7 @@ static int handle_new_connection(const struct hip_fw_context *const ctx,
 int signaling_hipfw_handle_packet(struct hip_fw_context *ctx)
 {
     uint16_t                          src_port, dest_port;
-    const struct signaling_cdb_entry *entry   = NULL;
+    const struct signaling_cdb_entry *entry = NULL;
 
     /* Get ports from tcp header */
     // TODO this code should not depend on payload to be TCP

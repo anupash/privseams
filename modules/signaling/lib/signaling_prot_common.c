@@ -485,6 +485,7 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
         memcpy(ctx->pkey, user_ctx->pkey, ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
 
         /*All the above information is not valid without verification of signature*/
+        /*Later when we add certificates we should also verify user key with the certificates*/
         if (!signaling_verify_user_signature_from_msg(msg, ctx)) {
             HIP_DEBUG("User Signature Verified.\n");
         } else {

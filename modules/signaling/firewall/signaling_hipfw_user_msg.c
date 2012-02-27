@@ -131,7 +131,7 @@ int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
     const hip_hit_t             *hits  = NULL;
     const hip_hit_t             *hitr  = NULL;
     struct signaling_connection  recv_conn;
-    struct signaling_cdb_entry *entry = NULL;
+    struct signaling_cdb_entry  *entry = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HIPFW_REQ2, PERF_HIPFW_R2_FINISH\n");
@@ -162,6 +162,13 @@ int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
         HIP_ERROR("No state found for connection confirmed by hipd.\n");
         return -1;
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_NEW_CONN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+    HIP_DEBUG("Stop PERF_NEW_UPDATE_CONN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+#endif
+
     signaling_cdb_print();
 
     return 0;

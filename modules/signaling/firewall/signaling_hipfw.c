@@ -313,12 +313,28 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     //TODO check here if ctx_in or ctx_out should be used
     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
     if (!ret && ret != -1) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+#endif
         if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_out, &ctx_flags, &policy_check))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+#endif
             HIP_DEBUG("Found matching policy tuple\n");
             if (policy_check == 1) {
                 HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
                 hip_dump_msg(common);
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_MBOX_R1_ADD_INFO_REQ\n");
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
+#endif
                 HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_MBOX_R1_ADD_INFO_REQ\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
+#endif
                 HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
                 hip_dump_msg(common);
                 ctx->modified = 1;
@@ -330,6 +346,10 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
                 ret = 1;
             }
         } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+#endif
             if (policy_check == -1) {
                 signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                 signaling_cdb_print();
@@ -357,6 +377,10 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     /* Step d) */
 
 out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_R1_ADD_INFO_REQ\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
+#endif
     free(ctx_flags);
     free(matched_tuple);
     return err;
@@ -440,16 +464,31 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     } else {
         //Check for acknowledgement
         HIP_DEBUG("Verifying Ack to Service Offer.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
+#endif
         if (signaling_verify_service_ack(common, tuple->offer_hash) != -1) {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
+#endif
             HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
 
             /* Step b) */
             //HIP_DEBUG("Connection after receipt of I2\n");
             //signaling_connection_print(&new_conn, "\t");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+#endif
             if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
                 HIP_DEBUG("Will verify the connection with the policy.\n");
                 policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+#endif
                 if (policy_verify == -1) {
                     signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                     signaling_cdb_print();
@@ -463,6 +502,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                     ret = -1;
                 }
             } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+#endif
                 if (policy_check == -1) {
                     // TODO add connection to scdb
                     signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -478,8 +521,12 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 }
             }
         } else {
-            HIP_DEBUG("No Service Offer Sent in R1, but will wait for the info response from Responder.\n");
-            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
+#endif
+            HIP_DEBUG("Service Ack in I2 could not be verified. Blocking the connection.\n");
+            signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
             signaling_cdb_print();
             ret = -1;
         }
@@ -500,11 +547,28 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+#endif
     if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hitr, &ctx_out, &ctx_flags, &policy_check))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+#endif
+
         if (policy_check == 1) {
             HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
             hip_dump_msg(common);
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_I2_ADD_INFO_REQ\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
+#endif
             HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_I2_ADD_INFO_REQ\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
+#endif
             HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
             hip_dump_msg(common);
             ctx->modified = 1;
@@ -515,6 +579,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             ret = -1;
         }
     } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+#endif
         if (policy_check == -1) {
             signaling_cdb_add_connection(common->hitr, common->hits, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_BLOCKED);
             signaling_cdb_print();
@@ -534,6 +602,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     return ret;
 
 out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_I2_ADD_INFO_REQ\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
+#endif
     free(ctx_flags);
     free(matched_tuple);
     return err;
@@ -620,11 +692,27 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             ret = 1;
         } else if (old_conn->status == SIGNALING_CONN_PROCESSING) {
             //Check for acknowledgement
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_R2_VERIFY_ACK\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
+#endif
             if (signaling_verify_service_ack(common, other_dir->offer_hash)) {
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
+#endif
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+#endif
                 if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
                     policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+#endif
                     if (policy_verify == -1) {
                         signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                         signaling_cdb_print();
@@ -638,6 +726,10 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                         ret = 1;
                     }
                 } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+#endif
                     if (policy_check == -1) {
                         // TODO add connection to scdb
                         signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -653,6 +745,10 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     }
                 }
             } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
+#endif
                 //Service Acknowledgement didn't veriy correctly.
                 HIP_DEBUG("Service Acknowledgement didn't veriy correctly.\n");
                 signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);

@@ -74,9 +74,8 @@ int signaling_send_connection_confirmation(const hip_hit_t *src_hit,
     HIP_DEBUG("Sending connection request for following context to HIPFW:\n");
     signaling_connection_print(conn, "");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HIPD_R2_FINISH, PERF_HIPD_I3_FINISH, PERF_CERTIFICATE_EXCHANGE\n");
+    HIP_DEBUG("Stop PERF_HIPD_R2_FINISH, PERF_CERTIFICATE_EXCHANGE\n");
     hip_perf_stop_benchmark(perf_set, PERF_HIPD_R2_FINISH);
-    hip_perf_stop_benchmark(perf_set, PERF_HIPD_I3_FINISH);
     hip_perf_stop_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
     HIP_DEBUG("Start PERF_USER_COMM\n");
     hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
@@ -120,8 +119,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
     struct signaling_connection        *conn      = NULL;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_out;
-    int err = 0;
-    struct system_app_context sys_ctx;
+    int                                 err = 0;
+    struct system_app_context           sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
@@ -207,13 +206,12 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not save connection in local state\n");
 
-
         HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_print(conn, "");
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
+    HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
     hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
     hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);

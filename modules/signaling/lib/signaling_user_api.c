@@ -29,15 +29,16 @@
 /*
  * @return NULL on error
  */
-static char *get_user_homedir(const uid_t uid) {
-    int err = 0;
-    struct passwd *pw = NULL;
+static char *get_user_homedir(const uid_t uid)
+{
+    int            err = 0;
+    struct passwd *pw  = NULL;
 
     HIP_IFEL(!(pw = getpwuid(uid)),
-            -1, "Failed to get info for user id %d.\n", uid);
+             -1, "Failed to get info for user id %d.\n", uid);
 
 out_err:
-    if(err) {
+    if (err) {
         return NULL;
     }
     return pw->pw_dir;
@@ -46,10 +47,10 @@ out_err:
 /*
  * @return NULL on error
  */
-STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid) {
-    char filebuf[SIGNALING_PATH_MAX_LEN];
-    char *homedir        = NULL;
-    STACK_OF(X509) *ret  = NULL;
+STACK_OF(X509) * signaling_user_api_get_user_certificate_chain(const uid_t uid) {
+    char  filebuf[SIGNALING_PATH_MAX_LEN];
+    char *homedir = NULL;
+    STACK_OF(X509) * ret = NULL;
 
     homedir = get_user_homedir(uid);
     sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
@@ -71,11 +72,11 @@ STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid) {
  */
 static int rsa_sign(RSA *const priv_key, const void *const data, const int in_len, unsigned char *const out)
 {
-    int err = 0;
+    int          err = 0;
     unsigned int sig_len;
-    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t      sha1_digest[HIP_AH_SHA_LEN];
 
-     HIP_IFEL(!priv_key,
+    HIP_IFEL(!priv_key,
              -1, "No private key given.\n");
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
@@ -94,7 +95,7 @@ out_err:
  */
 static int ecdsa_sign(EC_KEY *const priv_key, const void *const data, const int in_len, unsigned char *const out)
 {
-    int err = 0;
+    int     err = 0;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     HIP_IFEL(!priv_key,
              -1, "No private key given.\n");
@@ -106,13 +107,14 @@ out_err:
     return err;
 }
 
-int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx) {
-    int err             = 0;
-    STACK_OF(X509) *usercert_chain = NULL;
-    X509 *usercert      = NULL;
-    X509_NAME *uname    = NULL;
-    unsigned char *buf  = NULL;
-    int out_len;
+int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx)
+{
+    int err = 0;
+    STACK_OF(X509) * usercert_chain = NULL;
+    X509          *usercert = NULL;
+    X509_NAME     *uname    = NULL;
+    unsigned char *buf      = NULL;
+    int            out_len;
 
     if ((usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
         usercert = sk_X509_pop(usercert_chain);
@@ -136,13 +138,14 @@ out_err:
 /*
  * @return < 0 on error, size of computed signature on success
  */
-int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type) {
-    int err = 0;
-    int sig_len = -1;
-    char filebuf[SIGNALING_PATH_MAX_LEN];
-    char *homedir;
+int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type)
+{
+    int     err     = 0;
+    int     sig_len = -1;
+    char    filebuf[SIGNALING_PATH_MAX_LEN];
+    char   *homedir;
     EC_KEY *ecdsa = NULL;
-    RSA *rsa = NULL;
+    RSA    *rsa   = NULL;
 
     /* sanity checks */
     HIP_IFEL(!data,         -1, "Data to sign is NULL \n");
@@ -167,21 +170,19 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
         HIP_DEBUG("Stop PERF_LOAD_USER_KEY\n");
         hip_perf_stop_benchmark(perf_set, PERF_LOAD_USER_KEY);
 #endif
-        sig_len     = RSA_size(rsa);
-        *sig_type   = HIP_SIG_RSA;
+        sig_len   = RSA_size(rsa);
+        *sig_type = HIP_SIG_RSA;
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        HIP_DEBUG("Start  PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_I3_USER_SIGN);
 #endif
         HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_I3_USER_SIGN);
 #endif
         break;
 
@@ -201,21 +202,19 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
         hip_perf_stop_benchmark(perf_set, PERF_LOAD_USER_KEY);
 #endif
 
-        sig_len     = ECDSA_size(ecdsa);
-        *sig_type   = HIP_SIG_ECDSA;
+        sig_len   = ECDSA_size(ecdsa);
+        *sig_type = HIP_SIG_ECDSA;
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_I3_USER_SIGN);
 #endif
         HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_I3_USER_SIGN\n");
+        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_I3_USER_SIGN);
 #endif
         break;
     default:
@@ -230,16 +229,17 @@ out_err:
     return sig_len;
 }
 
-EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid) {
-    int err         = 0;
-    STACK_OF(X509) *user_cert_chain = NULL;
-    X509 *user_cert = NULL;
-    EVP_PKEY *pkey  = NULL;
+EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid)
+{
+    int err = 0;
+    STACK_OF(X509) * user_cert_chain = NULL;
+    X509     *user_cert = NULL;
+    EVP_PKEY *pkey      = NULL;
 
     HIP_IFEL(!(user_cert_chain = signaling_user_api_get_user_certificate_chain(uid)),
              -1, "Could not find user's certificate \n");
     user_cert = sk_X509_pop(user_cert_chain);
-    HIP_IFEL(!(pkey=X509_get_pubkey(user_cert)),
+    HIP_IFEL(!(pkey = X509_get_pubkey(user_cert)),
              -1, "Error getting public key from users certificate \n");
 
 out_err:

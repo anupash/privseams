@@ -366,6 +366,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_ECDSA_SIGN_IMPL, "results/PERF_ECDSA_SIGN_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_LOAD_USER_KEY, "results/PERF_LOAD_USER_KEY.csv");
     hip_perf_set_name(perf_set, PERF_LOAD_USER_PUBKEY, "results/PERF_LOAD_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_NETSTAT_LOOKUP, "results/PERF_NETSTAT_LOOKUP.csv");
 
     hip_perf_set_name(perf_set, PERF_HMAC, "results/PERF_HMAC.csv");
 

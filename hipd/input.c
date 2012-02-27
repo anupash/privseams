@@ -521,7 +521,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         /* RVS/Relay is handled later in the code. */
         if (hip_relay_get_status() == HIP_RELAY_OFF)
 #endif
-            return -1;
+        return -1;
     }
 
     /* Debug printing of received packet information. All received HIP
@@ -1127,12 +1127,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                                   &ctx->hadb_entry->hit_peer);
     }
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R2\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R2);
-    hip_perf_write_benchmark(perf_set, PERF_R2);
-#endif
-
     return 0;
 }
 
@@ -1565,16 +1559,16 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
     /* Validate signature */
 #ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Start PERF_I2_VERIFY_HOST_SIG\n");
-     hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
+    HIP_DEBUG("Start PERF_I2_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
              -EINVAL,
              "Verification of I2 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Stop PERF_I2_VERIFY_HOST_SIG\n");
-     hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
+    HIP_DEBUG("Stop PERF_I2_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
 #endif
 
     if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
