@@ -1729,7 +1729,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 {
     // assume DROP
     int verdict = 0;
-    int ptype   = 0;
+    //int ptype   = 0;
 
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */

@@ -127,6 +127,7 @@ out_err:
  */
 int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
 {
+    int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
     const hip_hit_t             *hits  = NULL;
     const hip_hit_t             *hitr  = NULL;
@@ -152,15 +153,17 @@ int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
 
     HIP_DEBUG_HIT("Src Hit: \t ", hits);
     HIP_DEBUG_HIT("Dst Hit: \t ", hitr);
-    HIP_DEBUG("Src Port = %u, dst_port = %u.\n", recv_conn.src_port, recv_conn.src_port);
+    HIP_DEBUG("Src Port = %u, dst_port = %u.\n", recv_conn.src_port, recv_conn.dst_port);
 
     if ((entry = signaling_cdb_get_connection(*hits, *hitr,
                                               recv_conn.src_port, recv_conn.dst_port)) != NULL) {
         entry->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hits, hitr, recv_conn.src_port, recv_conn.dst_port);
     } else {
-        HIP_ERROR("No state found for connection confirmed by hipd.\n");
-        return -1;
+        HIP_DEBUG("No state found for connection confirmed by hipd. Adding new state.\n");
+        HIP_IFEL(signaling_cdb_add_connection(*hits, *hitr, recv_conn.src_port, recv_conn.dst_port, SIGNALING_CONN_ALLOWED), -1,
+                 "Could not add new state\n");
+        insert_iptables_rule(hits, hitr, recv_conn.src_port, recv_conn.dst_port);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_NEW_CONN\n");
@@ -172,4 +175,6 @@ int signaling_handle_hipd_connection_confirmation(struct hip_common *msg)
     signaling_cdb_print();
 
     return 0;
+out_err:
+    return err;
 }
