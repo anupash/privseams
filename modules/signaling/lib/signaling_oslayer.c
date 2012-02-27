@@ -192,7 +192,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
         pclose(fp);
     }
     if (!res) {
-        sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
+        sprintf(callbuf, "netstat -tpneWl | grep :%d", dst_port);
         memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")),
                  -1, "Failed to make call to nestat.\n");
@@ -220,18 +220,24 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
                      &sys_ctx->inode,
                      &sys_ctx->pid,
                      sys_ctx->progname);
-    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", sys_ctx->progname, sys_ctx->pid, sys_ctx->uid, sys_ctx->proto);
-    HIP_DEBUG("\t from:\t %s\n", sys_ctx->local_addr);
-    HIP_DEBUG("\t to:\t %s\n",   sys_ctx->remote_addr);
+    /*Sanity Checking*/
+    if (strlen(sys_ctx->progname) > 0) {
+        HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", sys_ctx->progname, sys_ctx->pid, sys_ctx->uid, sys_ctx->proto);
+        HIP_DEBUG("\t from:\t %s\n", sys_ctx->local_addr);
+        HIP_DEBUG("\t to:\t %s\n",   sys_ctx->remote_addr);
 
-    // determine path to application binary from /proc/{pid}/exe
-    memset(sys_ctx->path, 0, SIGNALING_PATH_MAX_LEN);
-    sprintf(symlinkbuf, "/proc/%i/exe", sys_ctx->pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, sys_ctx->path, SIGNALING_PATH_MAX_LEN),
-             -1, "Failed to read symlink to application binary\n");
+        // determine path to application binary from /proc/{pid}/exe
+        memset(&sys_ctx->path, 0, SIGNALING_PATH_MAX_LEN);
 
-    HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
+        sprintf(symlinkbuf, "/proc/%i/exe", sys_ctx->pid);
+        HIP_DEBUG("Command prepapred successfully %s, pid = %d.\n", symlinkbuf, sys_ctx->pid);
+        HIP_IFEL((readlink(symlinkbuf, sys_ctx->path, SIGNALING_PATH_MAX_LEN) < 0),
+                 -1, "Failed to read symlink to application binary\n");
 
+        HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
+    } else {
+        HIP_DEBUG("No program found!\n");
+    }
 out_err:
     return err;
 }
