@@ -119,6 +119,7 @@ enum perf_sensor {
     PERF_CONN_REQUEST,       // test 1
     PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
     PERF_NETSTAT_LOOKUP,     // tests 1.1.1
+    PERF_HOST_INFO_LOOKUP,
     PERF_VERIFY_APPLICATION, // tests 1.1.2
     PERF_HASH,
     PERF_SEND_CONN_REQUEST,  // test 1.2
@@ -182,6 +183,8 @@ enum perf_sensor {
     PERF_NOTIFY_VERIFY_HOST_SIG, // time to verify signature on NOTIFY
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
+    PERF_RSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
+    PERF_RSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
     PERF_HMAC,               // HMAC
 

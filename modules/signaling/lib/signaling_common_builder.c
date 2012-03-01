@@ -676,45 +676,41 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
 
     //p_tmp = (uint8_t *) param_buf;
 
-    if (ctx->user.uid >= 0) {
-        switch (user_info_flag) {
-        case USER_INFO_ID:
-            /*Dirty Work here to keep the parameter as short as possible in length.*/
-            HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
-            sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
-            key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
-                           ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+    switch (user_info_flag) {
+    case USER_INFO_ID:
+        /*Dirty Work here to keep the parameter as short as possible in length.*/
+        HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
+        sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
+        key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
+                       ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
 
-            /*Building header of the USER_INFO_ID parameter*/
-            temp_param.user_dn_length  = htons(sub_name_len);
-            temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
-            temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
-            temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
-            temp_param.rdata.protocol  = ctx->user.rdata.protocol;
+        /*Building header of the USER_INFO_ID parameter*/
+        temp_param.user_dn_length  = htons(sub_name_len);
+        temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
+        temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
+        temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
+        temp_param.rdata.protocol  = ctx->user.rdata.protocol;
 
-            header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
+        header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
 
-            /*Preparing the USER_INFO_ID parameter to be sent*/
-            memcpy(&user_info_id, &temp_param, header_len);
-            memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
-            memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
+        /*Preparing the USER_INFO_ID parameter to be sent*/
+        memcpy(&user_info_id, &temp_param, header_len);
+        memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
+        memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
 
-            len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
-            hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
-            hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
+        len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
+        hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
+        hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
 
-            /* Append the parameter to the message */
-            if (hip_build_param(msg, &user_info_id)) {
-                HIP_ERROR("Failed to USER_INFO_ID parameter to message.\n");
-                return -1;
-            }
-            break;
-        case USER_INFO_CERTS:
-            //TODO
-            break;
+        /* Append the parameter to the message */
+        if (hip_build_param(msg, &user_info_id)) {
+            HIP_ERROR("Failed to USER_INFO_ID parameter to message.\n");
+            return -1;
         }
-    } else {
-        HIP_DEBUG("Cannot build User Info Response as not user information available. UID not found.\n");
+        break;
+    case USER_INFO_CERTS:
+        //TODO
+        break;
     }
     return 0;
 }
@@ -1098,10 +1094,20 @@ void signaling_get_connection_context(struct signaling_connection *conn,
 {
     HIP_ASSERT(ctx);
 
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+#endif
     if (signaling_get_verified_host_context(ctx)) {
         HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
         signaling_init_host_context(&ctx->host);
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+#endif
+
     if (signaling_get_verified_application_context_by_ports(conn, ctx)) {
         HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
         signaling_init_application_context(&ctx->app);
@@ -1224,24 +1230,20 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     HIP_ASSERT(ctx);
 
     HIP_DEBUG("Getting User context.\n");
-    if (ctx->user.uid >= 0) {
-        HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
-        if (ctx->user.key_rr_len <= 0) {
-            HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(ctx->user.uid)),
-                     -1, "Could not obtain users public key \n");
-            PEM_write_PUBKEY(stdout, user_pkey);
-            HIP_IFEL((ctx->user.key_rr_len = any_key_to_key_rr(user_pkey, &ctx->user.rdata.algorithm, &key_rr)) < 0,
-                     -1, "Could not serialize key \n");
-            HIP_DEBUG("GOT keyy rr of length %d\n", ctx->user.key_rr_len);
-            memcpy(ctx->user.pkey, key_rr, ctx->user.key_rr_len);
 
-            // necessary because any_key_to_rr returns only the length of the key rrwithout the header
-            ctx->user.key_rr_len += sizeof(struct hip_host_id_key_rdata);
-            free(key_rr);
-        }
-    } else {
-        HIP_DEBUG("User information (UID)could not be obtained. Hence cannot build user context.\n");
-        return 0;
+    HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
+    if (ctx->user.key_rr_len <= 0) {
+        HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(ctx->user.uid)),
+                 -1, "Could not obtain users public key \n");
+        PEM_write_PUBKEY(stdout, user_pkey);
+        HIP_IFEL((ctx->user.key_rr_len = any_key_to_key_rr(user_pkey, &ctx->user.rdata.algorithm, &key_rr)) < 0,
+                 -1, "Could not serialize key \n");
+        HIP_DEBUG("GOT keyy rr of length %d\n", ctx->user.key_rr_len);
+        memcpy(ctx->user.pkey, key_rr, ctx->user.key_rr_len);
+
+        // necessary because any_key_to_rr returns only the length of the key rrwithout the header
+        ctx->user.key_rr_len += sizeof(struct hip_host_id_key_rdata);
+        free(key_rr);
     }
 
 out_err:

@@ -1729,7 +1729,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 {
     // assume DROP
     int verdict = 0;
-    //int ptype   = 0;
+    int ptype   = 0;
 
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */
@@ -2025,7 +2025,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ2, "results/PERF_HIPFW_REQ2.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ3, "results/PERF_HIPFW_REQ3.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_R2_FINISH, "results/PERF_HIPFW_R2_FINISH.csv");
-    hip_perf_set_name(perf_set, PERF_HIPFW_I3_FINISH, "results/PERF_HIPFW_I3_FINISH.csv");
+    //hip_perf_set_name(perf_set, PERF_HIPFW_I3_FINISH, "results/PERF_HIPFW_I3_FINISH.csv");
     hip_perf_set_name(perf_set, PERF_CTX_LOOKUP, "results/PERF_CTX_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_HASH, "results/PERF_HASH.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY_APPLICATION, "results/PERF_VERIFY_APPLICATION.csv");
@@ -2035,7 +2035,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_R1, "results/PERF_MBOX_R1.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_I2, "results/PERF_MBOX_I2.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2, "results/PERF_MBOX_R2.csv");
-    hip_perf_set_name(perf_set, PERF_MBOX_I3, "results/PERF_MBOX_I3.csv");
+    //hip_perf_set_name(perf_set, PERF_MBOX_I3, "results/PERF_MBOX_I3.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_PACKET, "results/PERF_MBOX_PACKET.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG, "results/PERF_MBOX_R1_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY, "results/PERF_MBOX_R1_VERIFY_WITH_POLICY.csv");
@@ -2055,8 +2055,8 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_ACK, "results/PERF_MBOX_R2_VERIFY_ACK.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ, "results/PERF_MBOX_R2_VERIFY_INFO_REQ.csv");
 
-    hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG, "results/PERF_MBOX_I3_VERIFY_HOST_SIG.csv");
-    hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG, "results/PERF_MBOX_I3_VERIFY_USER_SIG.csv");
+    //hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG, "results/PERF_MBOX_I3_VERIFY_HOST_SIG.csv");
+    //hip_perf_set_name(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG, "results/PERF_MBOX_I3_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_I2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY, "results/PERF_MBOX_R2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_NOTIFY, "results/PERF_MBOX_NOTIFY.csv");
@@ -2188,13 +2188,13 @@ int hipfw_main(const char *const rule_file,
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MOBX_I3, PERF_MBOX_NOTIFY, PERF_MBOX_UPDATE\n");
+            HIP_DEBUG("Start PERF_MBOX_PACKET, PERF_MBOX_I1, PERF_MBOX_R1, PERF_MBOX_I2, PERF_MBOX_R2, PERF_MBOX_NOTIFY, PERF_MBOX_UPDATE\n"); /*PERF_MOBX_I3*/
             hip_perf_start_benchmark(perf_set, PERF_MBOX_PACKET);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I1);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R1);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I2);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2);
-            hip_perf_start_benchmark(perf_set, PERF_MBOX_I3);
+            //hip_perf_start_benchmark(perf_set, PERF_MBOX_I3);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_NOTIFY);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_UPDATE);
 #endif

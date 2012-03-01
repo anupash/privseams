@@ -983,9 +983,9 @@ struct signaling_application_context {
  *   All integers are in host-byte-order.
  */
 struct signaling_user_context {
-    long int uid;
-    int      subject_name_len;
-    int      key_rr_len;
+    uid_t uid;
+    int   subject_name_len;
+    int   key_rr_len;
 
     /* The key_rr is comprised of the rrdata and the actual key */
     struct hip_host_id_key_rdata rdata;
