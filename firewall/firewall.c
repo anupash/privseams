@@ -1729,7 +1729,6 @@ static int hip_fw_handle_packet(unsigned char *buf,
 {
     // assume DROP
     int verdict = 0;
-    int ptype   = 0;
 
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */
@@ -1789,6 +1788,7 @@ out_err:
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
+    int ptype   = 0;
     if (ctx->packet_type == HIP_PACKET) {
         ptype = ((struct hip_common *) ctx->transport_hdr.hip)->type_hdr;
     }
