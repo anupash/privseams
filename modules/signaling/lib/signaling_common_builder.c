@@ -683,29 +683,32 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
         sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
         key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
                        ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+        /*Sanity checking*/
+        if (sub_name_len > 0 && key_len > 0) {
+            /*Building header of the USER_INFO_ID parameter*/
+            temp_param.user_dn_length  = htons(sub_name_len);
+            temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
+            temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
+            temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
+            temp_param.rdata.protocol  = ctx->user.rdata.protocol;
 
-        /*Building header of the USER_INFO_ID parameter*/
-        temp_param.user_dn_length  = htons(sub_name_len);
-        temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
-        temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
-        temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
-        temp_param.rdata.protocol  = ctx->user.rdata.protocol;
+            header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
+            /*Preparing the USER_INFO_ID parameter to be sent*/
+            memcpy(&user_info_id, &temp_param, header_len);
+            memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
+            memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
 
-        header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
+            len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
+            hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
+            hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
 
-        /*Preparing the USER_INFO_ID parameter to be sent*/
-        memcpy(&user_info_id, &temp_param, header_len);
-        memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
-        memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
-
-        len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
-        hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
-        hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
-
-        /* Append the parameter to the message */
-        if (hip_build_param(msg, &user_info_id)) {
-            HIP_ERROR("Failed to USER_INFO_ID parameter to message.\n");
-            return -1;
+            /* Append the parameter to the message */
+            if (hip_build_param(msg, &user_info_id)) {
+                HIP_ERROR("Failed to USER_INFO_ID parameter to message.\n");
+                return -1;
+            }
+        } else {
+            HIP_DEBUG("No user information available to build USER_INFO_ID");
         }
         break;
     case USER_INFO_CERTS:
@@ -923,6 +926,7 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                  -1, "Could not build hash of the service offer \n");
 
         print_hash(ack.service_offer_hash);
+        HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
 
         len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
         hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
