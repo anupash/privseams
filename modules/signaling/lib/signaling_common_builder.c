@@ -922,8 +922,18 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
         ack.service_offer_id = offer->service_offer_id;
         ack.service_option   = 0;
         /*Generate the hash of the service offer*/
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_HASH_SERVICE_OFFER, PERF_I2_HASH_SERVICE_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+#endif
         HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, offer, hip_get_param_contents_len(offer), ack.service_offer_hash),
                  -1, "Could not build hash of the service offer \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_HASH_SERVICE_OFFER, PERF_I2_HASH_SERVICE_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+#endif
 
         print_hash(ack.service_offer_hash);
         HIP_DEBUG("Hash calculated for Service Acknowledgement\n");

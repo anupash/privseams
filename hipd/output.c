@@ -582,7 +582,7 @@ out_err:
 
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_LOAD_USER_PUBKEY, PERF_HMAC, "
-              "PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH, PERF_HOST_INFO_LOOKUP\n");
+              "PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH, PERF_HOST_INFO_LOOKUP, PERF_I2_HASH_SERVICE_OFFER \n");
     hip_perf_write_benchmark(perf_set, PERF_R1);
     hip_perf_write_benchmark(perf_set, PERF_I1_R1);
     hip_perf_write_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
@@ -596,6 +596,7 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_APPLICATION);
     hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_HASH);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
     HIP_DEBUG("Start PERF_I2_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2_R2);
 #endif
@@ -1119,13 +1120,15 @@ out_err:
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HOST_SIG, PERF_VERIFY_USER_SIG, PERF_LOAD_USER_PUBKEY"
               "PERF_I2_VERIFY_USER_SIG, PERF_R2_HOST_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U1_VERIFY_USER_SIG, PERF_HMAC, "
-              "PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH, PERF_HOST_INFO_LOOKUP\n");
+              "PERF_NETSTAT_LOOKUP, PERF_VERIFY_APPLICATION, PERF_X509AC_VERIFY_CERT_CHAIN, PERF_HASH, PERF_HOST_INFO_LOOKUP,"
+              "PERF_R2_HASH_SERVICE_OFFER \n");
     hip_perf_write_benchmark(perf_set, PERF_I2);
     hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
     hip_perf_write_benchmark(perf_set, PERF_R1_I2);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
     hip_perf_write_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
     hip_perf_write_benchmark(perf_set, PERF_R2_USER_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);

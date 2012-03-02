@@ -157,11 +157,13 @@ enum perf_sensor {
     PERF_I1_SEND,
     PERF_STARTUP,
     PERF_R1_VERIFY_HOST_SIG, // time to verify host signature on R1
+    PERF_I2_HASH_SERVICE_OFFER,
     PERF_I2_HOST_SIGN,       // time to generate host signature on I2
     PERF_I2_USER_SIGN,       // time to generate user signature on I2
     PERF_I2_VERIFY_HOST_SIG, // time to verify host signature on I2
     PERF_I2_VERIFY_USER_SIG, // time to verify user signature on I2
     PERF_R2_HOST_SIGN,       // time to generate host signature on R2
+    PERF_R2_HASH_SERVICE_OFFER,
     PERF_R2_USER_SIGN,       // time to generate user signature on R2
     PERF_R2_VERIFY_HOST_SIG, // time to verify host signature on R2
     PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2

@@ -328,12 +328,14 @@ int hipd_main(uint64_t flags)
 
     /* signature verification and generation */
     hip_perf_set_name(perf_set, PERF_R1_VERIFY_HOST_SIG, "results/PERF_R1_VERIFY_HOST_SIG.csv");
+    hip_perf_set_name(perf_set, PERF_I2_HASH_SERVICE_OFFER, "results/PERF_I2_HASH_SERVICE_OFFER.csv");
     hip_perf_set_name(perf_set, PERF_I2_HOST_SIGN, "results/PERF_I2_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_I2_HOST_SIGN, "results/PERF_I2_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_I2_USER_SIGN, "results/PERF_I2_USER_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_I2_VERIFY_HOST_SIG, "results/PERF_I2_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_I2_VERIFY_USER_SIG, "results/PERF_I2_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_R2_HOST_SIGN, "results/PERF_R2_HOST_SIGN.csv");
+    hip_perf_set_name(perf_set, PERF_R2_HASH_SERVICE_OFFER, "results/PERF_R2_HASH_SERVICE_OFFER.csv");
     hip_perf_set_name(perf_set, PERF_R2_USER_SIGN, "results/PERF_R2_USER_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_HOST_SIG, "results/PERF_R2_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_SIG, "results/PERF_R2_VERIFY_USER_SIG.csv");
