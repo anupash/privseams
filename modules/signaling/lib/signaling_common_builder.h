@@ -11,7 +11,7 @@
 #include "signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/hipd/signaling_hipd_state.h"
-
+#include "modules/signaling/hipd/signaling.h"
 
 /* Builders for on the wire parameters */
 int signaling_build_param_connection_identifier(struct hip_common *msg,
@@ -83,8 +83,8 @@ int signaling_build_response_to_service_offer_s(struct hip_common *msg,
                                                 const struct signaling_param_service_offer_u *offer);
 
 /* Utility functions */
-void signaling_get_connection_context(struct signaling_connection *conn,
-                                      struct signaling_connection_context *ctx);
+int signaling_get_connection_context(struct signaling_connection *conn,
+                                     struct signaling_connection_context *ctx);
 int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
                                            struct signaling_port_pair *const port_list);
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);

@@ -406,7 +406,7 @@ out_err:
     return err;
 }
 
-int signaling_get_verified_host_context(struct signaling_connection_context *const ctx)
+int signaling_get_verified_host_context(struct signaling_host_context *ctx)
 {
     int   err = 0;
     FILE *fp  = NULL;
@@ -420,11 +420,11 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
     HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to uname.\n");
     result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
-        ctx->host.host_kernel_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
-        memcpy(ctx->host.host_kernel, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        ctx->host_kernel_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
+        memcpy(ctx->host_kernel, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        ctx->host.host_kernel_len = strlen(result);
-        memcpy(ctx->host.host_kernel, result, strlen(result));
+        ctx->host_kernel_len = strlen(result);
+        memcpy(ctx->host_kernel, result, strlen(result));
     }
 
     sprintf(callbuf, "cat /etc/lsb-release | head -n 1 | cut -d'=' -f2");
@@ -434,11 +434,11 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
     result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
     pclose(fp);
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
-        ctx->host.host_os_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
-        memcpy(ctx->host.host_os, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        ctx->host_os_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
+        memcpy(ctx->host_os, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        ctx->host.host_os_len = strlen(result);
-        memcpy(ctx->host.host_os, result, strlen(result));
+        ctx->host_os_len = strlen(result);
+        memcpy(ctx->host_os, result, strlen(result));
     }
 
     sprintf(callbuf, "cat /etc/lsb-release | head -n 2 | tail -1 |  cut -d'=' -f2");
@@ -449,28 +449,27 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
     pclose(fp);
 
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
-        ctx->host.host_os_ver_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
-        memcpy(ctx->host.host_os_version, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+        ctx->host_os_ver_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
+        memcpy(ctx->host_os_version, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
     } else {
-        ctx->host.host_os_ver_len = strlen(result);
-        memcpy(ctx->host.host_os_version, result, strlen(result));
+        ctx->host_os_ver_len = strlen(result);
+        memcpy(ctx->host_os_version, result, strlen(result));
     }
-
 
     HIP_IFEL(gethostname(readbuf, NETSTAT_SIZE_OUTPUT),
              -1, "Failed to make call to get the hostname\n");
     tmp_len = strlen(readbuf);
     if (tmp_len > 0) {
         if (tmp_len < SIGNALING_HOST_INFO_REQ_MAX_LEN) {
-            ctx->host.host_name_len = tmp_len;
-            memcpy(ctx->host.host_name, readbuf, strlen(readbuf));
+            ctx->host_name_len = tmp_len;
+            memcpy(ctx->host_name, readbuf, strlen(readbuf));
         } else {
-            ctx->host.host_name_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
-            memcpy(ctx->host.host_name, readbuf, SIGNALING_HOST_INFO_REQ_MAX_LEN);
+            ctx->host_name_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
+            memcpy(ctx->host_name, readbuf, SIGNALING_HOST_INFO_REQ_MAX_LEN);
         }
     } else {
-        ctx->host.host_name_len = 0;
-        ctx->host.host_name[0]  = '\0';
+        ctx->host_name_len = 0;
+        ctx->host_name[0]  = '\0';
     }
 
 /*    HIP_IFEL(!getdomainname(readbuf, NETSTAT_SIZE_OUTPUT),
@@ -486,9 +485,9 @@ int signaling_get_verified_host_context(struct signaling_connection_context *con
  *          memcpy(ctx->host.host_name, readbuf, SIGNALING_HOST_INFO_REQ_MAX_LEN);
  *      }
  *  } else {*/
-    ctx->host.host_domain_name_len = 0;
-    ctx->host.host_domain_name[0]  = '\0';
-    tmp_len                        = strlen(readbuf);
+    ctx->host_domain_name_len = 0;
+    ctx->host_domain_name[0]  = '\0';
+    tmp_len                   = strlen(readbuf);
 /*    }*/
 
     //TODO generate certs

@@ -84,6 +84,7 @@ int signaling_hipd_init_state(struct modular_state *state)
 
     err = lmod_add_state_item(state, sig_state, "signaling_hipd_state");
 
+    signaling_init_connection_context(&sig_state->pending_conn_context, OUT);
 out_err:
     return err;
 }

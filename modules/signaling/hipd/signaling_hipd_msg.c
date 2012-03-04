@@ -1193,39 +1193,27 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
-    struct signaling_connection_context    ctx_out;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    if (sig_state->pending_conn) {
-        HIP_IFEL(hip_build_param_contents(ctx->output_msg, sig_state->pending_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-                 -1, "build signaling_connection failed \n");
-    } else {
+    if (!sig_state->pending_conn) {
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
     }
-
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         HIP_DEBUG("Service Offers from Middleboxes received.\n");
         HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
                  -1, "Could not copy connection context\n");
 
-        HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
-                 -1, "Could not init connection context\n");
-        signaling_get_connection_context(sig_state->pending_conn, &ctx_out);
-        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, ctx_out.app.sockets);
+        //signaling_get_connection_context(sig_state->pending_conn, &ctx_out);
+        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, sig_state->pending_conn_context.app.sockets);
 
-        /*Sanity Checking*/
-        if (sig_state->pending_conn->uid == ctx_out.user.uid) {
-            //TODO also add the handler for signed service offer parameter
-            if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &ctx_out, &param_service_offer)) {
-                HIP_DEBUG("Building of application context parameter failed.\n");
-                err = 0;
-            }
-        } else {
-            HIP_DEBUG("Building User context for a different user.\n");
+        //TODO also add the handler for signed service offer parameter
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &sig_state->pending_conn_context, &param_service_offer)) {
+            HIP_DEBUG("Building of application context parameter failed.\n");
+            err = 0;
         }
         return err;
     } else {
@@ -1244,7 +1232,6 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
-    struct signaling_connection_context    ctx_out;
     struct signaling_connection            new_conn;
     struct signaling_connection           *conn;
 
@@ -1259,17 +1246,11 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
                  -1, "Could not copy connection context\n");
 
-        HIP_IFEL(signaling_init_connection_context(&ctx_out, OUT),
-                 -1, "Could not init connection context\n");
-
-        signaling_get_connection_context(&new_conn, &ctx_out);
-        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, ctx_out.app.sockets);
-
-        HIP_IFEL(hip_build_param_contents(ctx->output_msg, &new_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-                 -1, "build signaling_connection failed \n");
+        signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context);
+        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, sig_state->pending_conn_context.app.sockets);
 
         //TODO also add the handler for signed service offer parameter
-        if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn, &ctx_out, &param_service_offer)) {
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn, &sig_state->pending_conn_context, &param_service_offer)) {
             HIP_DEBUG("Building of application context parameter failed.\n");
             err = 0;
         }
@@ -1277,9 +1258,11 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
 
+
     HIP_DEBUG("Adding the connection information to the hipd state.\n");
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
+
     HIP_DEBUG("Added requests to Service Offer. Sending the request to end-point firewall (hipfw)\n");
     // Tell the firewall/oslayer about the new connection and await it's decision
     HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),

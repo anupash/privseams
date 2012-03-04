@@ -684,7 +684,7 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
         key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
                        ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
         /*Sanity checking*/
-        if (sub_name_len > 0 && key_len > 0) {
+        if ((sub_name_len > 0) && (key_len > 0)) {
             /*Building header of the USER_INFO_ID parameter*/
             temp_param.user_dn_length  = htons(sub_name_len);
             temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
@@ -906,9 +906,18 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
 
     char                               param_buf[HIP_MAX_PACKET];
     struct signaling_param_service_ack ack;
+    struct signaling_connection        temp_conn;
 
     /* sanity checks */
     HIP_IFEL(!offer, -1, "Got NULL service offer parameter\n");
+
+    signaling_init_connection(&temp_conn);
+    memcpy(&temp_conn, &conn, sizeof(struct signaling_connection));
+    temp_conn.src_port = htons(conn.src_port);
+    temp_conn.dst_port = htons(conn.dst_port);
+    HIP_IFEL(hip_build_param_contents(msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build signaling_connection failed \n");
+
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER);
     HIP_DEBUG("Processing requests in the Service Offer parameter.\n");
@@ -1103,34 +1112,32 @@ out_err:
     return err;
 }
 
-void signaling_get_connection_context(struct signaling_connection *conn,
-                                      struct signaling_connection_context *ctx)
+int signaling_get_connection_context(struct signaling_connection *conn,
+                                     struct signaling_connection_context *ctx)
 {
+    int err = 0;
     HIP_ASSERT(ctx);
 
+/*
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Start PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+ *  hip_perf_start_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+ * #endif
+ *  if (signaling_get_verified_host_context(&ctx->host)) {
+ *      HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
+ *      signaling_init_host_context(&ctx->host);
+ *  }
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Stop PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+ *  hip_perf_stop_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+ * #endif
+ */
+    memcpy(&ctx->host, &signaling_persistent_host, sizeof(struct signaling_host_context));
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(conn, ctx), -1, "Getting application context failed.\n");
+    HIP_IFEL(signaling_get_verified_user_context(ctx), -1, "Getting user context failed.\n");
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HOST_INFO_LOOKUP\n");   // test 1.1
-    hip_perf_start_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
-#endif
-    if (signaling_get_verified_host_context(ctx)) {
-        HIP_DEBUG("Host lookup/verification failed, assuming ANY HOST.\n");
-        signaling_init_host_context(&ctx->host);
-    }
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HOST_INFO_LOOKUP\n");   // test 1.1
-    hip_perf_stop_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
-#endif
-
-    if (signaling_get_verified_application_context_by_ports(conn, ctx)) {
-        HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
-        signaling_init_application_context(&ctx->app);
-    }
-
-    if (signaling_get_verified_user_context(ctx) == -1) {
-        HIP_DEBUG("USER lookup/verification failed, assuming ANY USER.\n");
-        signaling_init_user_context(&ctx->user);
-    }
+out_err:
+    return err;
 }
 
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr)

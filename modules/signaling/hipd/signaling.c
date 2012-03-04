@@ -13,6 +13,7 @@
 #include "signaling_hipd_state.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_user_management.h"
+#include "modules/signaling/lib/signaling_oslayer.h"
 
 #define INBOUND_CHECK_APPINFO_PRIO              29000
 #define INBOUND_CHECK_USERINFO_PRIO             29100
@@ -34,11 +35,32 @@
 
 #define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
 
+
+int Load_host_info_on_boot_strap()
+{
+    int err = 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+#endif
+
+    HIP_IFEL(signaling_get_verified_host_context(&signaling_persistent_host), -1, "Could not get host context at boot strap.\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_HOST_INFO_LOOKUP\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+#endif
+
+out_err:
+    return err;
+}
+
 int hip_signaling_init(void)
 {
     int err = 0;
 
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not init user management\n");
+    HIP_IFEL(signaling_init_host_context(&signaling_persistent_host), -1, "Could not initialize host context.\n");
 
     // register on the wire parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,         "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
@@ -137,6 +159,9 @@ int hip_signaling_init(void)
 
     // Init openssl
     OpenSSL_add_all_algorithms();
+
+    HIP_IFEL(Load_host_info_on_boot_strap(), -1, "Error getting host context\n");
+    // TODO store host state in global variable
 
     HIP_DEBUG("Initialized Signaling Module.\n");
 

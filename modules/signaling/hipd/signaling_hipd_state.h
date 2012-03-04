@@ -33,8 +33,8 @@ struct signaling_hipd_state {
 
     /* Points to a connection context with status pending.
      * We need this to determine which context to use in I2 and R2. */
-    struct signaling_connection *pending_conn;
-
+    struct signaling_connection        *pending_conn;
+    struct signaling_connection_context pending_conn_context;
     /* Collects user certificates accross multiple updates */
     struct user_certificate_context user_cert_ctx;
 };

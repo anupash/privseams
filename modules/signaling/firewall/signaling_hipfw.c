@@ -528,7 +528,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             HIP_DEBUG("Service Ack in I2 could not be verified. Blocking the connection.\n");
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
             signaling_cdb_print();
-            ret = -1;
+            ret = 0;
         }
     }
 

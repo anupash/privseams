@@ -120,7 +120,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_out;
     int                                 err = 0;
-    struct system_app_context           sys_ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
@@ -128,11 +127,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
 #endif
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIT)),
-             -1, "Missing (dst HIT) parameter\n");
-    our_hit = hip_get_param_contents_direct(param);
-    HIP_IFEL(!(param = hip_get_next_param(msg, param)),
              -1, "Missing (src HIT) parameter\n");
     peer_hit = hip_get_param_contents_direct(param);
+    HIP_IFEL(!(param = hip_get_next_param(msg, param)),
+             -1, "Missing (dst HIT) parameter\n");
+    our_hit = hip_get_param_contents_direct(param);
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_PORT)),
              -1, "Missing (dst port) parameter\n");
     peer_port = hip_get_param_contents_direct(param);
@@ -152,27 +151,28 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
     /* Determine if we already have an association */
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
+    //entry = hip_hadb_find_byhits(peer_hit, our_hit);
+    HIP_DEBUG("our_port = %u, peer_port= %u \n", ntohs(*our_port), ntohs(*peer_port));
 
     /* Now check whether we need to trigger a BEX or an UPDATE */
     if (entry) {   // UPDATE
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
-        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
-                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
-        memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
-
-        //TODO check if I need to do ntohs here
         new_conn.id = 0; //some random initiatialization .. will remove it later
                          //conn->id;
-        new_conn.src_port = *our_port;
-        new_conn.dst_port = *peer_port;
-        new_conn.uid      = sys_ctx.uid;
+        new_conn.src_port = ntohs(*our_port);
+        new_conn.dst_port = ntohs(*peer_port);
+
+        memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
+        HIP_IFEL(signaling_get_verified_application_context_by_ports(&new_conn, &sig_state->pending_conn_context), -1, "Getting application context failed.\n");
+        HIP_IFEL(signaling_get_verified_user_context(&sig_state->pending_conn_context), -1, "Getting user context failed.\n");
+
+
 
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could save connection in local state\n");
-
 
         /* now trigger the UPDATE */
         //TODO talk to Rene about this
@@ -204,16 +204,16 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
-        HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(*our_port, *peer_port, &sys_ctx),
-                 -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", *our_port, *peer_port);
-        memcpy(new_conn.application_name, sys_ctx.progname, strlen(sys_ctx.progname));
-
-        //TODO check if I need to do ntohs here
         new_conn.id = 0; //some random initiatialization .. will remove it later
                          //conn->id;
-        new_conn.src_port = *our_port;
-        new_conn.dst_port = *peer_port;
-        new_conn.uid      = sys_ctx.uid;
+        new_conn.src_port = ntohs(*our_port);
+        new_conn.dst_port = ntohs(*peer_port);
+
+        memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
+        HIP_IFEL(signaling_get_verified_application_context_by_ports(&new_conn, &sig_state->pending_conn_context), -1, "Getting application context failed.\n");
+        HIP_IFEL(signaling_get_verified_user_context(&sig_state->pending_conn_context), -1, "Getting user context failed.\n");
+
+
         /* save application context to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not save connection in local state\n");

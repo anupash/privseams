@@ -53,6 +53,6 @@ int signaling_get_application_context_from_certificate(X509AC *ac,
 int signaling_get_verified_application_context_by_ports(struct signaling_connection *conn,
                                                         struct signaling_connection_context *const ctx);
 
-int signaling_get_verified_host_context(struct signaling_connection_context *const ctx);
+int signaling_get_verified_host_context(struct signaling_host_context *ctx);
 
 #endif /* HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H */

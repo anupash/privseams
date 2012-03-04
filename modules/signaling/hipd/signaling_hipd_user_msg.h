@@ -13,6 +13,7 @@
 
 #include "lib/core/protodefs.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "signaling.h"
 
 int signaling_send_connection_confirmation(const hip_hit_t *src_hit,
                                            const hip_hit_t *dst_hit,

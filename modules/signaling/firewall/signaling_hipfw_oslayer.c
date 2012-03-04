@@ -102,7 +102,7 @@ static int handle_new_connection(const struct hip_fw_context *const ctx,
 
     HIP_DEBUG("Sending connection request to hipd.\n");
     signaling_hipfw_send_connection_request(ctx->src, ctx->dst,
-                                            src_port, dst_port);
+                                            htons(src_port), htons(dst_port));
 
 
 #ifdef CONFIG_HIP_PERFORMANCE

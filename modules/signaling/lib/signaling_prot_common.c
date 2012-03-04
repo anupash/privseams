@@ -567,6 +567,8 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_CONNECTION) {
         signaling_copy_connection(conn, (const struct signaling_connection *) (param + 1));
     }
+    conn->src_port = ntohs(conn->src_port);
+    conn->dst_port = ntohs(conn->dst_port);
 
     return 0;
 out_err:
