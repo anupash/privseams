@@ -589,15 +589,15 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_R1);
 
     /* The packet is on the wire, so write all tests now.. */
-    HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_LOAD_USER_PUBKEY, PERF_I2_HMAC, "
-              "PERF_HASH, PERF_I2_SERVICE_ACK, PERF_I2_DH_CREATE, PERF_I2_HANDLE_SERVICE_OFFER\n");
+    HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_I_LOAD_USER_KEY, "
+              "PERF_I_LOAD_USER_PUBKEY, PERF_I2_HMAC, PERF_HASH, PERF_I2_SERVICE_ACK, PERF_I2_DH_CREATE, PERF_I2_HANDLE_SERVICE_OFFER\n");
     hip_perf_write_benchmark(perf_set, PERF_R1);
     hip_perf_write_benchmark(perf_set, PERF_I1_R1);
     hip_perf_write_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
     hip_perf_write_benchmark(perf_set, PERF_I2_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_I2_USER_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_KEY);
-    hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
+    hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
     hip_perf_write_benchmark(perf_set, PERF_I2_HMAC);
     hip_perf_write_benchmark(perf_set, PERF_HASH);
     hip_perf_write_benchmark(perf_set, PERF_I2_SERVICE_ACK);
@@ -1135,10 +1135,10 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN_RESPONDER);
 
     /* The packet is on the wire, so write all tests now.. */
-    HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HOST_SIG, PERF_VERIFY_USER_SIG, PERF_LOAD_USER_PUBKEY"
+    HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HOST_SIG, PERF_I2_VERIFY_USER_SIG, PERF_R_LOAD_USER_PUBKEY"
               "PERF_I2_VERIFY_USER_SIG, PERF_R2_HOST_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U1_VERIFY_USER_SIG, PERF_R2_HMAC, "
               "PERF_HASH, PERF_R_NETSTAT_LOOKUP, PERF_R_USER_CTX_LOOKUP, PERF_R_X509AC_VERIFY_CERT_CHAIN,"
-              "PERF_R2_SERVICE_ACK, PERF_R_APP_CTX_LOOKUP, PERF_R_VERIFY_APPLICATION, PERF_R_LOAD_USER_CERT,"
+              "PERF_R2_SERVICE_ACK, PERF_R_APP_CTX_LOOKUP, PERF_R_VERIFY_APPLICATION, PERF_R_LOAD_USER_CERT, PERF_R_LOAD_USER_KEY"
               "PERF_R2_DH_CREATE, PERF_R2_HANDLE_SERVICE_OFFER, PERF_R2_VERIFY_HMAC, PERF_NEW_CONN_RESPONDER\n");
     hip_perf_write_benchmark(perf_set, PERF_I2);
     hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
@@ -1153,8 +1153,8 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
     hip_perf_write_benchmark(perf_set, PERF_R_VERIFY_APPLICATION);
-    hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_KEY);
-    hip_perf_write_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_USER_PUBKEY);
     hip_perf_write_benchmark(perf_set, PERF_R_NETSTAT_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);

@@ -140,7 +140,7 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
         return -1;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_HOST_SIGN\n");
+    HIP_DEBUG("Stop PERF_I2_HOST_SIGN, PERF_R2_HOST_SIGN, PERF_I3_HOST_SIGN, PERF_UPDATE_HOST_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_HOST_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_R2_HOST_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
@@ -262,8 +262,8 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
                           sig->signature, RSA_size(peer_pub), peer_pub);
     } else if (type == HIP_HI_ECDSA) {
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
-    hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+        HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
+        hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
 #endif
         err = impl_ecdsa_verify(sha1_digest, peer_pub, sig->signature);
     } else {

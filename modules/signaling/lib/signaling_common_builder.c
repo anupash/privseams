@@ -235,14 +235,16 @@ int signaling_build_param_user_context(struct hip_common *msg,
      *   b) We need to load it from the users certificate. */
     if (user_ctx->key_rr_len <= 0) {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_LOAD_USER_PUBKEY");
-        hip_perf_start_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
+        HIP_DEBUG("Start PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY");
+        hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
+        hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
 #endif
         HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(user_ctx->uid)),
                  -1, "Could not obtain users public key \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_LOAD_USER_PUBKEY");
-        hip_perf_stop_benchmark(perf_set, PERF_LOAD_USER_PUBKEY);
+        HIP_DEBUG("Stop PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY");
+        hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
+        hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
 #endif
         PEM_write_PUBKEY(stdout, user_pkey);
         HIP_IFEL((user_ctx->key_rr_len = any_key_to_key_rr(user_pkey, &user_ctx->rdata.algorithm, &key_rr)) < 0,

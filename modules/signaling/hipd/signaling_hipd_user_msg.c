@@ -192,7 +192,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_DEBUG("Triggering BEX \n");
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
+        HIP_DEBUG("Start PERF_COMPLETE_BEX\n");
         hip_perf_start_benchmark(perf_set, PERF_COMPLETE_BEX);
 #endif
         HIP_IFEL(hip_netdev_trigger_bex_msg(msg, src),
