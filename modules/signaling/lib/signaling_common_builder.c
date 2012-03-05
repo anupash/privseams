@@ -1279,7 +1279,7 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     if (ctx->user.key_rr_len <= 0) {
         HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(ctx->user.uid)),
                  -1, "Could not obtain users public key \n");
-        PEM_write_PUBKEY(stdout, user_pkey);
+        //PEM_write_PUBKEY(stdout, user_pkey);
         HIP_IFEL((ctx->user.key_rr_len = any_key_to_key_rr(user_pkey, &ctx->user.rdata.algorithm, &key_rr)) < 0,
                  -1, "Could not serialize key \n");
         HIP_DEBUG("GOT keyy rr of length %d\n", ctx->user.key_rr_len);

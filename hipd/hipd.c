@@ -380,6 +380,9 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_R_X509AC_VERIFY_CERT_CHAIN, "results/PERF_R_X509AC_VERIFY_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_I_LOAD_USER_CERT, "results/PERF_I_LOAD_USER_CERT.csv");
     hip_perf_set_name(perf_set, PERF_R_LOAD_USER_CERT, "results/PERF_R_LOAD_USER_CERT.csv");
+    hip_perf_set_name(perf_set, PERF_I_LOAD_USER_NAME, "results/PERF_I_LOAD_USER_NAME.csv");
+    hip_perf_set_name(perf_set, PERF_R_LOAD_USER_NAME, "results/PERF_R_LOAD_USER_NAME.csv");
+
 
     hip_perf_set_name(perf_set, PERF_I_HOST_CTX_LOOKUP, "results/PERF_I_HOST_CTX_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_R_HOST_CTX_LOOKUP, "results/PERF_R_HOST_CTX_LOOKUP.csv");

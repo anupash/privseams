@@ -130,6 +130,11 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     unsigned char *buf      = NULL;
     int            out_len;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
+    hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+#endif
     if ((usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
         usercert = sk_X509_pop(usercert_chain);
         HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
@@ -141,7 +146,11 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     } else {
         err = -1;
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
+    hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+#endif
 out_err:
     sk_X509_free(usercert_chain);
     X509_free(usercert);
