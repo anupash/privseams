@@ -40,17 +40,18 @@ int Load_host_info_on_boot_strap()
 {
     int err = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HOST_INFO_LOOKUP\n");   // test 1.1
-    hip_perf_start_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+    HIP_DEBUG("Start PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
 #endif
 
     HIP_IFEL(signaling_get_verified_host_context(&signaling_persistent_host), -1, "Could not get host context at boot strap.\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HOST_INFO_LOOKUP\n");   // test 1.1
-    hip_perf_stop_benchmark(perf_set, PERF_HOST_INFO_LOOKUP);
+    HIP_DEBUG("Stop PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
 #endif
-
 out_err:
     return err;
 }

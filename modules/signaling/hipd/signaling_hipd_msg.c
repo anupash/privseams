@@ -684,10 +684,10 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_NEW_CONN, PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+    HIP_DEBUG("Stop PERF_CONN_U3, PERF_NEW_UPDATE_CONN, PERF_COMPLETE_BEX\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
     hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+    hip_perf_stop_benchmark(perf_set, PERF_COMPLETE_BEX);
 
     HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
     hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
@@ -700,21 +700,21 @@ out_err:
     HIP_DEBUG("Write PERF_USER_COMM PERF_X509_VERIFY_CERT_CHAIN, PERF_I3_HOST_SIGN, PERF_SEND_CERT_CHAIN, \n");
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);
-    if (conn->id <= 0) {
-        HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_USER_COMM\n");
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-        hip_perf_write_benchmark(perf_set, PERF_R2);
-        hip_perf_write_benchmark(perf_set, PERF_I2_R2);
-        hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
-        hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
-        hip_perf_write_benchmark(perf_set, PERF_HMAC);
-    }
-    HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN, PERF_NEW_CONN\n");
+    HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_USER_COMM,"
+              "PERF_R2_VERIFY_HMAC, PERF_COMPLETE_BEX \n");
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_I2_R2);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
+    hip_perf_write_benchmark(perf_set, PERF_COMPLETE_BEX);
+
+    HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
     hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
     hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
 #endif
 
     return err;
@@ -1211,6 +1211,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, sig_state->pending_conn_context.app.sockets);
 
         //TODO also add the handler for signed service offer parameter
+
         if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &sig_state->pending_conn_context, &param_service_offer)) {
             HIP_DEBUG("Building of application context parameter failed.\n");
             err = 0;

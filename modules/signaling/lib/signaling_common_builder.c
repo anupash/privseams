@@ -928,23 +928,18 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
         /* Creating the acknowledgment of the service offer*/
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
         ack.service_offer_id = offer->service_offer_id;
         ack.service_option   = 0;
         /*Generate the hash of the service offer*/
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2_HASH_SERVICE_OFFER, PERF_I2_HASH_SERVICE_OFFER\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
-        hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
-#endif
         HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, offer, hip_get_param_contents_len(offer), ack.service_offer_hash),
                  -1, "Could not build hash of the service offer \n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_R2_HASH_SERVICE_OFFER, PERF_I2_HASH_SERVICE_OFFER\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
-        hip_perf_stop_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
-#endif
 
-        print_hash(ack.service_offer_hash);
+        // print_hash(ack.service_offer_hash);
         HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
 
         len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
@@ -956,9 +951,20 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
             HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
             return -1;
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+
         HIP_DEBUG("Service Acknowledgement Added. Hash Also added\n");
         HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
+#endif
         /*Processing the information requests in the service offer*/
         while ((i < num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
             switch (tmp_info) {
@@ -1006,6 +1012,12 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
                 break;
             }
         }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
+#endif
     }
 
 out_err:
@@ -1251,6 +1263,11 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     HIP_ASSERT(ctx);
 
     HIP_DEBUG("Getting User context.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
+#endif
 
     HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
     if (ctx->user.key_rr_len <= 0) {
@@ -1267,6 +1284,11 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
         free(key_rr);
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
+#endif
 out_err:
     return err;
 }

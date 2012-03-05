@@ -1788,7 +1788,7 @@ out_err:
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    int ptype   = 0;
+    int ptype = 0;
     if (ctx->packet_type == HIP_PACKET) {
         ptype = ((struct hip_common *) ctx->transport_hdr.hip)->type_hdr;
     }
@@ -2026,10 +2026,8 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ3, "results/PERF_HIPFW_REQ3.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_R2_FINISH, "results/PERF_HIPFW_R2_FINISH.csv");
     //hip_perf_set_name(perf_set, PERF_HIPFW_I3_FINISH, "results/PERF_HIPFW_I3_FINISH.csv");
-    hip_perf_set_name(perf_set, PERF_CTX_LOOKUP, "results/PERF_CTX_LOOKUP.csv");
+    hip_perf_set_name(perf_set, PERF_I_APP_CTX_LOOKUP, "results/PERF_CTX_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_HASH, "results/PERF_HASH.csv");
-    hip_perf_set_name(perf_set, PERF_VERIFY_APPLICATION, "results/PERF_VERIFY_APPLICATION.csv");
-    hip_perf_set_name(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN, "results/PERF_X509AC_VERIFY_CERT_CHAIN.csv");
     hip_perf_set_name(perf_set, PERF_IP6TABLES, "results/PERF_IP6TABLES.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_I1, "results/PERF_MBOX_I1.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R1, "results/PERF_MBOX_R1.csv");

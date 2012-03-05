@@ -115,12 +115,19 @@ enum perf_sensor {
     PERF_CLOSE_COMPLETE,
     PERF_PERF,               // time to stop and write a perf set
     PERF_NEW_CONN,           // test 0
+    PERF_NEW_CONN_RESPONDER,           // test 0
     PERF_NEW_UPDATE_CONN,    // time to establish a new connection when a HA already exists
     PERF_CONN_REQUEST,       // test 1
-    PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
-    PERF_NETSTAT_LOOKUP,     // tests 1.1.1
-    PERF_HOST_INFO_LOOKUP,
-    PERF_VERIFY_APPLICATION, // tests 1.1.2
+    PERF_I_APP_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
+    PERF_R_APP_CTX_LOOKUP,
+    PERF_I_USER_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
+    PERF_R_USER_CTX_LOOKUP,
+    PERF_I_NETSTAT_LOOKUP,   // tests 1.1.1
+    PERF_R_NETSTAT_LOOKUP,
+    PERF_I_HOST_CTX_LOOKUP,
+    PERF_R_HOST_CTX_LOOKUP,
+    PERF_I_VERIFY_APPLICATION, // tests 1.1.2
+    PERF_R_VERIFY_APPLICATION, // tests 1.1.2
     PERF_HASH,
     PERF_SEND_CONN_REQUEST,  // test 1.2
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
@@ -135,7 +142,10 @@ enum perf_sensor {
     PERF_IP6TABLES,          // time for setting up ip6table rules
     PERF_I2_VERIFY_USER_PUBKEY,
     PERF_R2_VERIFY_USER_PUBKEY,
-    PERF_X509AC_VERIFY_CERT_CHAIN,
+    PERF_I_X509AC_VERIFY_CERT_CHAIN,
+    PERF_R_X509AC_VERIFY_CERT_CHAIN,
+    PERF_I_LOAD_USER_CERT,
+    PERF_R_LOAD_USER_CERT,
     PERF_X509_VERIFY_CERT_CHAIN,
     PERF_MBOX_X509_VERIFY_CERT_CHAIN,
     PERF_X509_VERIFY_CERT_CHAIN_RESPONDER,  // hack
@@ -152,21 +162,24 @@ enum perf_sensor {
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,
-    PERF_DH_CREATE,
+    PERF_I2_DH_CREATE,
+    PERF_R2_DH_CREATE,
     PERF_SIGN,
     PERF_I1_SEND,
     PERF_STARTUP,
     PERF_R1_VERIFY_HOST_SIG, // time to verify host signature on R1
-    PERF_I2_HASH_SERVICE_OFFER,
+    PERF_I2_SERVICE_ACK,
     PERF_I2_HOST_SIGN,       // time to generate host signature on I2
     PERF_I2_USER_SIGN,       // time to generate user signature on I2
     PERF_I2_VERIFY_HOST_SIG, // time to verify host signature on I2
     PERF_I2_VERIFY_USER_SIG, // time to verify user signature on I2
+    PERF_I2_HANDLE_SERVICE_OFFER,
     PERF_R2_HOST_SIGN,       // time to generate host signature on R2
-    PERF_R2_HASH_SERVICE_OFFER,
+    PERF_R2_HANDLE_SERVICE_OFFER,
     PERF_R2_USER_SIGN,       // time to generate user signature on R2
     PERF_R2_VERIFY_HOST_SIG, // time to verify host signature on R2
     PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2
+    PERF_R2_SERVICE_ACK,
     PERF_I3_HOST_SIGN,       // time to generate host signature on I3
     PERF_I3_USER_SIGN,       // time to generate user signature on I3
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
@@ -188,7 +201,11 @@ enum perf_sensor {
     PERF_RSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_RSA_SIGN_IMPL,    // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
-    PERF_HMAC,               // HMAC
+    PERF_COMPLETE_BEX,       // hipd side of test SEND_CONN_REQUEST
+    PERF_I2_HMAC,               // HMAC
+    PERF_R2_HMAC,               // HMAC
+    PERF_I2_VERIFY_HMAC,               // Verify  HMAC
+    PERF_R2_VERIFY_HMAC,               // Verify HMAC
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

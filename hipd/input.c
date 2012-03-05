@@ -322,8 +322,9 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     const struct hip_dh_public_value *dhpv = hip_dh_select_key(dhf);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_DH_CREATE\n");
-    hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
+    HIP_DEBUG("Start PERF_I2_DH_CREATE, PERF_R2_DH_CREATE\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_DH_CREATE);
+    hip_perf_start_benchmark(perf_set, PERF_R2_DH_CREATE);
 #endif
     HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhpv->public_value, dhpv->group_id,
                                                           ntohs(dhpv->pub_len),
@@ -386,8 +387,9 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
                                  auth_transf_length);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_DH_CREATE\n");
-    hip_perf_stop_benchmark(perf_set, PERF_DH_CREATE);
+    HIP_DEBUG("Stop PERF_I2_DH_CREATE, PERF_R2_DH_CREATE\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_DH_CREATE);
+    hip_perf_start_benchmark(perf_set, PERF_R2_DH_CREATE);
 #endif
     HIP_HEXDUMP("HIP-gl encryption:", &ctx->hadb_entry->hip_enc_out.key,
                 hip_transf_length);
@@ -577,9 +579,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     hip_run_handle_functions(type, state, ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_SIGN, PERF_DH_CREATE\n");
+    HIP_DEBUG("Write PERF_SIGN\n");
     hip_perf_write_benchmark(perf_set, PERF_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
 #endif
 
     return 0;
@@ -1010,6 +1011,10 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
              "Dropping.\n");
 
     /* Verify HMAC */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+#endif
     if (ctx->hadb_entry->is_loopback) {
         HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
                                          &ctx->hadb_entry->hip_hmac_out,
@@ -1023,6 +1028,10 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
                  -1,
                  "HMAC validation on R2 failed.\n");
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+#endif
 
     /* Signature validation */
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1163,8 +1172,8 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     int mask = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_NEW_CONN, PERF_I1\n");
-    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
+    HIP_DEBUG("Start PERF_NEW_CONN_RESPONDER, PERF_I1\n");
+    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN_RESPONDER);
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
 
@@ -1404,6 +1413,10 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
              "Unable to produce keying material. Dropping the I2 packet.\n");
 
     /* Verify HMAC. */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+#endif
     if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
         hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
         is_loopback = 1;
@@ -1417,6 +1430,10 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  -EPROTO,
                  "HMAC validation on I2 failed. Dropping the I2 packet.\n");
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_VERIFY_HMAC\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+#endif
 
     HIP_IFEL(!(hip_transform = hip_get_param(ctx->input_msg,
                                              HIP_PARAM_HIP_TRANSFORM)),

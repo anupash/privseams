@@ -52,14 +52,28 @@ STACK_OF(X509) * signaling_user_api_get_user_certificate_chain(const uid_t uid) 
     char *homedir = NULL;
     STACK_OF(X509) * ret = NULL;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+#endif
     homedir = get_user_homedir(uid);
     sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
     if (!(ret = signaling_load_certificate_chain(filebuf))) {
         HIP_ERROR("Could not get user certificate \n");
         sk_X509_free(ret);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n"); // test 1.1
+        hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
+        hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+#endif
         return NULL;
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+#endif
     return ret;
 }
 
