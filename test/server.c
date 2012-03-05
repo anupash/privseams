@@ -223,11 +223,9 @@ static int openSckt(const char *service,
     struct addrinfo *ai;
     int              aiErr;
     struct addrinfo *aiHead;
-    struct addrinfo  hints = { .ai_flags  = AI_PASSIVE,      /* Server mode.
-                                                              * ¬ */
-                               .ai_family = PF_UNSPEC };     /* IPv4 or IPv6.
-                                                              * ¬ */
-    size_t maxDescs = *descSize;
+    struct addrinfo  hints = { .ai_flags  = AI_PASSIVE,      /* Server mode.*/
+                               .ai_family = PF_UNSPEC };     /* IPv4 or IPv6.*/
+    size_t           maxDescs = *descSize;
     /*
     ** Initialize output parameters.  When the loop completes, *descSize is 0.
     */
