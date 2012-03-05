@@ -256,10 +256,19 @@ EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid)
 
     HIP_IFEL(!(user_cert_chain = signaling_user_api_get_user_certificate_chain(uid)),
              -1, "Could not find user's certificate \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY\n");
+    hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
+#endif
     user_cert = sk_X509_pop(user_cert_chain);
     HIP_IFEL(!(pkey = X509_get_pubkey(user_cert)),
              -1, "Error getting public key from users certificate \n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
+#endif
 out_err:
     if (err) {
         return NULL;

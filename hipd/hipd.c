@@ -342,7 +342,8 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_R2_SERVICE_ACK, "results/PERF_R2_SERVICE_ACK.csv");
     hip_perf_set_name(perf_set, PERF_I2_VERIFY_USER_PUBKEY, "results/PERF_I2_VERIFY_USER_PUBKEY.csv");
     hip_perf_set_name(perf_set, PERF_R2_VERIFY_USER_PUBKEY, "results/PERF_R2_VERIFY_USER_PUBKEY.csv");
-
+    hip_perf_set_name(perf_set, PERF_I2_HANDLE_SERVICE_OFFER, "results/PERF_I2_HANDLE_SERVICE_OFFER.csv");
+    hip_perf_set_name(perf_set, PERF_R2_HANDLE_SERVICE_OFFER, "results/PERF_R2_HANDLE_SERVICE_OFFER.csv");
 
     hip_perf_set_name(perf_set, PERF_UPDATE_HOST_SIGN, "results/PERF_UPDATE_HOST_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_VERIFY_HOST_SIG, "results/PERF_UPDATE_VERIFY_HOST_SIG.csv");
@@ -366,8 +367,10 @@ int hipd_main(uint64_t flags)
 
     hip_perf_set_name(perf_set, PERF_ECDSA_VERIFY_IMPL, "results/PERF_ECDSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_ECDSA_SIGN_IMPL, "results/PERF_ECDSA_SIGN_IMPL.csv");
-    hip_perf_set_name(perf_set, PERF_I_LOAD_USER_KEY, "results/PERF_LOAD_USER_KEY.csv");
-    hip_perf_set_name(perf_set, PERF_I_LOAD_USER_PUBKEY, "results/PERF_LOAD_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_I_LOAD_USER_KEY, "results/PERF_I_LOAD_USER_KEY.csv");
+    hip_perf_set_name(perf_set, PERF_I_LOAD_USER_PUBKEY, "results/PERF_I_LOAD_USER_PUBKEY.csv");
+    hip_perf_set_name(perf_set, PERF_R_LOAD_USER_KEY, "results/PERF_R_LOAD_USER_KEY.csv");
+    hip_perf_set_name(perf_set, PERF_R_LOAD_USER_PUBKEY, "results/PERF_R_LOAD_USER_PUBKEY.csv");
 
     hip_perf_set_name(perf_set, PERF_I_NETSTAT_LOOKUP, "results/PERF_I_NETSTAT_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_R_NETSTAT_LOOKUP, "results/PERF_R_NETSTAT_LOOKUP.csv");

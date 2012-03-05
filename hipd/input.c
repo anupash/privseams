@@ -389,7 +389,7 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_I2_DH_CREATE, PERF_R2_DH_CREATE\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_DH_CREATE);
-    hip_perf_start_benchmark(perf_set, PERF_R2_DH_CREATE);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_DH_CREATE);
 #endif
     HIP_HEXDUMP("HIP-gl encryption:", &ctx->hadb_entry->hip_enc_out.key,
                 hip_transf_length);
