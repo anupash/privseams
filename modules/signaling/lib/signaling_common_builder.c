@@ -672,9 +672,9 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
     struct signaling_param_user_info_id user_info_id;
     struct signaling_param_user_info_id temp_param;
     //struct signaling_param_user_info_certs   user_info_name;
-    uint16_t header_len   = 0;
-    uint16_t key_len      = 0;
-    uint16_t sub_name_len = 0;
+    int header_len   = 0;
+    int key_len      = 0;
+    int sub_name_len = 0;
 
     //p_tmp = (uint8_t *) param_buf;
 
@@ -682,11 +682,11 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
     case USER_INFO_ID:
         /*Dirty Work here to keep the parameter as short as possible in length.*/
         HIP_DEBUG("Adding USER_INFO_ID response to Service Offer.\n");
-        sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
-        key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
-                       ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
         /*Sanity checking*/
-        if ((sub_name_len > 0) && (key_len > 0)) {
+        if ((ctx->user.subject_name_len > 0) && (ctx->user.key_rr_len > 0)) {
+            sub_name_len = (ctx->user.subject_name_len > SIGNALING_USER_ID_MAX_LEN) ? SIGNALING_USER_ID_MAX_LEN : ctx->user.subject_name_len;
+            key_len      = ((ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata)) > SIGNALING_USER_KEY_MAX_LEN)
+                           ? SIGNALING_USER_KEY_MAX_LEN : (ctx->user.key_rr_len - sizeof(struct hip_host_id_key_rdata));
             /*Building header of the USER_INFO_ID parameter*/
             temp_param.user_dn_length  = htons(sub_name_len);
             temp_param.prr_length      = htons(key_len + sizeof(struct hip_host_id_key_rdata));
@@ -1148,9 +1148,13 @@ int signaling_get_connection_context(struct signaling_connection *conn,
  */
     memcpy(&ctx->host, &signaling_persistent_host, sizeof(struct signaling_host_context));
     HIP_IFEL(signaling_get_verified_application_context_by_ports(conn, ctx), -1, "Getting application context failed.\n");
-    HIP_IFEL(signaling_get_verified_user_context(ctx), -1, "Getting user context failed.\n");
+    HIP_IFEL(signaling_get_verified_user_context(ctx) == -1, -1, "Getting user context failed.\n");
+    return 0;
 
 out_err:
+    HIP_DEBUG("Getting Application and User context failed\n");
+    signaling_init_user_context(&ctx->user);
+    signaling_init_application_context(&ctx->app);
     return err;
 }
 
@@ -1291,6 +1295,7 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     hip_perf_stop_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
     hip_perf_stop_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
 #endif
+    return 0;
 out_err:
     return err;
 }
