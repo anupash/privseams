@@ -667,6 +667,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from R2/U2 \n");
+    signaling_connection_print(&recv_conn, "\t");
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id, recv_conn.src_port, recv_conn.dst_port)),
              -1, "Could not get connection state for connection in R2\n");
 
@@ -1193,6 +1194,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
+    struct signaling_connection            temp_conn;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -1201,6 +1203,16 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_DEBUG("We have no connection context for this host associtaion. \n");
         return 0;
     }
+
+
+    signaling_init_connection(&temp_conn);
+    memcpy(&temp_conn, sig_state->pending_conn, sizeof(struct signaling_connection));
+    temp_conn.src_port = htons(sig_state->pending_conn->src_port);
+    temp_conn.dst_port = htons(sig_state->pending_conn->dst_port);
+    HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build signaling_connection failed \n");
+
+
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         HIP_DEBUG("Service Offers from Middleboxes received.\n");
@@ -1235,12 +1247,20 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     const struct hip_tlv_common           *param;
     struct signaling_connection            new_conn;
     struct signaling_connection           *conn;
+    struct signaling_connection            temp_conn;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I2 \n");
+
+    signaling_init_connection(&temp_conn);
+    memcpy(&temp_conn, &new_conn, sizeof(struct signaling_connection));
+    temp_conn.src_port = htons(new_conn.src_port);
+    temp_conn.dst_port = htons(new_conn.dst_port);
+    HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build signaling_connection failed \n");
 
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
