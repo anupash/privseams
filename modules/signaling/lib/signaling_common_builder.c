@@ -1127,7 +1127,8 @@ out_err:
 }
 
 int signaling_get_connection_context(struct signaling_connection *conn,
-                                     struct signaling_connection_context *ctx)
+                                     struct signaling_connection_context *ctx,
+                                     uint8_t end_point_role)
 {
     int err = 0;
     HIP_ASSERT(ctx);
@@ -1147,7 +1148,7 @@ int signaling_get_connection_context(struct signaling_connection *conn,
  * #endif
  */
     memcpy(&ctx->host, &signaling_persistent_host, sizeof(struct signaling_host_context));
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(conn, ctx), -1, "Getting application context failed.\n");
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(conn, ctx, end_point_role), -1, "Getting application context failed.\n");
     HIP_IFEL(signaling_get_verified_user_context(ctx) == -1, -1, "Getting user context failed.\n");
     return 0;
 

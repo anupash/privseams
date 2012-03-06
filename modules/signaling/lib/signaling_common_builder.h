@@ -84,7 +84,8 @@ int signaling_build_response_to_service_offer_s(struct hip_common *msg,
 
 /* Utility functions */
 int signaling_get_connection_context(struct signaling_connection *conn,
-                                     struct signaling_connection_context *ctx);
+                                     struct signaling_connection_context *ctx,
+                                     uint8_t end_point_role);
 int signaling_get_ports_from_param_app_ctx(const struct signaling_param_app_context *const param_app_ctx,
                                            struct signaling_port_pair *const port_list);
 void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t **hits, const hip_hit_t **hitr);

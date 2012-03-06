@@ -1247,7 +1247,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
                  -1, "Could not copy connection context\n");
 
-        signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context);
+        signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context, RESPONDER);
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, sig_state->pending_conn_context.app.sockets);
 
         //TODO also add the handler for signed service offer parameter

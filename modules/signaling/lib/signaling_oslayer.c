@@ -153,7 +153,10 @@ out_err:
 
 /*
  * Determine the pid, and path of an application and fill it into the struct.
- *
+ * param @src_port
+ * param @dst_port
+ * param @sys_ctx store information retrieved form netstat
+ * param @endpoint   endpoint is an INITIATOR or RESPONDER
  * TODO:
  *  - add more checks for right connection (check src and destination addresses)
  *  - add parsing of udp connections
@@ -162,7 +165,8 @@ out_err:
  */
 int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_port,
                                                            const uint16_t dst_port,
-                                                           struct system_app_context *const sys_ctx)
+                                                           struct system_app_context *const sys_ctx,
+                                                           uint8_t endpoint)
 {
     FILE *fp;
     int   err = 0, UNUSED scanerr;
@@ -183,15 +187,16 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
      * Prepare and make call to netstat.
      * Distinguish between client and server process.
      */
-    if (dst_port != 0) {
-        sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
-        memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-        HIP_IFEL(!(fp = popen(callbuf, "r")),
-                 -1, "Failed to make call to nestat.\n");
-        res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-        pclose(fp);
-    }
-    if (!res) {
+    if (endpoint == INITIATOR) {
+        if (dst_port != 0) {
+            sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
+            memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
+            HIP_IFEL(!(fp = popen(callbuf, "r")),
+                     -1, "Failed to make call to nestat.\n");
+            res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
+            pclose(fp);
+        }
+    } else if (endpoint == RESPONDER) {
         sprintf(callbuf, "netstat -tpneWl | grep :%d", dst_port);
         memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")),
@@ -360,7 +365,8 @@ out_err:
  * Just a wrapper.
  */
 int signaling_get_verified_application_context_by_ports(struct signaling_connection *conn,
-                                                        struct signaling_connection_context *const ctx)
+                                                        struct signaling_connection_context *const ctx,
+                                                        uint8_t endpoint)
 {
     int                       err = 0;
     X509AC                   *ac  = NULL;
@@ -376,7 +382,7 @@ int signaling_get_verified_application_context_by_ports(struct signaling_connect
     hip_perf_start_benchmark(perf_set, PERF_R_NETSTAT_LOOKUP);
 #endif
 
-    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx),
+    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx, endpoint),
              -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", conn->src_port, conn->dst_port);
     ctx->user.uid = sys_ctx.uid;
 
