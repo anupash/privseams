@@ -1196,7 +1196,8 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 {
     int         err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0, ecdsa_nid = ECDSA_DEFAULT_CURVE;
     int         dsa_key_bits = 0;
-    const char *fmt          = NULL, *file = NULL;
+    int         fmt          = 0;
+    const char *file = NULL;
 
     if (action == ACTION_DEL) {
         return hip_conf_handle_hi_del(msg, action, opt, optc, send_only);
@@ -1241,7 +1242,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
          * to fit in the message. */
 
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "dsa", NULL, 0, 0, 0))) {
+                                                HIP_HI_DSA, NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1251,7 +1252,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                                "dsa", NULL, 0, 0, 0))) {
+                                                HIP_HI_DSA, NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1261,7 +1262,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "ecdsa", NULL, 0, 0, 0))) {
+                                                HIP_HI_ECDSA, NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1271,7 +1272,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                                "ecdsa", NULL, 0, 0, 0))) {
+                                                HIP_HI_ECDSA, NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1281,7 +1282,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "rsa", NULL, 0, 0, 0))) {
+                                                HIP_HI_RSA, NULL, 0, 0, 0))) {
             return err;
         }
         if (hip_send_recv_daemon_info(msg, send_only, 0)) {
@@ -1291,7 +1292,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                           "rsa", NULL, 0, 0, 0);
+                                           HIP_HI_RSA, NULL, 0, 0, 0);
         return err;
     }
 
@@ -1311,7 +1312,17 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
             return -EINVAL;
         }
 
-        fmt  = opt[OPT_HI_FMT];
+        if (!strcmp(opt[OPT_HI_FMT], "dsa")) {
+            fmt = HIP_HI_DSA;
+        } else if (!strcmp(opt[OPT_HI_FMT], "ecdsa")) {
+            fmt = HIP_HI_ECDSA;
+        } else if (!strcmp(opt[OPT_HI_FMT], "rsa")) {
+            fmt = HIP_HI_RSA;
+        } else {
+            HIP_ERROR("Invalid HI algorithm.\n");
+            return -EINVAL;
+        }
+
         file = opt[OPT_HI_FILE];
     }
 

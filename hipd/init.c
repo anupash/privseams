@@ -540,7 +540,7 @@ static int hip_init_host_ids(void)
     if (stat(DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
              &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
-                                              NULL, NULL, RSA_KEY_DEFAULT_BITS,
+                                              0, NULL, RSA_KEY_DEFAULT_BITS,
                                               DSA_KEY_DEFAULT_BITS, ECDSA_DEFAULT_CURVE),
                  1, "Failed to create keys to %s\n", HIPL_SYSCONFDIR);
     }
@@ -555,13 +555,13 @@ static int hip_init_host_ids(void)
     /* rsa pub */
     hip_msg_init(user_msg);
     if ((err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                            0, 1, "rsa", NULL, 0, 0, 0))) {
-        HIP_ERROR("Could not load default keys (ECDSA pub)\n");
+                                            0, 1, HIP_DEFAULT_HI_ALGO, NULL, 0, 0, 0))) {
+        HIP_ERROR("Could not load default keys\n");
         goto out_err;
     }
 
     if ((err = hip_handle_add_local_hi(user_msg))) {
-        HIP_ERROR("Adding of keys failed (RSA pub)\n");
+        HIP_ERROR("Adding of keys failed\n");
         goto out_err;
     }
 

@@ -699,7 +699,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int action,
                                  const int anon,
                                  const int use_default,
-                                 const char *hi_fmt,
+                                 const int hi_fmt,
                                  const char *hi_file,
                                  const int rsa_key_bits,
                                  const int dsa_key_bits,
@@ -744,10 +744,13 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
 
     HIP_INFO("Using hostname: %s\n", hostname);
 
-    HIP_IFEL(!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa") && strcmp(hi_fmt, "ecdsa"),
+    HIP_IFEL(!use_default &&
+             hi_fmt != HIP_HI_RSA &&
+             hi_fmt != HIP_HI_DSA &&
+             hi_fmt != HIP_HI_ECDSA,
              -ENOSYS, "Only RSA, DSA and EC keys are supported\n");
 
-    HIP_DEBUG("Using format %s and file %s \n", hi_fmt, hi_file);
+    HIP_DEBUG("Using format %i and file %s \n", hi_fmt, hi_file);
 
     switch (action) {
     case ACTION_NEW:
@@ -759,7 +762,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 goto out_err;
             }
         } else if (!use_default) {
-            if (!strcmp(hi_fmt, "dsa")) {
+            if (hi_fmt == HIP_HI_DSA) {
                 dsa_key = create_dsa_key(dsa_key_bits);
                 HIP_IFEL(!dsa_key, -EINVAL,
                          "Creation of DSA key failed.\n");
@@ -767,7 +770,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     HIP_ERROR("Saving of DSA key failed.\n");
                     goto out_err;
                 }
-            } else if (!strcmp(hi_fmt, "ecdsa")) {
+            } else if (hi_fmt == HIP_HI_ECDSA) {
                 ecdsa_key = create_ecdsa_key(ecdsa_nid);
                 HIP_IFEL(!ecdsa_key, -EINVAL,
                          "Creation of ECDSA key failed.\n");
@@ -847,7 +850,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
 
     case ACTION_ADD:
         if (!use_default) {
-            if (!strcmp(hi_fmt, "dsa")) {
+            if (hi_fmt == HIP_HI_DSA) {
                 if ((err = load_dsa_private_key(hi_file, &dsa_key))) {
                     HIP_ERROR("Failed to load DSA key from file %s\n", hi_file);
                     goto out_err;
@@ -864,7 +867,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     HIP_ERROR("Building of host id failed\n");
                     goto out_err;
                 }
-            } else if (!strcmp(hi_fmt, "ecdsa")) {
+            } else if (hi_fmt == HIP_HI_ECDSA) {
                 if ((err = load_ecdsa_private_key(ecdsa_filenamebase, &ecdsa_key))) {
                     HIP_ERROR("Loading of the ECDSA key failed\n");
                     goto out_err;
@@ -901,10 +904,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
             goto skip_host_id;
         }
 
-        /* using default */
-        HIP_IFEL(hi_fmt == NULL, -1, "Key type is NULL.\n");
-
-        if (!strcmp(hi_fmt, "dsa")) {
+        if (hi_fmt == HIP_HI_DSA) {
             if (anon) {
                 if ((err = load_dsa_private_key(dsa_filenamebase, &dsa_key))) {
                     HIP_ERROR("Loading of the DSA key failed\n");
@@ -951,7 +951,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     goto out_err;
                 }
             }
-        } else if (!strcmp(hi_fmt, "ecdsa")) {
+        } else if (hi_fmt == HIP_HI_ECDSA) {
             if (anon) {
                 if ((err = load_ecdsa_private_key(ecdsa_filenamebase, &ecdsa_key))) {
                     HIP_ERROR("Loading of the ECDSA key failed\n");
@@ -1048,7 +1048,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         goto skip_msg;
     }
 
-    if (!strcmp(hi_fmt, "dsa")) {
+    if (hi_fmt == HIP_HI_DSA) {
         if (anon) {
             if ((err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip))) {
                 HIP_ERROR("Building of host id failed\n");
@@ -1060,7 +1060,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 goto out_err;
             }
         }
-    } else if (!strcmp(hi_fmt, "ecdsa")) {
+    } else if (hi_fmt == HIP_HI_ECDSA) {
         if (anon) {
             if ((err = hip_build_param_eid_endpoint(msg, endpoint_ecdsa_hip))) {
                 HIP_ERROR("Building of host id failed\n");
