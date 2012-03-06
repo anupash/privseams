@@ -908,17 +908,9 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
 
     char                               param_buf[HIP_MAX_PACKET];
     struct signaling_param_service_ack ack;
-    struct signaling_connection        temp_conn;
-
     /* sanity checks */
     HIP_IFEL(!offer, -1, "Got NULL service offer parameter\n");
 
-    signaling_init_connection(&temp_conn);
-    memcpy(&temp_conn, &conn, sizeof(struct signaling_connection));
-    temp_conn.src_port = htons(conn.src_port);
-    temp_conn.dst_port = htons(conn.dst_port);
-    HIP_IFEL(hip_build_param_contents(msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-             -1, "build signaling_connection failed \n");
 
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER);
