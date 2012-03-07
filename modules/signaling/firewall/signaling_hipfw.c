@@ -344,6 +344,12 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
                 signaling_cdb_print();
                 /* Let packet pass */
                 ret = 1;
+            } else if (policy_check == 0) {
+                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+                signaling_cdb_print();
+                /* Let packet pass */
+                ret = 1;
             }
         } else {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -577,6 +583,11 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             HIP_DEBUG("Received I2. Connection tracking table after adding of Service Offers\n");
             signaling_cdb_print();
             ret = -1;
+        } else if (policy_check == 0) {
+            HIP_DEBUG("Connection tracking table after checking policy for Responder\n");
+            signaling_cdb_add_connection(common->hitr, common->hits, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_ALLOWED);
+            signaling_cdb_print();
+            ret = 1;
         }
     } else {
 #ifdef CONFIG_HIP_PERFORMANCE
