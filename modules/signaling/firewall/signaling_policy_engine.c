@@ -480,7 +480,7 @@ static int match_tuples(struct policy_tuple                 *tuple_conn,
     /* Check if host with any name is allowed */
     if (ret && strlen(tuple_rule->host.host_name) > 0) {
         tmp_len = strlen(tuple_conn->host.host_name);
-        if (tmp_len <= 0 || (strncmp(tuple_rule->host.host_kernel, tuple_conn->host.host_name, tmp_len) == 0)) {
+        if (tmp_len <= 0) {
             signaling_info_req_flag_set(&flags->flag_info_requests, HOST_INFO_ID);
             ret = -1;
         } else if (strncmp(tuple_rule->host.host_name, tuple_conn->host.host_name, tmp_len) != 0) {
