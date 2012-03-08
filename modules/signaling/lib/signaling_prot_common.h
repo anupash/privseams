@@ -59,9 +59,6 @@
 #define HIP_PARAM_SIGNALING_CONNECTION          5102
 #define HIP_PARAM_SIGNALING_PORTS               5103
 
-#define HIP_PARAM_SIGNALING_SERVICE_ACK         5107
-#define HIP_PARAM_SIGNALING_SERVICE_NACK        5108
-
 /*Parameter types for the end-point information*/
 //TODO check for the values for these parameters
 //TODO paramters such as CERTS should be in the signed part
@@ -77,6 +74,10 @@
 #define HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS      5117
 #define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5118
 #define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5119
+
+
+#define HIP_PARAM_SIGNALING_SERVICE_ACK             5120
+#define HIP_PARAM_SIGNALING_SERVICE_NACK            5121
 
 /*Parameter type for user signature*/
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62504
@@ -1235,8 +1236,8 @@ void signaling_service_info_flag_set(struct signaling_flags_service_info *flags,
 void signaling_service_info_flag_unset(struct signaling_flags_service_info *flags, int f);
 void signaling_service_info_flag_init(struct signaling_flags_service_info *flags);
 
-void signaling_info_req_flags_print(struct signaling_flags_info_req  flags, const char *const prefix);
-int signaling_info_req_flag_check(struct signaling_flags_info_req  flags, int f);
+void signaling_info_req_flags_print(struct signaling_flags_info_req  *flags, const char *const prefix);
+int signaling_info_req_flag_check(struct signaling_flags_info_req  *flags, int f);
 void signaling_info_req_flag_set(struct signaling_flags_info_req *flags, int f);
 void signaling_info_req_flag_unset(struct signaling_flags_info_req *flags, int f);
 void signaling_info_req_flag_init(struct signaling_flags_info_req *flags);

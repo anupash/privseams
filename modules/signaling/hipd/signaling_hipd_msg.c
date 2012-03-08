@@ -1194,8 +1194,10 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     int                                    err       = 0;
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer;
-    const struct hip_tlv_common           *param;
+    const struct hip_tlv_common           *param = NULL;
     struct signaling_connection            temp_conn;
+    struct signaling_flags_info_req        flags_info_requested;
+    uint8_t                                ctx_looked_up = 0;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -1213,24 +1215,50 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build signaling_connection failed \n");
 
-
+    signaling_info_req_flag_init(&flags_info_requested);
     //TODO check for signed and unsigned service offer parameters
+    // Adding response to service offers
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
-        HIP_DEBUG("Service Offers from Middleboxes received.\n");
-        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
-                 -1, "Could not copy connection context\n");
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_DEBUG("Service Offers from Middleboxes received.\n");
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                         -1, "Could not copy connection context\n");
 
-        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, sig_state->pending_conn_context.app.sockets);
+                // Check if the context has already been looked up
+                if (!ctx_looked_up) {
+                    // signaling_get_connection_context(&temp_conn, &sig_state->pending_conn_context, RESPONDER);
+                    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, sig_state->pending_conn_context.app.sockets);
+                    ctx_looked_up = 1;
+                }
 
-        //TODO also add the handler for signed service offer parameter
-        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn, &sig_state->pending_conn_context, &param_service_offer)) {
-            HIP_DEBUG("Building of application context parameter failed.\n");
-            err = 0;
-        }
-        return err;
+                //TODO also add the handler for signed service offer parameter
+                if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn,
+                                                                &sig_state->pending_conn_context, &param_service_offer,
+                                                                &flags_info_requested)) {
+                    HIP_DEBUG("Building of application context parameter failed.\n");
+                    err = 0;
+                }
+            }
+        } while ((param = hip_get_next_param(ctx->input_msg, param)));
     } else {
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
+
+    // Now Add the service acknowledgements
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+    hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+    HIP_IFEL(signaling_build_service_ack(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+    hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+
+
 out_err:
     return err;
 }
@@ -1247,6 +1275,9 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     struct signaling_connection            new_conn;
     struct signaling_connection           *conn;
     struct signaling_connection            temp_conn;
+    struct signaling_flags_info_req        flags_info_requested;
+    uint8_t                                ctx_looked_up = 0;
+
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -1261,22 +1292,48 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build signaling_connection failed \n");
 
+    signaling_info_req_flag_init(&flags_info_requested);
     //TODO check for signed and unsigned service offer parameters
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
-        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
-                 -1, "Could not copy connection context\n");
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                         -1, "Could not copy connection context\n");
 
-        signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context, RESPONDER);
-        signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name, sig_state->pending_conn_context.app.sockets);
+                // Check if the context has already been looked up
+                if (!ctx_looked_up) {
+                    signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context, RESPONDER);
+                    signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name,
+                                                                     sig_state->pending_conn_context.app.sockets);
+                    ctx_looked_up = 1;
+                }
 
-        //TODO also add the handler for signed service offer parameter
-        if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn, &sig_state->pending_conn_context, &param_service_offer)) {
-            HIP_DEBUG("Building of application context parameter failed.\n");
-            err = 0;
-        }
+                //TODO also add the handler for signed service offer parameter
+                if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn,
+                                                                &sig_state->pending_conn_context, &param_service_offer,
+                                                                &flags_info_requested)) {
+                    HIP_DEBUG("Building of application context parameter failed.\n");
+                    err = 0;
+                }
+            }
+        } while ((param = hip_get_next_param(ctx->input_msg, param)));
     } else {
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
+
+
+    // Now Add the service acknowledgements
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+    hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+    HIP_IFEL(signaling_build_service_ack(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+    hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
 
 
     HIP_DEBUG("Adding the connection information to the hipd state.\n");

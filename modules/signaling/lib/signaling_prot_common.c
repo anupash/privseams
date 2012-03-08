@@ -1026,7 +1026,7 @@ void signaling_flag_init(struct flags_connection_context *flags)
     flags->HOST_AUTHED       = 0;
 }
 
-void signaling_info_req_flags_print(struct signaling_flags_info_req flags, const char *const prefix)
+void signaling_info_req_flags_print(struct signaling_flags_info_req *flags, const char *const prefix)
 {
     char buf[100];
     memset(buf, 0, sizeof(buf));
@@ -1039,72 +1039,72 @@ void signaling_info_req_flags_print(struct signaling_flags_info_req flags, const
     sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
     sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
 
-    HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
+    HIP_DEBUG("%s  Service Flags: %s \n", prefix, buf);
 }
 
-int signaling_info_req_flag_check(struct signaling_flags_info_req flags, int f)
+int signaling_info_req_flag_check(struct signaling_flags_info_req *flags, int f)
 {
     switch (f) {
     case HOST_INFO_OS:
-        return (flags.HOST_INFO_OS) ? 1 : 0;
+        return (flags->HOST_INFO_OS) ? 1 : 0;
         break;
     case HOST_INFO_KERNEL:
-        return (flags.HOST_INFO_KERNEL) ? 1 : 0;
+        return (flags->HOST_INFO_KERNEL) ? 1 : 0;
         break;
     case HOST_INFO_ID:
-        return (flags.HOST_INFO_ID) ? 1 : 0;
+        return (flags->HOST_INFO_ID) ? 1 : 0;
         break;
     case HOST_INFO_CERTS:
-        return (flags.HOST_INFO_CERTS) ? 1 : 0;
+        return (flags->HOST_INFO_CERTS) ? 1 : 0;
         break;
     case USER_INFO_ID:
-        return (flags.USER_INFO_ID) ? 1 : 0;
+        return (flags->USER_INFO_ID) ? 1 : 0;
         break;
     case USER_INFO_CERTS:
-        return (flags.USER_INFO_CERTS) ? 1 : 0;
+        return (flags->USER_INFO_CERTS) ? 1 : 0;
         break;
     case APP_INFO_NAME:
-        return (flags.APP_INFO_NAME) ? 1 : 0;
+        return (flags->APP_INFO_NAME) ? 1 : 0;
         break;
     case APP_INFO_QOS_CLASS:
-        return (flags.APP_INFO_QOS_CLASS) ? 1 : 0;
+        return (flags->APP_INFO_QOS_CLASS) ? 1 : 0;
         break;
     case APP_INFO_CONNECTIONS:
-        return (flags.APP_INFO_CONNECTIONS) ? 1 : 0;
+        return (flags->APP_INFO_CONNECTIONS) ? 1 : 0;
         break;
     case APP_INFO_REQUIREMENTS:
-        return (flags.APP_INFO_REQUIREMENTS) ? 1 : 0;
+        return (flags->APP_INFO_REQUIREMENTS) ? 1 : 0;
         break;
 
     case HOST_INFO_OS_RECV:
-        return (flags.HOST_INFO_OS_RECV) ? 1 : 0;
+        return (flags->HOST_INFO_OS_RECV) ? 1 : 0;
         break;
     case HOST_INFO_KERNEL_RECV:
-        return (flags.HOST_INFO_KERNEL_RECV) ? 1 : 0;
+        return (flags->HOST_INFO_KERNEL_RECV) ? 1 : 0;
         break;
     case HOST_INFO_ID_RECV:
-        return (flags.HOST_INFO_ID_RECV) ? 1 : 0;
+        return (flags->HOST_INFO_ID_RECV) ? 1 : 0;
         break;
     case HOST_INFO_CERTS_RECV:
-        return (flags.HOST_INFO_CERTS_RECV) ? 1 : 0;
+        return (flags->HOST_INFO_CERTS_RECV) ? 1 : 0;
         break;
     case USER_INFO_ID_RECV:
-        return (flags.USER_INFO_ID_RECV) ? 1 : 0;
+        return (flags->USER_INFO_ID_RECV) ? 1 : 0;
         break;
     case USER_INFO_CERTS_RECV:
-        return (flags.USER_INFO_CERTS_RECV) ? 1 : 0;
+        return (flags->USER_INFO_CERTS_RECV) ? 1 : 0;
         break;
     case APP_INFO_NAME_RECV:
-        return (flags.APP_INFO_NAME_RECV) ? 1 : 0;
+        return (flags->APP_INFO_NAME_RECV) ? 1 : 0;
         break;
     case APP_INFO_QOS_CLASS_RECV:
-        return (flags.APP_INFO_QOS_CLASS_RECV) ? 1 : 0;
+        return (flags->APP_INFO_QOS_CLASS_RECV) ? 1 : 0;
         break;
     case APP_INFO_CONNECTIONS_RECV:
-        return (flags.APP_INFO_CONNECTIONS_RECV) ? 1 : 0;
+        return (flags->APP_INFO_CONNECTIONS_RECV) ? 1 : 0;
         break;
     case APP_INFO_REQUIREMENTS_RECV:
-        return (flags.APP_INFO_REQUIREMENTS_RECV) ? 1 : 0;
+        return (flags->APP_INFO_REQUIREMENTS_RECV) ? 1 : 0;
         break;
     default:
         return 0;
