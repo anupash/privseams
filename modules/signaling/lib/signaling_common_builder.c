@@ -1352,19 +1352,23 @@ int signaling_check_if_user_info_req(struct hip_packet_context *ctx)
     uint16_t                               tmp_info;
 
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
-        HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
-                 -1, "Could not copy connection context\n");
-        num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
-                              (sizeof(param_service_offer.service_offer_id) +
-                               sizeof(param_service_offer.service_type) +
-                               sizeof(param_service_offer.service_description))) / sizeof(uint16_t);
-        while (i < num_req_info_items) {
-            tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
-            if (tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
-                return 1;
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                         -1, "Could not copy connection context\n");
+                num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
+                                      (sizeof(param_service_offer.service_offer_id) +
+                                       sizeof(param_service_offer.service_type) +
+                                       sizeof(param_service_offer.service_description))) / sizeof(uint16_t);
+                while (i < num_req_info_items) {
+                    tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
+                    if (tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
+                        return 1;
+                    }
+                    i++;
+                }
             }
-            i++;
-        }
+        } while ((param = hip_get_next_param(ctx->input_msg, param)));
     }
 
     HIP_DEBUG("No need for the user to sign this packet as no USER INFO request\n");
