@@ -502,39 +502,45 @@ int signaling_build_param_host_info_response(struct hip_common *msg,
     switch (host_info_flag) {
     case HOST_INFO_KERNEL:
         HIP_DEBUG("Request for Information about Host Kernel found. Building host info kernel parameter.\n");
-        tmp_len = (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? MAX_SIZE_HOST_KERNEL : ctx->host.host_kernel_len;
-        HIP_DEBUG("Host Kernel Length set to be %d.\n", tmp_len);
-        memcpy(host_info_kernel.kernel, ctx->host.host_kernel, tmp_len);
-        host_info_kernel.kernel[tmp_len] = '\0';
-        HIP_DEBUG("Host Kernel value copied \n");
+        if (ctx->host.host_kernel_len > 0) {
+            tmp_len = (ctx->host.host_kernel_len > MAX_SIZE_HOST_KERNEL) ? MAX_SIZE_HOST_KERNEL : ctx->host.host_kernel_len;
+            HIP_DEBUG("Host Kernel Length set to be %d.\n", tmp_len);
+            memcpy(host_info_kernel.kernel, ctx->host.host_kernel, tmp_len);
+            host_info_kernel.kernel[tmp_len] = '\0';
+            HIP_DEBUG("Host Kernel value copied \n");
 
-        hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, tmp_len);
-        hip_set_param_type((struct hip_tlv_common *) &host_info_kernel, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
+            hip_set_param_contents_len((struct hip_tlv_common *) &host_info_kernel, tmp_len);
+            hip_set_param_type((struct hip_tlv_common *) &host_info_kernel, HIP_PARAM_SIGNALING_HOST_INFO_KERNEL);
 
-        /* Append the parameter to the message */
-        if (hip_build_param(msg, &host_info_kernel)) {
-            HIP_ERROR("Failed to append host info kernel parameter to message.\n");
-            return -1;
+            /* Append the parameter to the message */
+            if (hip_build_param(msg, &host_info_kernel)) {
+                HIP_ERROR("Failed to append host info kernel parameter to message.\n");
+                return -1;
+            }
+        } else {
+            HIP_DEBUG("No information about host kernel available.\n");
         }
         break;
     case HOST_INFO_OS:
         HIP_DEBUG("Request for Information about Host OS found. Building host info os parameter\n");
-        tmp_len             = (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_len;
-        host_info_os.os_len = htons(tmp_len);
-        memcpy(&host_info_os.os_name, &ctx->host.host_os, tmp_len);
+        if (ctx->host.host_os_len > 0 && ctx->host.host_os_ver_len > 0) {
+            tmp_len             = (ctx->host.host_os_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_len;
+            host_info_os.os_len = htons(tmp_len);
+            memcpy(&host_info_os.os_name, &ctx->host.host_os, tmp_len);
 
-        tmp_len                     = (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_ver_len;
-        host_info_os.os_version_len = htons(tmp_len);
-        memcpy(&host_info_os.os_version, &ctx->host.host_os_version, tmp_len);
+            tmp_len                     = (ctx->host.host_os_ver_len > MAX_SIZE_HOST_OS) ? MAX_SIZE_HOST_OS : ctx->host.host_os_ver_len;
+            host_info_os.os_version_len = htons(tmp_len);
+            memcpy(&host_info_os.os_version, &ctx->host.host_os_version, tmp_len);
 
-        len_contents = sizeof(struct signaling_param_host_info_os) - (sizeof(hip_tlv) + sizeof(hip_tlv_len));
-        hip_set_param_contents_len((struct hip_tlv_common *) &host_info_os, len_contents);
-        hip_set_param_type((struct hip_tlv_common *) &host_info_os, HIP_PARAM_SIGNALING_HOST_INFO_OS);
+            len_contents = sizeof(struct signaling_param_host_info_os) - (sizeof(hip_tlv) + sizeof(hip_tlv_len));
+            hip_set_param_contents_len((struct hip_tlv_common *) &host_info_os, len_contents);
+            hip_set_param_type((struct hip_tlv_common *) &host_info_os, HIP_PARAM_SIGNALING_HOST_INFO_OS);
 
-        /* Append the parameter to the message */
-        if (hip_build_param(msg, &host_info_os)) {
-            HIP_ERROR("Failed to append host info os parameter to message.\n");
-            return -1;
+            /* Append the parameter to the message */
+            if (hip_build_param(msg, &host_info_os)) {
+                HIP_ERROR("Failed to append host info os parameter to message.\n");
+                return -1;
+            }
         }
         break;
     case HOST_INFO_ID:
@@ -1372,6 +1378,41 @@ int signaling_check_if_user_info_req(struct hip_packet_context *ctx)
     }
 
     HIP_DEBUG("No need for the user to sign this packet as no USER INFO request\n");
+    return 0;
+
+out_err:
+    return err;
+}
+
+int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx)
+{
+    int                                    err                = 0;
+    int                                    num_req_info_items = 0;
+    int                                    i                  = 0;
+    const struct hip_tlv_common           *param;
+    struct signaling_param_service_offer_u param_service_offer;
+    uint16_t                               tmp_info;
+
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                         -1, "Could not copy connection context\n");
+                num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
+                                      (sizeof(param_service_offer.service_offer_id) +
+                                       sizeof(param_service_offer.service_type) +
+                                       sizeof(param_service_offer.service_description))) / sizeof(uint16_t);
+                while (i < num_req_info_items) {
+                    tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
+                    if (tmp_info == APP_INFO_NAME || tmp_info == APP_INFO_QOS_CLASS || tmp_info == APP_INFO_REQUIREMENTS || tmp_info == APP_INFO_CONNECTIONS ||
+                        tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
+                        return 1;
+                    }
+                    i++;
+                }
+            }
+        } while ((param = hip_get_next_param(ctx->input_msg, param)));
+    }
     return 0;
 
 out_err:

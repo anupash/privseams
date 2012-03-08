@@ -98,5 +98,6 @@ int signaling_get_free_message_space(const struct hip_common *msg, struct hip_ha
 int signaling_get_verified_user_context(struct signaling_connection_context *ctx);
 /*Utility function*/
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
+int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
 void print_hash(const unsigned char *hash);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

@@ -1226,6 +1226,8 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
                          -1, "Could not copy connection context\n");
 
                 // Check if the context has already been looked up
+                // No need for the checking of user or app info request
+                // We have already looked up the context after sending I1
                 if (!ctx_looked_up) {
                     // signaling_get_connection_context(&temp_conn, &sig_state->pending_conn_context, RESPONDER);
                     signaling_port_pairs_from_hipd_state_by_app_name(sig_state, sig_state->pending_conn->application_name, sig_state->pending_conn_context.app.sockets);
@@ -1301,11 +1303,14 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
                          -1, "Could not copy connection context\n");
 
                 // Check if the context has already been looked up
-                if (!ctx_looked_up) {
+                if (!ctx_looked_up  && (signaling_check_if_app_or_user_info_req(ctx) == 1)) {
                     signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context, RESPONDER);
                     signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name,
                                                                      sig_state->pending_conn_context.app.sockets);
                     ctx_looked_up = 1;
+                } else {
+                    HIP_DEBUG("No need to look up for ctx: It has been looked before or it is not needed\n");
+                    memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
                 }
 
                 //TODO also add the handler for signed service offer parameter
