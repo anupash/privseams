@@ -887,11 +887,8 @@ int signaling_verify_service_ack(struct hip_common *msg,
                     return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
-                    printf("Stored hash: ");
-                    print_hash(stored_hash);
-
-                    printf("Acked hash: ");
-                    print_hash(ack->service_offer_hash);
+                    HIP_HEXDUMP("Stored hash: ", stored_hash, HIP_AH_SHA_LEN);
+                    HIP_HEXDUMP("Acked hash: ", ack->service_offer_hash, HIP_AH_SHA_LEN);
                 }
             }
         } while ((param = hip_get_next_param(msg, param)));
@@ -1422,15 +1419,4 @@ int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx)
 
 out_err:
     return err;
-}
-
-void print_hash(const unsigned char *hash)
-{
-    int i = 0;
-    //Printing hash
-    printf("Printing the Generated hash: ");
-    for (i = 0; i < HIP_AH_SHA_LEN; i++) {
-        printf("%02x ", hash[i]);
-    }
-    printf("\n");
 }
