@@ -273,7 +273,9 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     //This tuple is different from above
     struct tuple *other_dir = NULL;
 
-    //printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
+#ifdef DEMO_MODE
+    printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
+#endif
 
     if (tuple->direction == ORIGINAL_DIR) {
         other_dir = &tuple->connection->reply;
@@ -370,9 +372,11 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         }
     }
 
+#ifdef DEMO_MODE
     if (ret) {
-        //printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
     }
+#endif
 
     free(ctx_flags);
     free(matched_tuple);
@@ -423,7 +427,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     //This tuple is different
     struct tuple *other_dir = NULL;
 
+#ifdef DEMO_MODE
     printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
+#endif
 
     if (tuple->direction == ORIGINAL_DIR) {
         other_dir = &tuple->connection->reply;
@@ -464,7 +470,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
             ret = 0;
         } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
-            //printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+#ifdef DEMO_MODE
+            printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+#endif
             ret = 1;
         }
     } else {
@@ -544,7 +552,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         return ret;
     }
     /* Let packet pass */
+#ifdef DEMO_MODE
     printf("\033[22;32mAccepted I2 packet. Checking for information required from Responder\033[22;37m\n\n\033[01;37m");
+#endif
 
     /*
      * Add the info request parameters to the outgoing
@@ -603,7 +613,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             HIP_DEBUG("Connection tracking table after receipt of I2\n");
             signaling_cdb_add_connection(common->hitr, common->hits, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_ALLOWED);
             signaling_cdb_print();
+#ifdef DEMO_MODE
             printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+#endif
             ret = 1;
         }
     }
@@ -650,7 +662,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     //This tuple is different
     struct tuple *other_dir = NULL;
 
+#ifdef DEMO_MODE
     printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
+#endif
 
     other_dir = &tuple->connection->reply;
 
@@ -685,7 +699,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
             ret = 0;
         } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
+#ifdef DEMO_MODE
             printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[01;37m");
+#endif
             ret = 1;
         } else if (old_conn->status == SIGNALING_CONN_PROCESSING) {
             //Check for acknowledgment
@@ -763,7 +779,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     /* Let packet pass */
+#ifdef DEMO_MODE
     printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[22;37m");
+#endif
     free(ctx_flags);
     free(matched_tuple);
     return ret;
