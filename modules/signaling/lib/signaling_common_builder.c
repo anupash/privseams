@@ -705,7 +705,7 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
 
             HIP_DEBUG("The algorithm used for the user signature : %u\n", ctx->user.rdata.algorithm);
 
-            header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
+            header_len = sizeof(struct hip_tlv_common) + sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
             /*Preparing the USER_INFO_ID parameter to be sent*/
             memcpy(&user_info_id, &temp_param, header_len);
             memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);

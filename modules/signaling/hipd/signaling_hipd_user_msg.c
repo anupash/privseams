@@ -169,7 +169,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(signaling_get_verified_application_context_by_ports(&new_conn, &sig_state->pending_conn_context, INITIATOR), -1, "Getting application context failed.\n");
         HIP_IFEL(signaling_get_verified_user_context(&sig_state->pending_conn_context), -1, "Getting user context failed.\n");
 
-        HIP_DEBUG("Signature algorithm: %u\n", sig_state->pending_conn_context.user.rdata.algorithm);
+        HIP_DEBUG("Signature algorithm: %u", sig_state->pending_conn_context.user.rdata.algorithm);
 
 
         /* save application context to our local state */

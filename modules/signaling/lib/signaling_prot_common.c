@@ -498,7 +498,7 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
         ctx->rdata.flags     = ntohs(user_ctx->rdata.flags);
 
 
-        memcpy(ctx->pkey, user_ctx->pkey, key_len - 2);
+        memcpy(ctx->pkey, user_ctx->pkey, key_len);
         memcpy(ctx->subject_name, &user_ctx->pkey[key_len], sub_name_len);
 
         /*All the above information is not valid without verification of signature*/
