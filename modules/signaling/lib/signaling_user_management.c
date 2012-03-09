@@ -962,6 +962,7 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
 #endif
 
+    HIP_DEBUG("SIg Algorithm in the signature : %u\n", param_user_signature->algorithm);
 
     switch (user_ctx->rdata.algorithm) {
     case HIP_HI_RSA:
@@ -973,7 +974,7 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
         return signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
         break;
     default:
-        HIP_DEBUG("Algorithm used is : %u", user_ctx->rdata.algorithm);
+        HIP_DEBUG("Algorithm used is : %u\n", user_ctx->rdata.algorithm);
         break;
     }
 

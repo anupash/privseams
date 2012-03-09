@@ -161,7 +161,7 @@ out_err:
 /*
  * @return < 0 on error, size of computed signature on success
  */
-int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type)
+int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, const uint8_t sig_type)
 {
     int     err     = 0;
     int     sig_len = -1;
@@ -174,10 +174,9 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
     HIP_IFEL(!data,         -1, "Data to sign is NULL \n");
     HIP_IFEL(in_len < 0,    -1, "Invalid in length \n");
     HIP_IFEL(!out_buf,      -1, "Cannot write to NULL-buffer\n");
-    HIP_IFEL(!sig_type,     -1, "Cannot write signature type to NULL pointer\n");
 
     /* Check if there is a preferred signature type */
-    switch (*sig_type) {
+    switch (sig_type) {
     case HIP_HI_RSA:
         HIP_DEBUG("Computing user signature using RSA key\n");
         HIP_IFEL(!(homedir = get_user_homedir(uid)),
@@ -195,8 +194,7 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
         hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
         hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
 #endif
-        sig_len   = RSA_size(rsa);
-        *sig_type = HIP_SIG_RSA;
+        sig_len = RSA_size(rsa);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start  PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
@@ -229,8 +227,7 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
         hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
 #endif
 
-        sig_len   = ECDSA_size(ecdsa);
-        *sig_type = HIP_SIG_ECDSA;
+        sig_len = ECDSA_size(ecdsa);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);

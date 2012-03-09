@@ -1305,6 +1305,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
                 // Check if the context has already been looked up
                 if (!ctx_looked_up  && (signaling_check_if_app_or_user_info_req(ctx) == 1)) {
                     signaling_get_connection_context(&new_conn, &sig_state->pending_conn_context, RESPONDER);
+                    HIP_DEBUG("Signature algorithm: %u\n", sig_state->pending_conn_context.user.rdata.algorithm);
                     signaling_port_pairs_from_hipd_state_by_app_name(sig_state, new_conn.application_name,
                                                                      sig_state->pending_conn_context.app.sockets);
                     ctx_looked_up = 1;

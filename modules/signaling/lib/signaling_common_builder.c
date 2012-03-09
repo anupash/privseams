@@ -40,6 +40,8 @@
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
 #include "lib/core/hostid.h"
+#include "hipd/hipd.h"
+
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
@@ -308,17 +310,18 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
     unsigned char  signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
     int            in_len;
     int            sig_len  = 0;
-    uint8_t        sig_type = HIP_HI_RSA;
+    uint8_t        sig_type = HIP_DEFAULT_HI_ALGO;
 
     /* sanity checks */
     HIP_IFEL(!msg,       -1, "Cannot sign NULL-message\n");
 
+    HIP_IFEL(sig_type != HIP_HI_RSA && sig_type != HIP_HI_ECDSA,
+             -1, "Unsupported signature type: %d\n", sig_type);
+
     /* calculate the signature */
     in_len = hip_get_msg_total_len(msg);
-    HIP_IFEL((sig_len = signaling_user_api_sign(uid, msg, in_len, signature_buf, &sig_type)) < 0,
+    HIP_IFEL((sig_len = signaling_user_api_sign(uid, msg, in_len, signature_buf, sig_type)) < 0,
              -1, "Could not get user's signature \n");
-    HIP_IFEL(sig_type != HIP_HI_RSA && sig_type != HIP_HI_RSA && sig_type != HIP_HI_ECDSA,
-             -1, "Unsupported signature type: %d\n", sig_type);
 
     /* build the signature parameter */
     hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_USER_SIGNATURE);
@@ -699,6 +702,8 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
             temp_param.rdata.flags     = htons(ctx->user.rdata.flags);
             temp_param.rdata.algorithm = ctx->user.rdata.algorithm;
             temp_param.rdata.protocol  = ctx->user.rdata.protocol;
+
+            HIP_DEBUG("The algorithm used for the user signature : %u\n", ctx->user.rdata.algorithm);
 
             header_len = sizeof(temp_param.user_dn_length) + sizeof(temp_param.prr_length) + sizeof(struct hip_host_id_key_rdata);
             /*Preparing the USER_INFO_ID parameter to be sent*/
@@ -1330,7 +1335,7 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
         //PEM_write_PUBKEY(stdout, user_pkey);
         HIP_IFEL((ctx->user.key_rr_len = any_key_to_key_rr(user_pkey, &ctx->user.rdata.algorithm, &key_rr)) < 0,
                  -1, "Could not serialize key \n");
-        HIP_DEBUG("GOT keyy rr of length %d\n", ctx->user.key_rr_len);
+        HIP_DEBUG("GOT key rr of length %d\n", ctx->user.key_rr_len);
         memcpy(ctx->user.pkey, key_rr, ctx->user.key_rr_len);
 
         // necessary because any_key_to_rr returns only the length of the key rrwithout the header
