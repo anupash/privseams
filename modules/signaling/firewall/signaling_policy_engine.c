@@ -182,67 +182,6 @@ static void print_policy_tuple(const struct policy_tuple *tuple, UNUSED const ch
     HIP_DEBUG("%s--------------------------------------------\n", prefix);
 }
 
-UNUSED static void printf_policy_tuple(const struct policy_tuple *tuple, UNUSED const char *prefix,
-                                       struct signaling_connection_flags *flags)
-{
-    char dst[INET6_ADDRSTRLEN];
-
-    printf("%s--------------     TUPLE    ----------------\n", prefix);
-    if (ipv6_addr_any(&tuple->host.host_id)) {
-        printf("%s  HOST:\t ANY HOST\n", prefix);
-    } else {
-        hip_in6_ntop(&tuple->host.host_id, dst);
-        printf("%s  HOST:\t %s\n", prefix, dst);
-    }
-    printf("%s  HOST KERNEL:\t\t %s\n", prefix, strlen(tuple->host.host_kernel) == 0 ? "ANY KERNEL" : tuple->host.host_kernel);
-    printf("%s  HOST OS:\t\t %s\n", prefix, strlen(tuple->host.host_os) == 0 ? "ANY OS" : tuple->host.host_os);
-    printf("%s  HOST NAME:\t\t %s\n", prefix, strlen(tuple->host.host_name) == 0 ? "ANY HOST" : tuple->host.host_name);
-
-    printf("%s  USER:\t %s\n", prefix, strlen(tuple->user.user_name) == 0 ? "ANY USER" : tuple->user.user_name);
-    printf("%s  APP:\t %s\n",  prefix, strlen(tuple->application.application_dn)  == 0 ? "ANY APPLICATION" : tuple->application.application_dn);
-    printf("%s  APP ISS:\t\t %s\n",  prefix, strlen(tuple->application.issuer_dn)  == 0 ? "ANY ISSUER" : tuple->application.issuer_dn);
-    printf("%s  APP CONN:\t\t %d\n",  prefix, tuple->application.connections < 0 ? -1 : tuple->application.connections);
-
-    if (policy_decision_check(tuple->target, POLICY_ACCEPT) || policy_decision_check(tuple->target, POLICY_REJECT)) {
-        printf("%s  TRGT:\t\t\t %s\n",  prefix, policy_decision_check(tuple->target, POLICY_ACCEPT) ? "ALLOW" : "DROP");
-    } else {
-        printf("%s  TRGT:\t\t\t\n", prefix);
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_ID)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_ID) ? "HOST_INFO_ID" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_KERNEL)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_KERNEL) ? "HOST_INFO_KERNEL" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_OS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_OS) ? "HOST_INFO_OS" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_CERTS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_CERTS) ? "HOST_INFO_CERTS" : "");
-        }
-
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_NAME)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_NAME) ? "APP_INFO_NAME" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_QOS_CLASS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_QOS_CLASS) ? "APP_INFO_QOS_CLASS" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_CONNECTIONS) ? "APP_INFO_CONNECTIONS" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_REQUIREMENTS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_REQUIREMENTS) ? "APP_INFO_REQUIREMENTS" : "");
-        }
-
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_ID)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_ID) ? "USER_INFO_ID" : "");
-        }
-        if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_CERTS)) {
-            printf("%s      :\t\t\t %s\n",  prefix, signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_CERTS) ? "USER_INFO_CERTS" : "");
-        }
-    }
-    printf("%s--------------------------------------------\n", prefix);
-}
-
 static int read_tuple(config_setting_t *tuple, struct slist **rulelist)
 {
     int                  err     = 0;
@@ -644,10 +583,9 @@ struct policy_tuple *signaling_policy_check(UNUSED const struct in6_addr *const 
 
     /* Find a match for authed tuple */
     if ((tuple_match = match_tuple_list(tuple_conn, rule_list, ctx_flags))) {
+#ifdef DEMO_MODE
         printf("\033[22;32mConnection could be matched to firewall rules:\033[22;37m\n");
-        //printf("Connection tuple:\n");
-        //print_policy_tuple(tuple_match, "\t", ctx_flags);
-        printf("is matched by rule tuple:\n");
+#endif
         print_policy_tuple(tuple_match, "\t", ctx_flags);
         policy_tuple_copy(tuple_match, tuple_conn);
         return tuple_conn;
@@ -675,7 +613,9 @@ struct policy_tuple *signaling_policy_engine_check_and_flag(const hip_hit_t *hit
     //req_auth_types = signaling_policy_check(hit, conn_ctx);
     if (policy_decision_check(tuple_match->target, POLICY_REJECT)) {
         HIP_DEBUG("Connection request has been rejected by local policy. \n");
+#ifdef DEMO_MODE
         printf("\033[22;31m Connection request has been rejected by local policy.\n\033[22;37m");
+#endif
         *ret = -1;
         free(tuple_match);
         return NULL;
