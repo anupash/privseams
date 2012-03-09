@@ -972,6 +972,9 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
         HIP_DEBUG("Verifying ECDSA \n");
         return signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
         break;
+    default:
+        HIP_DEBUG("Algorithm used is : %u", user_ctx->rdata.algorithm);
+        break;
     }
 
 
