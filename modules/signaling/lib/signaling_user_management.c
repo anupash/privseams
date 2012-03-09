@@ -689,86 +689,6 @@ out_err:
     return err;
 }
 
-/**
- * @return 0 if signature verified correctly, < 0 otherwise
- */
-int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey)
-{
-    int             err = 0;
-    int             hash_range_len;
-    struct hip_sig *param_user_signature = NULL;
-    unsigned char   sha1_digest[HIP_AH_SHA_LEN];
-    RSA            *rsa      = NULL;
-    EC_KEY         *ecdsa    = NULL;
-    const int       orig_len = hip_get_msg_total_len(msg);
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n"); // test 2.1.1
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
-#endif
-
-    /* sanity checks */
-    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
-             -1, "Packet contains no user signature\n");
-
-    /* Modify the packet to verify signature */
-    hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) msg);
-    hip_zero_msg_checksum(msg);
-    HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
-    hip_set_msg_total_len(msg, hash_range_len);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
-             -1, "Could not build message digest \n");
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
-    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-#endif
-    switch (EVP_PKEY_type(pkey->type)) {
-    case EVP_PKEY_EC:
-        // - 1 is the algorithm field
-        ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
-        HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
-                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
-        HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
-                 -1, "ECDSA user signature did not verify correctly\n");
-        break;
-    case EVP_PKEY_RSA:
-        rsa = EVP_PKEY_get1_RSA(pkey);
-        HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length) - 1,
-                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", RSA_size(rsa), ntohs(param_user_signature->length));
-        HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, param_user_signature->signature, RSA_size(rsa), rsa),
-                 -1, "RSA user signature did not verify correctly\n");
-        break;
-    default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
-    }
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
-#endif
-
-out_err:
-    hip_set_msg_total_len(msg, orig_len);
-    RSA_free(rsa);
-    EC_KEY_free(ecdsa);
-    return err;
-}
-
 /* Verify RSA Signature
  * return zero on success
  */
@@ -967,11 +887,11 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     switch (user_ctx->rdata.algorithm) {
     case HIP_HI_RSA:
         HIP_DEBUG("Verifying RSA signature...\n");
-        return signaling_verify_user_signature_rsa(user_ctx, param_user_signature, sha1_digest);
+        err = signaling_verify_user_signature_rsa(user_ctx, param_user_signature, sha1_digest);
         break;
     case HIP_HI_ECDSA:
         HIP_DEBUG("Verifying ECDSA \n");
-        return signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
+        err = signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
         break;
     default:
         HIP_DEBUG("Algorithm used is : %u\n", user_ctx->rdata.algorithm);
