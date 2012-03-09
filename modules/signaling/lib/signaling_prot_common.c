@@ -499,15 +499,15 @@ int signaling_init_user_context_from_msg(struct signaling_user_context *const ct
         ctx->rdata.flags     = ntohs(user_ctx->rdata.flags);
 
 
-        memcpy(&ctx->pkey, &user_ctx->pkey[0], key_len);
-        memcpy(&ctx->subject_name, &user_ctx->pkey[key_len], sub_name_len);
+        memcpy(ctx->pkey, user_ctx->pkey, key_len);
+        memcpy(ctx->subject_name, &user_ctx->pkey[key_len], sub_name_len);
 
         /*All the above information is not valid without verification of signature*/
         /*Later when we add certificates we should also verify user key with the certificates*/
         if (!signaling_verify_user_signature_from_msg(msg, ctx)) {
             HIP_DEBUG("User Signature Verified.\n");
         } else {
-            HIP_DEBUG("User Signature Verification failed. Cannot accept the user information as true.\n");
+            HIP_ERROR("User Signature Verification failed. Cannot accept the user information as true.\n");
             HIP_IFEL(signaling_init_user_context(ctx),
                      -1, "Could not init user context\n");
         }

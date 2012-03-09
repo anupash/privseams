@@ -965,6 +965,7 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
 
     switch (user_ctx->rdata.algorithm) {
     case HIP_HI_RSA:
+        HIP_DEBUG("Verifying RSA signature...\n");
         return signaling_verify_user_signature_rsa(user_ctx, param_user_signature, sha1_digest);
         break;
     case HIP_HI_ECDSA:
