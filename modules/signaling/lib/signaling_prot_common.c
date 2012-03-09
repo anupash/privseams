@@ -86,9 +86,8 @@ void signaling_param_application_context_print(const struct signaling_param_app_
         if (pp[i].src_port == 0 && pp[i].dst_port == 0 && i > 0) {
             break;
         }
-        fprintf(stderr, "[%d: %d -> %d] ", i, ntohs(pp[i].src_port), ntohs(pp[i].dst_port));
+        HIP_DEBUG("[%d: %d -> %d]\n", i, ntohs(pp[i].src_port), ntohs(pp[i].dst_port));
     }
-    fprintf(stderr, "\n");
 
     p_content += ntohs(param_app_ctx->port_count) * sizeof(struct signaling_port_pair);
 
