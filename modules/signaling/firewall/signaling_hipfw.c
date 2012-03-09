@@ -273,7 +273,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     //This tuple is different from above
     struct tuple *other_dir = NULL;
 
-    printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
+    //printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
 
     if (tuple->direction == ORIGINAL_DIR) {
         other_dir = &tuple->connection->reply;
@@ -371,7 +371,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     if (ret) {
-        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+        //printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
     }
 
     free(ctx_flags);
@@ -464,7 +464,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
             ret = 0;
         } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
-            printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+            //printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
             ret = 1;
         }
     } else {
