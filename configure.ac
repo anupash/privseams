@@ -121,7 +121,7 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline -Wcast-qual")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-missing-field-initializers")
-AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -I ../x509ac")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -I../x509ac -I../net-tools-1.60 -idirafter ../net-tools-1.60/include  -I../net-tools-1.60/lib")
 
 
 #TODO fix the code and get rid of this one

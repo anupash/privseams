@@ -201,7 +201,7 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
     X509_NAME                *uname = NULL;
-    struct userdb_user_entry *new = NULL;
+    struct userdb_user_entry *new   = NULL;
 
     /* Check if we already have that user */
     if (signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname)) {
@@ -855,8 +855,15 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     const int       orig_len = hip_get_msg_total_len(msg);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n"); // test 2.1.1
-    hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
 #endif
 
     /* sanity checks */
@@ -870,19 +877,6 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
              -1, "Could not build message digest \n");
 
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
-    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-#endif
-
-    HIP_DEBUG("SIg Algorithm in the signature : %u\n", param_user_signature->algorithm);
 
     switch (user_ctx->rdata.algorithm) {
     case HIP_HI_RSA:
@@ -894,7 +888,7 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
         err = signaling_verify_user_signature_ecdsa(user_ctx, param_user_signature, sha1_digest);
         break;
     default:
-        HIP_DEBUG("Algorithm used is : %u\n", user_ctx->rdata.algorithm);
+        HIP_DEBUG("Algorithm used is : %u but not supported here for user verification\n", user_ctx->rdata.algorithm);
         break;
     }
 
@@ -909,7 +903,6 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
 
 out_err:

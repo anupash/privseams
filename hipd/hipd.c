@@ -374,6 +374,8 @@ int hipd_main(uint64_t flags)
 
     hip_perf_set_name(perf_set, PERF_I_NETSTAT_LOOKUP, "results/PERF_I_NETSTAT_LOOKUP.csv");
     hip_perf_set_name(perf_set, PERF_R_NETSTAT_LOOKUP, "results/PERF_R_NETSTAT_LOOKUP.csv");
+    hip_perf_set_name(perf_set, PERF_I_NETSTAT_CMD, "results/PERF_I_NETSTAT_CMD.csv");
+    hip_perf_set_name(perf_set, PERF_R_NETSTAT_CMD, "results/PERF_R_NETSTAT_CMD.csv");
     hip_perf_set_name(perf_set, PERF_I_VERIFY_APPLICATION, "results/PERF_I_VERIFY_APPLICATION.csv");
     hip_perf_set_name(perf_set, PERF_R_VERIFY_APPLICATION, "results/PERF_R_VERIFY_APPLICATION.csv");
     hip_perf_set_name(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN, "results/PERF_I_X509AC_VERIFY_CERT_CHAIN.csv");

@@ -1812,7 +1812,6 @@ out_err:
         HIP_DEBUG("Stop and write PERF_MBOX_I2, write PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_PUBKEY\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2);
-        hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
@@ -1826,7 +1825,6 @@ out_err:
         HIP_DEBUG("Stop and write PERF_MBOX_R2, write PERF_MBOX_R2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_PUBKEY\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2);
-        hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
@@ -2064,7 +2062,6 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_UPDATE, "results/PERF_MBOX_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_UPDATE_VERIFY_HOST_SIG, "results/PERF_MBOX_UPDATE_VERIFY_HOST_SIG.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_X509_VERIFY_CERT_CHAIN, "results/PERF_MBOX_X509_VERIFY_CERT_CHAIN.csv");
-    hip_perf_set_name(perf_set, PERF_VERIFY_USER_SIG, "results/PERF_VERIFY_USER_SIG.csv");
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
 #endif

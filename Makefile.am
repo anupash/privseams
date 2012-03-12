@@ -215,6 +215,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/tool/xfrmapi.c         \
                                  modules/signaling/lib/signaling_common_builder.c \
                                  modules/signaling/lib/signaling_prot_common.c \
+                                 modules/signaling/lib/signaling_netstat.c \
                                  modules/signaling/lib/signaling_oslayer.c \
                                  modules/signaling/lib/signaling_user_api.c \
                                  modules/signaling/lib/signaling_user_management.c \
@@ -257,7 +258,7 @@ test_check_modules_midauth_SOURCES = test/check_modules_midauth.c               
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
 firewall_hipfw_LDADD                    +=-L../x509ac -lx509ac -lssl
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
-hipd_hipd_LDADD                         +=-L../x509ac -lx509ac -lssl
+hipd_hipd_LDADD                         +=-L../x509ac -L../net-tools-1.60/lib/ -lx509ac -lssl -lnet-tools
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
@@ -271,6 +272,7 @@ tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
 tools_accert_LDADD                       = lib/core/libhipcore.la
 tools_accert_LDADD                      += -L../x509ac -lx509ac
+lib_core_libhipcore_la_LIBADD		 = -L../net-tools-1.60/lib/ -lnet-tools
 
 ### dynamic library dependencies ###
 

@@ -35,6 +35,7 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_management.h"
 #include "signaling_x509_api.h"
+#include "signaling_netstat.h"
 
 static struct hip_ll verified_apps;
 
@@ -45,7 +46,7 @@ static struct hip_ll verified_apps;
  */
 static X509AC *get_application_attribute_certificate_chain(const char *app_file, STACK_OF(X509) **chain)
 {
-    FILE   *fp = NULL;
+    FILE   *fpout = NULL;
     char    app_cert_file[PATH_MAX];
     X509AC *app_cert = NULL;
 
@@ -56,15 +57,15 @@ static X509AC *get_application_attribute_certificate_chain(const char *app_file,
 
     /* Get the application attribute certificate */
     sprintf(app_cert_file, "%s.cert", app_file);
-    if (!(fp = fopen(app_cert_file, "r"))) {
+    if (!(fpout = fopen(app_cert_file, "r"))) {
         HIP_ERROR("Application certificate could not be found at %s.\n", app_cert_file);
         return NULL;
     }
-    if (!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL))) {
+    if (!(app_cert = PEM_read_X509AC(fpout, NULL, NULL, NULL))) {
         HIP_ERROR("Could not decode application certificate.\n");
         return NULL;
     }
-    fclose(fp);
+    fclose(fpout);
 
     /* Look if there is a chain for this certificate */
     if (!chain) {
@@ -168,12 +169,10 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
                                                            struct system_app_context *const sys_ctx,
                                                            uint8_t endpoint)
 {
-    FILE *fp;
-    int   err = 0, UNUSED scanerr;
-    char *res = NULL;
-    char  callbuf[CALLBUF_SIZE];
-    char  symlinkbuf[SYMLINKBUF_SIZE];
-    char  readbuf[NETSTAT_SIZE_OUTPUT];
+    int  err = 0;
+    char symlinkbuf[SYMLINKBUF_SIZE];
+
+
 
     memset(sys_ctx->proto,       0, NETSTAT_SIZE_PROTO);
     memset(sys_ctx->recv_q,      0, NETSTAT_SIZE_RECV_SEND);
@@ -189,42 +188,33 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
      */
     if (endpoint == INITIATOR) {
         if (dst_port != 0) {
-            sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
-            memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-            HIP_IFEL(!(fp = popen(callbuf, "r")),
-                     -1, "Failed to make call to nestat.\n");
-            res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-            pclose(fp);
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_I_NETSTAT_CMD, PERF_R_NETSTAT_CMD\n");  // test 1.1.1
+            hip_perf_start_benchmark(perf_set, PERF_I_NETSTAT_CMD);
+            hip_perf_start_benchmark(perf_set, PERF_R_NETSTAT_CMD);
+#endif
+            netstat_info_tpneW(src_port, dst_port, sys_ctx, 0);
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_I_NETSTAT_CMD, PERF_R_NETSTAT_CMD\n");  // test 1.1.1
+            hip_perf_stop_benchmark(perf_set, PERF_I_NETSTAT_CMD);
+            hip_perf_stop_benchmark(perf_set, PERF_R_NETSTAT_CMD);
+#endif
         }
     } else if (endpoint == RESPONDER) {
-        sprintf(callbuf, "netstat -tpneWl | grep :%d", dst_port);
-        memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-        HIP_IFEL(!(fp = popen(callbuf, "r")),
-                 -1, "Failed to make call to nestat.\n");
-        res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-        pclose(fp);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I_NETSTAT_CMD, PERF_R_NETSTAT_CMD\n");      // test 1.1.1
+        hip_perf_start_benchmark(perf_set, PERF_I_NETSTAT_CMD);
+        hip_perf_start_benchmark(perf_set, PERF_R_NETSTAT_CMD);
+#endif
+        netstat_info_tpneW(src_port, dst_port, sys_ctx, 1); // listening == true
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I_NETSTAT_CMD, PERF_R_NETSTAT_CMD\n");      // test 1.1.1
+        hip_perf_stop_benchmark(perf_set, PERF_I_NETSTAT_CMD);
+        hip_perf_stop_benchmark(perf_set, PERF_R_NETSTAT_CMD);
+#endif
     }
 
-    if (!res) {
-        HIP_DEBUG("No output from netstat call: %s\n", callbuf);
-    }
-    HIP_IFEL(!res, -1, "Got no output from netstat.\n");
 
-    /*
-     * Parse the output.
-     * Format is the same for connections and listening sockets.
-     */
-    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d %d %d/%s",
-                     sys_ctx->proto,
-                     sys_ctx->recv_q,
-                     sys_ctx->send_q,
-                     sys_ctx->local_addr,
-                     sys_ctx->remote_addr,
-                     sys_ctx->state,
-                     &sys_ctx->uid,
-                     &sys_ctx->inode,
-                     &sys_ctx->pid,
-                     sys_ctx->progname);
     /*Sanity Checking*/
     if (strlen(sys_ctx->progname) > 0) {
         HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", sys_ctx->progname, sys_ctx->pid, sys_ctx->uid, sys_ctx->proto);
@@ -241,7 +231,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
 
         HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
     } else {
-        HIP_DEBUG("No program found!\n");
+        HIP_DEBUG("No suitable application found found!\n");
         return -1;
     }
 out_err:
@@ -424,8 +414,8 @@ out_err:
 
 int signaling_get_verified_host_context(struct signaling_host_context *ctx)
 {
-    int   err = 0;
-    FILE *fp  = NULL;
+    int   err   = 0;
+    FILE *fpout = NULL;
     char  callbuf[CALLBUF_SIZE];
     char  readbuf[NETSTAT_SIZE_OUTPUT];
     char *result  = NULL;
@@ -433,8 +423,8 @@ int signaling_get_verified_host_context(struct signaling_host_context *ctx)
 
     sprintf(callbuf, "uname -r");
     memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-    HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to uname.\n");
-    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
+    HIP_IFEL(!(fpout = popen(callbuf, "r")), -1, "Failed to make call to uname.\n");
+    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fpout);
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
         ctx->host_kernel_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
         memcpy(ctx->host_kernel, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
@@ -445,10 +435,10 @@ int signaling_get_verified_host_context(struct signaling_host_context *ctx)
 
     sprintf(callbuf, "cat /etc/lsb-release | head -n 1 | cut -d'=' -f2");
     memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-    HIP_IFEL(!(fp = popen(callbuf, "r")),
+    HIP_IFEL(!(fpout = popen(callbuf, "r")),
              -1, "Failed to make call to get the information about OS\n");
-    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-    pclose(fp);
+    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fpout);
+    pclose(fpout);
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
         ctx->host_os_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;
         memcpy(ctx->host_os, result, SIGNALING_HOST_INFO_REQ_MAX_LEN);
@@ -459,10 +449,10 @@ int signaling_get_verified_host_context(struct signaling_host_context *ctx)
 
     sprintf(callbuf, "cat /etc/lsb-release | head -n 2 | tail -1 |  cut -d'=' -f2");
     memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-    HIP_IFEL(!(fp = popen(callbuf, "r")),
+    HIP_IFEL(!(fpout = popen(callbuf, "r")),
              -1, "Failed to make call to get the information about OS\n");
-    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-    pclose(fp);
+    result = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fpout);
+    pclose(fpout);
 
     if (strlen(result) > SIGNALING_HOST_INFO_REQ_MAX_LEN) {
         ctx->host_os_ver_len = SIGNALING_HOST_INFO_REQ_MAX_LEN;

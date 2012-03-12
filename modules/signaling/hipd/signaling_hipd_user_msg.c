@@ -227,7 +227,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN, PERF_I_HOST_CTX_LOOKUP,"
               "PERF_I_NETSTAT_LOOKUP, PERF_I_USER_CTX_LOOKUP, PERF_I_APP_CTX_LOOKUP, PERF_I_X509AC_VERIFY_CERT_CHAIN,"
-              "PERF_I_VERIFY_APPLICATION, PERF_I_LOAD_USER_CERT, PERF_I_LOAD_USER_NAME\n");
+              "PERF_I_VERIFY_APPLICATION, PERF_I_LOAD_USER_CERT, PERF_I_LOAD_USER_NAME, PERF_I_NETSTAT_CMD\n");
     hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
     hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
@@ -235,6 +235,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     hip_perf_write_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_I_APP_CTX_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_CMD);
     hip_perf_write_benchmark(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_I_VERIFY_APPLICATION);
     hip_perf_write_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
