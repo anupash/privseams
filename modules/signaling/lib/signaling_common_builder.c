@@ -65,22 +65,25 @@
  *
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_connection_identifier(struct hip_common *msg, const struct signaling_connection *conn)
+int signaling_build_param_signaling_connection(struct hip_common *msg, const struct signaling_connection *conn)
 {
-    int                                          err = 0;
-    struct signaling_param_connection_identifier conn_id;
+    int                         err = 0;
+    struct signaling_connection tmp_conn;
 
     /* Sanity checks */
     HIP_IFEL(msg  == NULL, -1, "Got no msg context. (msg == NULL)\n");
     HIP_IFEL(conn == NULL, -1, "Got no context to built the parameter from.\n");
 
-    hip_set_param_type((struct hip_tlv_common *) &conn_id, HIP_PARAM_SIGNALING_CONNECTION_ID);
-    hip_set_param_contents_len((struct hip_tlv_common *) &conn_id,
-                               sizeof(struct signaling_param_connection_identifier) - sizeof(struct hip_tlv_common));
-    conn_id.id = htonl(conn->id);
+    signaling_copy_connection(&tmp_conn, conn);
 
-    HIP_IFEL(hip_build_param(msg, &conn_id),
-             -1, "Failed to append connection identifier parameter to message.\n");
+    tmp_conn.id       = 0;
+    tmp_conn.src_port = htons(conn->src_port);
+    tmp_conn.dst_port = htons(conn->dst_port);
+
+    HIP_IFEL(hip_build_param_contents(msg, &tmp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+             -1, "build signaling_connection failed \n");
+
+    HIP_DEBUG("Signaling connection added successfully src_port = %u, dst_port = %u \n", conn->src_port, conn->dst_port);
 
 out_err:
     return err;
@@ -1240,25 +1243,23 @@ void signaling_get_hits_from_msg(const struct hip_common *msg, const hip_hit_t *
  */
 int signaling_get_update_type(const struct hip_common *msg)
 {
-    int                                       err           = -1;
-    const struct signaling_param_app_context *param_app_ctx = NULL;
-    const struct hip_seq                     *param_seq     = NULL;
-    const struct hip_ack                     *param_ack     = NULL;
-    const struct hip_cert                    *param_cert    = NULL;
+    int                    err        = -1;
+    const struct hip_seq  *param_seq  = NULL;
+    const struct hip_ack  *param_ack  = NULL;
+    const struct hip_cert *param_cert = NULL;
     //const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
     const struct signaling_param_cert_chain_id *param_cer_chain_id = NULL;
 
     //TODO check for the parameters to be put here
-    param_app_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_NAME);
-    param_seq     = hip_get_param(msg, HIP_PARAM_SEQ);
-    param_ack     = hip_get_param(msg, HIP_PARAM_ACK);
-    param_cert    = hip_get_param(msg, HIP_PARAM_CERT);
+    param_seq  = hip_get_param(msg, HIP_PARAM_SEQ);
+    param_ack  = hip_get_param(msg, HIP_PARAM_ACK);
+    param_cert = hip_get_param(msg, HIP_PARAM_CERT);
     //param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_INFO_CERTS);
     param_cer_chain_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CERT_CHAIN_ID);
 
-    if (param_app_ctx && param_seq && !param_ack) {
+    if (param_seq && !param_ack) {
         return SIGNALING_FIRST_BEX_UPDATE;
-    } else if (param_app_ctx && param_seq && param_ack) {
+    } else if (param_seq && param_ack) {
         return SIGNALING_SECOND_BEX_UPDATE;
     } else if (param_ack && !param_seq && !param_cer_chain_id) {
         return SIGNALING_THIRD_BEX_UPDATE;

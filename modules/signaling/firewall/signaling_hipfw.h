@@ -49,7 +49,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, struct tuple *tuple, st
 int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
 int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
 int signaling_hipfw_handle_i3(struct hip_common *common, struct tuple *tuple, const struct hip_fw_context *ctx);
-int signaling_hipfw_handle_update(const struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
+int signaling_hipfw_handle_update(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
 int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx);
 
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

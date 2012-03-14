@@ -104,8 +104,8 @@ int signaling_hipfw_send_connection_request(const hip_hit_t src_hit,
     HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
     HIP_DEBUG_HIT("Src HIT:\t\t", &src_hit);
     HIP_DEBUG_HIT("Dst HIT:\t\t", &dst_hit);
-    HIP_DEBUG("Src Port:\t\t%u\n", src_port);
-    HIP_DEBUG("Dst Port:\t\t%u\n", dst_port);
+    HIP_DEBUG("Src Port:\t\t%u\n", ntohs(src_port));
+    HIP_DEBUG("Dst Port:\t\t%u\n", ntohs(dst_port));
 
 out_err:
     free(msg);

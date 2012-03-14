@@ -274,7 +274,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     struct tuple *other_dir = NULL;
 
 #ifdef DEMO_MODE
-    printf("\033[22;34mReceived R1 packet\033[22;37m\n\033[01;37m");
+    printf("\033[22;34mReceived R1/U1 packet\033[22;37m\n\033[01;37m");
 #endif
 
     if (tuple->direction == ORIGINAL_DIR) {
@@ -288,7 +288,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
-        HIP_ERROR("Could not init connection context from R1 \n");
+        HIP_ERROR("Could not init connection context from R1/U1 \n");
         ret = -1;
     }
 
@@ -309,7 +309,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     signaling_update_info_flags_from_msg(ctx_flags, common, FWD);
 
     /* Step b) */
-    HIP_DEBUG("Connection after receipt of R1 \n");
+    HIP_DEBUG("Connection after receipt of R1/U1 \n");
     signaling_connection_print(&new_conn, "\t");
     //TODO check here if the hits refers to the hit of the initiator
     //TODO check here if ctx_in or ctx_out should be used
@@ -345,7 +345,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_DEBUG("Connection tracking table after receipt of R1\n");
                 signaling_cdb_print();
                 /* Let packet pass */
-                ret = 1;
+                ret = -1;
             } else if (policy_check == 0) {
                 signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
                 HIP_DEBUG("Connection tracking table after receipt of R1\n");
@@ -374,7 +374,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
 #ifdef DEMO_MODE
     if (ret) {
-        printf("\033[22;32mAccepted R1 packet\033[22;37m\n\n\033[01;37m");
+        printf("\033[22;32mAccepted R1/U1 packet\033[22;37m\n\n\033[01;37m");
     }
 #endif
 
@@ -428,7 +428,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct tuple *other_dir = NULL;
 
 #ifdef DEMO_MODE
-    printf("\033[22;34mReceived I2 packet\033[22;37m\n\033[01;37m");
+    printf("\033[22;34mReceived I2/U2 packet\033[22;37m\n\033[01;37m");
 #endif
 
     if (tuple->direction == ORIGINAL_DIR) {
@@ -455,26 +455,27 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
 
+
     /*
      * Handle the incoming response parameters from the Initiator
      */
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
-        HIP_ERROR("Could not init connection context from I2 \n");
+        HIP_ERROR("Could not init connection context from I2/U2 \n");
         ret = -1;
     }
 
-    if ((old_conn = signaling_cdb_get_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port))) {
-        if (old_conn->status == SIGNALING_CONN_BLOCKED) {
-            signaling_cdb_print();
-            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-            ret = 0;
-        } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
+    old_conn = signaling_cdb_get_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port);
+
+    if ((old_conn != NULL) && (old_conn->status == SIGNALING_CONN_BLOCKED)) {
+        signaling_cdb_print();
+        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
+        ret = 0;
+    } else if ((old_conn != NULL) && (old_conn->status == SIGNALING_CONN_ALLOWED)) {
 #ifdef DEMO_MODE
-            printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+        printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
 #endif
-            ret = 1;
-        }
+        ret = 1;
     } else {
         //Check for acknowledgement
         HIP_DEBUG("Verifying Ack to Service Offer.\n");
@@ -482,7 +483,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-        if (signaling_verify_service_ack(common, tuple->offer_hash) != -1) {
+        if (signaling_verify_service_ack(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
             HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
             hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
@@ -510,7 +511,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                     //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
                     ret = 0;
                 } else {
-                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
                     signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
                     signaling_cdb_print();
                     ret = -1;
@@ -528,7 +529,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                     ret = 0;
                 } else if (policy_check == 0) {
                     // TODO add connection to scdb
-                    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+                    HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
                     signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
                     signaling_cdb_print();
                     ret = -1;
@@ -539,7 +540,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
             hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-            HIP_DEBUG("Service Ack in I2 could not be verified. Blocking the connection.\n");
+            HIP_DEBUG("Service Ack in I2/U2 could not be verified. Blocking the connection.\n");
             signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
             signaling_cdb_print();
             ret = 0;
@@ -553,7 +554,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     }
     /* Let packet pass */
 #ifdef DEMO_MODE
-    printf("\033[22;32mAccepted I2 packet. Checking for information required from Responder\033[22;37m\n\n\033[01;37m");
+    printf("\033[22;32mAccepted I2/U2 packet. Checking for information required from Responder\033[22;37m\n\n\033[01;37m");
 #endif
 
     /*
@@ -590,7 +591,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             ctx->modified = 1;
             signaling_cdb_add_connection(common->hitr, common->hits, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_PROCESSING);
             next_service_offer_id++;
-            HIP_DEBUG("Received I2. Connection tracking table after adding of Service Offers\n");
+            HIP_DEBUG("Received I2/U2. Connection tracking table after adding of Service Offers\n");
             signaling_cdb_print();
             ret = -1;
         } else if (policy_check == 0) {
@@ -614,7 +615,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             signaling_cdb_add_connection(common->hitr, common->hits, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_ALLOWED);
             signaling_cdb_print();
 #ifdef DEMO_MODE
-            printf("\033[22;32mAccepted I2 packet\033[22;37m\n\n\033[01;37m");
+            printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
 #endif
             ret = 1;
         }
@@ -658,15 +659,21 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection_flags *ctx_flags     = NULL;
     struct policy_tuple               *matched_tuple = NULL;
     struct signaling_cdb_entry        *old_conn;
+    struct in6_addr                    hit_i;
+    struct in6_addr                    hit_r;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
 
 #ifdef DEMO_MODE
-    printf("\033[22;34mReceived R2 packet\033[22;37m\n\033[22;37m");
+    printf("\033[22;34mReceived R2/U3 packet\033[22;37m\n\033[22;37m");
 #endif
 
-    other_dir = &tuple->connection->reply;
+    if (common->type_hdr == HIP_R2) {
+        other_dir = &tuple->connection->reply;
+    } else if (common->type_hdr == HIP_UPDATE) {
+        other_dir = &tuple->connection->original;
+    }
 
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
@@ -684,7 +691,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
      */
     /* Step a) */
     if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
-        HIP_ERROR("Could not init connection context from R2 \n");
+        HIP_ERROR("Could not init connection context from R2/U3 \n");
         ret = -1;
     }
 
@@ -692,15 +699,23 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
 
+    if (common->type_hdr == HIP_R2) {
+        hit_i = common->hitr;
+        hit_r = common->hits;
+    } else if (common->type_hdr == HIP_UPDATE) {
+        hit_i = common->hits;
+        hit_r = common->hitr;
+    }
+
     // Here the ports are in reversed order as the packet is from the Responder
-    if ((old_conn = signaling_cdb_get_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port))) {
+    if ((old_conn = signaling_cdb_get_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port))) {
         if (old_conn->status == SIGNALING_CONN_BLOCKED) {
             signaling_cdb_print();
             signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
             ret = 0;
         } else if (old_conn->status == SIGNALING_CONN_ALLOWED) {
 #ifdef DEMO_MODE
-            printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[01;37m");
+            printf("\033[22;32mAccepted R2/U3 packet\033[22;37m\n\n\033[01;37m");
 #endif
             ret = 1;
         } else if (old_conn->status == SIGNALING_CONN_PROCESSING) {
@@ -720,21 +735,21 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_DEBUG("Start PERF_MBOX_R2_VERIFY_INFO_REQ\n");
                 hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
 #endif
-                if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
+                if ((matched_tuple = signaling_policy_engine_check_and_flag(&hit_i, &ctx_in, &ctx_flags, &policy_check))) {
                     policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
 #endif
                     if (policy_verify == -1) {
-                        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                         signaling_cdb_print();
                         //TODO confirm with Rene if we need it or not.
                         //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
                         ret = 0;
                     } else {
-                        HIP_DEBUG("Connection tracking table after receipt of R2\n");
-                        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                        HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
+                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
                         signaling_cdb_print();
                         ret = 1;
                     }
@@ -745,14 +760,14 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #endif
                     if (policy_check == -1) {
                         // TODO add connection to scdb
-                        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                         signaling_cdb_print();
                         signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
                         ret = 0;
                     } else if (policy_check == 0) {
                         // TODO add connection to scdb
-                        HIP_DEBUG("Connection tracking table after receipt of R2\n");
-                        signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
+                        HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
+                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
                         signaling_cdb_print();
                         ret = 1;
                     }
@@ -764,7 +779,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #endif
                 //Service Acknowledgement didn't veriy correctly.
                 HIP_DEBUG("Service Acknowledgement didn't veriy correctly.\n");
-                signaling_cdb_add_connection(common->hitr, common->hits, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
+                signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                 signaling_cdb_print();
                 signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
                 ret = 0;
@@ -780,7 +795,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 
     /* Let packet pass */
 #ifdef DEMO_MODE
-    printf("\033[22;32mAccepted R2 packet\033[22;37m\n\n\033[22;37m");
+    printf("\033[22;32mAccepted R2/U3 packet\033[22;37m\n\n\033[22;37m");
 #endif
     free(ctx_flags);
     free(matched_tuple);
@@ -929,7 +944,7 @@ out_err:
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
+int signaling_hipfw_handle_update(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
     int err = 0;
     int update_type;
@@ -942,14 +957,20 @@ int signaling_hipfw_handle_update(const struct hip_common *common, UNUSED struct
     switch (update_type) {
     case SIGNALING_FIRST_BEX_UPDATE:
         HIP_DEBUG("Received FIRST BEX Update... \n");
+        HIP_IFEL(signaling_hipfw_handle_r1(common, tuple, ctx) == 0,
+                 -1, "Handling First BEX Update/U1 failed\n");
         return 1;
         break;
     case SIGNALING_SECOND_BEX_UPDATE:
         HIP_DEBUG("Received SECOND BEX Update... \n");
+        HIP_IFEL(signaling_hipfw_handle_i2(common, tuple, ctx) == 0,
+                 -1, "Handling Second BEX Update/U2 failed\n");
         return 1;
         break;
     case SIGNALING_THIRD_BEX_UPDATE:
         HIP_DEBUG("Received THIRD BEX Update... \n");
+        HIP_IFEL(signaling_hipfw_handle_r2(common, tuple, ctx) == 0,
+                 -1, "Handling Third BEX Update/U3 failed\n");
         return 1;
         break;
     case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:

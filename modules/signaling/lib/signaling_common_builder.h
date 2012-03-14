@@ -14,8 +14,8 @@
 #include "modules/signaling/hipd/signaling.h"
 
 /* Builders for on the wire parameters */
-int signaling_build_param_connection_identifier(struct hip_common *msg,
-                                                const struct signaling_connection *conn);
+int signaling_build_param_signaling_connection(struct hip_common *msg,
+                                               const struct signaling_connection *conn);
 int signaling_build_param_application_context(struct hip_common *msg,
                                               const struct signaling_port_pair *port_list,
                                               const struct signaling_application_context *app_ctx);

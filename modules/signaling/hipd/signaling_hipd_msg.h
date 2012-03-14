@@ -56,8 +56,8 @@ int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t
 int signaling_send_first_update(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit,
                                 struct signaling_connection *conn);
-int signaling_send_second_update(const struct hip_common *first_update);
-int signaling_send_third_update(const struct hip_common *second_update);
+int signaling_send_second_update(struct hip_packet_context *ctx);
+int signaling_send_third_update(struct hip_packet_context *ctx);
 
 /* Functions for certificate exchange */
 int signaling_send_user_auth_failed_ntf(struct hip_hadb_state *ha, const int reason);

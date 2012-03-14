@@ -36,6 +36,8 @@
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 
+#define DEMO_MODE 1
+
 /* Definition of return values for signaling_policy_check.
  */
 enum policy_all {

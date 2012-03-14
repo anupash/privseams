@@ -93,7 +93,7 @@ static const char *prg_cache_get(unsigned long inode)
             return pn->name;
         }
     }
-    return "-";
+    return '\0';
 }
 
 static void prg_cache_clear(void)
@@ -331,6 +331,7 @@ static void finish_this_one(int uid, unsigned long inode, const char *timers)
     char           temp[20];
     char          *ch;
 
+    HIP_DEBUG("finish_this_one()\n");
     if (flag_exp > 1) {
         if (!(flag_not & FLAG_NUM_USER) && ((pw = getpwuid(uid)) != NULL)) {
             HIP_DEBUG("pw->pw_name: %-10s \n", pw->pw_name);
@@ -339,12 +340,16 @@ static void finish_this_one(int uid, unsigned long inode, const char *timers)
         }
         sys_ctx->inode = inode;
     }
+
     if (flag_prg) {
         sprintf(temp, "%-16s", prg_cache_get(inode));
-        ch           = strtok(temp, "/");
-        sys_ctx->pid = strtol(ch, NULL, 10);
-        ch           = strtok(NULL, " ");
-        strcpy(sys_ctx->progname, ch);
+        if (strlen(temp) > 0) {
+            HIP_DEBUG("prg_cache_get %-16s \n", temp);
+            ch           = strtok(temp, "/");
+            sys_ctx->pid = strtol(ch, NULL, 10);
+            ch           = strtok(NULL, " ");
+            strcpy(sys_ctx->progname, ch);
+        }
     }
     if (flag_opt) {
         HIP_DEBUG("timers %s\n", timers);
@@ -564,7 +569,7 @@ int netstat_info_tpneW(int src_port, int dst_port, struct system_app_context *ct
         if (!flag_cnt || i) {
             break;
         }
-        prg_cache_clear();
     }
+    prg_cache_clear();
     return i;
 }

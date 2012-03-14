@@ -442,8 +442,8 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
 
 
     /* Append connection identifier */
-    signaling_build_param_connection_identifier(msg_buf, conn);
-    signaling_build_param_connection_identifier(msg_buf2, conn);
+    signaling_build_param_signaling_connection(msg_buf, conn);
+    signaling_build_param_signaling_connection(msg_buf2, conn);
     /* Append hits */
     HIP_IFEL(hip_build_param_contents(msg_buf, &common->hitr, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (dst hit) failed\n");

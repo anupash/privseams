@@ -165,33 +165,33 @@ int signaling_handle_connection_request(struct hip_common *msg,
         new_conn.src_port = ntohs(*our_port);
         new_conn.dst_port = ntohs(*peer_port);
 
+        /* check if previous BEX has been completed */
+        if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT)) {
+            HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
+            signaling_connection_print(conn, "");
+        } else {
+            /* now trigger the UPDATE */
+            HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, &new_conn),
+                     -1, "Failed triggering first bex update.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+#endif
+            HIP_DEBUG("Triggered UPDATE for following connection context:\n");
+            signaling_connection_print(&new_conn, "");
+        }
+
         memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
         HIP_IFEL(signaling_get_verified_application_context_by_ports(&new_conn, &sig_state->pending_conn_context, INITIATOR), -1, "Getting application context failed.\n");
         HIP_IFEL(signaling_get_verified_user_context(&sig_state->pending_conn_context), -1, "Getting user context failed.\n");
 
-        HIP_DEBUG("Signature algorithm: %u", sig_state->pending_conn_context.user.rdata.algorithm);
-
-
-        /* save application context to our local state */
+        /* save signaling connection to our local state */
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could save connection in local state\n");
 
-        /* now trigger the UPDATE */
-        //TODO talk to Rene about this
-//        if (conn->status == SIGNALING_CONN_PROCESSING) {
-        HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, conn),
-                 -1, "Failed triggering first bex update.\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
-#endif
-        HIP_DEBUG("Triggered UPDATE for following connection context:\n");
+        HIP_DEBUG("Started new UPDATE for following connection context:\n");
         signaling_connection_print(conn, "");
-//        } else {
-        HIP_DEBUG("We have a BEX running, postponing establishment of new connection for: \n");
-        signaling_connection_print(conn, "");
-//        }
-    } else {       // BEX
+    } else {        // BEX
         HIP_DEBUG("Triggering BEX \n");
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
         HIP_IFEL(hip_netdev_trigger_bex_msg(msg, src),
