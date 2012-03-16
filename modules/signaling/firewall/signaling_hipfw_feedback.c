@@ -451,9 +451,9 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
              -1, "build param contents (src hit) failed\n");
 
     /* Sign the packet */
-    HIP_IFEL(hip_rsa_sign(priv_key, msg_buf),
+    HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf),
              -1, "Could not sign notification for source host \n");
-    HIP_IFEL(hip_rsa_sign(priv_key, msg_buf2),
+    HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf2),
              -1, "Could not sign notification for destination host\n");
 
     /* Send to source and destination of the connection */

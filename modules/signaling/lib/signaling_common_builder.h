@@ -46,7 +46,9 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
 int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
                                          struct signaling_connection_flags *flags,
                                          int service_offer_id,
-                                         unsigned char *hash);
+                                         unsigned char *hash,
+                                         RSA           *mb_key,
+                                         X509          *mb_cert);
 int signaling_verify_service_ack(struct hip_common *msg,
                                  unsigned char *stored_hash);
 

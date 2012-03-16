@@ -863,12 +863,97 @@ out_err:
     return err;
 }
 
-int signaling_add_service_offer_to_msg_s(UNUSED struct hip_common *msg,
-                                         UNUSED struct signaling_connection_flags *flags,
-                                         UNUSED int service_offer_id,
-                                         UNUSED unsigned char *hash)
+int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
+                                         struct signaling_connection_flags *flags,
+                                         int service_offer_id,
+                                         unsigned char *hash,
+                                         RSA           *mb_key,
+                                         X509          *mb_cert)
 {
-    return 0;
+    int                                    err = 0;
+    int                                    len;
+    int                                    idx = 0;
+    struct signaling_param_service_offer_s param_service_offer_s;
+    struct signaling_param_service_offer_s tmp_service_offer_s;
+    unsigned char                          signature_buf[HIP_MAX_RSA_KEY_LEN / 8];
+
+    HIP_DEBUG("Adding service offer parameter according to the policy\n");
+    /* build and append parameter */
+    hip_set_param_type((struct hip_tlv_common *) &param_service_offer_s, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+    tmp_service_offer_s.service_offer_id = htons(service_offer_id);
+    //TODO check for the following values to be assigned to the parameter types
+    tmp_service_offer_s.service_type          = htons(0);
+    tmp_service_offer_s.service_description   = htonl(0);
+    tmp_service_offer_s.service_cert_hint_len =  htons(sizeof(mb_cert->skid->length));
+    tmp_service_offer_s.service_signature_len =  htons(0);
+
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_OS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_OS);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_KERNEL)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_KERNEL);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_ID)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_ID);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_CERTS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_CERTS);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_ID)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(USER_INFO_ID);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_CERTS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(USER_INFO_CERTS);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_NAME)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_NAME);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_CONNECTIONS);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_QOS_CLASS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_QOS_CLASS);
+        idx++;
+    }
+    if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_REQUIREMENTS)) {
+        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_REQUIREMENTS);
+        idx++;
+    }
+    HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
+    len = sizeof(struct signaling_param_service_offer_s) - (sizeof(struct hip_tlv_common) + sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx));
+    //Computing the hash of the service offer and storing it in tuple
+    hip_set_param_contents_len((struct hip_tlv_common *) &tmp_service_offer_s, len);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
+#endif
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &tmp_service_offer_s, len, hash),
+             -1, "Could not build hash of the service offer \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
+#endif
+    //print_hash(hash);
+
+    memcpy(tmp_service_offer_s.service_cert_hint, mb_cert->skid, mb_cert->skid->length);
+
+    HIP_IFEL(hip_build_param(msg, &param_service_offer_s),
+             -1, "Could not build notification parameter into message \n");
+
+
+out_err:
+    return err;
 }
 
 int signaling_verify_service_ack(struct hip_common *msg,
