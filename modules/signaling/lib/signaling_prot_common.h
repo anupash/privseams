@@ -887,6 +887,50 @@ struct signaling_param_service_offer_u {
 } __attribute__((packed));
 
 
+/*
+ *   Parameter for the middlebox to offer services
+ *   The parameter contains Service Offer Identifier, Service Type and Service Description
+ *   Also contains the information parameters requested by the middlebox
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       SERVICE_OFFER_ID        |          SERVICE_TYPE         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |    SERVICE_CERT_HINT_LEN      |       SERVICE_SIG_LEN         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                          SERVICE_DESCRIPTION                  |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       ENDPOINT_INFO_REQ       |              ...              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                              ...                              /
+ * /                              ...                              /
+ * /                              ...                              /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                        SERVICE_CERT_HINT                      /
+ * /                                                               |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                              ...                              /
+ * /                       SERVICE_SIGNATURE                       /
+ * /                              ...                              /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct signaling_param_service_offer_s {
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    service_offer_id;
+    uint16_t    service_type;
+    uint16_t    service_cert_hint_len;
+    uint16_t    service_signature_len;
+    uint32_t    service_description;
+    uint16_t    endpoint_info_req[MAX_NUM_INFO_ITEMS];
+} __attribute__((packed));
+
 
 /*
  *   Parameter for acknowledging the Service Offer from middlebox
