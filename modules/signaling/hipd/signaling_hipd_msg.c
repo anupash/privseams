@@ -1189,13 +1189,13 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     int                                    err       = 0;
     struct signaling_hipd_state           *sig_state = NULL;
     struct signaling_param_service_offer_u param_service_offer_u;
-    //struct signaling_param_service_offer_s param_service_offer_s;
-    const struct hip_tlv_common    *param = NULL;
-    struct signaling_connection     temp_conn;
-    struct signaling_connection     new_conn;
-    struct signaling_connection    *conn;
-    struct signaling_flags_info_req flags_info_requested;
-    uint8_t                         ctx_looked_up = 0;
+    struct signaling_param_service_offer_s param_service_offer_s;
+    const struct hip_tlv_common           *param = NULL;
+    struct signaling_connection            temp_conn;
+    struct signaling_connection            new_conn;
+    struct signaling_connection           *conn;
+    struct signaling_flags_info_req        flags_info_requested;
+    uint8_t                                ctx_looked_up = 0;
 
     /* sanity checks */
     if (packet_type == HIP_R1) {
@@ -1272,6 +1272,16 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         } while ((param = hip_get_next_param(ctx->input_msg, param)));
     } else {
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
+    }
+
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S))) {
+        HIP_DEBUG("Signed Service Offers from Middleboxes received.\n");
+        HIP_IFEL(signaling_copy_service_offer_s(&param_service_offer_s, (const struct signaling_param_service_offer_s *) (param)),
+                 -1, "Could not copy connection context\n");
+        signaling_build_response_to_service_offer_s(ctx->output_msg, *sig_state->pending_conn,
+                                                    &sig_state->pending_conn_context,
+                                                    &param_service_offer_s,
+                                                    &flags_info_requested);
     }
 
     // Now Add the service acknowledgements

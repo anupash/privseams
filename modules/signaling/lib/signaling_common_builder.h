@@ -83,7 +83,7 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
 int signaling_build_response_to_service_offer_s(struct hip_common *msg,
                                                 struct signaling_connection conn,
                                                 struct signaling_connection_context *ctx_out,
-                                                const struct signaling_param_service_offer_u *offer,
+                                                struct signaling_param_service_offer_s *offer,
                                                 struct signaling_flags_info_req    *flags);
 int signaling_build_service_ack(struct hip_common *input_msg,
                                 struct hip_common *output_msg);
