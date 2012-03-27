@@ -775,21 +775,40 @@ int signaling_copy_port_pair(struct signaling_port_pair *const dst,
 }
 
 /**
- * Copies a complete service offer parameter from src to dst.
+ * Copies a complete service offer parameter of unsigned typefrom src to dst.
  *
  * @param dst   the destination struct
  * @param src   the source struct
  *
  * @return negative value on error, 0 on success
  */
-int signaling_copy_service_offer(struct signaling_param_service_offer_u *const dst,
-                                 const struct signaling_param_service_offer_u *const src)
+int signaling_copy_service_offer_u(struct signaling_param_service_offer_u *const dst,
+                                   const struct signaling_param_service_offer_u *const src)
 {
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;
     }
     memcpy(dst, src, sizeof(struct signaling_param_service_offer_u));
+    return 0;
+}
+
+/**
+ * Copies a complete service offer parameter of signed type from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_service_offer_s(struct signaling_param_service_offer_s *const dst,
+                                   const struct signaling_param_service_offer_s *const src)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_param_service_offer_s));
     return 0;
 }
 

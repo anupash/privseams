@@ -900,7 +900,7 @@ struct signaling_param_service_offer_u {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |       SERVICE_OFFER_ID        |          SERVICE_TYPE         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |    SERVICE_CERT_HINT_LEN      |       SERVICE_SIG_LEN         |
+ * |    SERVICE_CERT_HINT_LEN      |   SIG_ALGO    |    SIG_LEN    |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                          SERVICE_DESCRIPTION                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -926,10 +926,12 @@ struct signaling_param_service_offer_s {
     uint16_t      service_offer_id;
     uint16_t      service_type;
     uint16_t      service_cert_hint_len;
-    uint16_t      service_signature_len;
+    uint8_t       service_sig_algo;
+    uint8_t       service_sig_len;
     uint32_t      service_description;
     uint16_t      endpoint_info_req[MAX_NUM_INFO_ITEMS];
     unsigned char service_cert_hint[HIP_MAX_RSA_KEY_LEN / 8];
+    unsigned char service_signature[HIP_MAX_RSA_KEY_LEN / 8];
 } __attribute__((packed));
 
 
@@ -1261,9 +1263,10 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
                                        struct signaling_connection *const conn);
 int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
-int signaling_copy_service_offer(struct signaling_param_service_offer_u *const dst,
-                                 const struct signaling_param_service_offer_u *const src);
-
+int signaling_copy_service_offer_u(struct signaling_param_service_offer_u *const dst,
+                                   const struct signaling_param_service_offer_u *const src);
+int signaling_copy_service_offer_s(struct signaling_param_service_offer_s *const dst,
+                                   const struct signaling_param_service_offer_s *const src);
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn);

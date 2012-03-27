@@ -1188,13 +1188,14 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 {
     int                                    err       = 0;
     struct signaling_hipd_state           *sig_state = NULL;
-    struct signaling_param_service_offer_u param_service_offer;
-    const struct hip_tlv_common           *param = NULL;
-    struct signaling_connection            temp_conn;
-    struct signaling_connection            new_conn;
-    struct signaling_connection           *conn;
-    struct signaling_flags_info_req        flags_info_requested;
-    uint8_t                                ctx_looked_up = 0;
+    struct signaling_param_service_offer_u param_service_offer_u;
+    //struct signaling_param_service_offer_s param_service_offer_s;
+    const struct hip_tlv_common    *param = NULL;
+    struct signaling_connection     temp_conn;
+    struct signaling_connection     new_conn;
+    struct signaling_connection    *conn;
+    struct signaling_flags_info_req flags_info_requested;
+    uint8_t                         ctx_looked_up = 0;
 
     /* sanity checks */
     if (packet_type == HIP_R1) {
@@ -1246,7 +1247,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         do {
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                 HIP_DEBUG("Service Offers from Middleboxes received.\n");
-                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                HIP_IFEL(signaling_copy_service_offer_u(&param_service_offer_u, (const struct signaling_param_service_offer_u *) (param)),
                          -1, "Could not copy connection context\n");
 
                 // Check if the context has already been looked up
@@ -1262,7 +1263,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 
                 //TODO also add the handler for signed service offer parameter
                 if (signaling_build_response_to_service_offer_u(ctx->output_msg, *sig_state->pending_conn,
-                                                                &sig_state->pending_conn_context, &param_service_offer,
+                                                                &sig_state->pending_conn_context, &param_service_offer_u,
                                                                 &flags_info_requested)) {
                     HIP_DEBUG("Building of application context parameter failed.\n");
                     err = 0;
@@ -1299,13 +1300,14 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 {
     int                                    err       = 0;
     struct signaling_hipd_state           *sig_state = NULL;
-    struct signaling_param_service_offer_u param_service_offer;
-    const struct hip_tlv_common           *param;
-    struct signaling_connection            new_conn;
-    struct signaling_connection           *conn;
-    struct signaling_connection            temp_conn;
-    struct signaling_flags_info_req        flags_info_requested;
-    uint8_t                                ctx_looked_up = 0;
+    struct signaling_param_service_offer_u param_service_offer_u;
+    //struct signaling_param_service_offer_s param_service_offer_s;
+    const struct hip_tlv_common    *param;
+    struct signaling_connection     new_conn;
+    struct signaling_connection    *conn;
+    struct signaling_connection     temp_conn;
+    struct signaling_flags_info_req flags_info_requested;
+    uint8_t                         ctx_looked_up = 0;
 
     /* sanity checks */
     if (packet_type == HIP_I2) {
@@ -1346,7 +1348,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
-                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer_u *) (param)),
+                HIP_IFEL(signaling_copy_service_offer_u(&param_service_offer_u, (const struct signaling_param_service_offer_u *) (param)),
                          -1, "Could not copy connection context\n");
 
                 // Check if the context has already been looked up
@@ -1364,7 +1366,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 
                 //TODO also add the handler for signed service offer parameter
                 if (signaling_build_response_to_service_offer_u(ctx->output_msg, new_conn,
-                                                                &sig_state->pending_conn_context, &param_service_offer,
+                                                                &sig_state->pending_conn_context, &param_service_offer_u,
                                                                 &flags_info_requested)) {
                     HIP_DEBUG("Building of application context parameter failed.\n");
                     err = 0;
@@ -1375,6 +1377,12 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
     }
 
+/* else if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S))) {
+ *            HIP_DEBUG("Signed Service Offers from Middleboxes received.\n");
+ *           HIP_IFEL(signaling_copy_service_offer_s(&param_service_offer_s, (const struct signaling_param_service_offer_s *) (param)),
+ *                    -1, "Could not copy connection context\n");
+ *   }
+ */
 
     // Now Add the service acknowledgements
 #ifdef CONFIG_HIP_PERFORMANCE

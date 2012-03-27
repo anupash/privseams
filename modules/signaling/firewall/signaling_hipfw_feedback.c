@@ -57,7 +57,7 @@
 /* The identity of the firewall */
 static RSA            *rsa_key  = NULL;
 static EC_KEY         *priv_key = NULL;
-static X509           *cert     = NULL;
+static X509           *mb_cert  = NULL;
 static struct in6_addr our_hit;
 
 /* Sockets for output */
@@ -152,7 +152,7 @@ int signaling_hipfw_feedback_init(const char *key_file, const char *cert_file)
     //load_ecdsa_private_key(key_file, &priv_key);
     HIP_DEBUG("Successfully Loaded the MiddleBox RSA key. Should not crash anymore.\n");
 
-    cert = load_x509_certificate(cert_file);
+    mb_cert = load_x509_certificate(cert_file);
     //hip_any_key_to_hit(priv_key, &our_hit, 0, HIP_HI_ECDSA);
     hip_any_key_to_hit(rsa_key, &our_hit, 0, HIP_HI_RSA);
     HIP_INFO_HIT("Our hit: ", &our_hit);
@@ -195,7 +195,7 @@ int signaling_hipfw_feedback_uninit(void)
     HIP_DEBUG("Uninit signaling firewall feedback module \n");
     EC_KEY_free(priv_key);
     RSA_free(rsa_key);
-    X509_free(cert);
+    X509_free(mb_cert);
     return 0;
 }
 
@@ -428,7 +428,7 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
     hip_build_network_hdr(msg_buf2, HIP_NOTIFY, mask, &our_hit, &common->hitr);
 
     /* Append certificate */
-    HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
+    HIP_IFEL((cert_len = signaling_X509_to_DER(mb_cert, &buf)) < 0,
              -1, "Could not get DER encoding of certificate\n");
     HIP_IFEL(hip_build_param_cert(msg_buf, 0, 1, 1, HIP_CERT_X509V3, buf, cert_len),
              -1, "Could not build cert parameter\n");
@@ -468,4 +468,22 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
 
 out_err:
     return err;
+}
+
+RSA     *signaling_hipfw_feedback_get_mb_key()
+{
+    if (rsa_key != NULL) {
+        return rsa_key;
+    } else {
+        return NULL;
+    }
+}
+
+X509    *signaling_hipfw_feedback_get_mb_cert()
+{
+    if (mb_cert != NULL) {
+        return mb_cert;
+    } else {
+        return NULL;
+    }
 }
