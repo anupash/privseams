@@ -101,4 +101,8 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
 /*Utility function*/
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
+char *signaling_concatenate_paths(const char *str1, char *str2);
+unsigned char *signaling_extract_skey_ident_from_cert(X509 *cert, unsigned int *len);
+int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
+                                       uint8_t *signature, uint8_t sig_len);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

@@ -32,6 +32,9 @@
 #include <unistd.h>
 #include <openssl/pem.h>
 #include <openssl/sha.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -40,6 +43,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
 #include "lib/core/hostid.h"
+#include "lib/core/crypto.h"
 #include "hipd/hipd.h"
 
 
@@ -874,22 +878,18 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     int tmp_len    = 0;
     int header_len = 0;
     ;
-    int info_len     = 0;
-    int skid_len     = 0;
-    int idx          = 0;
-    int contents_len = 0;
-    ;
-    int                                    k = 0;
+    int                                    info_len     = 0;
+    int                                    skid_len     = 0;
+    int                                    idx          = 0;
+    int                                    contents_len = 0;
     struct signaling_param_service_offer_s param_service_offer_s;
     struct signaling_param_service_offer_s tmp_service_offer_s;
     uint8_t                                sha1_digest[HIP_AH_SHA_LEN];
     uint8_t                               *signature = NULL;
-    uint8_t                               *tmp_ptr   = (uint8_t *) &param_service_offer_s;
     unsigned int                           sig_len;
-
-    X509_EXTENSION    *tmp_x509_ext    = NULL;
-    ASN1_OCTET_STRING *data            = NULL;
-    unsigned char     *ext_data_buffer = NULL;
+    uint8_t                               *cert_hint = NULL;
+    unsigned int                           cert_hint_len;
+    uint8_t                               *tmp_ptr = (uint8_t *) &param_service_offer_s;
 
     HIP_DEBUG("Adding service offer parameter according to the policy\n");
     /* build and append parameter */
@@ -943,24 +943,10 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
     //print_hash(hash);
 
-    /* The logic to get the subjectKeyIdentifier extension is not perfect */
-    k            = X509_get_ext_by_NID(mb_cert, NID_subject_key_identifier, -1);
-    tmp_x509_ext = X509_get_ext(mb_cert, k);
-    if (tmp_x509_ext != NULL) {
-        data =   X509_EXTENSION_get_data(tmp_x509_ext);
-        if (data != NULL) {
-            ext_data_buffer = ASN1_STRING_data(data);
-        }
-    }
-
-    /* We have to leave the 2 bytes from the start for the Sub Key Identifier to be correct
-     * Still no clue as to how to prevent this ugly hack
-     */
-    tmp_len = ASN1_STRING_length(data) - 2;
-    HIP_HEXDUMP("Extension Data = ", ext_data_buffer + 2, tmp_len);
-    tmp_service_offer_s.service_cert_hint_len =  htons(tmp_len);
-    memcpy(tmp_service_offer_s.service_cert_hint, ext_data_buffer + 2, tmp_len);
-    skid_len = tmp_len;
+    cert_hint                                 = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_cert, &cert_hint_len);
+    tmp_service_offer_s.service_cert_hint_len =  htons(cert_hint_len);
+    memcpy(tmp_service_offer_s.service_cert_hint, cert_hint, cert_hint_len);
+    skid_len = cert_hint_len;
     HIP_DEBUG(" Service cert hint copied successfully \n");
 
     tmp_len   = RSA_size(mb_key);
@@ -1205,11 +1191,20 @@ int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
     int header_len    = 0;
     int info_len      = 0;
     int signature_len = 0;
-    int cert_hint_len = 0;
 
     unsigned char certificate_hint[HIP_AH_SHA_LEN];
+    unsigned int  cert_hint_len = 0;
+    char         *signature     = NULL;
     //uint16_t tmp_info;
     uint8_t *tmp_ptr = (uint8_t *) offer;
+
+    struct stat    filestat;
+    struct dirent *dirp;
+    // enter existing path to directory below
+    const char *dir_path = "/usr/local/etc/hip/trusted_mb_certs";
+    DIR        *dp       = opendir(dir_path);
+
+    X509 *mb_certificate = NULL;
 
     /* sanity checks */
     HIP_IFEL(!offer, -1, "Got NULL for signed service offer parameter\n");
@@ -1231,13 +1226,54 @@ int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
     tmp_ptr += (header_len + info_len);
     memcpy(certificate_hint, tmp_ptr, HIP_AH_SHA_LEN);
     HIP_HEXDUMP("Received certificate hint = ", certificate_hint, HIP_AH_SHA_LEN);
+    tmp_ptr += HIP_AH_SHA_LEN;
+
+
+    if (dp != NULL) {
+        while ((dirp = readdir(dp)) != NULL) {
+            char          *filepath;
+            unsigned char *tmp_cert_hint;
+            unsigned int   tmp_cert_hint_len;
+            filepath = signaling_concatenate_paths(dir_path, dirp->d_name);
+            if (stat(filepath, &filestat)) {
+                continue;
+            }
+            if (S_ISDIR(filestat.st_mode)) {
+                continue;
+            }
+            //printf("Path %s\n", filepath);
+            mb_certificate = load_x509_certificate(filepath);
+            tmp_cert_hint  = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_certificate, &tmp_cert_hint_len);
+            if ((cert_hint_len == tmp_cert_hint_len) && !memcmp(tmp_cert_hint, certificate_hint, cert_hint_len)) {
+                HIP_DEBUG("Found certificate in our store %s \n", filepath);
+                free(filepath);
+                break;
+            }
+
+            free(filepath);
+            filepath = NULL;
+        }
+        closedir(dp);
+    }
 
     signature_len = offer->service_sig_len;
+    signature     = malloc(signature_len);
+    memcpy(signature, tmp_ptr, signature_len);
+    HIP_HEXDUMP("Received signature = ", signature, signature_len);
+
     HIP_DEBUG("Verifying mbox signature in the Signed Service Offer parameter.\n");
+    if (!signaling_verify_service_signature(mb_certificate, (uint8_t *) offer, header_len + info_len + cert_hint_len,
+                                            (uint8_t *) signature, signature_len)) {
+        HIP_DEBUG("Service Signature verified Successfully\n");
+    }
+
     HIP_DEBUG("Processing requests in the Signed Service Offer parameter.\n");
     num_req_info_items = info_len / sizeof(uint16_t);
+    HIP_DEBUG("Num of info request parameters = %d\n", num_req_info_items);
 
 out_err:
+    free(signature);
+    X509_free(mb_certificate);
     return err;
 }
 
@@ -1623,6 +1659,104 @@ int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx)
     }
     return 0;
 
+out_err:
+    return err;
+}
+
+/*
+ * Concatenate two string to form a path
+ *
+ * @return the concatenated string
+ */
+char *signaling_concatenate_paths(const char *str1, char *str2)
+{
+    uint8_t str1_len = strlen(str1);
+    uint8_t str2_len = strlen(str2);
+    int     i, j;
+    char   *result;
+
+    result = malloc((str1_len + str2_len + 2) * sizeof(char));
+    strcpy(result, str1);
+    result[str1_len] = '/';
+    for (i = str1_len + 1, j = 0; ((i < (str1_len + str2_len + 1)) && (j < str2_len)); i++, j++) {
+        result[i] = str2[j];
+    }
+    result[str1_len + str2_len + 1] = '\0';
+    return result;
+}
+
+/*
+ * Get the Subject Key Identifier from the X509 certificate
+ *
+ * @return Subject Key Identifier
+ */
+unsigned char *signaling_extract_skey_ident_from_cert(X509 *cert, unsigned int *len)
+{
+    int                k               = 0;
+    X509_EXTENSION    *tmp_x509_ext    = NULL;
+    ASN1_OCTET_STRING *data            = NULL;
+    unsigned char     *ext_data_buffer = NULL;
+
+
+    /* The logic to get the subjectKeyIdentifier extension is not perfect */
+    k            = X509_get_ext_by_NID(cert, NID_subject_key_identifier, -1);
+    tmp_x509_ext = X509_get_ext(cert, k);
+    if (tmp_x509_ext != NULL) {
+        data =   X509_EXTENSION_get_data(tmp_x509_ext);
+        if (data != NULL) {
+            ext_data_buffer = ASN1_STRING_data(data);
+        }
+    }
+
+    /* We have to leave the 2 bytes from the start for the Sub Key Identifier to be correct
+     * Still no clue as to how to prevent this ugly hack
+     */
+    *len = ASN1_STRING_length(data) - 2;
+    HIP_HEXDUMP("Extension Data = ", ext_data_buffer + 2, *len);
+    return ext_data_buffer + 2;
+}
+
+/*
+ * Verify the mbox signature on the signed service offer
+ *
+ * @return Subject Key Identifier
+ */
+int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
+                                       uint8_t *signature, uint8_t sig_len)
+{
+    int       err = 0;
+    uint8_t   sha1_digest[HIP_AH_SHA_LEN];
+    RSA      *rsa     = NULL;
+    EC_KEY   *ecdsa   = NULL;
+    EVP_PKEY *pub_key = X509_get_pubkey(cert);
+
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, verify_it, verify_it_len, sha1_digest),
+             -1, "Could not build message digest \n");
+
+    switch (EVP_PKEY_type(pub_key->type)) {
+    case EVP_PKEY_EC:
+        // - 1 is the algorithm field
+        HIP_DEBUG("Verifying ECDSA signature\n");
+        ecdsa = EVP_PKEY_get1_EC_KEY(pub_key);
+        HIP_IFEL(ECDSA_size(ecdsa) != sig_len,
+                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n",
+                 ECDSA_size(ecdsa), sig_len);
+        HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, signature),
+                 -1, "ECDSA service signature did not verify correctly\n");
+        break;
+    case EVP_PKEY_RSA:
+        HIP_DEBUG("Verifying RSA signature\n");
+        rsa = EVP_PKEY_get1_RSA(pub_key);
+        HIP_IFEL(RSA_size(rsa) != sig_len,
+                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n",
+                 RSA_size(rsa), sig_len);
+        HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature, RSA_size(rsa), rsa),
+                 -1, "RSA service signature did not verify correctly\n");
+        break;
+    default:
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        break;
+    }
 out_err:
     return err;
 }
