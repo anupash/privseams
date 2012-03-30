@@ -105,4 +105,7 @@ char *signaling_concatenate_paths(const char *str1, char *str2);
 unsigned char *signaling_extract_skey_ident_from_cert(X509 *cert, unsigned int *len);
 int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
                                        uint8_t *signature, uint8_t sig_len);
+int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_service_offer_u *offer_u,
+                                                         struct signaling_param_service_offer_s *offer_s,
+                                                         int end_point_info_len);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

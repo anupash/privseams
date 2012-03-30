@@ -33,6 +33,7 @@
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <dirent.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -718,7 +719,7 @@ int signaling_build_param_user_info_response(struct hip_common *msg,
             memcpy(&user_info_id.pkey[0], ctx->user.pkey, key_len);
             memcpy(&user_info_id.pkey[key_len], ctx->user.subject_name, sub_name_len);
 
-            len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len;
+            len_contents = header_len + (key_len + sizeof(struct hip_host_id_key_rdata)) + sub_name_len - sizeof(struct hip_tlv_common);
             hip_set_param_contents_len((struct hip_tlv_common *) &user_info_id, len_contents);
             hip_set_param_type((struct hip_tlv_common *) &user_info_id, HIP_PARAM_SIGNALING_USER_INFO_ID);
 
@@ -841,7 +842,8 @@ int signaling_add_service_offer_to_msg_u(struct hip_common *msg,
         idx++;
     }
     HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
-    len = sizeof(struct signaling_param_service_offer_u) - sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx);
+    len = sizeof(struct signaling_param_service_offer_u) - sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx)
+          - sizeof(struct hip_tlv_common);
     //Computing the hash of the service offer and storing it in tuple
     hip_set_param_contents_len((struct hip_tlv_common *) &param_service_offer_u, len);
 
@@ -1060,8 +1062,7 @@ int signaling_build_response_to_service_offer_u(struct hip_common *msg,
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER);
     HIP_DEBUG("Processing requests in the Service Offer parameter.\n");
-    num_req_info_items = (hip_get_param_contents_len(offer) - (sizeof(struct hip_tlv_common) +
-                                                               sizeof(offer->service_offer_id) +
+    num_req_info_items = (hip_get_param_contents_len(offer) - (sizeof(offer->service_offer_id) +
                                                                sizeof(offer->service_type) +
                                                                sizeof(offer->service_description))) / sizeof(uint16_t);
 
@@ -1179,22 +1180,24 @@ out_err:
  * @return 0 on success
  */
 //TODO no different parameter types for signed and unsigned service offers. Need to update
-int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
-                                                UNUSED struct signaling_connection conn,
-                                                UNUSED struct signaling_connection_context *ctx_out,
+int signaling_build_response_to_service_offer_s(struct hip_common                      *msg,
+                                                struct signaling_connection             conn,
+                                                struct signaling_connection_context    *ctx_out,
                                                 struct signaling_param_service_offer_s *offer,
-                                                UNUSED struct signaling_flags_info_req    *flags)
+                                                struct signaling_flags_info_req        *flags)
 {
     int err                = 0;
     int num_req_info_items = 0;
     //int      i                  = 0;
-    int header_len    = 0;
-    int info_len      = 0;
-    int signature_len = 0;
-
-    unsigned char certificate_hint[HIP_AH_SHA_LEN];
-    unsigned int  cert_hint_len = 0;
-    char         *signature     = NULL;
+    int                                    header_len          = 0;
+    int                                    info_len            = 0;
+    int                                    signature_len       = 0;
+    uint16_t                               mask                = 0;
+    struct hip_common                     *msg_buf             = NULL; /* It will be used in building the HIP Encrypted param*/
+    struct signaling_param_service_offer_u tmp_service_offer_u = { 0 };
+    unsigned char                          certificate_hint[HIP_AH_SHA_LEN];
+    unsigned int                           cert_hint_len = 0;
+    char                                  *signature     = NULL;
     //uint16_t tmp_info;
     uint8_t *tmp_ptr = (uint8_t *) offer;
 
@@ -1211,13 +1214,15 @@ int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER_S),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
 
-    header_len =    sizeof(struct hip_tlv_common) +
-                 sizeof(offer->service_offer_id) +
-                 sizeof(offer->service_type) +
-                 sizeof(offer->service_cert_hint_len) +
-                 sizeof(offer->service_sig_algo) +
-                 sizeof(offer->service_sig_len) +
-                 sizeof(offer->service_description);
+    /* Allocate and build message buffer */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+             -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
+    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &msg->hits, &msg->hitr); /*Just giving some dummy Packet type*/
+
+
+    header_len =    sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
+                 sizeof(offer->service_cert_hint_len) + sizeof(offer->service_sig_algo) +
+                 sizeof(offer->service_sig_len) + sizeof(offer->service_description);
     info_len = (hip_get_param_contents_len(offer) - (header_len +
                                                      ntohs(offer->service_cert_hint_len) +
                                                      offer->service_sig_len));
@@ -1225,9 +1230,8 @@ int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
 
     tmp_ptr += (header_len + info_len);
     memcpy(certificate_hint, tmp_ptr, HIP_AH_SHA_LEN);
-    HIP_HEXDUMP("Received certificate hint = ", certificate_hint, HIP_AH_SHA_LEN);
+    //HIP_HEXDUMP("Received certificate hint = ", certificate_hint, HIP_AH_SHA_LEN);
     tmp_ptr += HIP_AH_SHA_LEN;
-
 
     if (dp != NULL) {
         while ((dirp = readdir(dp)) != NULL) {
@@ -1259,13 +1263,23 @@ int signaling_build_response_to_service_offer_s(UNUSED struct hip_common *msg,
     signature_len = offer->service_sig_len;
     signature     = malloc(signature_len);
     memcpy(signature, tmp_ptr, signature_len);
-    HIP_HEXDUMP("Received signature = ", signature, signature_len);
+    //HIP_HEXDUMP("Received signature = ", signature, signature_len);
 
     HIP_DEBUG("Verifying mbox signature in the Signed Service Offer parameter.\n");
     if (!signaling_verify_service_signature(mb_certificate, (uint8_t *) offer, header_len + info_len + cert_hint_len,
                                             (uint8_t *) signature, signature_len)) {
         HIP_DEBUG("Service Signature verified Successfully\n");
     }
+
+
+    /* Create a temporary service offer unsigned param.
+     * This will help us to reuse the code in signaling_build_response_to_service_offer_u(..) */
+    HIP_IFEL(signaling_build_service_offer_u_from_service_offer_s(&tmp_service_offer_u, offer, info_len), -1,
+             "Could not build an unsigned service offer from a signed offer\n");
+
+    HIP_IFEL(signaling_build_response_to_service_offer_u(msg_buf, conn, ctx_out, &tmp_service_offer_u, flags), -1,
+             "Could not building responses to the signed service offer");
+    hip_dump_msg(msg_buf);
 
     HIP_DEBUG("Processing requests in the Signed Service Offer parameter.\n");
     num_req_info_items = info_len / sizeof(uint16_t);
@@ -1317,6 +1331,39 @@ int signaling_build_service_ack(struct hip_common *input_msg,
     }
 out_err:
     return err;
+}
+
+/* Create a temporary service offer unsigned param.
+ * This will help us to reuse the code for signaling_build_response_to_service_offer_u(..)
+ * */
+int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_service_offer_u *offer_u,
+                                                         struct signaling_param_service_offer_s *offer_s,
+                                                         int end_point_info_len)
+{
+    int      tmp_len = 0;
+    uint8_t *tmp_ptr = (uint8_t *) offer_s;
+
+    HIP_ASSERT(offer_u);
+    HIP_ASSERT(offer_s);
+
+    HIP_DEBUG("No buildinf the service offer unsigned param\n");
+    tmp_len =   sizeof(struct hip_tlv_common) + sizeof(offer_u->service_offer_id) +
+              sizeof(offer_u->service_type);
+    memcpy(offer_u, tmp_ptr, tmp_len);
+    tmp_ptr += tmp_len + sizeof(offer_s->service_cert_hint_len) + sizeof(offer_s->service_sig_algo) +
+               sizeof(offer_s->service_sig_len);
+    tmp_len = sizeof(offer_u->service_description);
+    memcpy(&offer_u->service_description, tmp_ptr, tmp_len);
+    tmp_ptr += tmp_len;
+    tmp_len  = end_point_info_len;
+    memcpy(&offer_u->endpoint_info_req[0], tmp_ptr, tmp_len);
+
+    tmp_len +=  sizeof(offer_u->service_offer_id) + sizeof(offer_u->service_type) +
+               sizeof(offer_u->service_description);
+    hip_set_param_contents_len((struct hip_tlv_common *) offer_u, tmp_len);
+    hip_set_param_type((struct hip_tlv_common *) offer_u, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+
+    return 0;
 }
 
 /*
