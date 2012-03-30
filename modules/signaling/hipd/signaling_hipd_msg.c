@@ -1290,7 +1290,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
     hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
 #endif
-    HIP_IFEL(signaling_build_service_ack(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+    HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
@@ -1400,7 +1400,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
     hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
 #endif
-    HIP_IFEL(signaling_build_service_ack(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+    HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);

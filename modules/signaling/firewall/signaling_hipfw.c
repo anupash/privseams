@@ -165,7 +165,8 @@ int signaling_hipfw_init(const char *policy_file)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,            "HIP_PARAM_SIGNALING_CONNECTION");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,           "HIP_PARAM_SIGNALING_SERVICE_ACK");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,           "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,           "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
 
@@ -497,7 +498,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
         if (strlen((char *) tuple->offer_hash) > 0) {
-            if (signaling_verify_service_ack(common, tuple->offer_hash)) {
+            if (signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
@@ -748,7 +749,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
 #endif
             if (strlen((char *) tuple->offer_hash) > 0) {
-                if (signaling_verify_service_ack(common, other_dir->offer_hash)) {
+                if (signaling_verify_service_ack_u(common, other_dir->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);

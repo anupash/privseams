@@ -76,8 +76,9 @@
 #define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5119
 
 
-#define HIP_PARAM_SIGNALING_SERVICE_ACK             5120
-#define HIP_PARAM_SIGNALING_SERVICE_NACK            5121
+#define HIP_PARAM_SIGNALING_SERVICE_ACK_U            5120
+#define HIP_PARAM_SIGNALING_SERVICE_ACK_S            5121
+#define HIP_PARAM_SIGNALING_SERVICE_NACK            5122
 
 /*Parameter type for user signature*/
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62504
@@ -150,6 +151,8 @@
 #define MAX_SIZE_PROGNAME                           20
 
 
+#define SIGNALING_HIP_SYMM_KEY_LEN 16
+
 /* Direction for connections */
 enum direction {
     UNINIT, // for unassigned connection contexts
@@ -209,12 +212,14 @@ enum flag_internal {
 
 enum flags_service_state {
     SERVICE_OFFER = 0,
-    SERVICE_ACK   = 1,
-    SERVICE_NACK  = 2,
+    SERVICE_ACK_U   = 1,
+    SERVICE_ACK_S  = 2,
+    SERVICE_NACK  = 3,
 
-    SERVICE_OFFER_RECV = 3,
-    SERVICE_ACK_RECV   = 4,
-    SERVICE_NACK_RECV  = 5
+    SERVICE_OFFER_RECV = 4,
+    SERVICE_ACK_U_RECV   = 5,
+    SERVICE_ACK_S_RECV   = 6,
+    SERVICE_NACK_RECV  = 7
 };
 
 enum flags_service_options {
@@ -954,12 +959,54 @@ struct signaling_param_service_offer_s {
  *
  */
 
-struct signaling_param_service_ack {
+struct signaling_param_service_ack_u {
     hip_tlv       type;
     hip_tlv_len   length;
     uint16_t      service_offer_id;
     uint16_t      service_option;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
+} __attribute__((packed));
+
+
+/*
+ *   Parameter for acknowledging the Service Offer from middlebox
+ *   The parameter contains Service Offer Identifier and Service Options
+ *   Also contains the hash of the service offer
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       SERVICE_OFFER_ID        |          SERVICE_OPTION       |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               /
+ * /                         SERVICE_OFFER_HASH                    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
+ * /    Length   |     Algo        |            KEY_HINT           |                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                     |
+ * |                                                               /                     \
+ * /                                                               /                     /       Encrypted with mbox public key
+ * /         Symmetric Key used in HIP_ENCRYPT                     /                     |
+ * /                                                               |                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
+ */
+
+struct signaling_param_service_ack_s {
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint16_t      service_offer_id;
+    uint16_t      service_option;
+    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
+    unsigned char end_point_info_secret[ HIP_MAX_RSA_KEY_LEN/8 ];
+/*
+ *   uint8_t      symm_key_len;
+ *   uint8_t      symm_enc_algo;
+ *   uint32_t    key_hint;    // To be used in the HIP_ENCRYPTED param, reserved field
+ *   unsigned char symm_key[SIGNALING_HIP_SYMM_KEY_LEN];
+ *
+ */
 } __attribute__((packed));
 
 

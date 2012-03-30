@@ -666,9 +666,14 @@ int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flag
     }
 
     /*paramters for the response to service offer information from the end-point*/
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
-        signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK);
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_U);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_U) {
+        signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK_U);
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_S);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_S) {
+        signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK_S);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_NACK);
@@ -1051,7 +1056,7 @@ void signaling_info_req_flags_print(struct signaling_flags_info_req *flags, cons
     memset(buf, 0, sizeof(buf));
 
     sprintf(buf + strlen(buf), "SO   = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_U));
     sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_info_req_flag_check(flags, SERVICE_NACK));
 
     sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER_RECV));
@@ -1289,7 +1294,7 @@ void signaling_service_info_flags_print(struct signaling_flags_service_info *fla
     memset(buf, 0, sizeof(buf));
 
     sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK));
+    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_U));
     sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_info_flag_check(flags, SERVICE_NACK));
 
     sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_RECV));
@@ -1305,7 +1310,7 @@ int signaling_service_info_flag_check(struct signaling_flags_service_info *flags
     case SERVICE_OFFER:
         return (flags->SERVICE_OFFER)       ? 1 : 0;
         break;
-    case SERVICE_ACK:
+    case SERVICE_ACK_U:
         return flags->SERVICE_ACK           ? 1 : 0;
         break;
     case SERVICE_NACK:
@@ -1332,7 +1337,7 @@ void signaling_service_info_flag_set(struct signaling_flags_service_info *flags,
     case SERVICE_OFFER:
         flags->SERVICE_OFFER = 1;
         break;
-    case SERVICE_ACK:
+    case SERVICE_ACK_U:
         flags->SERVICE_ACK = 1;
         break;
     case SERVICE_NACK:
@@ -1357,7 +1362,7 @@ void signaling_service_info_flag_unset(struct signaling_flags_service_info *flag
     case SERVICE_OFFER:
         flags->SERVICE_OFFER = 0;
         break;
-    case SERVICE_ACK:
+    case SERVICE_ACK_U:
         flags->SERVICE_ACK = 0;
         break;
     case SERVICE_NACK:
