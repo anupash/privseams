@@ -1278,7 +1278,7 @@ int signaling_i2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_DEBUG("Signed Service Offers from Middleboxes received.\n");
         HIP_IFEL(signaling_copy_service_offer_s(&param_service_offer_s, (const struct signaling_param_service_offer_s *) (param)),
                  -1, "Could not copy connection context\n");
-        signaling_build_response_to_service_offer_s(ctx->output_msg, *sig_state->pending_conn,
+        signaling_build_response_to_service_offer_s(ctx->input_msg, ctx->output_msg, *sig_state->pending_conn,
                                                     &sig_state->pending_conn_context,
                                                     &param_service_offer_s,
                                                     &flags_info_requested);

@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
+
 
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -1010,7 +1012,7 @@ out_err:
 }
 
 int signaling_verify_service_ack_u(struct hip_common *msg,
-                                 unsigned char *stored_hash)
+                                   unsigned char *stored_hash)
 {
     const struct hip_tlv_common        *param;
     const struct signaling_service_ack *ack;
@@ -1193,23 +1195,23 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     int                                    header_len          = 0;
     int                                    info_len            = 0;
     int                                    signature_len       = 0;
-    int tmp_len = 0;
+    int                                    tmp_len             = 0;
     uint16_t                               mask                = 0;
     struct hip_common                     *msg_buf             = NULL; /* It will be used in building the HIP Encrypted param*/
     struct signaling_param_service_offer_u tmp_service_offer_u = { 0 };
     unsigned char                          certificate_hint[HIP_AH_SHA_LEN];
-    uint16_t                           cert_hint_len = 0;
+    uint16_t                               cert_hint_len = 0;
     char                                  *signature     = NULL;
-    char                   *enc_in_msg    = NULL, *info_secret_enc = NULL;
-    unsigned char          *iv            = NULL;
-    unsigned char key_data[16];
-    unsigned char key_hint[4];
-    int key_data_len = 0;
+    char                                  *enc_in_msg    = NULL, *info_secret_enc = NULL;
+    unsigned char                         *iv            = NULL;
+    unsigned char                          key_data[16];
+    unsigned char                          key_hint[4];
+    int                                    key_data_len = 0;
     //uint16_t tmp_info;
     uint8_t *tmp_ptr = (uint8_t *) offer;
 
-    const char *dir_path = "/usr/local/etc/hip/trusted_mb_certs";
-    X509 *mb_certificate = NULL;
+    const char *dir_path       = "/usr/local/etc/hip/trusted_mb_certs";
+    X509       *mb_certificate = NULL;
 
     /* sanity checks */
     HIP_IFEL(!offer, -1, "Got NULL for signed service offer parameter\n");
@@ -1236,7 +1238,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     tmp_ptr += HIP_AH_SHA_LEN;
 
     /* ========== Locate the mbox certificate from store and load the certificate into memory ===============*/
-    signaling_locate_mb_certificate( mb_certificate, dir_path, certificate_hint, cert_hint_len);
+    signaling_locate_mb_certificate(mb_certificate, dir_path, certificate_hint, cert_hint_len);
 
     signature_len = offer->service_sig_len;
     signature     = malloc(signature_len);
@@ -1260,12 +1262,12 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     hip_dump_msg(msg_buf);
 
     /* ========== Generate 128 -bit key for encrypting the payload of HIP_ENCRYPTED param ===============*/
-    HIP_IFEL(generate_key_for_hip_encrypt( key_data, &key_data_len, key_hint), -1, "Could not generate the random key for HIP Encrypted\n");
+    HIP_IFEL(generate_key_for_hip_encrypt(key_data, &key_data_len, key_hint), -1, "Could not generate the random key for HIP Encrypted\n");
 
     /* ========== Create the HIP_ENCRYPTED param. The payload will not be encrypted here ===============*/
-    tmp_ptr = (const uint8_t *) msg_buf + sizeof(struct hip_common);
+    tmp_ptr = (uint8_t *) msg_buf + sizeof(struct hip_common);
     tmp_len = hip_get_msg_total_len(msg_buf) - sizeof(struct hip_common);
-    HIP_IFEL(signaling_build_param_encrypted_aes_sha1(output_msg, tmp_ptr, tmp_len, key_hint), -1,
+    HIP_IFEL(signaling_build_param_encrypted_aes_sha1(output_msg, (char *) tmp_ptr, tmp_len, key_hint), -1,
              "Could not build the HIP Encrypted parameter\n");
 
     enc_in_msg = hip_get_param_readwrite(output_msg, HIP_PARAM_ENCRYPTED);
@@ -1278,12 +1280,12 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     /* Adjust the host id length for AES (block size 16).
      * build_param_encrypted_aes has already taken care that there is
      * enough padding */
-        /* remainder */
-        int rem = tmp_len % 16;
-        if (rem) {
-            HIP_DEBUG("Remainder %d (for AES)\n", rem);
-            tmp_len += rem;
-        }
+    /* remainder */
+    int rem = tmp_len % 16;
+    if (rem) {
+        HIP_DEBUG("Remainder %d (for AES)\n", rem);
+        tmp_len += rem;
+    }
 
     HIP_HEXDUMP("enc key", key_data, key_data_len);
     HIP_IFEL(hip_crypto_encrypted(info_secret_enc, iv, HIP_HIP_AES_SHA1,
@@ -1292,7 +1294,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
 
     /* ========== Create and send the ack for signed service offer  ===============*/
     HIP_IFEL(signaling_build_service_ack_s(input_msg, output_msg,  mb_certificate, key_data, key_data_len, key_hint, 4, HIP_HIP_AES_SHA1),
-                     -1, "Could not build ack for signed service offer\n");
+             -1, "Could not build ack for signed service offer\n");
 
     HIP_DEBUG("Processing requests in the Signed Service Offer parameter.\n");
     num_req_info_items = info_len / sizeof(uint16_t);
@@ -1308,12 +1310,12 @@ out_err:
  * Building Acknowledgment for unsigned signed service offer
  */
 int signaling_build_service_ack_u(struct hip_common *input_msg,
-                                struct hip_common *output_msg)
+                                  struct hip_common *output_msg)
 {
     int                                    err = 0;
     struct signaling_param_service_offer_u param_service_offer;
     const struct hip_tlv_common           *param;
-    struct signaling_param_service_ack_u     ack;
+    struct signaling_param_service_ack_u   ack;
     char                                   param_buf[HIP_MAX_PACKET];
 
     if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
@@ -1350,23 +1352,22 @@ out_err:
  * Building Acknowledgment for signed signed service offer. Slightly tricky.
  */
 int signaling_build_service_ack_s(struct hip_common *input_msg,
-                                struct hip_common *output_msg,  X509 *cert,
-                                unsigned char *symm_key, uint8_t key_len,
-                                char *key_hint, int key_hint_len, uint8_t algo) {
-    int err = 0;
+                                  struct hip_common *output_msg,  X509 *cert,
+                                  unsigned char *symm_key, uint8_t key_len,
+                                  unsigned char *key_hint, int key_hint_len, uint8_t algo)
+{
+    int                                    err = 0;
     struct signaling_param_service_offer_s param_service_offer;
     const struct hip_tlv_common           *param;
-    struct signaling_param_service_ack_s     ack;
+    struct signaling_param_service_ack_s   ack;
     char                                   param_buf[HIP_MAX_PACKET];
-    unsigned char   *tmp_info_secrets = NULL;
-    unsigned char   *enc_output = NULL;
-    uint8_t *tmp_ptr = NULL;
-    uint16_t tmp_len = 0;
-    int len_contents = 0;
-    RSA      *rsa     = NULL;
-    EVP_PKEY *pub_key = X509_get_pubkey(cert);
-
-    const char *dir_path = "/usr/local/etc/hip/trusted_mb_certs";
+    unsigned char                         *tmp_info_secrets = NULL;
+    unsigned char                         *enc_output       = NULL;
+    uint8_t                               *tmp_ptr          = NULL;
+    uint16_t                               tmp_len          = 0;
+    int                                    len_contents     = 0;
+    RSA                                   *rsa              = NULL;
+    EVP_PKEY                              *pub_key          = X509_get_pubkey(cert);
 
     if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER_S))) {
         do {
@@ -1380,9 +1381,9 @@ int signaling_build_service_ack_s(struct hip_common *input_msg,
                 HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer), ack.service_offer_hash),
                          -1, "Could not build hash of the service offer \n");
 
-                tmp_len = sizeof(uint16_t) + sizeof(uint32_t) + key_len;
-                tmp_info_secrets = malloc( tmp_len );
-                tmp_ptr = tmp_info_secrets;
+                tmp_len          = sizeof(uint16_t) + sizeof(uint32_t) + key_len;
+                tmp_info_secrets = malloc(tmp_len);
+                tmp_ptr          = tmp_info_secrets;
                 memcpy(tmp_ptr, &key_len, sizeof(key_len));
                 tmp_ptr += sizeof(key_len);
                 memcpy(tmp_ptr, &algo, sizeof(algo));
@@ -1392,18 +1393,18 @@ int signaling_build_service_ack_s(struct hip_common *input_msg,
                 memcpy(tmp_ptr, symm_key, key_len);
 
                 /*---- Encrypting the end point info secrets*/
-                rsa = EVP_PKEY_get1_RSA(pub_key);
+                rsa        = EVP_PKEY_get1_RSA(pub_key);
                 enc_output = malloc(RSA_size(rsa));
-                RSA_public_encrypt(tmp_len,tmp_info_secrets, enc_output, pub_key, RSA_PKCS1_OAEP_PADDING);
-                HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, RSA_size(pub_key));
+                RSA_public_encrypt(tmp_len, tmp_info_secrets, enc_output, rsa, RSA_PKCS1_OAEP_PADDING);
+                HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, RSA_size(rsa));
 
                 /*---- Building of the HIP PARAM SECVICE ACK Signed ----*/
-                tmp_ptr = (uint8_t *) &ack;
+                tmp_ptr  = (uint8_t *) &ack;
                 tmp_ptr += sizeof(ack.service_offer_id) + sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
-                tmp_len = RSA_size(pub_key);
+                tmp_len  = RSA_size(rsa);
                 memcpy(tmp_ptr, enc_output, tmp_len);
                 len_contents = tmp_len + sizeof(ack.service_offer_id) +
-                                           sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
+                               sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
                 // print_hash(ack.service_offer_hash);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
                 hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
@@ -1436,12 +1437,10 @@ out_err:
  * parameter has to be encrypted using a different function call.
  */
 int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
-                                       char *data, int data_len, UNUSED uint32_t *key_hint)
+                                             char *data, int data_len, UNUSED unsigned char *key_hint)
 {
-    int                           rem;
+    int                           err          = 0;
     struct hip_encrypted_aes_sha1 enc          = { 0 };
-    int                           param_len    = hip_get_param_total_len(param);
-    struct hip_tlv_common        *common       = param;
     char                         *param_padded = NULL;
 
     hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
@@ -1452,17 +1451,18 @@ int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
     /* AES block size must be multiple of 16 bytes */
     // No need for padding anymore
 
-    memcpy(param_padded, data, param_len);
-    common     = (struct hip_tlv_common *) param_padded;
+    memcpy(param_padded, data, data_len);
 
     hip_calc_param_len((struct hip_tlv_common *) &enc, sizeof(enc) -
                        sizeof(struct hip_tlv_common) +
-                       param_len);
+                       data_len);
 
+    HIP_IFEL(hip_build_generic_param(output_msg, &enc, sizeof(enc), param_padded),
+             -1, "Could not build the HIP Encrypted parameter");
+out_err:
     free(param_padded);
-    return hip_build_generic_param(msg, &enc, sizeof(enc), common);
+    return err;
 }
-
 
 /* Create a temporary service offer unsigned param.
  * This will help us to reuse the code for signaling_build_response_to_service_offer_u(..)
@@ -1939,46 +1939,48 @@ out_err:
     return err;
 }
 
-
 /* Locate the middlebox keys from the trusted mbox certificate store
  *
  */
-int signaling_locate_mb_certificate( X509 *mb_certificate, char *dir_path, unsigned char *certificate_hint, uint16_t cert_hint_len) {
+int signaling_locate_mb_certificate(X509 *mb_certificate, const char *dir_path, unsigned char *certificate_hint, uint16_t cert_hint_len)
+{
     struct stat    filestat;
     struct dirent *dirp;
     // enter existing path to directory below
-    DIR        *dp       = opendir(dir_path);
+    DIR *dp = opendir(dir_path);
 
 
     if (dp != NULL) {
-         while ((dirp = readdir(dp)) != NULL) {
-             char          *filepath;
-             unsigned char *tmp_cert_hint;
-             unsigned int   tmp_cert_hint_len;
-             filepath = signaling_concatenate_paths(dir_path, dirp->d_name);
-             if (stat(filepath, &filestat)) {
-                 continue;
-             }
-             if (S_ISDIR(filestat.st_mode)) {
-                 continue;
-             }
-             //printf("Path %s\n", filepath);
-             mb_certificate = load_x509_certificate(filepath);
-             tmp_cert_hint  = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_certificate, &tmp_cert_hint_len);
-             if ((cert_hint_len == tmp_cert_hint_len) && !memcmp(tmp_cert_hint, certificate_hint, cert_hint_len)) {
-                 HIP_DEBUG("Found certificate in our store %s \n", filepath);
-                 free(filepath);
-                 break;
-             }
+        while ((dirp = readdir(dp)) != NULL) {
+            char          *filepath;
+            unsigned char *tmp_cert_hint;
+            unsigned int   tmp_cert_hint_len;
+            filepath = signaling_concatenate_paths(dir_path, dirp->d_name);
+            if (stat(filepath, &filestat)) {
+                continue;
+            }
+            if (S_ISDIR(filestat.st_mode)) {
+                continue;
+            }
+            //printf("Path %s\n", filepath);
+            mb_certificate = load_x509_certificate(filepath);
+            tmp_cert_hint  = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_certificate, &tmp_cert_hint_len);
+            if ((cert_hint_len == tmp_cert_hint_len) && !memcmp(tmp_cert_hint, certificate_hint, cert_hint_len)) {
+                HIP_DEBUG("Found certificate in our store %s \n", filepath);
+                free(filepath);
+                break;
+            }
 
-             free(filepath);
-             filepath = NULL;
-         }
-         closedir(dp);
-     }
+            free(filepath);
+            filepath = NULL;
+        }
+        closedir(dp);
+    }
 
-    if (mb_certificate == NULL) return  -1;
-    else return 0;
+    if (mb_certificate == NULL) {
+        return -1;
+    } else {  return 0;
+    }
 }
 
 /* This generates a random 256 bit key using /dev/random. This key will used in HIP_ENCRYPTED param for encrypting the payload
@@ -1987,25 +1989,36 @@ int signaling_locate_mb_certificate( X509 *mb_certificate, char *dir_path, unsig
  *
  * @return return 0 on success, -1 otherwise
  */
-int generate_key_for_hip_encrypt (unsigned char* key, int *key_len, unsigned char* key_hint)
+int generate_key_for_hip_encrypt(unsigned char *key, int *key_len, unsigned char *key_hint)
 {
-        int err = 0;
-        int i, fd;
-        if ((fd = open ("/dev/random", O_RDONLY)) == -1)
-                perror ("open error");
+    int err = 0;
+    int i, fd;
+    if ((fd = open("/dev/random", O_RDONLY)) == -1) {
+        perror("open error");
+        err = -1;
+        goto out_err;
+    }
 
-        if ((read (fd, key, 16)) == -1)
-                perror ("read key error");
+    if ((read(fd, key, 16)) == -1) {
+        perror("read key error");
+        err = -1;
+        goto out_err;
+    }
 
-        *key_len = 16;
-        printf("128 bit key:\n");
-        for (i = 0; i < 16; i++)
-                printf ("%d \t", key[i]);
-        printf ("\n ------ \n");
+    *key_len = 16;
+    printf("128 bit key:\n");
+    for (i = 0; i < 16; i++) {
+        printf("%d \t", key[i]);
+    }
+    printf("\n ------ \n");
 
-        if ((read (fd, key_hint, 4)) == -1)
-                perror ("read key hint error");
+    if ((read(fd, key_hint, 4)) == -1) {
+        perror("read key hint error");
+        err = -1;
+        goto out_err;
+    }
 
-        close (fd);
-        return 0;
+    close(fd);
+out_err:
+    return err;
 }

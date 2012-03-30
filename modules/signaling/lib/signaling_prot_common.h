@@ -211,15 +211,17 @@ enum flag_internal {
 };
 
 enum flags_service_state {
-    SERVICE_OFFER = 0,
-    SERVICE_ACK_U   = 1,
-    SERVICE_ACK_S  = 2,
-    SERVICE_NACK  = 3,
+    SERVICE_OFFER   = 0,
+    SERVICE_OFFER_S = 1,
+    SERVICE_ACK_U   = 2,
+    SERVICE_ACK_S   = 3,
+    SERVICE_NACK    = 4,
 
-    SERVICE_OFFER_RECV = 4,
-    SERVICE_ACK_U_RECV   = 5,
-    SERVICE_ACK_S_RECV   = 6,
-    SERVICE_NACK_RECV  = 7
+    SERVICE_OFFER_RECV   = 5,
+    SERVICE_OFFER_S_RECV = 6,
+    SERVICE_ACK_U_RECV   = 7,
+    SERVICE_ACK_S_RECV   = 8,
+    SERVICE_NACK_RECV    = 9
 };
 
 enum flags_service_options {
@@ -306,11 +308,15 @@ struct signaling_flags_info_req {
  */
 struct signaling_flags_service_info {
     uint8_t SERVICE_OFFER;
-    uint8_t SERVICE_ACK;
+    uint8_t SERVICE_OFFER_S;
+    uint8_t SERVICE_ACK_U;
+    uint8_t SERVICE_ACK_S;
     uint8_t SERVICE_NACK;
 
     uint8_t SERVICE_OFFER_RECV;
-    uint8_t SERVICE_ACK_RECV;
+    uint8_t SERVICE_OFFER_S_RECV;
+    uint8_t SERVICE_ACK_U_RECV;
+    uint8_t SERVICE_ACK_S_RECV;
     uint8_t SERVICE_NACK_RECV;
 };
 
@@ -984,13 +990,18 @@ struct signaling_param_service_ack_u {
  * |                                                               /
  * /                         SERVICE_OFFER_HASH                    /
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
- * /    Length   |     Algo        |            KEY_HINT           |                     |
+ * /    Length   |     Algo        |            KEY_HINT           /                     |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                     |
- * |                                                               /                     \
- * /                                                               /                     /       Encrypted with mbox public key
+ * /       KEY_HINT ctd            |                               /                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               /                     \    Encrypted with mbox public key
+ * /                                                               /                     /
  * /         Symmetric Key used in HIP_ENCRYPT                     /                     |
- * /                                                               |                     |
+ * /                                               +-+-+-+-+-+-+-+-+                     |
+ * /                                               |   Padding     |                     |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
+ *
+ * Note : Padding is not included in the encryption.
+ *        It's shown as it is for the sake of completion.
  */
 
 struct signaling_param_service_ack_s {
@@ -999,7 +1010,7 @@ struct signaling_param_service_ack_s {
     uint16_t      service_offer_id;
     uint16_t      service_option;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
-    unsigned char end_point_info_secret[ HIP_MAX_RSA_KEY_LEN/8 ];
+    unsigned char end_point_info_secret[HIP_MAX_RSA_KEY_LEN / 8];
 /*
  *   uint8_t      symm_key_len;
  *   uint8_t      symm_enc_algo;

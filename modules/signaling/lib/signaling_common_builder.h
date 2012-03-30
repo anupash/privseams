@@ -50,7 +50,7 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *output_msg,
                                          RSA           *mb_key,
                                          X509          *mb_cert);
 int signaling_verify_service_ack_u(struct hip_common *output_msg,
-                                 unsigned char *stored_hash);
+                                   unsigned char *stored_hash);
 
 int signaling_build_param_host_info_response(struct hip_common *output_msg,
                                              struct signaling_connection existing_conn,
@@ -80,18 +80,20 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
                                                 struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer_u *offer,
                                                 struct signaling_flags_info_req    *flags);
-int signaling_build_response_to_service_offer_s(struct hip_common                      *input_msg ,
+int signaling_build_response_to_service_offer_s(struct hip_common                      *input_msg,
                                                 struct hip_common *output_msg,
                                                 struct signaling_connection conn,
                                                 struct signaling_connection_context *ctx_out,
                                                 struct signaling_param_service_offer_s *offer,
                                                 struct signaling_flags_info_req    *flags);
 int signaling_build_service_ack_u(struct hip_common *input_msg,
-                                struct hip_common *output_msg);
+                                  struct hip_common *output_msg);
 int signaling_build_service_ack_s(struct hip_common *input_msg,
-                                struct hip_common *output_msg);
+                                  struct hip_common *output_msg,  X509 *cert,
+                                  unsigned char *symm_key, uint8_t key_len,
+                                  unsigned char *key_hint, int key_hint_len, uint8_t algo);
 int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
-                                       char *data, int data_len, uint32_t *key_hint);
+                                             char *data, int data_len, unsigned char *key_hint);
 /* Utility functions */
 int signaling_get_connection_context(struct signaling_connection *conn,
                                      struct signaling_connection_context *ctx,
@@ -112,7 +114,7 @@ int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t v
 int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_service_offer_u *offer_u,
                                                          struct signaling_param_service_offer_s *offer_s,
                                                          int end_point_info_len);
-int signaling_locate_mb_certificate(  X509 *mb_certificate, char *dir_path,
-                                                                     unsigned char *certificate_hint, uint16_t cert_hint_len);
-int generate_key_for_hip_encrypt (unsigned char* key, int *key_len);
+int signaling_locate_mb_certificate(X509 *mb_certificate, const char *dir_path,
+                                    unsigned char *certificate_hint, uint16_t cert_hint_len);
+int generate_key_for_hip_encrypt(unsigned char *key, int *key_len, unsigned char *key_hint);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

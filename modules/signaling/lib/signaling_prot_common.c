@@ -1056,12 +1056,14 @@ void signaling_info_req_flags_print(struct signaling_flags_info_req *flags, cons
     memset(buf, 0, sizeof(buf));
 
     sprintf(buf + strlen(buf), "SO   = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_U));
+    sprintf(buf + strlen(buf), "SAU  = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_U));
+    sprintf(buf + strlen(buf), "SAS  = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_S));
     sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_info_req_flag_check(flags, SERVICE_NACK));
 
     sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_OFFER_RECV));
-    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
-    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SAUR = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_U_RECV));
+    sprintf(buf + strlen(buf), "SASR = %d | ", signaling_info_req_flag_check(flags, SERVICE_ACK_S_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_info_req_flag_check(flags, SERVICE_NACK_RECV));
 
     HIP_DEBUG("%s  Service Flags: %s \n", prefix, buf);
 }
@@ -1294,12 +1296,16 @@ void signaling_service_info_flags_print(struct signaling_flags_service_info *fla
     memset(buf, 0, sizeof(buf));
 
     sprintf(buf + strlen(buf), "SO   = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER));
-    sprintf(buf + strlen(buf), "SA   = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_U));
+    sprintf(buf + strlen(buf), "SOS  = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_S));
+    sprintf(buf + strlen(buf), "SAU  = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_U));
+    sprintf(buf + strlen(buf), "SAS  = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_S));
     sprintf(buf + strlen(buf), "SNA  = %d | ", signaling_service_info_flag_check(flags, SERVICE_NACK));
 
     sprintf(buf + strlen(buf), "SOR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_RECV));
-    sprintf(buf + strlen(buf), "SAR  = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
-    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_RECV));
+    sprintf(buf + strlen(buf), "SOSR = %d | ", signaling_service_info_flag_check(flags, SERVICE_OFFER_S_RECV));
+    sprintf(buf + strlen(buf), "SAUR = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_U_RECV));
+    sprintf(buf + strlen(buf), "SASR = %d | ", signaling_service_info_flag_check(flags, SERVICE_ACK_S_RECV));
+    sprintf(buf + strlen(buf), "SNAR = %d | ", signaling_service_info_flag_check(flags, SERVICE_NACK_RECV));
 
     HIP_DEBUG("%s  Service Flags: %s int = %d \n", prefix, buf, flags);
 }
@@ -1310,8 +1316,14 @@ int signaling_service_info_flag_check(struct signaling_flags_service_info *flags
     case SERVICE_OFFER:
         return (flags->SERVICE_OFFER)       ? 1 : 0;
         break;
+    case SERVICE_OFFER_S:
+        return (flags->SERVICE_OFFER_S)       ? 1 : 0;
+        break;
     case SERVICE_ACK_U:
-        return flags->SERVICE_ACK           ? 1 : 0;
+        return flags->SERVICE_ACK_U           ? 1 : 0;
+        break;
+    case SERVICE_ACK_S:
+        return flags->SERVICE_ACK_S           ? 1 : 0;
         break;
     case SERVICE_NACK:
         return (flags->SERVICE_NACK)        ? 1 : 0;
@@ -1320,8 +1332,14 @@ int signaling_service_info_flag_check(struct signaling_flags_service_info *flags
     case SERVICE_OFFER_RECV:
         return (flags->SERVICE_OFFER_RECV)  ? 1 : 0;
         break;
-    case SERVICE_ACK_RECV:
-        return (flags->SERVICE_ACK_RECV)  ? 1 : 0;
+    case SERVICE_OFFER_S_RECV:
+        return (flags->SERVICE_OFFER_S_RECV)  ? 1 : 0;
+        break;
+    case SERVICE_ACK_U_RECV:
+        return (flags->SERVICE_ACK_U_RECV)  ? 1 : 0;
+        break;
+    case SERVICE_ACK_S_RECV:
+        return (flags->SERVICE_ACK_S_RECV)  ? 1 : 0;
         break;
     case SERVICE_NACK_RECV:
         return (flags->SERVICE_NACK_RECV)  ? 1 : 0;
@@ -1338,7 +1356,10 @@ void signaling_service_info_flag_set(struct signaling_flags_service_info *flags,
         flags->SERVICE_OFFER = 1;
         break;
     case SERVICE_ACK_U:
-        flags->SERVICE_ACK = 1;
+        flags->SERVICE_ACK_U = 1;
+        break;
+    case SERVICE_ACK_S:
+        flags->SERVICE_ACK_S = 1;
         break;
     case SERVICE_NACK:
         flags->SERVICE_NACK = 1;
@@ -1347,8 +1368,11 @@ void signaling_service_info_flag_set(struct signaling_flags_service_info *flags,
     case SERVICE_OFFER_RECV:
         flags->SERVICE_OFFER_RECV = 1;
         break;
-    case SERVICE_ACK_RECV:
-        flags->SERVICE_ACK_RECV = 1;
+    case SERVICE_ACK_U_RECV:
+        flags->SERVICE_ACK_U_RECV = 1;
+        break;
+    case SERVICE_ACK_S_RECV:
+        flags->SERVICE_ACK_S_RECV = 1;
         break;
     case SERVICE_NACK_RECV:
         flags->SERVICE_NACK_RECV = 1;
@@ -1363,7 +1387,10 @@ void signaling_service_info_flag_unset(struct signaling_flags_service_info *flag
         flags->SERVICE_OFFER = 0;
         break;
     case SERVICE_ACK_U:
-        flags->SERVICE_ACK = 0;
+        flags->SERVICE_ACK_U = 0;
+        break;
+    case SERVICE_ACK_S:
+        flags->SERVICE_ACK_S = 0;
         break;
     case SERVICE_NACK:
         flags->SERVICE_NACK = 0;
@@ -1372,8 +1399,11 @@ void signaling_service_info_flag_unset(struct signaling_flags_service_info *flag
     case SERVICE_OFFER_RECV:
         flags->SERVICE_OFFER_RECV = 0;
         break;
-    case SERVICE_ACK_RECV:
-        flags->SERVICE_ACK_RECV = 0;
+    case SERVICE_ACK_U_RECV:
+        flags->SERVICE_ACK_U_RECV = 0;
+        break;
+    case SERVICE_ACK_S_RECV:
+        flags->SERVICE_ACK_S_RECV = 0;
         break;
     case SERVICE_NACK_RECV:
         flags->SERVICE_NACK_RECV = 0;
@@ -1384,10 +1414,12 @@ void signaling_service_info_flag_unset(struct signaling_flags_service_info *flag
 void signaling_service_info_flag_init(struct signaling_flags_service_info *flags)
 {
     flags->SERVICE_OFFER = 0;
-    flags->SERVICE_ACK   = 0;
+    flags->SERVICE_ACK_U = 0;
+    flags->SERVICE_ACK_S = 0;
     flags->SERVICE_NACK  = 0;
 
     flags->SERVICE_OFFER_RECV = 0;
-    flags->SERVICE_ACK_RECV   = 0;
+    flags->SERVICE_ACK_U_RECV = 0;
+    flags->SERVICE_ACK_S_RECV = 0;
     flags->SERVICE_NACK_RECV  = 0;
 }
