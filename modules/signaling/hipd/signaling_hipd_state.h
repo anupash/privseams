@@ -21,7 +21,7 @@ struct user_certificate_context {
     int      group;
     int      count;
     int      next_cert_id;
-             STACK_OF(X509) *cert_chain;
+    STACK_OF(X509) * cert_chain;
 };
 
 /**
@@ -35,6 +35,7 @@ struct signaling_hipd_state {
      * We need this to determine which context to use in I2 and R2. */
     struct signaling_connection        *pending_conn;
     struct signaling_connection_context pending_conn_context;
+    uint8_t                             flag_user_sig;
     /* Collects user certificates accross multiple updates */
     struct user_certificate_context user_cert_ctx;
 };

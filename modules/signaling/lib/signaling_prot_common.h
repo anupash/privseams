@@ -75,10 +75,11 @@
 #define HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS    5118
 #define HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS   5119
 
+#define HIP_PARAM_SIGNALING_ENCRYPTED               5120
 
-#define HIP_PARAM_SIGNALING_SERVICE_ACK_U            5120
-#define HIP_PARAM_SIGNALING_SERVICE_ACK_S            5121
-#define HIP_PARAM_SIGNALING_SERVICE_NACK            5122
+#define HIP_PARAM_SIGNALING_SERVICE_ACK_S           5121
+#define HIP_PARAM_SIGNALING_SERVICE_ACK_U           5122
+#define HIP_PARAM_SIGNALING_SERVICE_NACK            5123
 
 /*Parameter type for user signature*/
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62504
@@ -985,7 +986,7 @@ struct signaling_param_service_ack_u {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |       SERVICE_OFFER_ID        |          SERVICE_OPTION       |
+ * |       SERVICE_OFFER_ID        |         SERVICE_OPTION        |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                                                               /
  * /                         SERVICE_OFFER_HASH                    /

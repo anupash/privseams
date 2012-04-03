@@ -41,6 +41,8 @@
 #include "config.h"
 #include "firewall/firewall_defines.h"
 #include "lib/core/protodefs.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
 
 int signaling_hipfw_init(const char *policy_file);
 int signaling_hipfw_uninit(void);
@@ -50,6 +52,31 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, st
 int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
 int signaling_hipfw_handle_i3(struct hip_common *common, struct tuple *tuple, const struct hip_fw_context *ctx);
 int signaling_hipfw_handle_update(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
-int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx);
+int signaling_hipfw_handle_notify(struct hip_common *common, struct tuple *tuple, struct hip_fw_context *ctx);
 
+/*Utility Functions*/
+int signaling_hipfw_initialize_connection_contexts_and_flags(struct hip_common *common,
+                                                             struct signaling_connection         *new_conn,
+                                                             struct signaling_connection_context *ctx_in,
+                                                             struct signaling_connection_context *ctx_out,
+                                                             struct signaling_connection_flags  **ctx_flags,
+                                                             int *ret);
+int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *common, struct tuple *tuple,
+                                                          struct tuple *other_dir, struct hip_fw_context *ctx,
+                                                          struct signaling_connection_context *ctx_in,
+                                                          struct signaling_connection_context *ctx_out,
+                                                          struct signaling_connection_flags   *ctx_flags,
+                                                          struct signaling_connection         *new_conn,
+                                                          struct in6_addr                     *hit_i,
+                                                          struct in6_addr                     *hit_r,
+                                                          int *ret);
+int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *common,
+                                                          struct tuple *tuple,
+                                                          struct hip_fw_context *ctx,
+                                                          struct signaling_connection_context *ctx_in,
+                                                          struct signaling_connection_flags   *ctx_flags,
+                                                          struct signaling_connection         *new_conn,
+                                                          struct in6_addr                     *hit_i,
+                                                          struct in6_addr                     *hit_r,
+                                                          int *ret);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

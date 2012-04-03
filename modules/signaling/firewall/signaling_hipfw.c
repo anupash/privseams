@@ -52,8 +52,6 @@ typedef struct {
 
 #include "firewall/hslist.h"
 
-#include "modules/signaling/lib/signaling_prot_common.h"
-#include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_user_management.h"
 #include "modules/signaling/lib/signaling_x509_api.h"
 #include "firewall/conntrack.h"
@@ -163,10 +161,11 @@ int signaling_hipfw_init(const char *policy_file)
     // register internal parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT,    "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION,            "HIP_PARAM_SIGNALING_CONNECTION");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_ENCRYPTED,             "HIP_PARAM_SIGNALING_ENCRYPTED");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,           "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,           "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,         "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,         "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
 
@@ -263,12 +262,13 @@ out_err:
  */
 int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tuple, struct hip_fw_context *ctx)
 {
-    int                                 err          = 0;
-    int                                 policy_check = 0;
-    int                                 ret          = 0;
+    int                                 err = 0;
+    int                                 ret = 0;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_in;
     struct signaling_connection_context ctx_out;
+    struct in6_addr                     hit_i;
+    struct in6_addr                     hit_r;
     struct signaling_connection_flags  *ctx_flags     = NULL;
     struct policy_tuple                *matched_tuple = NULL;
 
@@ -285,97 +285,24 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
         other_dir = &tuple->connection->original;
     }
 
-    /* sanity checks */
-    HIP_IFEL(!common, -1, "Message is NULL\n");
-
-    /* Step a) */
-    if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
-        HIP_ERROR("Could not init connection context from R1/U1 \n");
-        ret = -1;
+    if (common->type_hdr == HIP_R1) {
+        hit_i = common->hitr;
+        hit_r = common->hits;
+    } else if (common->type_hdr == HIP_UPDATE) {
+        hit_i = common->hits;
+        hit_r = common->hitr;
     }
-
-    if (signaling_init_connection_context(&ctx_in, FWD)) {
-        HIP_ERROR("Could not init connection context for the IN side \n");
-        ret = -1;
-    }
-
-    if (signaling_init_connection_context(&ctx_out, FWD)) {
-        HIP_ERROR("Could not init connection context for the IN SIDE \n");
-        ret = -1;
-    }
-
-    ctx_flags = malloc(sizeof(struct signaling_connection_flags));
-    signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
-    signaling_service_info_flag_init(&ctx_flags->flag_services);
 
     signaling_update_info_flags_from_msg(ctx_flags, common, FWD);
 
+    HIP_IFEL(signaling_hipfw_initialize_connection_contexts_and_flags(common, &new_conn, &ctx_in, &ctx_out, &ctx_flags, &ret),
+             -1, "Could not initialize the contexts and flags successfully\n");
+
     /* Step b) */
-    HIP_DEBUG("Connection after receipt of R1/U1 \n");
-    signaling_connection_print(&new_conn, "\t");
-    //TODO check here if the hits refers to the hit of the initiator
-    //TODO check here if ctx_in or ctx_out should be used
-    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
-    if (!ret && ret != -1) {
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
-        hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
-#endif
-        if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_out, &ctx_flags, &policy_check))) {
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
-            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
-#endif
-            HIP_DEBUG("Found matching policy tuple\n");
-            if (policy_check == 1) {
-                HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
-                hip_dump_msg(common);
-#ifdef CONFIG_HIP_PERFORMANCE
-                HIP_DEBUG("Start PERF_MBOX_R1_ADD_INFO_REQ\n");
-                hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
-#endif
-                HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
-                HIP_IFEL(signaling_add_service_offer_to_msg_s(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                              signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert()), -1, "Could not add service offer to the message\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-                HIP_DEBUG("Stop PERF_MBOX_R1_ADD_INFO_REQ\n");
-                hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
-#endif
-                HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
-                hip_dump_msg(common);
-                ctx->modified = 1;
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-                next_service_offer_id++;
-                HIP_DEBUG("Connection tracking table after receipt of R1\n");
-                signaling_cdb_print();
-                /* Let packet pass */
-                ret = -1;
-            } else if (policy_check == 0) {
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                memset(other_dir->offer_hash, '\0', HIP_AH_SHA_LEN);
-                HIP_DEBUG("Connection tracking table after receipt of R1\n");
-                signaling_cdb_print();
-                /* Let packet pass */
-                ret = 1;
-            }
-        } else {
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
-            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
-#endif
-            if (policy_check == -1) {
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                signaling_cdb_print();
-                signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                ret = 0;
-            } else if (policy_check == 0) {
-                HIP_DEBUG("Connection tracking table after receipt of R1\n");
-                signaling_cdb_add_connection(common->hits, common->hitr, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                signaling_cdb_print();
-                ret = 1;
-            }
-        }
-    }
+    HIP_IFEL(signaling_hipfw_check_policy_and_create_service_offer(common, tuple, other_dir, ctx, &ctx_in, &ctx_out,
+                                                                   ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
+             -1, "Could not check policy and add service offers\n");
+    ;
 
 #ifdef DEMO_MODE
     if (ret) {
@@ -386,10 +313,6 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     free(ctx_flags);
     free(matched_tuple);
     return ret;
-    /* Step c) */
-    // TODO Add more handlers for user and application information requests
-
-    /* Step d) */
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -417,10 +340,8 @@ out_err:
  */
 int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int                                 err           = 0;
-    int                                 policy_check  = 0;
-    int                                 policy_verify = 0;
-    int                                 ret           = 0;
+    int                                 err = 0;
+    int                                 ret = 0;
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_in;
     struct signaling_connection_context ctx_out;
@@ -429,6 +350,11 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection_flags  *ctx_flags     = NULL;
     struct policy_tuple                *matched_tuple = NULL;
     struct signaling_cdb_entry         *old_conn;
+    struct hip_common                  *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
+    unsigned char                       symm_key[16];
+    uint8_t                             symm_key_len;
+    unsigned char                       symm_key_hint[4];
+    uint8_t                             algo;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -454,30 +380,12 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
 
-    // Here in because the firewall has to check for the forwarding policies
-    // for the message from the responder
-    if (signaling_init_connection_context(&ctx_in, FWD)) {
-        HIP_ERROR("Could not init connection context for the IN SIDE \n");
-        return -1;
-    }
-    if (signaling_init_connection_context(&ctx_out, FWD)) {
-        HIP_ERROR("Could not init connection context for the IN SIDE \n");
-        return -1;
-    }
-
-    ctx_flags = malloc(sizeof(struct signaling_connection_flags));
-    signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
-    signaling_service_info_flag_init(&ctx_flags->flag_services);
-
-
     /*
      * Handle the incoming response parameters from the Initiator
      */
     /* Step a) */
-    if (signaling_init_connection_from_msg(&new_conn, common, FWD)) {
-        HIP_ERROR("Could not init connection context from I2/U2 \n");
-        ret = -1;
-    }
+    HIP_IFEL(signaling_hipfw_initialize_connection_contexts_and_flags(common, &new_conn, &ctx_in, &ctx_out, &ctx_flags, &ret),
+             -1, "Could not initialize the contexts and flags successfully\n");
 
     old_conn = signaling_cdb_get_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port);
 
@@ -503,59 +411,30 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
-
-                /* Step b) */
-                //HIP_DEBUG("Connection after receipt of I2\n");
-                //signaling_connection_print(&new_conn, "\t");
+                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
+                         "Could not initialize the connection context from the message\n");
+                HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
+                                                                               ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
+                         "Could not check and verify the info in response with the policy\n");
+            } else if (signaling_verify_service_ack_s(common, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key(),
+                                                      symm_key, &symm_key_len, symm_key_hint, &algo)) {
 #ifdef CONFIG_HIP_PERFORMANCE
-                HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_INFO_REQ\n");
-                hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+                HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hits, &ctx_in, &ctx_flags, &policy_check))) {
-                    HIP_DEBUG("Will verify the connection with the policy.\n");
-                    policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);
-#ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
-                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
-#endif
-                    if (policy_verify == -1) {
-                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                        signaling_cdb_print();
-                        //TODO confirm with Rene if we need it or not.
-                        //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                        ret = 0;
-                    } else {
-                        HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
-                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-                        signaling_cdb_print();
-                        ret = -1;
-                    }
-                } else {
-#ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
-                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
-#endif
-                    if (policy_check == -1) {
-                        // TODO add connection to scdb
-                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                        signaling_cdb_print();
-                        signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                        ret = 0;
-                    } else if (policy_check == 0) {
-                        // TODO add connection to scdb
-                        HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
-                        signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_PROCESSING);
-                        signaling_cdb_print();
-                        ret = -1;
-                    }
-                }
+                signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
+                                                                    symm_key_hint, &algo);
+                HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
+                         "Could not initialize the connection context from the message\n");
+                HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
+                                                                               ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
+                         "Could not check and verify the info in response with the policy\n");
             } else {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                HIP_DEBUG("Service Ack in I2/U2 could not be verified. Blocking the connection.\n");
+                HIP_DEBUG("Service Ack in I2/U2 could not be found or verified. Blocking the connection.\n");
                 signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
                 signaling_cdb_print();
                 ret = 0;
@@ -584,69 +463,16 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     HIP_DEBUG("Policy check for the Responder.\n");
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
-    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
-#endif
-    if ((matched_tuple = signaling_policy_engine_check_and_flag(&common->hitr, &ctx_out, &ctx_flags, &policy_check))) {
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
-#endif
-
-        if (policy_check == 1) {
-            HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
-            hip_dump_msg(common);
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Start PERF_MBOX_I2_ADD_INFO_REQ\n");
-            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
-#endif
-            HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
-            HIP_IFEL(signaling_add_service_offer_to_msg_s(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                          signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert()), -1, "Could not add service offer to the message\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_MBOX_I2_ADD_INFO_REQ\n");
-            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
-#endif
-            HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
-            hip_dump_msg(common);
-            ctx->modified = 1;
-            signaling_cdb_add_connection(hit_r, hit_i, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_PROCESSING);
-            next_service_offer_id++;
-            HIP_DEBUG("Received I2/U2. Connection tracking table after adding of Service Offers\n");
-            signaling_cdb_print();
-            ret = -1;
-        } else if (policy_check == 0) {
-            HIP_DEBUG("Connection tracking table after checking policy for Responder\n");
-            signaling_cdb_add_connection(hit_r, hit_i, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_ALLOWED);
-            memset(other_dir->offer_hash, '\0', HIP_AH_SHA_LEN);
-            signaling_cdb_print();
-            ret = 1;
-        }
-    } else {
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
-#endif
-        if (policy_check == -1) {
-            signaling_cdb_add_connection(hit_r, hit_i, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_BLOCKED);
-            signaling_cdb_print();
-            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-            ret = 0;
-        } else if (policy_check == 0) {
-            HIP_DEBUG("Connection tracking table after receipt of I2\n");
-            signaling_cdb_add_connection(hit_r, hit_i, new_conn.dst_port, new_conn.src_port, SIGNALING_CONN_ALLOWED);
-            signaling_cdb_print();
+    HIP_IFEL(signaling_hipfw_check_policy_and_create_service_offer(common, tuple, other_dir, ctx, &ctx_in, &ctx_out,
+                                                                   ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
+             -1, "Could not check policy and add service offers\n");
 #ifdef DEMO_MODE
-            printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
+    printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
 #endif
-            ret = 1;
-        }
-    }
 
     free(ctx_flags);
     free(matched_tuple);
+    free(msg_buf);
     return ret;
 
 out_err:
@@ -654,6 +480,7 @@ out_err:
     HIP_DEBUG("Stop PERF_MBOX_I2_ADD_INFO_REQ\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
 #endif
+    free(msg_buf);
     free(ctx_flags);
     free(matched_tuple);
     return err;
@@ -672,10 +499,8 @@ out_err:
  */
 int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, UNUSED struct hip_fw_context *ctx)
 {
-    int err           = 0;
-    int policy_check  = 0;
-    int policy_verify = 0;
-    int ret           = 0;
+    int err = 0;
+    int ret = 0;
 
     struct signaling_connection         new_conn;
     struct signaling_connection_context ctx_in;
@@ -685,6 +510,11 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_cdb_entry        *old_conn;
     struct in6_addr                    hit_i;
     struct in6_addr                    hit_r;
+    struct hip_common                 *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
+    unsigned char                      symm_key[16];
+    uint8_t                            symm_key_len;
+    unsigned char                      symm_key_hint[4];
+    uint8_t                            algo;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -693,14 +523,22 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     printf("\033[22;34mReceived R2/U3 packet\033[22;37m\n\033[22;37m");
 #endif
 
+    /* sanity checks */
+    HIP_IFEL(!common, -1, "Message is NULL\n");
+
     if (common->type_hdr == HIP_R2) {
         other_dir = &tuple->connection->reply;
     } else if (common->type_hdr == HIP_UPDATE) {
         other_dir = &tuple->connection->original;
     }
 
-    /* sanity checks */
-    HIP_IFEL(!common, -1, "Message is NULL\n");
+    if (common->type_hdr == HIP_R2) {
+        hit_i = common->hitr;
+        hit_r = common->hits;
+    } else if (common->type_hdr == HIP_UPDATE) {
+        hit_i = common->hits;
+        hit_r = common->hitr;
+    }
 
     /* Step a) */
     // Here in because the firewall has to check for the forwarding policies
@@ -723,13 +561,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     signaling_info_req_flag_init(&ctx_flags->flag_info_requests);
     signaling_service_info_flag_init(&ctx_flags->flag_services);
 
-    if (common->type_hdr == HIP_R2) {
-        hit_i = common->hitr;
-        hit_r = common->hits;
-    } else if (common->type_hdr == HIP_UPDATE) {
-        hit_i = common->hits;
-        hit_r = common->hitr;
-    }
 
     // Here the ports are in reversed order as the packet is from the Responder
     if ((old_conn = signaling_cdb_get_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port))) {
@@ -754,49 +585,20 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
 #endif
-                    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1, "Could not initialize the connection context from the message\n");
-
+                    HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
+                                                                                   ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
+                             "Could not check and verify the info in response with the policy\n");
+                } else if (signaling_verify_service_ack_s(common, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key(),
+                                                          symm_key, &symm_key_len, symm_key_hint, &algo)) {
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Start PERF_MBOX_R2_VERIFY_INFO_REQ\n");
-                    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+                    HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                    if ((matched_tuple = signaling_policy_engine_check_and_flag(&hit_i, &ctx_in, &ctx_flags, &policy_check))) {
-                        policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, &ctx_in, ctx_flags);
-#ifdef CONFIG_HIP_PERFORMANCE
-                        HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
-                        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
-#endif
-                        if (policy_verify == -1) {
-                            signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                            signaling_cdb_print();
-                            //TODO confirm with Rene if we need it or not.
-                            //signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                            ret = 0;
-                        } else {
-                            HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
-                            signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                            signaling_cdb_print();
-                            ret = 1;
-                        }
-                    } else {
-#ifdef CONFIG_HIP_PERFORMANCE
-                        HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
-                        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
-#endif
-                        if (policy_check == -1) {
-                            // TODO add connection to scdb
-                            signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
-                            signaling_cdb_print();
-                            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, &new_conn);
-                            ret = 0;
-                        } else if (policy_check == 0) {
-                            // TODO add connection to scdb
-                            HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
-                            signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_ALLOWED);
-                            signaling_cdb_print();
-                            ret = 1;
-                        }
-                    }
+                    signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
+                                                                        symm_key_hint, &algo);
+                    HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
+                                                                                   ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
+                             "Could not check and verify the info in response with the policy\n");
                 } else {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
@@ -828,13 +630,16 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #ifdef DEMO_MODE
     printf("\033[22;32mAccepted R2/U3 packet\033[22;37m\n\n\033[22;37m");
 #endif
+
     free(ctx_flags);
     free(matched_tuple);
+    free(msg_buf);
     return ret;
 
 out_err:
     free(ctx_flags);
     free(matched_tuple);
+    free(msg_buf);
     return err;
 }
 
@@ -1043,6 +848,295 @@ int signaling_hipfw_handle_notify(struct hip_common *common, UNUSED struct tuple
     default:
         HIP_DEBUG("Unhandled notification type: %d \n", htons(notification->msgtype));
         break;
+    }
+
+out_err:
+    return err;
+}
+
+int signaling_hipfw_initialize_connection_contexts_and_flags(struct hip_common *common,
+                                                             struct signaling_connection         *new_conn,
+                                                             struct signaling_connection_context *ctx_in,
+                                                             struct signaling_connection_context *ctx_out,
+                                                             struct signaling_connection_flags   **ctx_flags,
+                                                             int *ret)
+{
+    int err = 0;
+    /* sanity checks */
+    HIP_IFEL(!common, -1, "Message is NULL\n");
+
+    /* Step a) */
+    if (signaling_init_connection_from_msg(new_conn, common, FWD)) {
+        HIP_ERROR("Could not init connection context for the IN side \n");
+        *ret = -1;
+    }
+
+    if (signaling_init_connection_context(ctx_in, FWD)) {
+        HIP_ERROR("Could not init connection context for the IN side \n");
+        *ret = -1;
+    }
+
+    if (signaling_init_connection_context(ctx_out, FWD)) {
+        HIP_ERROR("Could not init connection context for the IN SIDE \n");
+        *ret = -1;
+    }
+
+    *ctx_flags = malloc(sizeof(struct signaling_connection_flags));
+    signaling_info_req_flag_init(&(*ctx_flags)->flag_info_requests);
+    signaling_service_info_flag_init(&(*ctx_flags)->flag_services);
+
+out_err:
+    return err;
+}
+
+int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *common,
+                                                          struct tuple *tuple,
+                                                          struct tuple *other_dir,
+                                                          struct hip_fw_context *ctx,
+                                                          UNUSED struct signaling_connection_context *ctx_in,
+                                                          struct signaling_connection_context *ctx_out,
+                                                          struct signaling_connection_flags   *ctx_flags,
+                                                          struct signaling_connection         *new_conn,
+                                                          struct in6_addr                     *hit_i,
+                                                          struct in6_addr                     *hit_r,
+                                                          int *ret)
+{
+    int                  err           = 0;
+    int                  policy_check  = -2;
+    struct policy_tuple *matched_tuple = NULL;
+
+    HIP_ASSERT(ctx_out);
+    HIP_ASSERT(ctx_flags);
+    HIP_ASSERT(new_conn);
+
+    if (common->type_hdr == HIP_R1) {
+        HIP_DEBUG("Connection after receipt of R1/U1 \n");
+    } else if (common->type_hdr == HIP_I2) {
+        HIP_DEBUG("Connection after receipt of I2/U2 \n");
+    } else if (common->type_hdr == HIP_R2) {
+        HIP_DEBUG("Connection after receipt of R2/U3 \n");
+    }
+    signaling_connection_print(new_conn, "\t");
+
+    //TODO check here if ctx_in or ctx_out should be used
+    HIP_IFEL(signaling_init_connection_context_from_msg(ctx_out, common, OUT), -1, "Could not initialize the connection context from the message\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    if (common->type_hdr == HIP_R1) {
+        HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+    } else if (common->type_hdr == HIP_I2) {
+        HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+    } else if (common->type_hdr == HIP_R2) {
+    }
+#endif
+    if ((matched_tuple = signaling_policy_engine_check_and_flag(hit_i, ctx_out, &ctx_flags, &policy_check))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (common->type_hdr == HIP_R1) {
+            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+        } else if (common->type_hdr == HIP_I2) {
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+        } else if (common->type_hdr == HIP_R2) {
+        }
+#endif
+        HIP_DEBUG("Found matching policy tuple\n");
+        if (policy_check == 1) {
+            HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
+            hip_dump_msg(common);
+#ifdef CONFIG_HIP_PERFORMANCE
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Start PERF_MBOX_R1_ADD_INFO_REQ\n");
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Start PERF_MBOX_I2_ADD_INFO_REQ\n");
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
+            } else if (common->type_hdr == HIP_R2) {
+            }
+#endif
+/*
+ *          HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
+ */
+            HIP_IFEL(signaling_add_service_offer_to_msg_s(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
+                                                          signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert()), -1, "Could not add service offer to the message\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Stop PERF_MBOX_R1_ADD_INFO_REQ\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_ADD_INFO_REQ);
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Stop PERF_MBOX_I2_ADD_INFO_REQ\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_ADD_INFO_REQ);
+            } else if (common->type_hdr == HIP_R2) {
+            }
+#endif
+            HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
+            hip_dump_msg(common);
+            ctx->modified = 1;
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
+            next_service_offer_id++;
+
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Connection tracking table after receipt of I2\n");
+            } else if (common->type_hdr == HIP_R2) {
+            }
+            signaling_cdb_print();
+            /* Let packet pass */
+            *ret = -1;
+        } else if (policy_check == 0) {
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_ALLOWED);
+            memset(other_dir->offer_hash, '\0', HIP_AH_SHA_LEN);
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Connection tracking table after receipt of I2\n");
+            } else if (common->type_hdr == HIP_R2) {
+            }
+            signaling_cdb_print();
+            /* Let packet pass */
+            *ret = 1;
+        }
+    } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (common->type_hdr == HIP_R1) {
+            HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
+        } else if (common->type_hdr == HIP_I2) {
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
+        } else if (common->type_hdr == HIP_R2) {
+        }
+#endif
+        if (policy_check == -1) {
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_BLOCKED);
+            signaling_cdb_print();
+            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, new_conn);
+            *ret = 0;
+        } else if (policy_check == 0) {
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Connection tracking table after receipt of R1\n");
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Connection tracking table after receipt of I2\n");
+            } else if (common->type_hdr == HIP_R2) {
+            }
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_ALLOWED);
+            signaling_cdb_print();
+            *ret = 1;
+        }
+    }
+
+out_err:
+    return err;
+}
+
+int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *common,
+                                                          struct tuple *tuple,
+                                                          struct hip_fw_context *ctx,
+                                                          struct signaling_connection_context *ctx_in,
+                                                          struct signaling_connection_flags   *ctx_flags,
+                                                          struct signaling_connection         *new_conn,
+                                                          struct in6_addr                     *hit_i,
+                                                          struct in6_addr                     *hit_r,
+                                                          int *ret)
+{
+    int                  err           = 0;
+    int                  policy_check  = -2;
+    int                  policy_verify = -2;
+    struct policy_tuple *matched_tuple = NULL;
+
+    // Step b)
+#ifdef CONFIG_HIP_PERFORMANCE
+    if (common->type_hdr == HIP_R1) {
+    } else if (common->type_hdr == HIP_I2) {
+        HIP_DEBUG("Start PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+    } else if (common->type_hdr == HIP_R2) {
+        HIP_DEBUG("Start PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+    }
+#endif
+
+
+    if ((ctx_in->user.subject_name_len > 0) && (ctx_in->user.key_rr_len > 0)) {
+        if (!signaling_verify_user_signature_from_msg(common, &ctx_in->user)) {
+            HIP_DEBUG("User Signature Verified.\n");
+        } else {
+            HIP_ERROR("User Signature Verification failed. Cannot accept the user information as true.\n");
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_BLOCKED);
+            signaling_cdb_print();
+            //TODO confirm with Rene if we need it or not.
+            HIP_IFEL(signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, new_conn),
+                     -1, "Could not send connection fail notification to the end-point\n");
+            *ret = 0;
+            return *ret;
+        }
+    }
+
+    /*All the above information is not valid without verification of signature*/
+    /*Later when we add certificates we should also verify user key with the certificates*/
+    if ((matched_tuple = signaling_policy_engine_check_and_flag((hip_hit_t *) hit_i, ctx_in, &ctx_flags, &policy_check))) {
+        HIP_DEBUG("Will verify the connection with the policy.\n");
+        policy_verify = signaling_hipfw_verify_connection_with_policy(matched_tuple, ctx_in, ctx_flags);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (common->type_hdr == HIP_R1) {
+        } else if (common->type_hdr == HIP_I2) {
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+        } else if (common->type_hdr == HIP_R2) {
+            HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+        }
+#endif
+        if (policy_verify == -1) {
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_BLOCKED);
+            signaling_cdb_print();
+            //TODO confirm with Rene if we need it or not.
+            HIP_IFEL(signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, new_conn),
+                     -1, "Could not send connection fail notification to the end-point\n");
+            *ret = 0;
+        } else {
+            HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
+            signaling_cdb_print();
+            *ret = -1;
+        }
+    } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (common->type_hdr == HIP_R1) {
+        } else if (common->type_hdr == HIP_I2) {
+            HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
+        } else if (common->type_hdr == HIP_R2) {
+            HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+        }
+#endif
+        if (policy_check == -1) {
+            // TODO add connection to scdb
+            signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_BLOCKED);
+            signaling_cdb_print();
+            signaling_hipfw_send_connection_failed_ntf(common, tuple, ctx, PRIVATE_REASON, new_conn);
+            *ret = 0;
+        } else if (policy_check == 0) {
+            // TODO add connection to scdb
+            if (common->type_hdr == HIP_R1) {
+                HIP_DEBUG("Connection tracking table after receipt of R1/U1\n");
+                *ret = -1;
+            } else if (common->type_hdr == HIP_I2) {
+                HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
+                signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
+                *ret = -1;
+            } else if (common->type_hdr == HIP_R2) {
+                HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
+                signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_ALLOWED);
+                *ret = 1;
+            }
+            signaling_cdb_print();
+        }
     }
 
 out_err:
