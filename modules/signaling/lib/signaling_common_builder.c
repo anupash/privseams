@@ -882,12 +882,12 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     int tmp_len    = 0;
     int header_len = 0;
     ;
-    int                                    info_len     = 0;
-    int                                    skid_len     = 0;
-    int                                    idx          = 0;
-    int                                    contents_len = 0;
-    struct signaling_param_service_offer_s param_service_offer_s;
-    struct signaling_param_service_offer_s tmp_service_offer_s;
+    int                                    info_len              = 0;
+    int                                    skid_len              = 0;
+    int                                    idx                   = 0;
+    int                                    contents_len          = 0;
+    struct signaling_param_service_offer_s param_service_offer_s = { 0 };
+    struct signaling_param_service_offer_s tmp_service_offer_s   = { 0 };
     uint8_t                                sha1_digest[HIP_AH_SHA_LEN];
     uint8_t                               *signature = NULL;
     unsigned int                           sig_len;
@@ -966,7 +966,7 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     info_len = sizeof(uint16_t) * idx;
 
 
-    contents_len =  header_len + info_len + skid_len + tmp_len;
+    contents_len =  header_len + info_len + skid_len + tmp_len - sizeof(struct hip_tlv_common);
     hip_set_param_contents_len((struct hip_tlv_common *) &tmp_service_offer_s, contents_len);
     hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer_s, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
 
@@ -1303,10 +1303,10 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     header_len =    sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
                  sizeof(offer->service_cert_hint_len) + sizeof(offer->service_sig_algo) +
                  sizeof(offer->service_sig_len) + sizeof(offer->service_description);
-    info_len = (hip_get_param_contents_len(offer) - (header_len +
-                                                     ntohs(offer->service_cert_hint_len) +
-                                                     offer->service_sig_len));
     cert_hint_len = ntohs(offer->service_cert_hint_len);
+    info_len      = (hip_get_param_contents_len(offer) - (header_len + cert_hint_len +
+                                                          offer->service_sig_len - sizeof(struct hip_tlv_common)));
+
 
     tmp_ptr += (header_len + info_len);
     memcpy(certificate_hint, tmp_ptr, HIP_AH_SHA_LEN);

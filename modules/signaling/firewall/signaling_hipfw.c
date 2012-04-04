@@ -452,6 +452,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         free(ctx_flags);
         return ret;
     }
+
     /* Let packet pass */
 #ifdef DEMO_MODE
     printf("\033[22;32mAccepted I2/U2 packet. Checking for information required from Responder\033[22;37m\n\n\033[01;37m");
@@ -466,6 +467,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     HIP_IFEL(signaling_hipfw_check_policy_and_create_service_offer(common, tuple, other_dir, ctx, &ctx_in, &ctx_out,
                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
              -1, "Could not check policy and add service offers\n");
+
 #ifdef DEMO_MODE
     printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
 #endif
@@ -585,6 +587,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
 #endif
+                    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
+                             "Could not initialize the connection context from the message\n");
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
@@ -596,6 +600,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #endif
                     signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
                                                                         symm_key_hint, &algo);
+                    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
+                             "Could not initialize the connection context from the message\n");
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
