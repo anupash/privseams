@@ -55,9 +55,9 @@
 #include "modules/signaling/lib/signaling_common_builder.h"
 
 /* The identity of the firewall */
-static RSA            *rsa_key  = NULL;
-static EC_KEY         *priv_key = NULL;
-static X509           *mb_cert  = NULL;
+static RSA            *rsa_key   = NULL;
+static EC_KEY         *ecdsa_key = NULL;
+static X509           *mb_cert   = NULL;
 static struct in6_addr our_hit;
 
 /* Sockets for output */
@@ -148,14 +148,18 @@ int signaling_hipfw_feedback_init(const char *key_file, const char *cert_file)
     int err = 0;
 
     /* Load the host identity */
-    load_rsa_private_key(key_file, &rsa_key);
-    //load_ecdsa_private_key(key_file, &priv_key);
-    HIP_DEBUG("Successfully Loaded the MiddleBox RSA key. Should not crash anymore.\n");
+    if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
+        load_ecdsa_private_key(key_file, &ecdsa_key);
+        hip_any_key_to_hit(ecdsa_key, &our_hit, 0, HIP_HI_ECDSA);
+    } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
+        load_rsa_private_key(key_file, &rsa_key);
+        hip_any_key_to_hit(rsa_key, &our_hit, 0, HIP_HI_RSA);
+    }
+    HIP_DEBUG("Successfully Loaded the MiddleBox key.\n");
+    HIP_INFO_HIT("Our hit: ", &our_hit);
 
     mb_cert = load_x509_certificate(cert_file);
-    //hip_any_key_to_hit(priv_key, &our_hit, 0, HIP_HI_ECDSA);
-    hip_any_key_to_hit(rsa_key, &our_hit, 0, HIP_HI_RSA);
-    HIP_INFO_HIT("Our hit: ", &our_hit);
+
 
     /* Sockets */
     hipfw_nat_sock_output_udp = init_raw_sock_v4(IPPROTO_UDP);
@@ -193,7 +197,7 @@ out_err:
 int signaling_hipfw_feedback_uninit(void)
 {
     HIP_DEBUG("Uninit signaling firewall feedback module \n");
-    EC_KEY_free(priv_key);
+    EC_KEY_free(ecdsa_key);
     RSA_free(rsa_key);
     X509_free(mb_cert);
     return 0;
@@ -450,11 +454,19 @@ int signaling_hipfw_send_connection_failed_ntf(struct hip_common *common,
     HIP_IFEL(hip_build_param_contents(msg_buf2, &common->hits, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
 
-    /* Sign the packet */
-    HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf),
-             -1, "Could not sign notification for source host \n");
-    HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf2),
-             -1, "Could not sign notification for destination host\n");
+    if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
+        /* Sign the packet */
+        HIP_IFEL(hip_ecdsa_sign(ecdsa_key, msg_buf),
+                 -1, "Could not sign notification for source host \n");
+        HIP_IFEL(hip_ecdsa_sign(ecdsa_key, msg_buf2),
+                 -1, "Could not sign notification for destination host\n");
+    } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
+        /* Sign the packet */
+        HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf),
+                 -1, "Could not sign notification for source host \n");
+        HIP_IFEL(hip_rsa_sign(rsa_key, msg_buf2),
+                 -1, "Could not sign notification for destination host\n");
+    }
 
     /* Send to source and destination of the connection */
     if (send_pkt(NULL, &ctx->src, 10500, 10500, msg_buf)) {
@@ -470,12 +482,20 @@ out_err:
     return err;
 }
 
-RSA     *signaling_hipfw_feedback_get_mb_key()
+void     *signaling_hipfw_feedback_get_mb_key()
 {
-    if (rsa_key != NULL) {
-        return rsa_key;
-    } else {
-        return NULL;
+    if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
+        if (ecdsa_key != NULL) {
+            return ecdsa_key;
+        } else {
+            return NULL;
+        }
+    } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
+        if (rsa_key != NULL) {
+            return rsa_key;
+        } else {
+            return NULL;
+        }
     }
 }
 

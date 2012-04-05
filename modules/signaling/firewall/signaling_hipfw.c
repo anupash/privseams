@@ -961,11 +961,15 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
             } else if (common->type_hdr == HIP_R2) {
             }
 #endif
+
+            HIP_IFEL(signaling_add_service_offer_to_msg(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
+                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 1), -1,
+                     "Could not add service offer to the message\n");
+
 /*
- *          HIP_IFEL(signaling_add_service_offer_to_msg_u(common, ctx_flags, next_service_offer_id, other_dir->offer_hash), -1, "Could not add service offer to the message\n");
+ *           HIP_IFEL(signaling_add_service_offer_to_msg_s(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
+ *                                                         signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert()), -1, "Could not add service offer to the message\n");
  */
-            HIP_IFEL(signaling_add_service_offer_to_msg_s(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                          signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert()), -1, "Could not add service offer to the message\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
             if (common->type_hdr == HIP_R1) {

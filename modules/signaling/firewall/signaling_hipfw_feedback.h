@@ -54,6 +54,6 @@ int signaling_hipfw_send_connection_failed_ntf(UNUSED struct hip_common *common,
                                                const struct signaling_connection *conn);
 
 /*Utility functions*/
-RSA     *signaling_hipfw_feedback_get_mb_key(void);
+void     *signaling_hipfw_feedback_get_mb_key(void);
 X509    *signaling_hipfw_feedback_get_mb_cert(void);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_FEEDBACK_H*/

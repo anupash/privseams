@@ -367,6 +367,7 @@ int signaling_init_app_context_from_msg(struct signaling_application_context *co
     int                          err     = 0;
     int                          tmp_len = 0;
     int                          i       = 0;
+    const uint8_t               *tmp_ptr = NULL;
     const struct hip_tlv_common *param   = NULL;
 
 
@@ -377,12 +378,12 @@ int signaling_init_app_context_from_msg(struct signaling_application_context *co
         tmp_len = ntohs(((const struct signaling_param_app_info_name *) param)->app_dn_length);
         memcpy(ctx->application_dn, ((const struct signaling_param_app_info_name *) param)->application_dn,
                tmp_len);
-        ctx->application_dn[tmp_len - 1] = '\0';
+        ctx->application_dn[tmp_len] = '\0';
 
+        tmp_ptr = (const uint8_t *) &((const struct signaling_param_app_info_name *) param)->application_dn[tmp_len];
         tmp_len = ntohs(((const struct signaling_param_app_info_name *) param)->issuer_dn_length);
-        memcpy(ctx->issuer_dn, ((const struct signaling_param_app_info_name *) param)->issuer_dn,
-               tmp_len);
-        ctx->issuer_dn[tmp_len - 1] = '\0';
+        memcpy(ctx->issuer_dn, tmp_ptr, tmp_len);
+        ctx->issuer_dn[tmp_len] = '\0';
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
@@ -777,14 +778,14 @@ int signaling_copy_port_pair(struct signaling_port_pair *const dst,
  *
  * @return negative value on error, 0 on success
  */
-int signaling_copy_service_offer_u(struct signaling_param_service_offer_u *const dst,
-                                   const struct signaling_param_service_offer_u *const src)
+int signaling_copy_service_offer(struct signaling_param_service_offer *const dst,
+                                 const struct signaling_param_service_offer *const src)
 {
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;
     }
-    memcpy(dst, src, sizeof(struct signaling_param_service_offer_u));
+    memcpy(dst, src, sizeof(struct signaling_param_service_offer));
     return 0;
 }
 
@@ -862,7 +863,7 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
     int err     = 0;
     int tmp_len = 0;
 //    const struct signaling_param_user_auth_request *param_usr_auth;
-    const struct signaling_param_service_offer_u *param_service_offer;
+    const struct signaling_param_service_offer *param_service_offer;
     //const uint8_t                                *p_contents;
 
     /* sanity checks */

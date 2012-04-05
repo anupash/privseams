@@ -886,16 +886,20 @@ struct signaling_param_app_info_requirements {
  * /                              ...                              /
  * /                              ...                              /
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                        SERVICE_CERT_HINT                      /
+ * /                                                               |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
 
-struct signaling_param_service_offer_u {
-    hip_tlv     type;
-    hip_tlv_len length;
-    uint16_t    service_offer_id;
-    uint16_t    service_type;
-    uint32_t    service_description;
-    uint16_t    endpoint_info_req[MAX_NUM_INFO_ITEMS];
+struct signaling_param_service_offer {
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint16_t      service_offer_id;
+    uint16_t      service_type;
+    uint32_t      service_description;
+    uint16_t      endpoint_info_req[MAX_NUM_INFO_ITEMS];
+    unsigned char service_cert_hint[HIP_AH_SHA_LEN];
 } __attribute__((packed));
 
 
@@ -1322,8 +1326,8 @@ int signaling_connection_add_port_pair(uint16_t src_port, uint16_t dst_port,
                                        struct signaling_connection *const conn);
 int signaling_copy_port_pair(struct signaling_port_pair *const dst,
                              const struct signaling_port_pair *const src);
-int signaling_copy_service_offer_u(struct signaling_param_service_offer_u *const dst,
-                                   const struct signaling_param_service_offer_u *const src);
+int signaling_copy_service_offer(struct signaling_param_service_offer *const dst,
+                                 const struct signaling_param_service_offer *const src);
 int signaling_copy_service_offer_s(struct signaling_param_service_offer_s *const dst,
                                    const struct signaling_param_service_offer_s *const src);
 /* Flag handling */
