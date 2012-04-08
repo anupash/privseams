@@ -1214,6 +1214,33 @@ int hipd_init(const uint64_t flags)
 
     hip_register_sockets();
 
+#ifdef HIP_MODULE_SIGNALING
+    hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2);
+    hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2);
+    hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2);
+    hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_create_i2);
+
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_r1_counter_and_hip_transform, 40100);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_host_id, 40200);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_reg_req_and_esp_tranform, 40300);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40400);
+
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_r1_counter_and_hip_transform, 40100);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_host_id, 40200);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_reg_req_and_esp_tranform, 40300);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40400);
+
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_r1_counter_and_hip_transform, 40100);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_host_id, 40200);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_reg_req_and_esp_tranform, 40300);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40400);
+
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_r1_counter_and_hip_transform, 40100);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_host_id, 40200);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_reg_req_and_esp_tranform, 40300);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40400);
+#endif
+
 out_err:
     return err;
 }

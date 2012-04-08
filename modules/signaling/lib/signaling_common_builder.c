@@ -1051,8 +1051,6 @@ int signaling_verify_service_ack_u(struct hip_common *msg,
     const struct signaling_service_ack *ack;
 
     HIP_DEBUG("Ack received corresponding to the service offer.\n");
-    //TODO check for signed and unsigned service offer parameters
-
 
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_U))) {
         do {
@@ -1157,7 +1155,6 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
  *
  * @return 0 on success
  */
-//TODO no different parameter types for signed and unsigned service offers. Need to update
 int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
                                                 struct signaling_connection conn,
                                                 struct signaling_connection_context *ctx_out,
@@ -1292,7 +1289,6 @@ out_err:
  *
  * @return 0 on success
  */
-//TODO no different parameter types for signed and unsigned service offers. Need to update
 int signaling_build_response_to_service_offer_s(struct hip_common                      *input_msg,
                                                 struct hip_common                      *output_msg,
                                                 struct signaling_connection             conn,

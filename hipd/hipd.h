@@ -39,6 +39,7 @@
 #define HIP_HIT_DEV "dummy0"
 
 #define HIP_DEFAULT_HI_ALGO       HIP_HI_ECDSA
+#define HIP_MODULE_SIGNALING      1
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
