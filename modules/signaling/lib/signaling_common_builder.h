@@ -86,18 +86,19 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
                                                 struct signaling_connection_context *ctx_out,
                                                 const struct signaling_param_service_offer *offer,
                                                 struct signaling_flags_info_req    *flags);
-int signaling_build_response_to_service_offer_s(struct hip_common                      *input_msg,
-                                                struct hip_common *output_msg,
+int signaling_build_response_to_service_offer_s(struct hip_common *output_msg,
                                                 struct signaling_connection conn,
                                                 struct signaling_connection_context  *ctx_out,
                                                 struct signaling_param_service_offer *offer,
-                                                struct signaling_flags_info_req    *flags);
+                                                struct signaling_flags_info_req    *flags,
+                                                struct hip_packet_context *ctx);
 int signaling_build_service_ack_u(struct hip_common *input_msg,
                                   struct hip_common *output_msg);
-int signaling_build_service_ack_s(struct hip_common *input_msg,
-                                  struct hip_common *output_msg,  X509 *cert,
+int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
+                                  X509 *cert,
                                   unsigned char *symm_key, uint8_t key_len,
-                                  unsigned char *key_hint, int key_hint_len, uint8_t algo);
+                                  unsigned char *key_hint, int key_hint_len, uint8_t algo,
+                                  struct hip_packet_context *ctx);
 int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
                                              char *data, int *data_len, unsigned char *key_hint);
 int signaling_build_hip_packet_from_hip_encrypted_param(struct hip_common *common,    struct hip_common **msg_buf,

@@ -56,7 +56,6 @@
 
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5100
-#define HIP_PARAM_SIGNALING_CONNECTION          5102
 #define HIP_PARAM_SIGNALING_PORTS               5103
 
 /*Parameter types for the end-point information*/
@@ -77,6 +76,7 @@
 
 #define HIP_PARAM_SIGNALING_ENCRYPTED               5120
 
+#define HIP_PARAM_SIGNALING_CONNECTION          5121
 #define HIP_PARAM_SIGNALING_SERVICE_ACK_S           5122
 #define HIP_PARAM_SIGNALING_SERVICE_ACK_U           5124
 #define HIP_PARAM_SIGNALING_SERVICE_NACK            5126

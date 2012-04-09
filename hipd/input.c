@@ -1447,11 +1447,15 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 
     /* Decrypt the HOST_ID and verify it against the sender HIT. */
     /* @todo: the HOST_ID can be in the packet in plain text */
-    enc = hip_get_param(ctx->input_msg, HIP_PARAM_ENCRYPTED);
-    if (enc == NULL) {
+    enc            = hip_get_param(ctx->input_msg, HIP_PARAM_ENCRYPTED);
+    host_id_in_enc = hip_get_param_readwrite(ctx->input_msg,
+                                             HIP_PARAM_HOST_ID);
+    if (enc == NULL || host_id_in_enc != NULL) {
         HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
-        host_id_in_enc = hip_get_param_readwrite(ctx->input_msg,
-                                                 HIP_PARAM_HOST_ID);
+/*
+ *      host_id_in_enc = hip_get_param_readwrite(ctx->input_msg,
+ *                                               HIP_PARAM_HOST_ID);
+ */
         HIP_IFEL(!host_id_in_enc, -1, "No host id in i2");
     } else {
         /* Little workaround...

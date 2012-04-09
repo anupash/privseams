@@ -63,7 +63,7 @@
  */
 int signaling_hipd_init_state(struct modular_state *state)
 {
-    int                          err       = 0;
+    int                          err       = 0, i = 0;
     struct signaling_hipd_state *sig_state = NULL;
 
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) malloc(sizeof(struct signaling_hipd_state))),
@@ -81,6 +81,10 @@ int signaling_hipd_init_state(struct modular_state *state)
     sig_state->user_cert_ctx.cert_chain   = NULL;
     sig_state->user_cert_ctx.group        = -1;
     sig_state->user_cert_ctx.next_cert_id = 0;
+
+    for (i = 0; i < 10; i++) {
+        sig_state->service_ack[i] = NULL;
+    }
 
     err = lmod_add_state_item(state, sig_state, "signaling_hipd_state");
 

@@ -36,6 +36,7 @@ struct signaling_hipd_state {
     struct signaling_connection        *pending_conn;
     struct signaling_connection_context pending_conn_context;
     uint8_t                             flag_user_sig;
+    void                               *service_ack[10];
     /* Collects user certificates accross multiple updates */
     struct user_certificate_context user_cert_ctx;
 };

@@ -1289,12 +1289,12 @@ out_err:
  *
  * @return 0 on success
  */
-int signaling_build_response_to_service_offer_s(struct hip_common                      *input_msg,
-                                                struct hip_common                      *output_msg,
+int signaling_build_response_to_service_offer_s(struct hip_common                      *output_msg,
                                                 struct signaling_connection             conn,
                                                 struct signaling_connection_context    *ctx_out,
                                                 struct signaling_param_service_offer   *offer,
-                                                struct signaling_flags_info_req        *flags)
+                                                struct signaling_flags_info_req        *flags,
+                                                struct hip_packet_context                 *ctx)
 {
     int err = 0;
     //int      i                  = 0;
@@ -1358,7 +1358,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     HIP_IFEL(signaling_build_param_encrypted_aes_sha1(output_msg, (char *) tmp_ptr, &tmp_len, key_hint), -1,
              "Could not build the HIP Encrypted parameter\n");
 
-    enc_in_msg = hip_get_param_readwrite(output_msg, HIP_PARAM_SIGNALING_ENCRYPTED);
+    enc_in_msg = hip_get_param_readwrite(output_msg, HIP_PARAM_ENCRYPTED);
     HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
     iv = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
     get_random_bytes(iv, 16);
@@ -1372,7 +1372,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     HIP_HEXDUMP("Encrypted data = ", info_secret_enc, tmp_len);
 
     /* ========== Create and send the ack for signed service offer  ===============*/
-    HIP_IFEL(signaling_build_service_ack_s(input_msg, output_msg,  mb_certificate, key_data, key_data_len, key_hint, 4, HIP_HIP_AES_SHA1),
+    HIP_IFEL(signaling_build_service_ack_s(offer,  mb_certificate, key_data, key_data_len, key_hint, 4, HIP_HIP_AES_SHA1, ctx),
              -1, "Could not build ack for signed service offer\n");
 
 out_err:
@@ -1427,15 +1427,16 @@ out_err:
 /*
  * Building Acknowledgment for signed signed service offer. Slightly tricky.
  */
-int signaling_build_service_ack_s(struct hip_common *input_msg,
-                                  struct hip_common *output_msg,  X509 *cert,
+int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
+                                  X509 *cert,
                                   unsigned char *symm_key, uint8_t key_len,
-                                  unsigned char *key_hint, int key_hint_len, uint8_t algo)
+                                  unsigned char *key_hint, int key_hint_len, uint8_t algo,
+                                  struct hip_packet_context *ctx)
 {
-    int                                  err = 0;
+    int                                  err = 0, i = 0;
     struct signaling_param_service_offer param_service_offer;
-    const struct hip_tlv_common         *param;
     struct signaling_param_service_ack_s ack;
+    struct signaling_hipd_state         *sig_state = NULL;
     //char                                   param_buf[HIP_MAX_PACKET];
     unsigned char *tmp_info_secrets = NULL;
     unsigned char *enc_output       = NULL;
@@ -1447,61 +1448,68 @@ int signaling_build_service_ack_s(struct hip_common *input_msg,
     EVP_PKEY *pub_key = X509_get_pubkey(cert);
 
     HIP_ASSERT(pub_key);
+    HIP_ASSERT(offer);
 
-    if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
-        do {
-            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
-                HIP_DEBUG("Building the signed service ack \n");
-                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
-                         -1, "Could not copy connection context\n");
+    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
+    HIP_DEBUG("Building the signed service ack \n");
+    HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (offer)),
+             -1, "Could not copy connection context\n");
 
-                ack.service_offer_id = param_service_offer.service_offer_id;
-                ack.service_option   = 0;
-                /*Generate the hash of the service offer*/
-                HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer),
-                                          ack.service_offer_hash),
-                         -1, "Could not build hash of the service offer \n");
-                HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
-                tmp_len          = sizeof(uint16_t) + sizeof(uint32_t) + key_len;
-                tmp_info_secrets = malloc(tmp_len);
-                tmp_ptr          = tmp_info_secrets;
-                memcpy(tmp_ptr, &key_len, sizeof(key_len));
-                tmp_ptr += sizeof(key_len);
-                memcpy(tmp_ptr, &algo, sizeof(algo));
-                tmp_ptr += sizeof(algo);
-                memcpy(tmp_ptr, key_hint, key_hint_len);
-                tmp_ptr += key_hint_len;
-                memcpy(tmp_ptr, symm_key, key_len);
+    ack.service_offer_id = param_service_offer.service_offer_id;
+    ack.service_option   = 0;
+    /*Generate the hash of the service offer*/
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(offer),
+                              ack.service_offer_hash),
+             -1, "Could not build hash of the service offer \n");
+    HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
+    tmp_len          = sizeof(uint16_t) + sizeof(uint32_t) + key_len;
+    tmp_info_secrets = malloc(tmp_len);
+    tmp_ptr          = tmp_info_secrets;
+    memcpy(tmp_ptr, &key_len, sizeof(key_len));
+    tmp_ptr += sizeof(key_len);
+    memcpy(tmp_ptr, &algo, sizeof(algo));
+    tmp_ptr += sizeof(algo);
+    memcpy(tmp_ptr, key_hint, key_hint_len);
+    tmp_ptr += key_hint_len;
+    memcpy(tmp_ptr, symm_key, key_len);
 
-                HIP_HEXDUMP("Original end point info secrets : ", tmp_info_secrets, tmp_len);
-                HIP_DEBUG("Length of info secrets before encryption = %d\n", tmp_len);
+    HIP_HEXDUMP("Original end point info secrets : ", tmp_info_secrets, tmp_len);
+    HIP_DEBUG("Length of info secrets before encryption = %d\n", tmp_len);
 
-                /*---- Encrypting the end point info secrets*/
+    /*---- Encrypting the end point info secrets*/
 
-                rsa        = EVP_PKEY_get1_RSA(pub_key);
-                enc_output = malloc(RSA_size(rsa));
-                tmp_len    = RSA_public_encrypt(tmp_len, tmp_info_secrets, enc_output, rsa, RSA_PKCS1_OAEP_PADDING);
+    rsa        = EVP_PKEY_get1_RSA(pub_key);
+    enc_output = malloc(RSA_size(rsa));
+    tmp_len    = RSA_public_encrypt(tmp_len, tmp_info_secrets, enc_output, rsa, RSA_PKCS1_OAEP_PADDING);
 
-                HIP_DEBUG("Length of encrypted info secrets after encryption = %d\n", tmp_len);
-                HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, tmp_len);
+    HIP_DEBUG("Length of encrypted info secrets after encryption = %d\n", tmp_len);
+    HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, tmp_len);
 
-                /*---- Building of the HIP PARAM SECVICE ACK Signed ----*/
-                tmp_ptr  = (uint8_t *) &ack;
-                tmp_ptr +=  sizeof(struct hip_tlv_common) + sizeof(ack.service_offer_id) +
-                           sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
-                memcpy(tmp_ptr, enc_output, tmp_len);
-                len_contents = tmp_len + sizeof(ack.service_offer_id) +
-                               sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
-                // print_hash(ack.service_offer_hash);
+    /*---- Building of the HIP PARAM SECVICE ACK Signed ----*/
+    tmp_ptr  = (uint8_t *) &ack;
+    tmp_ptr +=  sizeof(struct hip_tlv_common) + sizeof(ack.service_offer_id) +
+               sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
+    memcpy(tmp_ptr, enc_output, tmp_len);
+    len_contents = tmp_len + sizeof(ack.service_offer_id) +
+                   sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
+    // print_hash(ack.service_offer_hash);
 
-                hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
-                hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK_S);
+    hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
+    hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK_S);
 
-                /* Append the parameter to the message */
-                if (hip_build_param(output_msg, &ack)) {
-                    HIP_ERROR("Failed to append signed service ack to message.\n");
-                    return -1;
-                }
+    /* Append the parameter to the  service ack list in the hipd_state. We will build the service_ack to the HIP msg later */
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             0, "failed to retrieve state for signaling\n");
+
+    for (i = 0; i < 10; i++) {
+        if (sig_state->service_ack[i] == NULL) {
+            break;
+        }
+    }
+    tmp_len                   = hip_get_param_contents_len(&ack) + sizeof(struct hip_tlv_common);
+    sig_state->service_ack[i] = malloc(tmp_len);
+    memcpy(sig_state->service_ack[i], &ack, tmp_len);
+
 /*
  *
  *               if (hip_build_generic_param(output_msg, (struct hip_tlv_common *) &ack,
@@ -1510,9 +1518,6 @@ int signaling_build_service_ack_s(struct hip_common *input_msg,
  *                   return -1;
  *               }
  */
-            }
-        } while ((param = hip_get_next_param(input_msg, param)));
-    }
 
 out_err:
     return err;
@@ -1537,7 +1542,7 @@ int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
     int                           err          = 0;
     struct hip_encrypted_aes_sha1 enc          = { 0 };
     char                         *param_padded = NULL;
-    hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_SIGNALING_ENCRYPTED);
+    hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
 
     HIP_ASSERT(data);
 
@@ -1737,7 +1742,7 @@ int signaling_build_hip_packet_from_hip_encrypted_param(struct hip_common *commo
     uint16_t mask = 0;
     hip_build_network_hdr(*msg_buf, HIP_UPDATE, mask, &common->hits, &common->hitr); /*Just giving some dummy Packet type*/
 
-    enc_in_msg    = hip_get_param(common, HIP_PARAM_SIGNALING_ENCRYPTED);
+    enc_in_msg    = hip_get_param(common, HIP_PARAM_ENCRYPTED);
     tmp_enc_param = malloc(hip_get_param_total_len(enc_in_msg));
     HIP_ASSERT(enc_in_msg);
     memcpy(tmp_enc_param, enc_in_msg, hip_get_param_total_len(enc_in_msg));

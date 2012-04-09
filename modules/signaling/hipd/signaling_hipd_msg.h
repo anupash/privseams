@@ -39,8 +39,16 @@
 #include <stdint.h>
 
 #include "lib/core/protodefs.h"
+#include "lib/core/modularization.h"
+#include "hipd/pkt_handling.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
+
+/* FLags to be used in case the offer is signed or unsigned */
+enum  offer_signed_or_unsigned {
+    OFFER_SIGNED,
+    OFFER_UNSIGNED
+};
 
 /* Handler for incoming messages */
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
@@ -49,9 +57,13 @@ int signaling_handle_incoming_notification(const uint8_t packet_type, const uint
 
 /* Handler for outgoing messages */
 int signaling_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_i2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_handle_unsigned_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_signed_service_ack_and_sig_conn(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
+int signaling_r2_handle_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet_type,
+                                                     UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 /* Functions for initiating and answering to a bex update */
 int signaling_send_first_update(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit,
@@ -67,5 +79,7 @@ int signaling_send_user_certificate_chain_ack(struct hip_hadb_state *ha,
                                               const uint32_t seq,
                                               const struct signaling_connection *const conn,
                                               uint32_t network_id);
-
+/* utility functions */
+int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
+                                              struct hip_packet_context *ctx, uint8_t flag);
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/
