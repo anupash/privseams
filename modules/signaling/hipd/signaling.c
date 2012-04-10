@@ -38,26 +38,6 @@
 #define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
 
 
-int Load_host_info_on_boot_strap()
-{
-    int err = 0;
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
-    hip_perf_start_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
-    hip_perf_start_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
-#endif
-
-    HIP_IFEL(signaling_get_verified_host_context(&signaling_persistent_host), -1, "Could not get host context at boot strap.\n");
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
-    hip_perf_stop_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
-    hip_perf_stop_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
-#endif
-out_err:
-    return err;
-}
-
 int hip_signaling_init(void)
 {
     int err = 0;
@@ -67,13 +47,20 @@ int hip_signaling_init(void)
 
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not init user management\n");
     HIP_IFEL(signaling_init_host_context(&signaling_persistent_host), -1, "Could not initialize host context.\n");
-    // FIXME This only call signaling_get_verified_host_context(), which is only used here. Remove this indirection.
-    HIP_IFEL(Load_host_info_on_boot_strap(), -1, "Error getting host context\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_start_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
+#endif
+    HIP_IFEL(signaling_get_verified_host_context(&signaling_persistent_host), -1, "Error getting host context at boot strap.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I_HOST_CTX_LOOKUP, PERF_R_HOST_CTX_LOOKUP\n");   // test 1.1
+    hip_perf_stop_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_R_HOST_CTX_LOOKUP);
+#endif
 
     // register on the wire parameter types
-    // FIXME Do we still need HIP_PARAM_SIGNALING_CONNECTION_ID?
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,
-                                 "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CERT_CHAIN_ID,
                                  "HIP_PARAM_SIGNALING_CERT_CHAIN_ID");
 
@@ -110,9 +97,7 @@ int hip_signaling_init(void)
                                  "HIP_PARAM_SIGNALING_ENCRYPTED");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,
                                  "HIP_PARAM_SIGNALING_SERVICE_OFFER");
-    // FIXME we do not need a signed offer anymore
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,
-                                 "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
+
     // FIXME we should only require a signed ACK
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,
                                  "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
@@ -193,7 +178,7 @@ int hip_signaling_init(void)
                                                HIP_STATE_R2_SENT,
                                                HIP_STATE_NONE };
     for (unsigned i = 0; i < ARRAY_SIZE(mbox_service_notify_states); i++) {
-        if (hip_register_handle_function(HIP_I2,
+        if (hip_register_handle_function(HIP_NOTIFY,
                                          mbox_service_notify_states[i],
                                          &signaling_handle_incoming_notification,
                                          INBOUND_HANDLE_NOTIFY_PRIO)) {
@@ -208,11 +193,14 @@ int hip_signaling_init(void)
                                       INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
              -1, "Error on registering Signaling user handle function.\n");
 
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2), -1, "Error on unregistering handle function hip_create_i2 HIP_I1_SENT\n");
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2), -1, "Error on unregistering handle function hip_create_i2 HIP_I2_SENT\n");
-    ;
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2), -1, "Error on unregistering handle function hip_create_i2 HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_create_i2), -1, "Error on unregistering handle function hip_create_i2 HIP_R1\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2),
+             -1, "Error on unregistering handle function hip_create_i2 HIP_I1_SENT\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2),
+             -1, "Error on unregistering handle function hip_create_i2 HIP_I2_SENT\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2),
+             -1, "Error on unregistering handle function hip_create_i2 HIP_STATE_CLOSING\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_create_i2),
+             -1, "Error on unregistering handle function hip_create_i2 HIP_R1\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_r1_counter_and_hip_transform, 40100),
              -1, "Error on registering handle function hip_create_i2_build_r1_counter_and_hip_transform HIP_STATE_I1_SENT\n");

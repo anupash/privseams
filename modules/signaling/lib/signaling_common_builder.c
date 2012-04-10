@@ -1330,7 +1330,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &output_msg->hits, &output_msg->hitr); /*Just giving some dummy Packet type*/
 
     header_len =    sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
-                 +sizeof(offer->service_description);
+                 + sizeof(offer->service_description);
     cert_hint_len = HIP_AH_SHA_LEN;
     info_len      = (hip_get_param_contents_len(offer) - (header_len + cert_hint_len - sizeof(struct hip_tlv_common)));
 
@@ -2034,6 +2034,27 @@ int signaling_check_if_service_offer_signed(struct signaling_param_service_offer
 
     memset(temp_check, 0, HIP_AH_SHA_LEN);
     return memcmp(temp_check, tmp_ptr, HIP_AH_SHA_LEN) ? 1 : 0;
+}
+
+int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg)
+{
+    int                                  err   = 0;
+    int                                  flag  = 0;
+    const struct hip_tlv_common         *param = NULL;
+    struct signaling_param_service_offer param_service_offer;
+
+    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        do {
+            HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
+                     -1, "Could not copy connection context\n");
+            flag =  signaling_check_if_service_offer_signed(&param_service_offer);
+            if (flag) {
+                return 1;
+            }
+        } while ((param = hip_get_next_param(msg, param)));
+    }
+out_err:
+    return err;
 }
 
 /*
