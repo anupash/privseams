@@ -1252,13 +1252,14 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     uint8_t                              ctx_looked_up             = 0;
     uint8_t                              flag_service_offer_signed = 0;
 
+    // FIXME you can incorporate this check in your if statement below
     /* sanity checks */
     if (packet_type == HIP_R1) {
         HIP_DEBUG("Handling an R1\n");
     } else if (packet_type == HIP_UPDATE) {
-        HIP_DEBUG("Handling a First BEX update U1 just like R1\n");
+        HIP_DEBUG("Handling a first update U1 just like R1\n");
     } else {
-        HIP_ERROR("Packet is neither R1 nor First BEX update.\n");
+        HIP_ERROR("Packet is neither R1 nor first update U1.\n");
         err = -1;
         goto out_err;
     }
@@ -1271,16 +1272,20 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
 
     HIP_DEBUG("Adding the connection information to the hipd state.\n");
     if (packet_type == HIP_UPDATE) {
+        // FIXME why do you first get the context into new_conn and then move it to temp_conn? Seems redundant!
         HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
                  -1, "Could not init connection context from I2 \n");
         signaling_init_connection(&temp_conn);
         memcpy(&temp_conn, &new_conn, sizeof(struct signaling_connection));
         temp_conn.src_port = htons(new_conn.src_port);
         temp_conn.dst_port = htons(new_conn.dst_port);
+
+        // FIXME Why do you need to add state here?
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not add new connection to hipd state. \n");
         HIP_DEBUG("Adding to hipd state since it's an update\n");
     } else if (packet_type == HIP_R1) {
+        // FIXME Why do you need to make this check? Documentation missing!
         if (!sig_state->pending_conn) {
             HIP_DEBUG("We have no connection context for this host associtaion. \n");
             return 0;
@@ -1292,8 +1297,9 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     }
 
     signaling_info_req_flag_init(&flags_info_requested);
-    //TODO check for signed and unsigned service offer parameters
     // Adding response to service offers
+    // FIXME good candidate for own function
+    // TODO explain logic to me :)
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
@@ -1336,12 +1342,14 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         sig_state->flag_user_sig = 1;
     }
 
+    // FIXME Why is this parameter only needed in unsigned case?
     /* Now adding the signaling connection to the HIP_I2 message*/
     if (flag == OFFER_UNSIGNED) {
         HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
                  -1, "build signaling_connection failed \n");
     }
 
+    // FIXME the ACK is always signed, however you appended a misleading _u and only add the ACK conditionally
     // Now Add the service acknowledgements
     if (!flag_service_offer_signed || flag == OFFER_UNSIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
