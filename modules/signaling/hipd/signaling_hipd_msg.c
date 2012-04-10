@@ -659,6 +659,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     }
 
 
+    // FIXME Why do we need to update anything here?
     /* Get the connection from state and update it with the information in the R2. */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
@@ -890,7 +891,7 @@ out_err:
 }
 
 /*
- * Handle a BEX update
+ * Handle an update
  */
 int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
@@ -907,6 +908,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
 #endif
 
+    // FIXME PK signature verification is not necessary. The packet is verified via HMAC in the update module!
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
              -EINVAL,
@@ -917,6 +919,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
 #endif
 
 
+    // FIXME This looks strange. Why don't you just add the parameter as during BEX and let the update module do the rest?
     /* Handle the different update types */
     switch (update_type) {
     case SIGNALING_FIRST_BEX_UPDATE:

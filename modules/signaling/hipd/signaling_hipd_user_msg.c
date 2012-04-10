@@ -181,6 +181,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
             signaling_connection_print(&new_conn, "");
         }
 
+        //FIXME this is redundant with BEX case. Just move out of if statement!
         memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
         HIP_IFEL(signaling_get_verified_application_context_by_ports(&new_conn, &sig_state->pending_conn_context, INITIATOR), -1, "Getting application context failed.\n");
         HIP_IFEL(signaling_get_verified_user_context(&sig_state->pending_conn_context), -1, "Getting user context failed.\n");
