@@ -1408,6 +1408,7 @@ out_err:
     return err;
 }
 
+// FIXME This should be mostly redundant with the corresponding I2 function. Refactor!
 /*
  * Receive the service offers from the service provider with the R2 packet and respond to them
  */
@@ -1517,7 +1518,6 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
     } else {
         HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1, "Building Acknowledgment to signed Service Offer failed\n");
-        ;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");

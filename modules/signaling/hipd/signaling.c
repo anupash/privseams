@@ -97,6 +97,7 @@ int hip_signaling_init(void)
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);
 
+    // FIXME Service offers are always unsigned. The function name suggests that there is also a signed counterpart, though.
     /* Handle Service Offer in R1*/
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,         &signaling_i2_handle_unsigned_service_offers, OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO),
              -1, "Error on registering Signaling handle function.\n");
@@ -219,6 +220,7 @@ int hip_signaling_init(void)
     // Init openssl
     OpenSSL_add_all_algorithms();
 
+    // FIXME This only call signaling_get_verified_host_context(), which is only used here. Remove this indirection.
     HIP_IFEL(Load_host_info_on_boot_strap(), -1, "Error getting host context\n");
     // TODO store host state in global variable
 
