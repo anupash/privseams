@@ -84,25 +84,25 @@ int hip_add_unsigned_echo_response(const uint8_t packet_type,
                                    const uint32_t ha_state,
                                    struct hip_packet_context *ctx);
 
-int hip_create_i2(const uint8_t packet_type,
-                  const uint32_t ha_state,
-                  struct hip_packet_context *ctx);
+int hip_select_and_add_hip_transform(const uint8_t packet_type,
+                                     const uint32_t ha_state,
+                                     struct hip_packet_context *ctx);
 
-int hip_create_i2_build_r1_counter_and_hip_transform(const uint8_t packet_type,
-                                                     const uint32_t ha_state,
-                                                     struct hip_packet_context *ctx);
+int hip_add_r1_counter(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
 
-int hip_create_i2_build_host_id(const uint8_t packet_type,
-                                const uint32_t ha_state,
-                                struct hip_packet_context *ctx);
+int hip_add_i2_host_id(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
 
-int hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec(const uint8_t packet_type,
-                                                          const uint32_t ha_state,
-                                                          struct hip_packet_context *ctx);
+int hip_add_reg_request(const uint8_t packet_type,
+                        const uint32_t ha_state,
+                        struct hip_packet_context *ctx);
 
-int hip_create_i2_build_reg_req_and_esp_tranform(const uint8_t packet_type,
-                                                 const uint32_t ha_state,
-                                                 struct hip_packet_context *ctx);
+int hip_select_and_add_esp_tranform(const uint8_t packet_type,
+                                    const uint32_t ha_state,
+                                    struct hip_packet_context *ctx);
 
 int hip_send_i2(const uint8_t packet_type,
                 const uint32_t ha_state,
