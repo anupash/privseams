@@ -165,7 +165,6 @@ int signaling_hipfw_init(const char *policy_file)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,         "HIP_PARAM_SIGNALING_SERVICE_ACK");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,         "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
 
@@ -964,7 +963,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
 #endif
 
             HIP_IFEL(signaling_add_service_offer_to_msg(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 1), -1,
+                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 0), -1,
                      "Could not add service offer to the message\n");
 
 /*
@@ -1057,6 +1056,7 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
     int                  policy_check  = -2;
     int                  policy_verify = -2;
     struct policy_tuple *matched_tuple = NULL;
+    int                  update_type   = -1;
 
     // Step b)
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1086,6 +1086,11 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
         }
     }
 
+    if (common->type_hdr == HIP_UPDATE) {
+        /* Sanity checks */
+        HIP_IFEL((update_type = signaling_get_update_type(common)) < 0,
+                 1, "This is no signaling update packet\n");
+    }
     /*All the above information is not valid without verification of signature*/
     /*Later when we add certificates we should also verify user key with the certificates*/
     if ((matched_tuple = signaling_policy_engine_check_and_flag((hip_hit_t *) hit_i, ctx_in, &ctx_flags, &policy_check))) {
@@ -1138,13 +1143,23 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
                 HIP_DEBUG("Connection tracking table after receipt of R1/U1\n");
                 *ret = -1;
             } else if (common->type_hdr == HIP_I2) {
-                HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
+                HIP_DEBUG("Connection tracking table after receipt of I2\n");
                 signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
                 *ret = -1;
             } else if (common->type_hdr == HIP_R2) {
-                HIP_DEBUG("Connection tracking table after receipt of R2/U3\n");
+                HIP_DEBUG("Connection tracking table after receipt of R2\n");
                 signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_ALLOWED);
                 *ret = 1;
+            } else if (common->type_hdr == HIP_UPDATE) {
+                if (update_type == SIGNALING_SECOND_BEX_UPDATE) {
+                    HIP_DEBUG("Connection tracking table after receipt of U2\n");
+                    signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
+                    *ret = -1;
+                } else if (update_type == SIGNALING_THIRD_BEX_UPDATE) {
+                    HIP_DEBUG("Connection tracking table after receipt of U3\n");
+                    signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_ALLOWED);
+                    *ret = 1;
+                }
             }
             signaling_cdb_print();
         }

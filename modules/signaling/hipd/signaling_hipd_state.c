@@ -147,6 +147,7 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
 {
     struct signaling_connection *new_entry = NULL;
 
+    HIP_ASSERT(conn);
     /* allocate new entry and copy contents */
     if (!(new_entry = malloc(sizeof(struct signaling_connection)))) {
         HIP_ERROR("Could not allocate enough memory for new connection context\n");
@@ -161,10 +162,10 @@ struct signaling_connection *signaling_hipd_state_add_connection(struct signalin
     HIP_DEBUG("Added new HIPD state to the HIP State DB.\n");
 
     /* Remember this for BEX */
-    if (!state->pending_conn) {
-        state->pending_conn = new_entry;
-        HIP_DEBUG("Set pending context.. \n");
-    }
+//    if (!state->pending_conn) {
+    state->pending_conn = new_entry;
+    HIP_DEBUG("Set pending context.. \n");
+//    }
     return new_entry;
 }
 

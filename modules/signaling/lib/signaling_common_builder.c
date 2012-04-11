@@ -1402,7 +1402,6 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
     struct signaling_param_service_offer param_service_offer;
     const struct hip_tlv_common         *param;
     struct signaling_param_service_ack   ack = { 0 };
-    char                                 param_buf[HIP_MAX_PACKET];
 
     if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
@@ -1418,12 +1417,12 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
 
                 // print_hash(ack.service_offer_hash);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
-                int len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
+                int len_contents = sizeof(ack.service_offer_id) + sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
                 hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
                 hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
 
                 /* Append the parameter to the message */
-                if (hip_build_generic_param(output_msg, &ack, sizeof(struct signaling_param_service_ack), param_buf)) {
+                if (hip_build_param(output_msg, (struct hip_tlv_common *) &ack)) {
                     HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
                     return -1;
                 }

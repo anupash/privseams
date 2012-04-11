@@ -1347,8 +1347,6 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         goto out_err;
     }
 
-    HIP_DEBUG("==============Signaling_connection received =====================\n");
-    signaling_connection_print(sig_state->pending_conn, "\t");
     // FIXME why do you first get the context into new_conn and then move it to temp_conn? Seems redundant!
     // Copying because have to do htons before sending the signaling_connection
     // I will look into if I can improve the logic
@@ -1485,9 +1483,6 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     temp_conn.dst_port = htons(new_conn.dst_port);
     HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build signaling_connection failed \n");
-
-    HIP_DEBUG("==============Signaling_connection received =====================\n");
-    signaling_connection_print(&temp_conn, "\t");
 
     // Now Add the service acknowledgements
 #ifdef CONFIG_HIP_PERFORMANCE
