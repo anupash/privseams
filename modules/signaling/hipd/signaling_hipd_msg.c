@@ -120,7 +120,7 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 {
     uint16_t           mask    = 0;
     struct hip_common *msg_buf = NULL;
-
+    uint8_t            flag    = 0;
 
     /* Allocate and build message */
     // This is not an ideal implementation
@@ -163,7 +163,12 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
 
     /* check if we have to include a user auth req_s parameter */
     if (type == SIGNALING_SECOND_BEX_UPDATE) {
-        signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
+        flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
+        if (flag) {
+            signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_SIGNED);
+        } else {
+            signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
+        }
     }
 
     if (type == SIGNALING_THIRD_BEX_UPDATE) {
@@ -903,6 +908,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
              -1, "This is no signaling update packet\n");
 
 
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
@@ -1266,13 +1272,13 @@ int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const u
         HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_handle_unsigned_service_offers),
                  -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
 
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 40600),
+        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
                  -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I1_SENT\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 40600),
+        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
                  -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &signaling_i2_add_signed_service_ack_and_sig_conn, 40600),
+        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
                  -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSING\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &signaling_i2_add_signed_service_ack_and_sig_conn, 40600),
+        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
                  -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSED\n");
     } else if (flag == -1) {
         err = -1;
@@ -1341,6 +1347,8 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         goto out_err;
     }
 
+    HIP_DEBUG("==============Signaling_connection received =====================\n");
+    signaling_connection_print(sig_state->pending_conn, "\t");
     // FIXME why do you first get the context into new_conn and then move it to temp_conn? Seems redundant!
     // Copying because have to do htons before sending the signaling_connection
     // I will look into if I can improve the logic
@@ -1478,6 +1486,8 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build signaling_connection failed \n");
 
+    HIP_DEBUG("==============Signaling_connection received =====================\n");
+    signaling_connection_print(&temp_conn, "\t");
 
     // Now Add the service acknowledgements
 #ifdef CONFIG_HIP_PERFORMANCE

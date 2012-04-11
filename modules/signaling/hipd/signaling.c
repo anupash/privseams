@@ -23,17 +23,12 @@
 #define INBOUND_HANDLE_BEX_UPDATE_PRIO          32000
 #define INBOUND_HANDLE_NOTIFY_PRIO              32000
 
-#define OUTBOUND_I2_CREATE_APPINFO_PRIO         41500
-#define OUTBOUND_I2_CREATE_USRINFO_PRIO         41502
-#define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
-#define OUTBOUND_I2_CREATE_HOST_INFO_PRIO       41505
-#define OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO   40200
-#define OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO   41506
+#define OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO   42502
+#define OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO   44506
 #define OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO   41507
-#define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
-#define OUTBOUND_R2_CREATE_USRINFO_PRIO         41502
-#define OUTBOUND_R2_CREATE_USR_AUTH_PRIO        41504
-#define OUTBOUND_R2_CREATE_USER_SIG_PRIO        42501
+
+#define OUTBOUND_R2_CREATE_USER_SIG_PRIO        45501
+#define OUTBOUND_I2_CREATE_USER_SIG_PRIO        45500
 
 #define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
 
@@ -125,6 +120,7 @@ int hip_signaling_init(void)
                                           &signaling_add_user_signature,
                                           OUTBOUND_I2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
                                           &signaling_add_user_signature,
                                           OUTBOUND_I2_CREATE_USER_SIG_PRIO),
@@ -193,19 +189,19 @@ int hip_signaling_init(void)
 
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
                                           &signaling_i2_handle_signed_service_offers,
-                                          40200),
+                                          42520),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
                                           &signaling_i2_handle_signed_service_offers,
-                                          40200),
+                                          42520),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING,
                                           &signaling_i2_handle_signed_service_offers,
-                                          40200),
+                                          42520),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,
                                           &signaling_i2_handle_signed_service_offers,
-                                          40200),
+                                          42520),
              -1, "Error on registering Signaling handle function.\n");
 
     HIP_DEBUG("Initialized Signaling Module.\n");
