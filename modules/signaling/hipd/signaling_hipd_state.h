@@ -42,6 +42,7 @@ struct signaling_hipd_state {
 };
 
 int signaling_hipd_init_state(struct modular_state *state);
+int signaling_hipd_state_initialize_service_ack(struct signaling_hipd_state    *state);
 struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id,
                                                                  uint16_t src_port, uint16_t dst_port);
 int signaling_hipd_state_get_connections_by_app_name(struct signaling_hipd_state *state,

@@ -93,6 +93,18 @@ out_err:
     return err;
 }
 
+int signaling_hipd_state_initialize_service_ack(struct signaling_hipd_state    *state)
+{
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        if (state->service_ack[i]) {
+            free(state->service_ack[i]);
+        }
+        state->service_ack[i] = NULL;
+    }
+    return 0;
+}
+
 /**
  * return NULL if no such entry, or the matching entry
  */

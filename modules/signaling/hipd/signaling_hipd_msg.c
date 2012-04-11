@@ -166,6 +166,7 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
         flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
         if (flag) {
             signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_SIGNED);
+            signaling_i2_add_signed_service_ack_and_sig_conn(HIP_UPDATE, ha->state, ctx);
         } else {
             signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
         }
@@ -1264,9 +1265,9 @@ int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const u
     flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
     if (flag == 1) {
         HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
+
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
                  "Could not handle service Service Offers for I2\n");
-
         HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_handle_unsigned_service_offers),
                  -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
         HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_handle_unsigned_service_offers),
@@ -1356,6 +1357,7 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     temp_conn.dst_port = htons(sig_state->pending_conn->dst_port);
 
     signaling_info_req_flag_init(&flags_info_requested);
+    HIP_IFEL(signaling_hipd_state_initialize_service_ack(sig_state), -1, "Could not reinitialize the service ack storage\n");
     // Adding response to service offers
     HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx,
                                                      sig_state->pending_conn, flag,
@@ -1401,7 +1403,8 @@ out_err:
 int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet_type,
                                                      UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                          err = 0,  i = 0;
+    int                          err         = 0,  i = 0;
+    int                          update_type = -1;
     struct signaling_hipd_state *sig_state;
     struct signaling_connection  temp_conn;
 
@@ -1410,7 +1413,13 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (packet_type == HIP_R1) {
+    if (packet_type == HIP_UPDATE) {
+        HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
+                 -1, "This is no signaling update packet\n");
+    }
+
+
+    if (packet_type == HIP_R1 || update_type == SIGNALING_FIRST_BEX_UPDATE) {
         signaling_init_connection(&temp_conn);
         memcpy(&temp_conn, sig_state->pending_conn, sizeof(struct signaling_connection));
         temp_conn.src_port = htons(sig_state->pending_conn->src_port);
@@ -1467,6 +1476,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     signaling_init_connection(&temp_conn);
 
     signaling_info_req_flag_init(&flags_info_requested);
+    HIP_IFEL(signaling_hipd_state_initialize_service_ack(sig_state), -1, "Could not reinitialize the service ack storage\n");
     flag_service_offer_signed = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
     HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx, &new_conn,
                                                      (flag_service_offer_signed ? OFFER_SIGNED : OFFER_UNSIGNED),

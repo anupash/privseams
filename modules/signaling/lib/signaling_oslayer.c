@@ -358,9 +358,9 @@ int signaling_get_verified_application_context_by_ports(struct signaling_connect
                                                         struct signaling_connection_context *const ctx,
                                                         uint8_t endpoint)
 {
-    int                       err = 0;
-    X509AC                   *ac  = NULL;
-    struct system_app_context sys_ctx;
+    int                       err     = 0;
+    X509AC                   *ac      = NULL;
+    struct system_app_context sys_ctx = { 0 };
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I_APP_CTX_LOOKUP, PERF_R_APP_CTX_LOOKUP\n");   // test 1.1
