@@ -191,61 +191,22 @@ int hip_signaling_init(void)
                                       INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
              -1, "Error on registering Signaling user handle function.\n");
 
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2),
-             -1, "Error on unregistering handle function hip_create_i2 HIP_I1_SENT\n");
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2),
-             -1, "Error on unregistering handle function hip_create_i2 HIP_I2_SENT\n");
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2),
-             -1, "Error on unregistering handle function hip_create_i2 HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_create_i2),
-             -1, "Error on unregistering handle function hip_create_i2 HIP_R1\n");
-
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_r1_counter_and_hip_transform, 40100),
-             -1, "Error on registering handle function hip_create_i2_build_r1_counter_and_hip_transform HIP_STATE_I1_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_handle_signed_service_offers, 40200),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_I1_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_host_id, 40300),
-             -1, "Error on registering handle function hip_create_i2_build_host_id() HIP_STATE_I1_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_build_reg_req_and_esp_tranform, 40400),
-             -1, "Error on registering handle function hip_create_i2_build_reg_req_and_esp_tranform() HIP_STATE_I1_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40500),
-             -1, "Error on registering handle function hip_create_i2_build_reg_req_and_esp_tranform() HIP_STATE_I1_SENT\n");
-
-
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_r1_counter_and_hip_transform, 40100),
-             -1, "Error on registering handle function hip_create_i2_build_r1_counter_and_hip_transform() HIP_STATE_I2_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_handle_signed_service_offers, 40200),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_I2_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_host_id, 40300),
-             -1, "Error on registering handle function hip_create_i2_build_host_id() HIP_STATE_I2_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_build_reg_req_and_esp_tranform, 40400),
-             -1, "Error on registering handle function hip_create_i2_build_reg_req_and_esp_tranform() HIP_STATE_I2_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40500),
-             -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
-
-
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_r1_counter_and_hip_transform, 40100),
-             -1, "Error on registering handle function hip_create_i2_build_r1_counter_and_hip_transform() HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &signaling_i2_handle_signed_service_offers, 40200),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_host_id, 40300),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_build_reg_req_and_esp_tranform, 40400),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40500),
-             -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSING\n");
-
-
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_r1_counter_and_hip_transform, 40100),
-             -1, "Error on registering handle function hip_create_i2_build_r1_counter_and_hip_transform() HIP_STATE_CLOSED\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &signaling_i2_handle_signed_service_offers, 40200),
-             -1, "Error on registering handle function signaling_i2_handle_signed_service_offers() HIP_STATE_CLOSED\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_host_id, 40300),
-             -1, "Error on registering handle function hip_create_i2_build_host_id() HIP_STATE_CLOSED\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_build_reg_req_and_esp_tranform, 40400),
-             -1, "Error on registering handle function hip_create_i2_build_reg_req_and_esp_tranform() HIP_STATE_CLOSED\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec, 40500),
-             -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSED\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          40200),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          40200),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          40200),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          40200),
+             -1, "Error on registering Signaling handle function.\n");
 
     HIP_DEBUG("Initialized Signaling Module.\n");
 

@@ -844,15 +844,19 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                PUZZLE_LENGTH);
     }
 
-    HIP_DEBUG("Build normal I2.\n");
-    /* create I2 */
-    hip_msg_init(ctx->output_msg);
-    hip_build_network_hdr(ctx->output_msg,
-                          HIP_I2,
-                          0,
-                          &ctx->input_msg->hitr,
-                          &ctx->input_msg->hits);
+    HIP_DEBUG("src %d, dst %d\n", ctx->msg_ports.src_port,
+              ctx->msg_ports.dst_port);
 
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports.src_port;
+    ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.dst_port;
+
+    return 0;
+}
+
+int hip_produce_keymat(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
     /* note: we could skip keying material generation in the case
      * of a retransmission but then we'd had to fill ctx->hmac etc */
     if (hip_produce_keying_material(ctx, ctx->hadb_entry->puzzle_i,
@@ -864,22 +868,47 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     return 0;
 }
 
-int hip_build_esp_info(UNUSED const uint8_t packet_type,
-                       UNUSED const uint32_t ha_state,
-                       struct hip_packet_context *ctx)
+int hip_create_i2(UNUSED const uint8_t packet_type,
+                  UNUSED const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
 {
-    /* SPI is set in another handler */
+    hip_msg_init(ctx->output_msg);
+    hip_build_network_hdr(ctx->output_msg,
+                          HIP_I2,
+                          0,
+                          &ctx->input_msg->hitr,
+                          &ctx->input_msg->hits);
+
+    return 0;
+}
+
+int hip_add_esp_info(UNUSED const uint8_t packet_type,
+                     UNUSED const uint32_t ha_state,
+                     struct hip_packet_context *ctx)
+{
+    struct hip_esp_info *esp_info = NULL;
+
     if (hip_build_param_esp_info(ctx->output_msg, ctx->hadb_entry->esp_keymat_index, 0, 0)) {
         HIP_ERROR("building of ESP_INFO failed.\n");
         return -1;
     }
 
+    HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n",
+              ctx->hadb_entry->spi_inbound_current);
+
+    if (!(esp_info = hip_get_param_readwrite(ctx->output_msg, HIP_PARAM_ESP_INFO))) {
+        HIP_ERROR("ESP_INFO parameter not found, but should be there!\n");
+        return -1;
+    }
+
+    esp_info->new_spi = htonl(ctx->hadb_entry->spi_inbound_current);
+
     return 0;
 }
 
-int hip_build_solution(UNUSED const uint8_t packet_type,
-                       UNUSED const uint32_t ha_state,
-                       struct hip_packet_context *ctx)
+int hip_add_solution(UNUSED const uint8_t packet_type,
+                     UNUSED const uint32_t ha_state,
+                     struct hip_packet_context *ctx)
 {
     const struct hip_puzzle *pz = NULL;
 
@@ -896,9 +925,9 @@ int hip_build_solution(UNUSED const uint8_t packet_type,
     return 0;
 }
 
-int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
-                              UNUSED const uint32_t ha_state,
-                              struct hip_packet_context *ctx)
+int hip_add_diffie_hellman(UNUSED const uint8_t packet_type,
+                           UNUSED const uint32_t ha_state,
+                           struct hip_packet_context *ctx)
 {
     const struct hip_diffie_hellman  *dh_req;
     const struct hip_dh_public_value *dhpv;
