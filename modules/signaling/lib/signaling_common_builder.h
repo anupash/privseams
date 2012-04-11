@@ -118,6 +118,7 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_service_offer_signed(struct signaling_param_service_offer *param_service_offer);
+int signaling_check_if_service_ack_signed(const struct signaling_param_service_ack *param_service_ack);
 int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg);
 char *signaling_concatenate_paths(const char *str1, char *str2);
 unsigned char *signaling_extract_skey_ident_from_cert(X509 *cert, unsigned int *len);

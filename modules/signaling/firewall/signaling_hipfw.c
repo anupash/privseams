@@ -164,7 +164,7 @@ int signaling_hipfw_init(const char *policy_file)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_ENCRYPTED,             "HIP_PARAM_SIGNALING_ENCRYPTED");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,         "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,         "HIP_PARAM_SIGNALING_SERVICE_ACK");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,         "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
@@ -422,6 +422,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
+                HIP_DEBUG("Verifying the Signed service ack failed\n");
                 signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
                                                                     symm_key_hint, &algo);
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,

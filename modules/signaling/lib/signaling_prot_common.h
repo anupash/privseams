@@ -77,8 +77,7 @@
 #define HIP_PARAM_SIGNALING_ENCRYPTED               5120
 
 #define HIP_PARAM_SIGNALING_CONNECTION          5121
-#define HIP_PARAM_SIGNALING_SERVICE_ACK_S           5122
-#define HIP_PARAM_SIGNALING_SERVICE_ACK_U           5124
+#define HIP_PARAM_SIGNALING_SERVICE_ACK           5124
 #define HIP_PARAM_SIGNALING_SERVICE_NACK            5126
 
 /*Parameter type for user signature*/
@@ -962,34 +961,6 @@ struct signaling_param_service_offer_s {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |       SERVICE_OFFER_ID        |          SERVICE_OPTION       |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                                                               /
- * /                         SERVICE_OFFER_HASH                    /
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *
- */
-
-struct signaling_param_service_ack_u {
-    hip_tlv       type;
-    hip_tlv_len   length;
-    uint16_t      service_offer_id;
-    uint16_t      service_option;
-    unsigned char service_offer_hash[HIP_AH_SHA_LEN];
-} __attribute__((packed));
-
-
-/*
- *   Parameter for acknowledging the Service Offer from middlebox
- *   The parameter contains Service Offer Identifier and Service Options
- *   Also contains the hash of the service offer
- *   All integers are in network byte order.
- *
- * 0                   1                   2                   3
- * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |             Type              |             Length            |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |       SERVICE_OFFER_ID        |         SERVICE_OPTION        |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                                                               /
@@ -1003,26 +974,24 @@ struct signaling_param_service_ack_u {
  * /         Symmetric Key used in HIP_ENCRYPT                     /                     |
  * /                                               +-+-+-+-+-+-+-+-+                     |
  * /                                               |   Padding     |                     |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
- *
- * Note : Padding is not included in the encryption.
- *        It's shown as it is for the sake of completion.
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---*
  */
 
-struct signaling_param_service_ack_s {
+struct signaling_param_service_ack {
     hip_tlv       type;
     hip_tlv_len   length;
     uint16_t      service_offer_id;
     uint16_t      service_option;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
+    // The field below is used only when building acknowledgment for signed service offer
     unsigned char end_point_info_secret[HIP_MAX_RSA_KEY_LEN / 8];
-/*
- *   uint8_t      symm_key_len;
- *   uint8_t      symm_enc_algo;
- *   uint32_t    key_hint;    // To be used in the HIP_ENCRYPTED param, reserved field
- *   unsigned char symm_key[SIGNALING_HIP_SYMM_KEY_LEN];
- *
- */
+    /*
+     *   uint8_t      symm_key_len;
+     *   uint8_t      symm_enc_algo;
+     *   uint32_t    key_hint;    // To be used in the HIP_ENCRYPTED param, reserved field
+     *   unsigned char symm_key[SIGNALING_HIP_SYMM_KEY_LEN];
+     *
+     */
 } __attribute__((packed));
 
 
@@ -1330,6 +1299,9 @@ int signaling_copy_service_offer(struct signaling_param_service_offer *const dst
                                  const struct signaling_param_service_offer *const src);
 int signaling_copy_service_offer_s(struct signaling_param_service_offer_s *const dst,
                                    const struct signaling_param_service_offer_s *const src);
+int signaling_copy_service_ack(struct signaling_param_service_ack *const dst,
+                               const struct signaling_param_service_ack *const src);
+
 /* Flag handling */
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn);

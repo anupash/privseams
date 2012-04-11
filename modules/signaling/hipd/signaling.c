@@ -99,10 +99,8 @@ int hip_signaling_init(void)
                                  "HIP_PARAM_SIGNALING_SERVICE_OFFER");
 
     // FIXME we should only require a signed ACK
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_U,
-                                 "HIP_PARAM_SIGNALING_SERVICE_ACK_U");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK_S,
-                                 "HIP_PARAM_SIGNALING_SERVICE_ACK_S");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,
+                                 "HIP_PARAM_SIGNALING_SERVICE_ACK");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,
                                  "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,
@@ -142,7 +140,7 @@ int hip_signaling_init(void)
         if (hip_register_handle_function(HIP_I2,
                                          mbox_service_I2_states[i],
                                          &signaling_r2_handle_service_offers,
-                                         OUTBOUND_R2_CREATE_APPINFO_PRIO)) {
+                                         OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO)) {
             HIP_ERROR("Error on registering signaling handle function.\n");
             return -1;
         }

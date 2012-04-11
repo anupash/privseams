@@ -1052,12 +1052,17 @@ int signaling_verify_service_ack_u(struct hip_common *msg,
 
     HIP_DEBUG("Ack received corresponding to the service offer.\n");
 
-    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_U))) {
+    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
         do {
-            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_U) {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
                 ack = (const struct signaling_service_ack *) (param + 1);
+                /* Check if the service acknowledgment is a signed or an unsgined service ack */
+                if (signaling_check_if_service_ack_signed((const struct signaling_param_service_ack *) param)) {
+                    HIP_DEBUG("Service Ack in the HIP msg in not an unsigned service ack\n");
+                    return 0;
+                }
                 if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {
-                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer.\n");
+                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Found unsigned service ack\n");
                     return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
@@ -1086,7 +1091,7 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
     int                          param_len    = 0;
     int                          enc_data_len = 0;
 
-    struct signaling_param_service_ack_s tmp_service_offer;
+    struct signaling_param_service_ack tmp_service_ack;
 
     unsigned char *tmp_info_secrets = NULL;
     unsigned char *dec_output       = NULL;
@@ -1095,17 +1100,22 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
     //int                                    len_contents     = 0;
 
 
-    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_S))) {
+    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
         HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
         do {
-            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_S) {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
                 param_len    = hip_get_param_contents_len(param);
                 enc_data_len = param_len - sizeof(struct signaling_service_ack);
-                memcpy(&tmp_service_offer, param, sizeof(struct signaling_param_service_ack_s));
-                tmp_ptr = (uint8_t *) &tmp_service_offer;
+                memcpy(&tmp_service_ack, param, sizeof(struct signaling_param_service_ack));
+                /* Check if the service acknowledgment is a signed ack */
+                if (!signaling_check_if_service_ack_signed(&tmp_service_ack)) {
+                    HIP_DEBUG("Service Ack in the HIP msg in not a signed service ack\n");
+                    return 0;
+                }
+                tmp_ptr = (uint8_t *) &tmp_service_ack;
                 memcpy(&ack, (const struct signaling_service_ack *) (param + 1), sizeof(struct signaling_service_ack));
                 if (!memcmp(stored_hash, ack.service_offer_hash, HIP_AH_SHA_LEN)) {
-                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer.\n");
+                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Checking for signed service ack\n");
                     break;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
@@ -1330,7 +1340,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &output_msg->hits, &output_msg->hitr); /*Just giving some dummy Packet type*/
 
     header_len =    sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
-                 + sizeof(offer->service_description);
+                 +sizeof(offer->service_description);
     cert_hint_len = HIP_AH_SHA_LEN;
     info_len      = (hip_get_param_contents_len(offer) - (header_len + cert_hint_len - sizeof(struct hip_tlv_common)));
 
@@ -1391,7 +1401,7 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
     int                                  err = 0;
     struct signaling_param_service_offer param_service_offer;
     const struct hip_tlv_common         *param;
-    struct signaling_param_service_ack_u ack;
+    struct signaling_param_service_ack   ack = { 0 };
     char                                 param_buf[HIP_MAX_PACKET];
 
     if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
@@ -1408,12 +1418,12 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
 
                 // print_hash(ack.service_offer_hash);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
-                int len_contents = sizeof(struct signaling_param_service_ack_u) - sizeof(struct hip_tlv_common);
+                int len_contents = sizeof(struct signaling_param_service_ack) - sizeof(struct hip_tlv_common);
                 hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
-                hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK_U);
+                hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
 
                 /* Append the parameter to the message */
-                if (hip_build_generic_param(output_msg, &ack, sizeof(struct signaling_param_service_ack_u), param_buf)) {
+                if (hip_build_generic_param(output_msg, &ack, sizeof(struct signaling_param_service_ack), param_buf)) {
                     HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
                     return -1;
                 }
@@ -1435,7 +1445,7 @@ int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
 {
     int                                  err = 0, i = 0;
     struct signaling_param_service_offer param_service_offer;
-    struct signaling_param_service_ack_s ack;
+    struct signaling_param_service_ack   ack       = { 0 };
     struct signaling_hipd_state         *sig_state = NULL;
     //char                                   param_buf[HIP_MAX_PACKET];
     unsigned char *tmp_info_secrets = NULL;
@@ -1456,7 +1466,6 @@ int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
              -1, "Could not copy connection context\n");
 
     ack.service_offer_id = param_service_offer.service_offer_id;
-    ack.service_option   = 0;
     /*Generate the hash of the service offer*/
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(offer),
                               ack.service_offer_hash),
@@ -1477,11 +1486,11 @@ int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
     HIP_DEBUG("Length of info secrets before encryption = %d\n", tmp_len);
 
     /*---- Encrypting the end point info secrets*/
-
     rsa        = EVP_PKEY_get1_RSA(pub_key);
     enc_output = malloc(RSA_size(rsa));
     tmp_len    = RSA_public_encrypt(tmp_len, tmp_info_secrets, enc_output, rsa, RSA_PKCS1_OAEP_PADDING);
 
+    ack.service_option = htons(tmp_len);
     HIP_DEBUG("Length of encrypted info secrets after encryption = %d\n", tmp_len);
     HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, tmp_len);
 
@@ -1495,7 +1504,7 @@ int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
     // print_hash(ack.service_offer_hash);
 
     hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
-    hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK_S);
+    hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
 
     /* Append the parameter to the  service ack list in the hipd_state. We will build the service_ack to the HIP msg later */
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
@@ -1509,15 +1518,6 @@ int signaling_build_service_ack_s(struct signaling_param_service_offer *offer,
     tmp_len                   = hip_get_param_contents_len(&ack) + sizeof(struct hip_tlv_common);
     sig_state->service_ack[i] = malloc(tmp_len);
     memcpy(sig_state->service_ack[i], &ack, tmp_len);
-
-/*
- *
- *               if (hip_build_generic_param(output_msg, (struct hip_tlv_common *) &ack,
- *                                           sizeof(struct signaling_param_service_ack_s), param_buf)) {
- *                   HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
- *                   return -1;
- *               }
- */
 
 out_err:
     return err;
@@ -2034,6 +2034,21 @@ int signaling_check_if_service_offer_signed(struct signaling_param_service_offer
 
     memset(temp_check, 0, HIP_AH_SHA_LEN);
     return memcmp(temp_check, tmp_ptr, HIP_AH_SHA_LEN) ? 1 : 0;
+}
+
+int signaling_check_if_service_ack_signed(const struct signaling_param_service_ack *param_service_ack)
+{
+    uint16_t tmp_len;
+
+    tmp_len = (sizeof(param_service_ack->service_offer_id) + sizeof(param_service_ack->service_option) +
+               sizeof(param_service_ack->service_offer_hash));
+
+    if (ntohs(param_service_ack->service_option) != 0 &&
+        hip_get_param_contents_len((const struct tlv_common *) param_service_ack) > tmp_len) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg)

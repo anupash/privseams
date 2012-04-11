@@ -657,14 +657,9 @@ int signaling_update_info_flags_from_msg(struct signaling_connection_flags *flag
     }
 
     /*paramters for the response to service offer information from the end-point*/
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_U);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_U) {
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
         signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK_U);
-    }
-
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK_S);
-    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK_S) {
-        signaling_service_info_flag_set(&flags->flag_services, SERVICE_ACK_S);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_NACK);
@@ -805,6 +800,25 @@ int signaling_copy_service_offer_s(struct signaling_param_service_offer_s *const
         return -1;
     }
     memcpy(dst, src, sizeof(struct signaling_param_service_offer_s));
+    return 0;
+}
+
+/**
+ * Copies a complete service offer parameter of signed type from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_service_ack(struct signaling_param_service_ack *const dst,
+                               const struct signaling_param_service_ack *const src)
+{
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_param_service_ack));
     return 0;
 }
 
