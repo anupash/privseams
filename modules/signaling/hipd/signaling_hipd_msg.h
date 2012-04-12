@@ -57,6 +57,9 @@ int signaling_handle_incoming_notification(const uint8_t packet_type, const uint
 
 /* Handler for outgoing messages */
 int signaling_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_update_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_update_add_signed_service_ack_and_sig_conn(const uint8_t packet_type,
+                                                         const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hip_packet_context *ctx,
                                             struct signaling_connection *recv_conn,
                                             uint8_t flag_service_offer_signed,

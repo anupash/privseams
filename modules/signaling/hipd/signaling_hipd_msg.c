@@ -52,10 +52,11 @@
 #include "hipd/user.h"
 #include "hipd/output.h"
 #include "hipd/close.h"
-
+#include "hipd/hipd.h"
 
 #include "modules/update/hipd/update.h"
 #include "modules/update/hipd/update_builder.h"
+#include "modules/update/hipd/update_locator.h"
 
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
@@ -106,121 +107,98 @@ int update_sent = 0;
  * @param ha    the host association
  * @param type  the upade type (U1, U2 or U3)
  * @param conn  the connection
- * @param seq   the sequence number for U1 and U2
- * @param ack   the ack number for U2 and U3
  *
  * @return      the update message
  */
 static struct hip_common *build_update_message(struct hip_hadb_state *ha,
                                                const int type,
                                                struct signaling_connection *conn,
-                                               const uint32_t seq,
-                                               const uint32_t ack,
                                                struct hip_packet_context *ctx)
 {
-    uint16_t           mask    = 0;
-    struct hip_common *msg_buf = NULL;
-    uint8_t            flag    = 0;
+    uint16_t                           mask        = 0;
+    struct hip_common                 *msg_buf     = NULL;
+    struct hip_common                 *locator_msg = NULL;
+    struct hip_locator_info_addr_item *locators    = NULL;
+    struct update_state               *localstate  = NULL;
 
     /* Allocate and build message */
-    // This is not an ideal implementation
-    if (!(msg_buf = hip_msg_alloc())) {
-        HIP_ERROR("Out of memory while allocation memory for the bex update packet\n");
-        return NULL;
-    }
+    if (type == SIGNALING_FIRST_BEX_UPDATE) {
+        if (!(msg_buf = hip_msg_alloc())) {
+            HIP_ERROR("Out of memory while allocation memory for the bex update packet\n");
+            return NULL;
+        }
 
-    if (ctx != NULL) {
-        ctx->output_msg = msg_buf;
+        if (ctx != NULL) {
+            free(ctx->output_msg);
+            ctx->output_msg = msg_buf;
+        }
+        hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
+        localstate = lmod_get_state_item(ha->hip_modular_state, "update");
+    } else {
+        msg_buf = ctx->output_msg;
     }
-
-    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
 
     /* Add sequence number in U1 and U2 */
-    if (type == SIGNALING_FIRST_BEX_UPDATE || type == SIGNALING_SECOND_BEX_UPDATE) {
-        if (hip_build_param_seq(msg_buf, seq)) {
+    if (type == SIGNALING_FIRST_BEX_UPDATE) {
+        if (hip_build_param_esp_info(msg_buf,
+                                     ha->current_keymat_index,
+                                     ha->spi_inbound_current,
+                                     ha->spi_inbound_current)) {
+            HIP_ERROR("Could not build param esp_info\n");
+            return NULL;
+        }
+        locator_msg = hip_msg_alloc();
+        hip_create_locators(locator_msg, &locators);
+        hip_build_param_locator(msg_buf,
+                                locators,
+                                address_count);
+        localstate->update_id_out++;
+        HIP_DEBUG("outgoing UPDATE ID=%u\n", hip_update_get_out_id(localstate));
+        if (hip_build_param_seq(msg_buf, hip_update_get_out_id(localstate))) {
             HIP_ERROR("Building of SEQ parameter failed\n");
             free(msg_buf);
             return NULL;
         }
-    }
 
-    /* Add ACK paramater in U2 and U3 */
-    if (type == SIGNALING_SECOND_BEX_UPDATE || type == SIGNALING_THIRD_BEX_UPDATE) {
-        if (hip_build_param_ack(msg_buf, ack)) {
-            HIP_ERROR("Building of ACK parameter failed\n");
-            free(msg_buf);
-            return NULL;
-        }
-    }
-
-    if (type == SIGNALING_FIRST_BEX_UPDATE) {
         if (signaling_build_param_signaling_connection(msg_buf, conn)) {
             HIP_ERROR("Building of connection identifier parameter failed\n");
             free(msg_buf);
             return NULL;
         }
-    }
 
-    /* check if we have to include a user auth req_s parameter */
-    if (type == SIGNALING_SECOND_BEX_UPDATE) {
-        flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
-        if (flag) {
-            signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_SIGNED);
-            signaling_i2_add_signed_service_ack_and_sig_conn(HIP_UPDATE, ha->state, ctx);
-        } else {
+        /* Add host authentication */
+        if (hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out)) {
+            HIP_ERROR("Building of HMAC failed\n");
+            free(msg_buf);
+            return NULL;
+        }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+#endif
+        if (ha->sign(ha->our_priv_key, msg_buf)) {
+            HIP_ERROR("Could not sign UPDATE. Failing\n");
+            free(msg_buf);
+            return NULL;
+        }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+#endif
+    } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
+        /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
+        if (!signaling_hip_msg_contains_signed_service_offer(ctx->input_msg)) {
             signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
         }
-    }
-
-    if (type == SIGNALING_THIRD_BEX_UPDATE) {
+    } else if (type == SIGNALING_THIRD_BEX_UPDATE) {
         signaling_r2_handle_service_offers(HIP_UPDATE, ha->state, ctx);
     }
 
-    /* Add host authentication */
-    if (hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out)) {
-        HIP_ERROR("Building of HMAC failed\n");
-        free(msg_buf);
-        return NULL;
-    }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
-#endif
-    if (ha->sign(ha->our_priv_key, msg_buf)) {
-        HIP_ERROR("Could not sign UPDATE. Failing\n");
-        free(msg_buf);
-        return NULL;
-    }
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN\n");
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
-    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
-#endif
-    if (type == SIGNALING_SECOND_BEX_UPDATE) {
-        signaling_add_user_signature(HIP_UPDATE, ha->state, ctx);
-    }
-    if (type == SIGNALING_THIRD_BEX_UPDATE) {
-        signaling_add_user_signature(HIP_UPDATE, ha->state, ctx);
-    }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
-#endif
-
+    free(locator_msg);
     return msg_buf;
 }
 
@@ -238,9 +216,7 @@ int signaling_send_first_update(const struct in6_addr *src_hit,
                                 struct signaling_connection *conn)
 {
     int                    err                   = 0;
-    uint32_t               seq_id                = 0;
     struct hip_hadb_state *ha                    = NULL;
-    struct update_state   *updatestate           = NULL;
     struct hip_common     *update_packet_to_send = NULL;
 
     /* sanity tests */
@@ -251,13 +227,9 @@ int signaling_send_first_update(const struct in6_addr *src_hit,
     /* Lookup and update state */
     HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
              -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
-             -1, "Could not get update state for host association.\n");
-    updatestate->update_id_out++;
-    seq_id = hip_update_get_out_id(updatestate);
 
     /* Build and send the first update */
-    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_FIRST_BEX_UPDATE, conn, seq_id, 0, NULL)),
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_FIRST_BEX_UPDATE, conn, NULL)),
              -1, "Failed to build update.\n");
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
@@ -267,6 +239,7 @@ int signaling_send_first_update(const struct in6_addr *src_hit,
                        ha,
                        1);
 
+    free(update_packet_to_send);
 out_err:
     return err;
 }
@@ -281,14 +254,9 @@ out_err:
 int signaling_send_second_update(struct hip_packet_context *ctx)
 {
     int                          err                   = 0;
-    uint32_t                     seq_id                = 0;
-    uint32_t                     ack_id                = 0;
     const struct in6_addr       *src_hit               = NULL;
     const struct in6_addr       *dst_hit               = NULL;
-    const struct hip_seq        *par_seq               = NULL;
-    struct hip_hadb_state       *ha                    = NULL;
     struct signaling_hipd_state *sig_state             = NULL;
-    struct update_state         *updatestate           = NULL;
     struct hip_common           *update_packet_to_send = NULL;
     struct signaling_connection *conn                  = NULL;
 
@@ -298,42 +266,16 @@ int signaling_send_second_update(struct hip_packet_context *ctx)
     /* Lookup state */
     src_hit = &ctx->input_msg->hitr;
     dst_hit = &ctx->input_msg->hits;
-    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
-             -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
+    if (ctx->hadb_entry) {
+        HIP_IFEL(!(ctx->hadb_entry = hip_hadb_find_byhits(src_hit, dst_hit)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    }
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
-             -1, "Could not get update state for host association.\n");
-    updatestate->update_id_out++;
-    seq_id = hip_update_get_out_id(updatestate);
-
-    /* get the connection state */
-/*
- *  signaling_init_connection_from_msg(&conn_tmp, ctx->input_msg, IN);
- *  HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id, conn_tmp.src_port, conn_tmp.dst_port)),
- *           -1, "Could not retrieve local connection state for conn id %d \n", conn_tmp.id);
- */
-
-    /* get the sequence number that we have to acknowledge */
-    HIP_IFEL(!(par_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
-             -1, "Message contains no seq parameter.\n");
-    ack_id = ntohl(par_seq->update_id);
 
     /* Build and send the second update */
-    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_SECOND_BEX_UPDATE, conn, seq_id, ack_id, ctx)),
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ctx->hadb_entry, SIGNALING_SECOND_BEX_UPDATE, conn,  ctx)),
              -1, "Failed to build update.\n");
-    err = hip_send_pkt(NULL,
-                       &ha->peer_addr,
-                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ha->peer_udp_port,
-                       update_packet_to_send,
-                       ha,
-                       1);
-
-    /* progress update sequence to currently processed update */
-    if (updatestate->update_id_in < ack_id) {
-        updatestate->update_id_in = ack_id;
-    }
 
 out_err:
     return err;
@@ -349,13 +291,9 @@ out_err:
 int signaling_send_third_update(struct hip_packet_context *ctx)
 {
     int                          err                   = 0;
-    uint32_t                     ack_id                = 0;
     const struct in6_addr       *src_hit               = NULL;
     const struct in6_addr       *dst_hit               = NULL;
-    const struct hip_seq        *par_seq               = NULL;
-    struct hip_hadb_state       *ha                    = NULL;
     struct signaling_hipd_state *sig_state             = NULL;
-    struct update_state         *updatestate           = NULL;
     struct hip_common           *update_packet_to_send = NULL;
     struct signaling_connection *conn                  = NULL;
     struct signaling_connection  conn_tmp;
@@ -366,38 +304,22 @@ int signaling_send_third_update(struct hip_packet_context *ctx)
     /* Lookup state */
     src_hit = &ctx->input_msg->hitr;
     dst_hit = &ctx->input_msg->hits;
-    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
-             -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
+    if (ctx->hadb_entry) {
+        HIP_IFEL(!(ctx->hadb_entry = hip_hadb_find_byhits(src_hit, dst_hit)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    }
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
-             -1, "Could not get update state for host association.\n");
+
 
     /* get the connection state */
     signaling_init_connection_from_msg(&conn_tmp, ctx->input_msg, IN);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id, conn_tmp.src_port, conn_tmp.dst_port)),
              -1, "Could not retrieve local connection state for conn id %d src_port = %u dst_port = %u \n", conn_tmp.id, conn_tmp.src_port, conn_tmp.dst_port);
 
-    /* get the sequence number that we have to acknowledge */
-    HIP_IFEL(!(par_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
-             -1, "Message contains no seq parameter.\n");
-    ack_id = ntohl(par_seq->update_id);
-
     /* Build and send the second update */
-    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_THIRD_BEX_UPDATE, conn, 0, ack_id, ctx)),
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ctx->hadb_entry, SIGNALING_THIRD_BEX_UPDATE, conn, ctx)),
              -1, "Failed to build update.\n");
-    err = hip_send_pkt(NULL,
-                       &ha->peer_addr,
-                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ha->peer_udp_port,
-                       update_packet_to_send,
-                       ha,
-                       1);
-
-    /* progress update sequence to currently processed update */
-    if (updatestate->update_id_in < ack_id) {
-        updatestate->update_id_in = ack_id;
-    }
 
 out_err:
     return err;
@@ -908,25 +830,23 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
              -1, "This is no signaling update packet\n");
 
+/*
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *   HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
+ *   hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
+ * #endif
+ *
+ *    // FIXME PK signature verification is not necessary. The packet is verified via HMAC in the update module!
+ *    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+ *                                     ctx->input_msg),
+ *             -EINVAL,
+ *             "Verification of Update signature failed\n");
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *    HIP_DEBUG("Stop PERF_UPDATE_VERIFY_HOST_SIG\n");
+ *    hip_perf_stop_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
+ * #endif
+ */
 
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
-    hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
-#endif
-
-    // FIXME PK signature verification is not necessary. The packet is verified via HMAC in the update module!
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                     ctx->input_msg),
-             -EINVAL,
-             "Verification of Update signature failed\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_UPDATE_VERIFY_HOST_SIG\n");
-    hip_perf_stop_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
-#endif
-
-
-    // FIXME This looks strange. Why don't you just add the parameter as during BEX and let the update module do the rest?
     /* Handle the different update types */
     switch (update_type) {
     case SIGNALING_FIRST_BEX_UPDATE:
@@ -1086,15 +1006,33 @@ static int signaling_handle_notify_connection_failed(UNUSED const uint8_t packet
             HIP_ERROR("Notification contains broken certificate, cannot verify signature!\n");
         } else {
             pub_key = X509_get_pubkey(cert);
+            switch (EVP_PKEY_type(pub_key->type)) {
+            case EVP_PKEY_EC:
 #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Start PERF_NOTIFY_VERIFY_HOST_SIG\n");
-            hip_perf_start_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+                HIP_DEBUG("Start PERF_NOTIFY_VERIFY_HOST_SIG\n");
+                hip_perf_start_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
 #endif
-            err = hip_ecdsa_verify(EVP_PKEY_get1_EC_KEY(pub_key), ctx->input_msg);
+                err = hip_ecdsa_verify(EVP_PKEY_get1_EC_KEY(pub_key), ctx->input_msg);
 #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_NOTIFY_VERIFY_HOST_SIG\n");
-            hip_perf_stop_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+                HIP_DEBUG("Stop PERF_NOTIFY_VERIFY_HOST_SIG\n");
+                hip_perf_stop_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
 #endif
+                break;
+            case EVP_PKEY_RSA:
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_NOTIFY_VERIFY_HOST_SIG\n");
+                hip_perf_start_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+                err = hip_rsa_verify(EVP_PKEY_get1_EC_KEY(pub_key), ctx->input_msg);
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_NOTIFY_VERIFY_HOST_SIG\n");
+                hip_perf_stop_benchmark(perf_set, PERF_NOTIFY_VERIFY_HOST_SIG);
+#endif
+                break;
+            default:
+                HIP_IFEL(1, -1, "Unknown algorithm\n");
+                break;
+            }
             if (err) {
                 HIP_ERROR("signature on notification did not verify correctly\n");
                 return -1;
@@ -1254,6 +1192,40 @@ out_err:
 }
 
 /*
+ * Receive the signed service offers from the service provider in an update packet and respond to them.
+ */
+int signaling_update_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err  = 0;
+    int flag = 0;
+    HIP_DEBUG("Handling Signed Service offers from the mbox\n");
+
+    flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
+    if (flag == 1) {
+        HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
+        HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
+                 "Could not handle service Service Offers for I2\n");
+    } else if (flag == -1) {
+        err = -1;
+        goto out_err;
+    } else {
+        HIP_DEBUG("No signed service offers in the HIP message. Will look for unsigned service offers in a few moment!\n");
+    }
+out_err:
+    return err;
+}
+
+int signaling_update_add_signed_service_ack_and_sig_conn(const uint8_t packet_type,
+                                                         const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = 0;
+    HIP_IFEL(signaling_i2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx),
+             -1, "Could not add signed service acks and signalling connection to HIP_UPDATE\n");
+out_err:
+    return err;
+}
+
+/*
  * Receive the service offers from the service provider and respond to them.
  */
 int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
@@ -1268,19 +1240,12 @@ int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const u
 
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
                  "Could not handle service Service Offers for I2\n");
-        HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_handle_unsigned_service_offers),
-                 -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
-        HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_handle_unsigned_service_offers),
-                 -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
-
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
-                 -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I1_SENT\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
-                 -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
-                 -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSING\n");
-        HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &signaling_i2_add_signed_service_ack_and_sig_conn, 44505),
-                 -1, "Error on registering handle function hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSED\n");
+/*
+ *      HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_handle_unsigned_service_offers),
+ *               -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
+ *      HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_handle_unsigned_service_offers),
+ *               -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
+ */
     } else if (flag == -1) {
         err = -1;
         goto out_err;
@@ -1297,9 +1262,16 @@ out_err:
  */
 int signaling_i2_handle_unsigned_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int err = 0;
-    HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_UNSIGNED), -1,
-             "Could not handle service Service Offers for I2\n");
+    int err  = 0;
+    int flag = 0;
+    HIP_DEBUG("Handling Unsigned Service offers from the mbox\n");
+
+    flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
+    if (flag == 0) {
+        HIP_DEBUG("Message contains unsigned service offer. Handling them accordingly! \n");
+        HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_UNSIGNED), -1,
+                 "Could not handle service Service Offers for I2\n");
+    }
 out_err:
     return err;
 }
@@ -1327,15 +1299,12 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         HIP_DEBUG("Handling a first update U1 just like R1\n");
         HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
                  -1, "Could not init connection context from I2 \n");
-        // FIXME Why do you need to add state here?
-        // Signaling connections state here is added because sig_state->pending_conn is used to build response to offer
         HIP_DEBUG("Adding the connection information to the hipd state.\n");
         HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
                  -1, "Could not add new connection to hipd state. \n");
         HIP_DEBUG("Adding to hipd state since it's an update\n");
     } else if (packet_type == HIP_R1) {
         HIP_DEBUG("Handling an R1\n");
-        // FIXME Why do you need to make this check? Documentation missing!
         // We have already looked for connection context after sending I1 or the FIRST BEX UPDATE, so must not be NULL
         /* Sanity Check*/
         if (!sig_state->pending_conn) {
@@ -1348,8 +1317,6 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         goto out_err;
     }
 
-    // FIXME why do you first get the context into new_conn and then move it to temp_conn? Seems redundant!
-    // Copying because have to do htons before sending the signaling_connection
     // I will look into if I can improve the logic
     signaling_init_connection(&temp_conn);
     memcpy(&temp_conn, sig_state->pending_conn, sizeof(struct signaling_connection));
@@ -1368,15 +1335,12 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
         sig_state->flag_user_sig = 1;
     }
 
-    // FIXME Why is this parameter only needed in unsigned case?
-    // The signed case is handled differently due to the parameter type value of SIGNALING_CONNECTION
     /* Now adding the signaling connection to the HIP_I2 message*/
     if (flag == OFFER_UNSIGNED) {
         HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
                  -1, "build signaling_connection failed \n");
     }
 
-    // FIXME the ACK is always signed, however you appended a misleading _u and only add the ACK conditionally
     // Now Add the service acknowledgements
     if (flag == OFFER_UNSIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1405,39 +1369,44 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
 {
     int                          err         = 0,  i = 0;
     int                          update_type = -1;
+    int                          flag        = 0;
     struct signaling_hipd_state *sig_state;
     struct signaling_connection  temp_conn;
+
 
     HIP_DEBUG("Building signaling connection and signed service ack\n");
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (packet_type == HIP_UPDATE) {
-        HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
-                 -1, "This is no signaling update packet\n");
-    }
+    flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
+    if (flag == 1) {
+        if (packet_type == HIP_UPDATE) {
+            HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
+                     -1, "This is no signaling update packet\n");
+        }
 
 
-    if (packet_type == HIP_R1 || update_type == SIGNALING_FIRST_BEX_UPDATE) {
-        signaling_init_connection(&temp_conn);
-        memcpy(&temp_conn, sig_state->pending_conn, sizeof(struct signaling_connection));
-        temp_conn.src_port = htons(sig_state->pending_conn->src_port);
-        temp_conn.dst_port = htons(sig_state->pending_conn->dst_port);
-        HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-                 -1, "build signaling_connection failed \n");
-    }
+        if (packet_type == HIP_R1 || update_type == SIGNALING_FIRST_BEX_UPDATE ||
+            update_type == SIGNALING_SECOND_BEX_UPDATE) {
+            signaling_init_connection(&temp_conn);
+            memcpy(&temp_conn, sig_state->pending_conn, sizeof(struct signaling_connection));
+            temp_conn.src_port = htons(sig_state->pending_conn->src_port);
+            temp_conn.dst_port = htons(sig_state->pending_conn->dst_port);
+            HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                     -1, "build signaling_connection failed \n");
+        }
 
-    for (i = 0; i < 10; i++) {
-        if (sig_state->service_ack[i] != NULL) {
-            /* Append the parameter to the message */
-            HIP_IFEL(hip_build_param(ctx->output_msg, sig_state->service_ack[i]), -1,
-                     "Failed to append signed service ack to message.\n");
-        } else {
-            break;
+        for (i = 0; i < 10; i++) {
+            if (sig_state->service_ack[i] != NULL) {
+                /* Append the parameter to the message */
+                HIP_IFEL(hip_build_param(ctx->output_msg, sig_state->service_ack[i]), -1,
+                         "Failed to append signed service ack to message.\n");
+            } else {
+                break;
+            }
         }
     }
-
 out_err:
     return err;
 }
@@ -1478,21 +1447,23 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     signaling_info_req_flag_init(&flags_info_requested);
     HIP_IFEL(signaling_hipd_state_initialize_service_ack(sig_state), -1, "Could not reinitialize the service ack storage\n");
     flag_service_offer_signed = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
-    HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx, &new_conn,
-                                                     (flag_service_offer_signed ? OFFER_SIGNED : OFFER_UNSIGNED),
-                                                     &flags_info_requested, INITIATOR), -1,
-             "Could not handle service offer\n");
+
+    if (!flag_service_offer_signed || packet_type != HIP_UPDATE) {
+        HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx, &new_conn,
+                                                         (flag_service_offer_signed ? OFFER_SIGNED : OFFER_UNSIGNED),
+                                                         &flags_info_requested, INITIATOR), -1,
+                 "Could not handle service offer\n");
+        // Now adding the signaling connection to the HIP_R2 message
+        memcpy(&temp_conn, &new_conn, sizeof(struct signaling_connection));
+        temp_conn.src_port = htons(new_conn.src_port);
+        temp_conn.dst_port = htons(new_conn.dst_port);
+        HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
+                 -1, "build signaling_connection failed \n");
+    }
 
     if (signaling_info_req_flag_check(&flags_info_requested, USER_INFO_ID)) {
         sig_state->flag_user_sig = 1;
     }
-
-    // Now adding the signaling connection to the HIP_R2 message
-    memcpy(&temp_conn, &new_conn, sizeof(struct signaling_connection));
-    temp_conn.src_port = htons(new_conn.src_port);
-    temp_conn.dst_port = htons(new_conn.dst_port);
-    HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
-             -1, "build signaling_connection failed \n");
 
     // Now Add the service acknowledgements
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1503,7 +1474,10 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     if (!flag_service_offer_signed) {
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
     } else {
-        HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1, "Building Acknowledgment to signed Service Offer failed\n");
+        if (packet_type != HIP_UPDATE) {
+            HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,
+                     "Building Acknowledgment to signed Service Offer failed\n");
+        }
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");

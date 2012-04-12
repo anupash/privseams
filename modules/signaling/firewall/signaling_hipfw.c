@@ -447,6 +447,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         }
     }
 
+    memset(tuple->offer_hash, '\0', HIP_AH_SHA_LEN);
     if (!ret) {
         free(matched_tuple);
         free(ctx_flags);
@@ -582,7 +583,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
 #endif
             if (strlen((char *) tuple->offer_hash) > 0) {
-                if (signaling_verify_service_ack_u(common, other_dir->offer_hash)) {
+                if (signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
@@ -626,6 +627,7 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
         }
     }
 
+    memset(tuple->offer_hash, '\0', HIP_AH_SHA_LEN);
     if (!ret) {
         free(ctx_flags);
         free(matched_tuple);
@@ -963,7 +965,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
 #endif
 
             HIP_IFEL(signaling_add_service_offer_to_msg(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 1), -1,
+                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 0), -1,
                      "Could not add service offer to the message\n");
 
 /*

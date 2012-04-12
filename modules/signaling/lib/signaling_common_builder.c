@@ -877,6 +877,7 @@ int signaling_add_service_offer_to_msg(struct hip_common *msg,
 #endif
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, len, hash),
              -1, "Could not build hash of the service offer \n");
+    HIP_HEXDUMP("Hash of the service offer = ", hash, HIP_AH_SHA_LEN);
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
@@ -1068,6 +1069,7 @@ int signaling_verify_service_ack_u(struct hip_common *msg,
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
                     HIP_HEXDUMP("Stored hash: ", stored_hash, HIP_AH_SHA_LEN);
                     HIP_HEXDUMP("Acked hash: ", ack->service_offer_hash, HIP_AH_SHA_LEN);
+                    hip_dump_msg(msg);
                 }
             }
         } while ((param = hip_get_next_param(msg, param)));
