@@ -49,6 +49,8 @@ typedef struct {
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 #include "lib/core/hostid.h"
+#include "lib/core/crypto.h"
+#include "lib/tool/pk.h"
 
 #include "firewall/hslist.h"
 
@@ -60,6 +62,33 @@ typedef struct {
 #include "signaling_cdb.h"
 #include "signaling_hipfw.h"
 #include "signaling_hipfw_feedback.h"
+
+static unsigned char dh_priv_key[] = {
+    0x4D, 0xE2, 0xBE, 0x6A, 0x20, 0x45, 0x5C, 0x3B, 0x13, 0x50,
+    0x2E, 0xC3, 0x0D, 0xDF, 0x3A, 0xF9, 0xE9, 0xEC, 0x6B, 0x14,
+    0x36, 0x81, 0x4D, 0xE2, 0x2B, 0x1E, 0x25, 0x89, 0x4B, 0x5A,
+    0x7D, 0x0B, 0xD8, 0x5B, 0x7B, 0x5D, 0xDF, 0x63, 0xEF, 0xFB,
+    0xA0, 0x63, 0x1E, 0xCA, 0x4C, 0x18, 0x68, 0x98, 0x3C, 0xB5,
+    0x97, 0xD0, 0xA9, 0xA8, 0x6F, 0x95, 0xD1, 0xA1, 0x0F, 0xD1,
+    0x93, 0xB9, 0x26, 0xB4, 0xB1, 0x38, 0x19, 0x51, 0x39, 0x3E,
+    0xA9, 0x15, 0xD1, 0x0C, 0x47, 0xDE, 0x70, 0x12, 0x10, 0x1B,
+    0xF1, 0xD9, 0x2E, 0xA5, 0x79, 0x78, 0x31, 0x57, 0x05, 0xFD,
+    0x59, 0xCD, 0xA1, 0x35, 0x6A, 0x58, 0xBA, 0x69, 0xAB, 0x02,
+    0x2F, 0xDA, 0x7D, 0x52, 0x6B, 0x51, 0xE3, 0xB9, 0xF1, 0xA1,
+    0xEE, 0x4C, 0x8B, 0x8E, 0xDD, 0x48, 0x9C, 0x8D, 0xF0, 0x2E,
+    0xEF, 0x69, 0x36, 0x1C, 0xCA, 0x4A, 0xEF, 0xDA, 0xBE, 0xD7,
+    0x7E, 0xAF, 0xC8, 0x61, 0x1B, 0x4B, 0xB2, 0x07, 0x66, 0x03,
+    0x26, 0x13, 0x6A, 0x77, 0x43, 0x8C, 0x76, 0x3A, 0x60, 0x16,
+    0xD9, 0xE5, 0x9A, 0xA5, 0xE9, 0x07, 0x02, 0x8C, 0x0F, 0x83,
+    0x80, 0x2C, 0xD7, 0x1D, 0x45, 0xC1, 0x19, 0xF5, 0x21, 0x5D,
+    0x58, 0x59, 0x3F, 0x83, 0x2E, 0xFD, 0xF9, 0x7D, 0xAE, 0x97,
+    0xF6, 0xCA, 0x1C, 0x3D, 0x9F, 0xD4, 0x6A, 0x68, 0x11, 0x79,
+    0x64, 0xAB
+};
+
+static uint16_t dh_priv_key_len = 192;
+static DH      *dh              = NULL;
+
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -197,6 +226,7 @@ int signaling_hipfw_init(const char *policy_file)
     /* Init firewall identity */
     HIP_IFEL(signaling_hipfw_feedback_init(path_key_file, path_cert_file), -1, "Problem installing the middlebox key and certificate.\n");
 
+    dh =  signaling_hipfw_generate_mb_dh_key(DH_GROUP_ID);
 out_err:
     return err;
 }
@@ -1169,4 +1199,68 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
 
 out_err:
     return err;
+}
+
+DH *signaling_hipfw_generate_mb_dh_key(const int group_id)
+{
+    int err;
+    DH *temp_dh;
+    DH *dh_key;
+
+    BIGNUM *priv_key = NULL;
+
+    temp_dh  = hip_generate_dh_key(DH_GROUP_ID);
+    priv_key = BN_bin2bn(dh_priv_key, dh_priv_key_len, NULL);
+
+    dh_key    = DH_new();
+    dh_key->g = BN_new();
+    dh_key->p = BN_new();
+
+    dh_key->p = temp_dh->p;
+    dh_key->g = temp_dh->g;
+    /*Setting the private key so that the corresponding public key can be generated*/
+    dh_key->priv_key = priv_key;
+
+    if ((err = DH_generate_key(dh_key)) != 1) {
+        HIP_ERROR("DH key generation failed (%d).\n", err);
+        exit(1);
+    }
+
+    HIP_DEBUG("=========================== Printing Mbox DH key ==============================\n");
+    BIO *bio_out;
+    bio_out = BIO_new_fp(stdout, BIO_NOCLOSE);
+    HIP_DEBUG("DH parameters\n");
+    DHparams_print(bio_out, dh_key);
+    BIO_free(bio_out);
+
+    uint8_t *buffer  = NULL;
+    int      bufsize = 0;
+    bufsize = hip_get_dh_size(group_id);
+    buffer  = calloc(1, bufsize);
+    HIP_DEBUG("Size of the public key : %d\n", bufsize);
+    hip_encode_dh_publickey(dh_key, buffer, bufsize);
+    HIP_HEXDUMP("Public Key :", buffer, bufsize);
+    free(buffer);
+
+    uint8_t *buffer1  = NULL;
+    int      bufsize1 = 0;
+    bufsize1 = BN_num_bytes(dh_key->priv_key);
+    buffer1  = calloc(1, bufsize1);
+    HIP_DEBUG("Size of the private key : %d\n", bufsize1);
+    err = bn2bin_safe(dh_key->priv_key, buffer1, bufsize1);
+    HIP_HEXDUMP("Private Key :", buffer1, bufsize1);
+    free(buffer1);
+    HIP_DEBUG("========================================================================\n");
+
+    DH_free(temp_dh);
+    return dh_key;
+}
+
+DH *signaling_hipfw_get_mb_dh_key()
+{
+    if (dh != NULL) {
+        return dh;
+    } else {
+        return NULL;
+    }
 }

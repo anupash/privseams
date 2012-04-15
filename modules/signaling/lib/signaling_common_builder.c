@@ -49,7 +49,6 @@
 #include "lib/core/crypto.h"
 #include "hipd/hipd.h"
 
-
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
@@ -57,7 +56,7 @@
 #include "signaling_x509_api.h"
 #include "signaling_user_management.h"
 
-
+#include "modules/signaling/hipd/signaling_hipd_msg.h"
 
 #define CALLBUF_SIZE            60
 #define SYMLINKBUF_SIZE         16
@@ -1370,7 +1369,7 @@ int signaling_build_response_to_service_offer_s(struct hip_common               
     HIP_IFEL(signaling_build_param_encrypted_aes_sha1(output_msg, (char *) tmp_ptr, &tmp_len, key_hint), -1,
              "Could not build the HIP Encrypted parameter\n");
 
-    enc_in_msg = hip_get_param_readwrite(output_msg, HIP_PARAM_ENCRYPTED);
+    enc_in_msg = hip_get_param_readwrite(output_msg, HIP_PARAM_SIGNALING_ENCRYPTED);
     HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
     iv = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
     get_random_bytes(iv, 16);
@@ -1543,7 +1542,7 @@ int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
     int                           err          = 0;
     struct hip_encrypted_aes_sha1 enc          = { 0 };
     char                         *param_padded = NULL;
-    hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
+    hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_SIGNALING_ENCRYPTED);
 
     HIP_ASSERT(data);
 
@@ -1743,7 +1742,7 @@ int signaling_build_hip_packet_from_hip_encrypted_param(struct hip_common *commo
     uint16_t mask = 0;
     hip_build_network_hdr(*msg_buf, HIP_UPDATE, mask, &common->hits, &common->hitr); /*Just giving some dummy Packet type*/
 
-    enc_in_msg    = hip_get_param(common, HIP_PARAM_ENCRYPTED);
+    enc_in_msg    = hip_get_param(common, HIP_PARAM_SIGNALING_ENCRYPTED);
     tmp_enc_param = malloc(hip_get_param_total_len(enc_in_msg));
     HIP_ASSERT(enc_in_msg);
     memcpy(tmp_enc_param, enc_in_msg, hip_get_param_total_len(enc_in_msg));
@@ -2174,6 +2173,27 @@ out_err:
     return err;
 }
 
+int signaling_generate_shared_key_from_dh_shared_secret(uint8_t *shared_key,
+                                                        uint8_t *shared_key_length,
+                                                        UNUSED const uint8_t *peer_key,
+                                                        UNUSED const int peer_key_len)
+{
+    int     err = 0, tmp_len = 0;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+
+    tmp_len = *shared_key_length;
+    //*shared_key_length = signaling_generate_shared_secret_from_mbox_dh(DH_GROUP_ID, peer_key, peer_key_len, shared_key, *shared_key_length);
+
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, shared_key, *shared_key_length, sha1_digest),
+             -1, "Could not build message digest \n");
+    memset((shared_key + *shared_key_length), 0, tmp_len - *shared_key_length);
+out_err:
+    return err;
+}
+
+/*
+ *  Extract mbox key from
+ */
 /* Locate the middlebox keys from the trusted mbox certificate store
  *
  */

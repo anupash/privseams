@@ -1513,3 +1513,9 @@ int signaling_r2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
 out_err:
     return err;
 }
+
+int signaling_generate_shared_secret_from_mbox_dh(const int groupid, const uint8_t *peer_key, size_t peer_len,
+                                                  uint8_t *dh_shared_key, size_t outlen)
+{
+    return hip_calculate_shared_secret(peer_key, groupid, peer_len, dh_shared_key, outlen);
+}

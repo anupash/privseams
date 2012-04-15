@@ -41,8 +41,11 @@
 #include "config.h"
 #include "firewall/firewall_defines.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/crypto.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
+
+#define DH_GROUP_ID 3
 
 int signaling_hipfw_init(const char *policy_file);
 int signaling_hipfw_uninit(void);
@@ -79,4 +82,8 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
                                                           struct in6_addr                     *hit_i,
                                                           struct in6_addr                     *hit_r,
                                                           int *ret);
+
+/* Utility functions*/
+DH *signaling_hipfw_generate_mb_dh_key(const int group_id);
+DH *signaling_hipfw_get_mb_dh_key(void);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

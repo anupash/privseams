@@ -130,4 +130,8 @@ int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_
 int signaling_locate_mb_certificate(X509 **mb_certificate, const char *dir_path,
                                     unsigned char *certificate_hint, uint16_t cert_hint_len);
 int generate_key_for_hip_encrypt(unsigned char *key, int *key_len, unsigned char *key_hint);
+int signaling_generate_shared_key_from_dh_shared_secret(uint8_t *shared_key,
+                                                        uint8_t *shared_key_length,
+                                                        const uint8_t *peer_key,
+                                                        const int peer_key_len);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_
