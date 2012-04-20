@@ -1084,28 +1084,23 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
                                    unsigned char *stored_hash,
                                    RSA           *priv_key)
 {
+    int                          err = 0;
     const struct hip_tlv_common *param;
     struct signaling_service_ack ack = { 0 };
 //  struct hip_encrypted_aes_sha1 tmp_enc_param = { 0 };
     int param_len    = 0;
     int enc_data_len = 0;
 
-    int            err              = 0;
     uint8_t       *tmp_service_ack  = NULL;
     unsigned char *tmp_info_secrets = NULL;
     unsigned char *dec_output       = NULL;
     uint8_t       *tmp_ptr          = NULL;
-    const uint8_t *tmp_enc_ptr      = NULL;
-    uint16_t       tmp_len          = 0;
-    uint16_t       tmp_info_sec_len = 0;
-    uint16_t       mask             = 0;
-    //int          len_contents     = 0;
+    //const uint8_t *tmp_enc_ptr      = NULL;
+    uint16_t tmp_len = 0;
+    //uint16_t       tmp_info_sec_len = 0;
+    uint16_t mask = 0;
 
-    unsigned char symm_key[16];
-    uint8_t       symm_key_len;
-    unsigned char symm_key_hint[4];
-    uint8_t       algo;
-
+    /*------------------ Find out the corresponding service acknowledgment --------------------*/
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
         HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
         do {
@@ -1136,6 +1131,7 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
         HIP_DEBUG("Packet content len = %d\n", enc_data_len);
         HIP_HEXDUMP("Encrypted end point info secrets : ", (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) +
                                                                         sizeof(struct hip_tlv_common)), enc_data_len);
+
         /*--------- Extract the symmetric key information now ---------------*/
         tmp_info_secrets = malloc(RSA_size(priv_key));
         memcpy(tmp_info_secrets, (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) +
@@ -1149,48 +1145,13 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
             return -1;
         }
 
-        /* Allocate and build message buffer */
+        /*----------------- Allocate and build message buffer ----------------------*/
         HIP_IFEL(!(*msg_buf = hip_msg_alloc()),
                  -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
-
         hip_build_network_hdr(*msg_buf, HIP_UPDATE, mask, &msg->hits, &msg->hitr); /*Just giving some dummy Packet type*/
 
-        tmp_info_sec_len = tmp_len;
-        tmp_ptr          = dec_output;
-
-        while (tmp_info_sec_len > 0) {
-            memcpy(&symm_key_len, tmp_ptr, sizeof(uint8_t));
-            tmp_ptr += sizeof(uint8_t);
-            memcpy(&algo, tmp_ptr, sizeof(uint8_t));
-            tmp_ptr += sizeof(uint8_t);
-            memcpy(symm_key_hint, tmp_ptr, sizeof(uint32_t));
-            tmp_ptr += sizeof(uint32_t);
-            memcpy(symm_key, tmp_ptr, symm_key_len);
-
-            HIP_HEXDUMP("Symmetric key received = ", symm_key, symm_key_len);
-            HIP_HEXDUMP("Symmetric key hint received = ", symm_key_hint, 4);
-
-            if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_ENCRYPTED))) {
-                do {
-                    /* Sanity check */
-                    if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_ENCRYPTED) {
-                        tmp_enc_ptr = (const uint8_t *) (param + 1);
-                        HIP_HEXDUMP("Symmetric key hint with this encrypted param = ", tmp_enc_ptr, 4);
-                        if (!memcmp(tmp_enc_ptr, symm_key_hint, sizeof(uint32_t))) {
-                            HIP_DEBUG("Found the corresponding encrypted param\n");
-                            signaling_build_hip_packet_from_hip_encrypted_param(msg, msg_buf,
-                                                                                (const struct hip_encrypted_aes_sha1 *) param,
-                                                                                (unsigned char *) symm_key, &symm_key_len,
-                                                                                (unsigned char *) symm_key_hint, &algo);
-                        }
-                    }
-                } while ((param = hip_get_next_param(msg, param)));
-            }
-
-            tmp_ptr          += symm_key_len;
-            tmp_info_sec_len -= (sizeof(uint16_t) + sizeof(uint32_t) + symm_key_len);
-            HIP_DEBUG("tmp_info_sec_len = %d\n", tmp_info_sec_len);
-        }
+        HIP_IFEL(signaling_put_decrypted_secrets_to_msg_buf(msg, msg_buf, dec_output,  tmp_len),
+                 -1, "Could not add the decrypted endpoint info to the msg buffer for further processing. \n");
 
         hip_dump_msg(*msg_buf);
         free(dec_output);
@@ -1202,6 +1163,63 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
     }
     HIP_DEBUG("None of the Service Acks matched.\n");
     //return 0;
+out_err:
+    return err;
+}
+
+int signaling_put_decrypted_secrets_to_msg_buf(struct hip_common *msg,
+                                               struct hip_common **msg_buf,
+                                               uint8_t *data, uint16_t data_len)
+{
+    int                          err         = 0;
+    const struct hip_tlv_common *param       = NULL;
+    uint8_t                     *tmp_ptr     = NULL;
+    const uint8_t               *tmp_enc_ptr = NULL;
+    uint16_t                     tmp_enc_len = 0;
+
+    unsigned char symm_key[16];
+    uint8_t       symm_key_len;
+    unsigned char symm_key_hint[4];
+    uint8_t       algo;
+
+    tmp_ptr     = data;
+    tmp_enc_len = data_len;
+
+    while (tmp_enc_len > 0) {
+        memcpy(&symm_key_len, tmp_ptr, sizeof(uint8_t));
+        tmp_ptr += sizeof(uint8_t);
+        memcpy(&algo, tmp_ptr, sizeof(uint8_t));
+        tmp_ptr += sizeof(uint8_t);
+        memcpy(symm_key_hint, tmp_ptr, sizeof(uint32_t));
+        tmp_ptr += sizeof(uint32_t);
+        memcpy(symm_key, tmp_ptr, symm_key_len);
+
+        HIP_HEXDUMP("Symmetric key received = ", symm_key, symm_key_len);
+        HIP_HEXDUMP("Symmetric key hint received = ", symm_key_hint, 4);
+
+        if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_ENCRYPTED))) {
+            do {
+                /* Sanity check */
+                if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_ENCRYPTED) {
+                    tmp_enc_ptr = (const uint8_t *) (param + 1);
+                    HIP_HEXDUMP("Symmetric key hint with this encrypted param = ", tmp_enc_ptr, 4);
+                    if (!memcmp(tmp_enc_ptr, symm_key_hint, sizeof(uint32_t))) {
+                        HIP_DEBUG("Found the corresponding encrypted param\n");
+                        HIP_IFEL(signaling_build_hip_packet_from_hip_encrypted_param(msg, msg_buf,
+                                                                                     (const struct hip_encrypted_aes_sha1 *) param,
+                                                                                     (unsigned char *) symm_key, &symm_key_len,
+                                                                                     (unsigned char *) symm_key_hint, &algo), -1,
+                                 "Could not append decrypted endpoint info to the hip msg\n");
+                    }
+                }
+            } while ((param = hip_get_next_param(msg, param)));
+        }
+
+        tmp_ptr     += symm_key_len;
+        tmp_enc_len -= (sizeof(uint16_t) + sizeof(uint32_t) + symm_key_len);
+        HIP_DEBUG("tmp_info_sec_len = %d\n", tmp_enc_len);
+    }
+
 out_err:
     return err;
 }

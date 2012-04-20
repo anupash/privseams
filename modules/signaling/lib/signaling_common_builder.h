@@ -123,6 +123,9 @@ int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state
 int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig_state,
                                                 struct signaling_param_service_offer *offer);
 
+int signaling_put_decrypted_secrets_to_msg_buf(struct hip_common *msg,
+                                               struct hip_common **msg_buf,
+                                               uint8_t *data, uint16_t data_len);
 int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg);
 int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
                                        struct service_offer_groups *offer_groups,
