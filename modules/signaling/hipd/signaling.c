@@ -19,23 +19,32 @@
 #define INBOUND_CHECK_APPINFO_PRIO              29000
 #define INBOUND_CHECK_USERINFO_PRIO             29100
 
-#define INBOUND_HANDLE_BEX_PRIO                 32000
-#define INBOUND_HANDLE_BEX_UPDATE_S_PRIO        20955
-#define INBOUND_HANDLE_BEX_UPDATE_PRIO            20975
-#define INBOUND_HANDLE_NOTIFY_PRIO              32000
+#define INBOUND_HANDLE_BEX_PRIO                     32000
+#define INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO   20935
+#define INBOUND_HANDLE_GROUP_SERVICE_OFFERS_PRIO    20945
+#define INBOUND_HANDLE_BEX_UPDATE_S_PRIO            20955
+#define INBOUND_HANDLE_BEX_UPDATE_PRIO              20975
+#define INBOUND_HANDLE_NOTIFY_PRIO                  32000
 
 #define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
 
-#define OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO        44504
-#define OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO      44505
-#define OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO          44506
+#define OUTBOUND_I2_CHECK_NEED_ENCRYPTION_PRIO              44505
+#define OUTBOUND_I2_GROUP_SERVICE_OFFERS_PRIO               44506
+#define OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO        44507
+#define OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO      44508
+#define OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO          44509
+#define OUTBOUND_I2_CREATE_USER_SIG_PRIO                    45500
+#define OUTBOUND_I2_HIPD_STATE_CLEANUP_PRIO                 45502
+
+#define OUTBOUND_R2_CHECK_NEED_ENCRYPTION_PRIO              41505
+#define OUTBOUND_R2_GROUP_SERVICE_OFFERS_PRIO               41506
 #define OUTBOUND_R2_HANDLE_SERVICE_OFFER_PRIO               41507
+#define OUTBOUND_R2_CREATE_USER_SIG_PRIO                    45501
+#define OUTBOUND_R2_HIPD_STATE_CLEANUP_PRIO                 45503
 
-#define OUTBOUND_R2_CREATE_USER_SIG_PRIO        45501
-#define OUTBOUND_I2_CREATE_USER_SIG_PRIO        45500
-#define OUTBOUND_UPDATE_ADD_SERVCICE_ACK_S_PRIO         20965
-#define OUTBOUND_UPDATE_CREATE_USER_SIG_PRIO    29955
-
+#define OUTBOUND_UPDATE_ADD_SERVCICE_ACK_S_PRIO             20965
+#define OUTBOUND_UPDATE_CREATE_USER_SIG_PRIO                29955
+#define OUTBOUND_UPDATE_HIPD_STATE_CLEANUP_PRIO             29956
 
 int hip_signaling_init(void)
 {
@@ -109,6 +118,34 @@ int hip_signaling_init(void)
 
     // FIXME Service offers are always unsigned. The function name suggests that there is also a signed counterpart, though.
     /*=================================== Handle HIP_R1 ===================================*/
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_i2_need_for_encryption,
+                                          OUTBOUND_I2_CHECK_NEED_ENCRYPTION_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_i2_need_for_encryption,
+                                          OUTBOUND_I2_CHECK_NEED_ENCRYPTION_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_i2_group_service_offers,
+                                          OUTBOUND_I2_GROUP_SERVICE_OFFERS_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_i2_group_service_offers,
+                                          OUTBOUND_I2_GROUP_SERVICE_OFFERS_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    /* Handle Signed Service Offers in R1*/
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_i2_handle_signed_service_offers,
+                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
     /* Handle Unsigned Service Offer in R1*/
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
                                           &signaling_i2_handle_unsigned_service_offers,
@@ -118,6 +155,18 @@ int hip_signaling_init(void)
                                           &signaling_i2_handle_unsigned_service_offers,
                                           OUTBOUND_I2_UNSIGNED_HANDLE_SERVICE_OFFER_PRIO),
              -1, "Error on registering Signaling handle function.\n");
+
+    /* Handle adding of signed acks */
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
+                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
+             -1, "Error on registering handle function "
+                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I1_SENT\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
+                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
+             -1, "Error on registering handle function "
+                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
 
     /* Add user signature to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
@@ -130,44 +179,18 @@ int hip_signaling_init(void)
                                           OUTBOUND_I2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
-    /* Handle Signed Service Offers in R1*/
+    /* Add user signature to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
-                                          &signaling_i2_handle_signed_service_offers,
-                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
-                                          &signaling_i2_handle_signed_service_offers,
-                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING,
-                                          &signaling_i2_handle_signed_service_offers,
-                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
-             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,
-                                          &signaling_i2_handle_signed_service_offers,
-                                          OUTBOUND_I2_SIGNED_HANDLE_SERVICE_OFFER_PRIO),
+                                          &signaling_hipd_state_cleanup,
+                                          OUTBOUND_I2_HIPD_STATE_CLEANUP_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
-                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
-                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
-             -1, "Error on registering handle function "
-                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I1_SENT\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
-                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
-                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
-             -1, "Error on registering handle function "
-                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING,
-                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
-                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
-             -1, "Error on registering handle function "
-                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSING\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,
-                                          &signaling_i2_add_signed_service_ack_and_sig_conn,
-                                          OUTBOUND_I2_HANDLE_SIGNED_SERVICE_ACK_PRIO),
-             -1, "Error on registering handle function "
-                 "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_CLOSED\n");
+                                          &signaling_hipd_state_cleanup,
+                                          OUTBOUND_I2_HIPD_STATE_CLEANUP_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+
     /*=================================== Handle HIP_I2 ===================================*/
     const int mbox_service_I2_states[] = { HIP_STATE_UNASSOCIATED,
                                            HIP_STATE_I1_SENT,
@@ -175,6 +198,16 @@ int hip_signaling_init(void)
                                            HIP_STATE_R2_SENT,
                                            HIP_STATE_NONE };
     for (unsigned i = 0; i < ARRAY_SIZE(mbox_service_I2_states); i++) {
+        HIP_IFEL(hip_register_handle_function(HIP_I2, mbox_service_I2_states[i],
+                                              &signaling_r2_need_for_encryption,
+                                              OUTBOUND_R2_CHECK_NEED_ENCRYPTION_PRIO),
+                 -1, "Error on registering Signaling handle function.\n");
+
+        HIP_IFEL(hip_register_handle_function(HIP_I2, mbox_service_I2_states[i],
+                                              &signaling_r2_group_service_offers,
+                                              OUTBOUND_R2_GROUP_SERVICE_OFFERS_PRIO),
+                 -1, "Error on registering Signaling handle function.\n");
+
         /* Handle Service Offers in I2*/
         if (hip_register_handle_function(HIP_I2,
                                          mbox_service_I2_states[i],
@@ -192,6 +225,15 @@ int hip_signaling_init(void)
             HIP_ERROR("Error on registering signaling handle function.\n");
             return -1;
         }
+
+        /* Cleaning up of hipd state*/
+        if (hip_register_handle_function(HIP_I2,
+                                         mbox_service_I2_states[i],
+                                         &signaling_hipd_state_cleanup,
+                                         OUTBOUND_R2_HIPD_STATE_CLEANUP_PRIO)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
     }
 
     /*=================================== Handle HIP_R2 ===================================*/
@@ -202,6 +244,26 @@ int hip_signaling_init(void)
 
 
     /*=================================== Handle HIP_UPDATE ===================================*/
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_update_need_for_encryption,
+                                          INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_update_need_for_encryption,
+                                          INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_update_group_service_offers,
+                                          INBOUND_HANDLE_GROUP_SERVICE_OFFERS_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_update_group_service_offers,
+                                          INBOUND_HANDLE_GROUP_SERVICE_OFFERS_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
                                           &signaling_handle_incoming_update,
                                           INBOUND_HANDLE_BEX_UPDATE_PRIO),
@@ -238,6 +300,16 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
                                           &signaling_add_user_signature,
                                           OUTBOUND_UPDATE_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    /* Cleaning up of hipd state*/
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_hipd_state_cleanup,
+                                          OUTBOUND_UPDATE_HIPD_STATE_CLEANUP_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_hipd_state_cleanup,
+                                          OUTBOUND_UPDATE_HIPD_STATE_CLEANUP_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     /*=================================== Handle HIP_NOTIFY ===================================*/

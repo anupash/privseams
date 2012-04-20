@@ -174,40 +174,35 @@ enum direction {
  */
 
 enum flag_internal {
-    USER_AUTH_REQUEST = 0,
-    USER_AUTHED       = 1,
-    HOST_AUTH_REQUEST = 2,
-    HOST_AUTHED       = 3,
-
     /*New flags to request for host informatin*/
-    HOST_INFO_OS     = 4,
-    HOST_INFO_KERNEL = 5,
-    HOST_INFO_ID     = 6,
-    HOST_INFO_CERTS  = 7,
+    HOST_INFO_OS     = 0,
+    HOST_INFO_KERNEL = 1,
+    HOST_INFO_ID     = 2,
+    HOST_INFO_CERTS  = 3,
 
     /*New flags to request for user informatin*/
-    USER_INFO_ID    = 8,
-    USER_INFO_CERTS = 9,
+    USER_INFO_ID    = 4,
+    USER_INFO_CERTS = 5,
 
     /*New flags to request for user informatin*/
-    APP_INFO_NAME         = 10,
-    APP_INFO_QOS_CLASS    = 11,
-    APP_INFO_CONNECTIONS  = 12,
-    APP_INFO_REQUIREMENTS = 13,
+    APP_INFO_NAME         = 6,
+    APP_INFO_QOS_CLASS    = 7,
+    APP_INFO_CONNECTIONS  = 8,
+    APP_INFO_REQUIREMENTS = 9,
 
     /*New flags checked on receiving a response for the request*/
-    HOST_INFO_OS_RECV     = 14,
-    HOST_INFO_KERNEL_RECV = 15,
-    HOST_INFO_ID_RECV     = 16,
-    HOST_INFO_CERTS_RECV  = 17,
+    HOST_INFO_OS_RECV     = 10,
+    HOST_INFO_KERNEL_RECV = 11,
+    HOST_INFO_ID_RECV     = 12,
+    HOST_INFO_CERTS_RECV  = 13,
 
-    USER_INFO_ID_RECV    = 18,
-    USER_INFO_CERTS_RECV = 19,
+    USER_INFO_ID_RECV    = 14,
+    USER_INFO_CERTS_RECV = 15,
 
-    APP_INFO_NAME_RECV         = 20,
-    APP_INFO_QOS_CLASS_RECV    = 21,
-    APP_INFO_CONNECTIONS_RECV  = 22,
-    APP_INFO_REQUIREMENTS_RECV = 23
+    APP_INFO_NAME_RECV         = 16,
+    APP_INFO_QOS_CLASS_RECV    = 17,
+    APP_INFO_CONNECTIONS_RECV  = 18,
+    APP_INFO_REQUIREMENTS_RECV = 19
 };
 
 enum flags_service_state {
@@ -984,7 +979,7 @@ struct signaling_param_service_ack {
     uint16_t      service_option;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
     // The field below is used only when building acknowledgment for signed service offer
-    unsigned char end_point_info_secret[HIP_MAX_RSA_KEY_LEN / 8];
+    //unsigned char end_point_info_secret[HIP_MAX_RSA_KEY_LEN / 8];
     /*
      *   uint8_t      symm_key_len;
      *   uint8_t      symm_enc_algo;

@@ -104,8 +104,12 @@ int signaling_r2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
 int signaling_send_first_update(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit,
                                 struct signaling_connection *conn);
-int signaling_send_second_update(struct hip_packet_context *ctx);
-int signaling_send_third_update(struct hip_packet_context *ctx);
+int signaling_send_second_update(const uint8_t packet_type,
+                                 const uint32_t ha_state,
+                                 struct hip_packet_context *ctx);
+int signaling_send_third_update(const uint8_t packet_type,
+                                const uint32_t ha_state,
+                                struct hip_packet_context *ctx);
 
 /* Functions for certificate exchange */
 int signaling_send_user_auth_failed_ntf(struct hip_hadb_state *ha, const int reason);
@@ -118,6 +122,30 @@ int signaling_send_user_certificate_chain_ack(struct hip_hadb_state *ha,
 /* utility functions */
 int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
                                               struct hip_packet_context *ctx, uint8_t flag);
+int signaling_i2_need_for_encryption(const uint8_t packet_type,
+                                     const uint32_t ha_state,
+                                     struct hip_packet_context *ctx);
+int signaling_i2_group_service_offers(const uint8_t packet_type,
+                                      const uint32_t ha_state,
+                                      struct hip_packet_context *ctx);
+
+int signaling_r2_need_for_encryption(const uint8_t packet_type,
+                                     const uint32_t ha_state,
+                                     struct hip_packet_context *ctx);
+int signaling_r2_group_service_offers(const uint8_t packet_type,
+                                      const uint32_t ha_state,
+                                      struct hip_packet_context *ctx);
+
+int signaling_update_need_for_encryption(const uint8_t packet_type,
+                                         const uint32_t ha_state,
+                                         struct hip_packet_context *ctx);
+int signaling_update_group_service_offers(const uint8_t packet_type,
+                                          const uint32_t ha_state,
+                                          struct hip_packet_context *ctx);
+
+int signaling_hipd_state_cleanup(const uint8_t packet_type,
+                                 const uint32_t ha_state, struct hip_packet_context *ctx);
+
 int signaling_generate_shared_secret_from_mbox_dh(const int groupid,
                                                   const uint8_t *peer_key,
                                                   size_t peer_len,

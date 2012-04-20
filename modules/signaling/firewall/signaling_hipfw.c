@@ -96,7 +96,7 @@ static DH      *dh              = NULL;
  * for later use. */
 int do_conntrack = 0;
 
-static int next_service_offer_id;
+static uint16_t next_service_offer_id;
 
 /* Paths to configuration elements */
 const char *default_policy_file = { "/usr/local/etc/hip/signaling_firewall_policy.cfg" };
@@ -201,7 +201,9 @@ int signaling_hipfw_init(const char *policy_file)
     signaling_cdb_init();
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
 
-    next_service_offer_id = 0;
+    get_random_bytes((unsigned char *) &next_service_offer_id, sizeof(uint16_t));
+    //next_service_offer_id = 0;
+
     // read and process policy
     if (!policy_file) {
         policy_file = default_policy_file;
@@ -380,10 +382,6 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct policy_tuple                *matched_tuple = NULL;
     struct signaling_cdb_entry         *old_conn;
     struct hip_common                  *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
-    unsigned char                       symm_key[16];
-    uint8_t                             symm_key_len;
-    unsigned char                       symm_key_hint[4];
-    uint8_t                             algo;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -445,15 +443,12 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                          "Could not check and verify the info in response with the policy\n");
-            } else if (signaling_verify_service_ack_s(common, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key(),
-                                                      symm_key, &symm_key_len, symm_key_hint, &algo)) {
+            } else if (signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key())) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                HIP_DEBUG("Verifying the Signed service ack failed\n");
-                signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
-                                                                    symm_key_hint, &algo);
+                HIP_DEBUG("Verifying the Signed service ack succeeded\n");
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
                          "Could not initialize the connection context from the message\n");
                 HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
@@ -544,10 +539,6 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct in6_addr                    hit_i;
     struct in6_addr                    hit_r;
     struct hip_common                 *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
-    unsigned char                      symm_key[16];
-    uint8_t                            symm_key_len;
-    unsigned char                      symm_key_hint[4];
-    uint8_t                            algo;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -623,14 +614,11 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
-                } else if (signaling_verify_service_ack_s(common, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key(),
-                                                          symm_key, &symm_key_len, symm_key_hint, &algo)) {
+                } else if (signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key())) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
-                    signaling_build_hip_packet_from_hip_encrypted_param(common, &msg_buf, symm_key, &symm_key_len,
-                                                                        symm_key_hint, &algo);
                     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
                              "Could not initialize the connection context from the message\n");
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
@@ -995,7 +983,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
 #endif
 
             HIP_IFEL(signaling_add_service_offer_to_msg(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
-                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 0), -1,
+                                                        signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(), 1), -1,
                      "Could not add service offer to the message\n");
 
 /*

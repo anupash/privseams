@@ -942,26 +942,28 @@ out_err:
  * @param conn      the connection to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_flags_print(struct flags_connection_context flags, UNUSED const char *const prefix)
-{
-    char buf[100];
-    memset(buf, 0, sizeof(buf));
-
-    sprintf(buf + strlen(buf), "HA  = %d | ", signaling_flag_check(flags, HOST_AUTHED));
-    sprintf(buf + strlen(buf), "HAR = %d | ", signaling_flag_check(flags, HOST_AUTH_REQUEST));
-    sprintf(buf + strlen(buf), "UA  = %d | ", signaling_flag_check(flags, USER_AUTHED));
-    sprintf(buf + strlen(buf), "UAR = %d | ", signaling_flag_check(flags, USER_AUTH_REQUEST));
-
-
-
-    HIP_DEBUG("%s  Flags: %s int = %d \n", prefix, buf, flags);
-}
-
-int signaling_flag_check_auth_complete(struct flags_connection_context flags)
-{
-    return signaling_flag_check(flags, HOST_AUTHED) && !signaling_flag_check(flags, HOST_AUTH_REQUEST) &&
-           signaling_flag_check(flags, USER_AUTHED) && !signaling_flag_check(flags, USER_AUTH_REQUEST);
-}
+/*
+ * void signaling_flags_print(struct flags_connection_context flags, UNUSED const char *const prefix)
+ * {
+ *  char buf[100];
+ *  memset(buf, 0, sizeof(buf));
+ *
+ *  sprintf(buf + strlen(buf), "HA  = %d | ", signaling_flag_check(flags, HOST_AUTHED));
+ *  sprintf(buf + strlen(buf), "HAR = %d | ", signaling_flag_check(flags, HOST_AUTH_REQUEST));
+ *  sprintf(buf + strlen(buf), "UA  = %d | ", signaling_flag_check(flags, USER_AUTHED));
+ *  sprintf(buf + strlen(buf), "UAR = %d | ", signaling_flag_check(flags, USER_AUTH_REQUEST));
+ *
+ *
+ *
+ *  HIP_DEBUG("%s  Flags: %s int = %d \n", prefix, buf, flags);
+ * }
+ *
+ * int signaling_flag_check_auth_complete(struct flags_connection_context flags)
+ * {
+ *  return signaling_flag_check(flags, HOST_AUTHED) && !signaling_flag_check(flags, HOST_AUTH_REQUEST) &&
+ *         signaling_flag_check(flags, USER_AUTHED) && !signaling_flag_check(flags, USER_AUTH_REQUEST);
+ * }
+ */
 
 /**
  * @return 1 if flag is set, 0 otherwise
@@ -969,52 +971,56 @@ int signaling_flag_check_auth_complete(struct flags_connection_context flags)
 /*int signaling_flag_check(uint8_t flags, int f) {
  *  return (flags & (1 << f)) > 0;
  * }*/
-int signaling_flag_check(struct flags_connection_context flags, int f)
-{
-    switch (f) {
-    case USER_AUTH_REQUEST:
-        return (flags.USER_AUTH_REQUEST) ? 1 : 0;
-        break;
-    case USER_AUTHED:
-        return (flags.USER_AUTHED) ? 1 : 0;
-        break;
-    case HOST_AUTH_REQUEST:
-        return (flags.HOST_AUTH_REQUEST) ? 1 : 0;
-        break;
-    case HOST_AUTHED:
-        return (flags.HOST_AUTHED) ? 1 : 0;
-        break;
-    default:
-        return 0;
-        break;
-    }
-    return 0;
-}
+/*
+ * int signaling_flag_check(struct flags_connection_context flags, int f)
+ * {
+ *  switch (f) {
+ *  case USER_AUTH_REQUEST:
+ *      return (flags.USER_AUTH_REQUEST) ? 1 : 0;
+ *      break;
+ *  case USER_AUTHED:
+ *      return (flags.USER_AUTHED) ? 1 : 0;
+ *      break;
+ *  case HOST_AUTH_REQUEST:
+ *      return (flags.HOST_AUTH_REQUEST) ? 1 : 0;
+ *      break;
+ *  case HOST_AUTHED:
+ *      return (flags.HOST_AUTHED) ? 1 : 0;
+ *      break;
+ *  default:
+ *      return 0;
+ *      break;
+ *  }
+ *  return 0;
+ * }
+ */
 
 /**
  * Set flag f in flags.
  *
  * @return flags with f set to 1
  */
-void signaling_flag_set(struct flags_connection_context *flags, int f)
-{
-    switch (f) {
-    case USER_AUTH_REQUEST:
-        flags->USER_AUTH_REQUEST = 1;
-        break;
-    case USER_AUTHED:
-        flags->USER_AUTHED = 1;
-        break;
-    case HOST_AUTH_REQUEST:
-        flags->HOST_AUTH_REQUEST = 1;
-        break;
-    case HOST_AUTHED:
-        flags->HOST_AUTHED = 1;
-        break;
-    default:
-        break;
-    }
-}
+/*
+ * void signaling_flag_set(struct flags_connection_context *flags, int f)
+ * {
+ *  switch (f) {
+ *  case USER_AUTH_REQUEST:
+ *      flags->USER_AUTH_REQUEST = 1;
+ *      break;
+ *  case USER_AUTHED:
+ *      flags->USER_AUTHED = 1;
+ *      break;
+ *  case HOST_AUTH_REQUEST:
+ *      flags->HOST_AUTH_REQUEST = 1;
+ *      break;
+ *  case HOST_AUTHED:
+ *      flags->HOST_AUTHED = 1;
+ *      break;
+ *  default:
+ *      break;
+ *  }
+ * }
+ */
 
 /**
  * Unset flag f in flags.
@@ -1026,27 +1032,28 @@ void signaling_flag_set(struct flags_connection_context *flags, int f)
  * *flags &= ~(1 << (int) f);
  * }
  */
-void signaling_flag_unset(struct flags_connection_context *flags, int f)
-{
-    switch (f) {
-    case USER_AUTH_REQUEST:
-        flags->USER_AUTH_REQUEST = 0;
-        break;
-    case USER_AUTHED:
-        flags->USER_AUTHED = 0;
-        break;
-    case HOST_AUTH_REQUEST:
-        flags->HOST_AUTH_REQUEST = 0;
-        break;
-    case HOST_AUTHED:
-        flags->HOST_AUTHED = 0;
-        break;
-
-    default:
-        break;
-    }
-}
-
+/*
+ * void signaling_flag_unset(struct flags_connection_context *flags, int f)
+ * {
+ *  switch (f) {
+ *  case USER_AUTH_REQUEST:
+ *      flags->USER_AUTH_REQUEST = 0;
+ *      break;
+ *  case USER_AUTHED:
+ *      flags->USER_AUTHED = 0;
+ *      break;
+ *  case HOST_AUTH_REQUEST:
+ *      flags->HOST_AUTH_REQUEST = 0;
+ *      break;
+ *  case HOST_AUTHED:
+ *      flags->HOST_AUTHED = 0;
+ *      break;
+ *
+ *  default:
+ *      break;
+ *  }
+ * }
+ */
 void signaling_flag_init(struct flags_connection_context *flags)
 {
     flags->USER_AUTH_REQUEST = 0;

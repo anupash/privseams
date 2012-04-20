@@ -78,16 +78,19 @@ int signaling_hipd_init_state(struct modular_state *state)
 
     sig_state->pending_conn               = NULL;
     sig_state->flag_user_sig              = 0;
+    sig_state->flag_need_encryption       = 0;
     sig_state->user_cert_ctx.cert_chain   = NULL;
     sig_state->user_cert_ctx.group        = -1;
     sig_state->user_cert_ctx.next_cert_id = 0;
 
     for (i = 0; i < 10; i++) {
-        sig_state->service_ack[i] = NULL;
+        sig_state->service_ack[i]  = NULL;
+        sig_state->service_nack[i] = 0;
+        sig_state->offer_groups[i] = NULL;
+        sig_state->mb_certs[i]     = NULL;
     }
 
     err = lmod_add_state_item(state, sig_state, "signaling_hipd_state");
-
     signaling_init_connection_context(&sig_state->pending_conn_context, OUT);
 out_err:
     return err;
@@ -101,6 +104,30 @@ int signaling_hipd_state_initialize_service_ack(struct signaling_hipd_state    *
             free(state->service_ack[i]);
         }
         state->service_ack[i] = NULL;
+    }
+    return 0;
+}
+
+int signaling_hipd_state_initialize_offer_groups(struct signaling_hipd_state    *state)
+{
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        if (state->offer_groups[i]) {
+            free(state->offer_groups[i]);
+        }
+        state->offer_groups[i] = NULL;
+    }
+    return 0;
+}
+
+int signaling_hipd_state_initialize_mb_certs(struct signaling_hipd_state    *state)
+{
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        if (state->mb_certs[i]) {
+            free(state->mb_certs[i]);
+        }
+        state->mb_certs[i] = NULL;
     }
     return 0;
 }
