@@ -1290,17 +1290,19 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_need_encryption) {
-        HIP_DEBUG("Inside group_Service_offers\n");
         signaling_hipd_state_initialize_offer_groups(sig_state);
-        for (j = 0; j < 20; j++) {
+        HIP_DEBUG("Inside group_Service_offers\n");
+        for (j = 0; j < MAX_NUM_OFFER_GROUPS; j++) {
             offer_groups[j] = temp_offer_grp;
         }
 
         /* Information requests into individual place holders. We will merge the groups later */
         signaling_split_info_req_to_groups(sig_state, offer_groups, ctx);
+        HIP_DEBUG("Service_offers split into groups\n");
 
         /* Merge the groups which have similar requests */
         signaling_merge_info_req_to_similar_groups(offer_groups, sig_state);
+        HIP_DEBUG("Similar Service_offers merged.\n");
 
         /*Now print the offer groups*/
         for (j = 0; sig_state->offer_groups[j] != NULL; j++) {
