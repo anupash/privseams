@@ -2345,6 +2345,9 @@ out_err:
     return err;
 }
 
+/* FIXME This check seems too complicated!
+ *       It may be worth adding a field to an offer that indicates the type
+ *       (unauthed, signature-authed, DH-authed) and use this field here. */
 int signaling_check_if_service_offer_signed(struct signaling_param_service_offer *param_service_offer)
 {
     uint8_t      *tmp_ptr = NULL;
@@ -2446,6 +2449,7 @@ int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg)
 
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
+            // FIXME Why do you need to memcpy the service offer here?
             HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                      -1, "Could not copy connection context\n");
             flag =  signaling_check_if_service_offer_signed(&param_service_offer);
