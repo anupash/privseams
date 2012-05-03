@@ -1501,7 +1501,7 @@ int hip_check_i2_hmac(UNUSED const uint8_t packet_type,
                       UNUSED const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {
-    int err = 0, is_loopback = 0;
+    int err = 0;
     /* Verify HMAC. */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
@@ -1509,7 +1509,6 @@ int hip_check_i2_hmac(UNUSED const uint8_t packet_type,
 #endif
     if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
         hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        is_loopback = 1;
         HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                         &ctx->hadb_entry->hip_hmac_out),
                  -EPROTO,
