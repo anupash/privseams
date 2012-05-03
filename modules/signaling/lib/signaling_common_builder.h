@@ -119,7 +119,7 @@ int signaling_get_info_req_from_service_offer_u(const struct signaling_param_ser
                                                 struct signaling_flags_info_req    *flags);
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
-int signaling_check_if_service_offer_signed(struct signaling_param_service_offer *param_service_offer);
+int signaling_check_if_service_offer_signed(const struct signaling_param_service_offer *param_service_offer);
 int signaling_check_if_service_ack_signed(const struct signaling_param_service_ack *param_service_ack);
 int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state, uint16_t service_offer_id);
 int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig_state,

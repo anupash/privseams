@@ -2330,7 +2330,8 @@ int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx)
                                        HIP_AH_SHA_LEN)) / sizeof(uint16_t);
                 while (i < num_req_info_items) {
                     tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
-                    if (tmp_info == APP_INFO_NAME || tmp_info == APP_INFO_QOS_CLASS || tmp_info == APP_INFO_REQUIREMENTS || tmp_info == APP_INFO_CONNECTIONS ||
+                    if (tmp_info == APP_INFO_NAME || tmp_info == APP_INFO_QOS_CLASS ||
+                        tmp_info == APP_INFO_REQUIREMENTS || tmp_info == APP_INFO_CONNECTIONS ||
                         tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
                         return 1;
                     }
@@ -2348,16 +2349,15 @@ out_err:
 /* FIXME This check seems too complicated!
  *       It may be worth adding a field to an offer that indicates the type
  *       (unauthed, signature-authed, DH-authed) and use this field here. */
-int signaling_check_if_service_offer_signed(struct signaling_param_service_offer *param_service_offer)
+int signaling_check_if_service_offer_signed(const struct signaling_param_service_offer *param_service_offer)
 {
-    uint8_t      *tmp_ptr = NULL;
-    uint16_t      tmp_len = 0;
-    unsigned char temp_check[HIP_AH_SHA_LEN];
+    const uint8_t *tmp_ptr = NULL;
+    uint16_t       tmp_len = 0;
+    unsigned char  temp_check[HIP_AH_SHA_LEN];
     HIP_ASSERT(param_service_offer);
 
-    tmp_ptr  = (uint8_t *) param_service_offer;
-    tmp_len  = hip_get_param_contents_len(param_service_offer);
-    tmp_ptr += (tmp_len + sizeof(struct hip_tlv_common) - HIP_AH_SHA_LEN);
+    tmp_len = hip_get_param_contents_len(param_service_offer);
+    tmp_ptr = (const uint8_t *) param_service_offer + (tmp_len + sizeof(struct hip_tlv_common) - HIP_AH_SHA_LEN);
 
     memset(temp_check, 0, HIP_AH_SHA_LEN);
     return memcmp(temp_check, tmp_ptr, HIP_AH_SHA_LEN) ? 1 : 0;
@@ -2442,24 +2442,18 @@ int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state
 
 int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg)
 {
-    int                                  err   = 0;
-    int                                  flag  = 0;
-    const struct hip_tlv_common         *param = NULL;
-    struct signaling_param_service_offer param_service_offer;
+    int                          flag  = 0;
+    const struct hip_tlv_common *param = NULL;
 
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
-            // FIXME Why do you need to memcpy the service offer here?
-            HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
-                     -1, "Could not copy connection context\n");
-            flag =  signaling_check_if_service_offer_signed(&param_service_offer);
+            flag =  signaling_check_if_service_offer_signed((const struct signaling_param_service_offer *) (param));
             if (flag) {
                 return 1;
             }
         } while ((param = hip_get_next_param(msg, param)));
     }
-out_err:
-    return err;
+    return 0;
 }
 
 int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
