@@ -56,6 +56,8 @@
  * @brief Host Association Database (HADB) for HIP
  */
 
+#define _BSD_SOURCE
+
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
