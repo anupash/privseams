@@ -575,21 +575,12 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct in6_addr                    hit_r;
     struct hip_common                 *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
 
-    //This tuple is different
-    struct tuple *other_dir = NULL;
-
 #ifdef DEMO_MODE
     printf("\033[22;34mReceived R2/U3 packet\033[22;37m\n\033[22;37m");
 #endif
 
     /* sanity checks */
     HIP_IFEL(!common, -1, "Message is NULL\n");
-
-    if (common->type_hdr == HIP_R2) {
-        other_dir = &tuple->connection->reply;
-    } else if (common->type_hdr == HIP_UPDATE) {
-        other_dir = &tuple->connection->original;
-    }
 
     if (common->type_hdr == HIP_R2) {
         hit_i = common->hitr;
