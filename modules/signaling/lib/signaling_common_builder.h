@@ -88,7 +88,6 @@ int signaling_build_port_list(const struct signaling_param_user_context *param_u
 int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
                                                 struct signaling_connection conn,
                                                 struct signaling_connection_context *ctx_out,
-                                                const struct signaling_param_service_offer *offer,
                                                 struct signaling_flags_info_req    *flags);
 int signaling_build_response_to_service_offer_s(struct hip_packet_context   *ctx,
                                                 struct signaling_connection  conn,
@@ -116,7 +115,8 @@ int signaling_get_update_type(const struct hip_common *output_msg);
 int signaling_get_free_message_space(const struct hip_common *output_msg, struct hip_hadb_state *ha);
 int signaling_get_verified_user_context(struct signaling_connection_context *ctx);
 X509 *signaling_get_mbox_cert_from_offer_id(struct signaling_hipd_state *sig_state, uint16_t service_offer_id);
-
+int signaling_get_info_req_from_service_offer_u(const struct signaling_param_service_offer *offer,
+                                                struct signaling_flags_info_req    *flags);
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_service_offer_signed(struct signaling_param_service_offer *param_service_offer);
@@ -141,8 +141,8 @@ unsigned char *signaling_extract_skey_ident_from_cert(X509 *cert, unsigned int *
 int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_service_offer *offer_u,
                                                          struct signaling_param_service_offer_s *offer_s,
                                                          int end_point_info_len);
-int signaling_build_service_offer_u_from_flags(struct signaling_param_service_offer *offer_u,
-                                               struct service_offer_groups *group);
+int signaling_build_service_offer_u_from_offer_groups(struct signaling_param_service_offer *offer_u,
+                                                      struct service_offer_groups *group);
 int signaling_locate_mb_certificate(X509 **mb_certificate, const char *dir_path,
                                     unsigned char *certificate_hint, uint16_t cert_hint_len);
 int generate_key_for_hip_encrypt(unsigned char *key, int *key_len, unsigned char *key_hint);

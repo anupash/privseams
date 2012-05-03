@@ -295,7 +295,7 @@ struct signaling_flags_info_req {
     uint8_t APP_INFO_CONNECTIONS_RECV;
     uint8_t APP_INFO_REQUIREMENTS;
     uint8_t APP_INFO_REQUIREMENTS_RECV;
-};
+} __attribute__((packed));
 
 
 /*
@@ -313,7 +313,7 @@ struct signaling_flags_service_info {
     uint8_t SERVICE_ACK_U_RECV;
     uint8_t SERVICE_ACK_S_RECV;
     uint8_t SERVICE_NACK_RECV;
-};
+} __attribute__((packed));
 
 /*
  * Data structure to store the values of the various information requests

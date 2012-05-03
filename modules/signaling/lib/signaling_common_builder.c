@@ -1294,14 +1294,11 @@ out_err:
 }
 
 /*
- * Building response to the service offer
+ * Get information requested in the service offer unsigned
  *
  * @return 0 on success
  */
-int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
-                                                struct signaling_connection conn,
-                                                struct signaling_connection_context *ctx_out,
-                                                const struct signaling_param_service_offer *offer,
+int signaling_get_info_req_from_service_offer_u(const struct signaling_param_service_offer *offer,
                                                 struct signaling_flags_info_req    *flags)
 {
     int      err                = 0;
@@ -1322,44 +1319,30 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
         HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
-
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
-        hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
-#endif
         /*Processing the information requests in the service offer*/
         while ((i < num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
             HIP_DEBUG("Service Offer  = %u\n", tmp_info);
             switch (tmp_info) {
             case HOST_INFO_OS:
                 if (!signaling_info_req_flag_check(flags, HOST_INFO_OS)) {
-                    HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_OS),
-                             -1, "Could not add HOST_INFO_OS parameter");
                     signaling_info_req_flag_set(flags, HOST_INFO_OS);
                 }
                 i++;
                 break;
             case HOST_INFO_KERNEL:
                 if (!signaling_info_req_flag_check(flags, HOST_INFO_KERNEL)) {
-                    HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_KERNEL),
-                             -1, "Could not add HOST_INFO_KERNEL parameter");
                     signaling_info_req_flag_set(flags, HOST_INFO_KERNEL);
                 }
                 i++;
                 break;
             case HOST_INFO_ID:
                 if (!signaling_info_req_flag_check(flags, HOST_INFO_ID)) {
-                    HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_ID),
-                             -1, "Could not add HOST_INFO_ID parameter");
                     signaling_info_req_flag_set(flags, HOST_INFO_ID);
                 }
                 i++;
                 break;
             case HOST_INFO_CERTS:
                 if (!signaling_info_req_flag_check(flags, HOST_INFO_CERTS)) {
-                    HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_CERTS),
-                             -1, "Could not add HOST_INFO_CERTS parameter");
                     signaling_info_req_flag_set(flags, HOST_INFO_CERTS);
                 }
                 i++;
@@ -1367,16 +1350,12 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
 
             case USER_INFO_ID:
                 if (!signaling_info_req_flag_check(flags, USER_INFO_ID)) {
-                    HIP_IFEL(signaling_build_param_user_info_response(output_msg, conn, ctx_out, USER_INFO_ID),
-                             -1, "Could not add USER_INFO_ID parameter");
                     signaling_info_req_flag_set(flags, USER_INFO_ID);
                 }
                 i++;
                 break;
             case USER_INFO_CERTS:
                 if (!signaling_info_req_flag_check(flags, USER_INFO_CERTS)) {
-                    HIP_IFEL(signaling_build_param_user_info_response(output_msg, conn, ctx_out, USER_INFO_CERTS),
-                             -1, "Could not add USER_INFO_CERTS parameter");
                     signaling_info_req_flag_set(flags, USER_INFO_CERTS);
                 }
                 i++;
@@ -1384,45 +1363,101 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
 
             case APP_INFO_NAME:
                 if (!signaling_info_req_flag_check(flags, APP_INFO_NAME)) {
-                    HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_NAME),
-                             -1, "Could not add APP_INFO_NAME parameter");
                     signaling_info_req_flag_set(flags, APP_INFO_NAME);
                 }
                 i++;
                 break;
             case APP_INFO_QOS_CLASS:
                 if (!signaling_info_req_flag_check(flags, APP_INFO_QOS_CLASS)) {
-                    HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_QOS_CLASS),
-                             -1, "Could not add APP_INFO_QOS_CLASS parameter");
                     signaling_info_req_flag_set(flags, APP_INFO_QOS_CLASS);
                 }
                 i++;
                 break;
             case APP_INFO_REQUIREMENTS:
                 if (!signaling_info_req_flag_check(flags, APP_INFO_REQUIREMENTS)) {
-                    HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_REQUIREMENTS),
-                             -1, "Could not add APP_INFO_REQUIREMENTS parameter");
                     signaling_info_req_flag_set(flags, APP_INFO_REQUIREMENTS);
                 }
                 i++;
                 break;
             case APP_INFO_CONNECTIONS:
                 if (!signaling_info_req_flag_check(flags, APP_INFO_CONNECTIONS)) {
-                    HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_CONNECTIONS),
-                             -1, "Could not add APP_INFO_CONNECTIONS parameter");
                     signaling_info_req_flag_set(flags, APP_INFO_CONNECTIONS);
                 }
                 i++;
                 break;
             }
         }
+    }
+
+out_err:
+    return err;
+}
+
+/*
+ * Building response to the service offer
+ *
+ * @return 0 on success
+ */
+int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
+                                                struct signaling_connection conn,
+                                                struct signaling_connection_context *ctx_out,
+                                                struct signaling_flags_info_req    *flags)
+{
+    int err = 0;
+
+    /* sanity checks */
+    HIP_ASSERT(flags);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
+    hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
+#endif
+    if (signaling_info_req_flag_check(flags, HOST_INFO_OS)) {
+        HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_OS),
+                 -1, "Could not add HOST_INFO_OS parameter");
+    }
+    if (signaling_info_req_flag_check(flags, HOST_INFO_KERNEL)) {
+        HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_KERNEL),
+                 -1, "Could not add HOST_INFO_KERNEL parameter");
+    }
+    if (signaling_info_req_flag_check(flags, HOST_INFO_ID)) {
+        HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_ID),
+                 -1, "Could not add HOST_INFO_ID parameter");
+    }
+    if (signaling_info_req_flag_check(flags, HOST_INFO_CERTS)) {
+        HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_CERTS),
+                 -1, "Could not add HOST_INFO_CERTS parameter");
+    }
+    if (signaling_info_req_flag_check(flags, USER_INFO_ID)) {
+        HIP_IFEL(signaling_build_param_user_info_response(output_msg, conn, ctx_out, USER_INFO_ID),
+                 -1, "Could not add USER_INFO_ID parameter");
+    }
+    if (signaling_info_req_flag_check(flags, USER_INFO_CERTS)) {
+        HIP_IFEL(signaling_build_param_user_info_response(output_msg, conn, ctx_out, USER_INFO_CERTS),
+                 -1, "Could not add USER_INFO_CERTS parameter");
+    }
+    if (signaling_info_req_flag_check(flags, APP_INFO_NAME)) {
+        HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_NAME),
+                 -1, "Could not add APP_INFO_NAME parameter");
+    }
+    if (signaling_info_req_flag_check(flags, APP_INFO_QOS_CLASS)) {
+        HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_QOS_CLASS),
+                 -1, "Could not add APP_INFO_QOS_CLASS parameter");
+    }
+    if (signaling_info_req_flag_check(flags, APP_INFO_REQUIREMENTS)) {
+        HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_REQUIREMENTS),
+                 -1, "Could not add APP_INFO_REQUIREMENTS parameter");
+    }
+    if (signaling_info_req_flag_check(flags, APP_INFO_CONNECTIONS)) {
+        HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_CONNECTIONS),
+                 -1, "Could not add APP_INFO_CONNECTIONS parameter");
+    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
-        hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
+    HIP_DEBUG("Stop PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
 #endif
-    }
 
 out_err:
     return err;
@@ -1450,7 +1485,8 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
     unsigned char                        key_hint[4];
     int                                  key_data_len = 0;
     //uint16_t tmp_info;
-    uint8_t *tmp_ptr = NULL;
+    uint8_t                        *tmp_ptr   = NULL;
+    struct signaling_flags_info_req tmp_flags = { 0 };
 
     /* sanity checks */
     HIP_IFEL(!sig_state, -1, "Got NULL for hipd state\n");
@@ -1458,14 +1494,22 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
 
     int i = 0, j = 0;
     for (i = 0; sig_state->offer_groups[i] != NULL; i++) {
-        signaling_build_service_offer_u_from_flags(&tmp_service_offer_u, sig_state->offer_groups[i]);
+        signaling_info_req_flag_init(&tmp_flags);
+        signaling_build_service_offer_u_from_offer_groups(&tmp_service_offer_u, sig_state->offer_groups[i]);
 
         /* Allocate and build message buffer */
         HIP_IFEL(!(msg_buf = hip_msg_alloc()),
                  -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
         hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ctx->output_msg->hits, &ctx->output_msg->hitr); /*Just giving some dummy Packet type*/
 
-        HIP_IFEL(signaling_build_response_to_service_offer_u(msg_buf, conn, &sig_state->pending_conn_context, &tmp_service_offer_u, flags), -1,
+        /* We use two flags below because one (tmp_flags) is used locally to build the dummy msg_buf for encryption
+         *  the other flag (flags) just collects all the information request over all service offers
+         *  Reason: as we set the flag for user signature in hipd_state using the flag we set here*/
+        HIP_IFEL(signaling_get_info_req_from_service_offer_u(&tmp_service_offer_u, &tmp_flags),  -1,
+                 "Could not get info request from service offer.\n");
+        HIP_IFEL(signaling_get_info_req_from_service_offer_u(&tmp_service_offer_u, flags),  -1,
+                 "Could not get info request from service offer.\n");
+        HIP_IFEL(signaling_build_response_to_service_offer_u(msg_buf, conn, &sig_state->pending_conn_context,  &tmp_flags), -1,
                  "Could not building responses to the signed service offer\n");
         hip_dump_msg(msg_buf);
 
@@ -1858,8 +1902,8 @@ int signaling_build_service_offer_u_from_service_offer_s(struct signaling_param_
 /* Create a temporary service offer unsigned param from the offer groups previously created.
  * This will help us to reuse the code for signaling_build_response_to_service_offer_u(..)
  * */
-int signaling_build_service_offer_u_from_flags(struct signaling_param_service_offer *offer_u,
-                                               struct service_offer_groups *group)
+int signaling_build_service_offer_u_from_offer_groups(struct signaling_param_service_offer *offer_u,
+                                                      struct service_offer_groups *group)
 {
     int tmp_len = 0, i = 0;
 

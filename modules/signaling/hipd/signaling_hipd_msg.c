@@ -1183,9 +1183,7 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
                     HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                              -1, "Could not copy connection context\n");
 
-                    if (signaling_build_response_to_service_offer_u(ctx->output_msg, *recv_conn,
-                                                                    &sig_state->pending_conn_context, &param_service_offer,
-                                                                    flags_info_requested)) {
+                    if (signaling_get_info_req_from_service_offer_u(&param_service_offer, flags_info_requested)) {
                         HIP_DEBUG("Building of application context parameter failed.\n");
                         err = 0;
                     }
@@ -1193,6 +1191,12 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
             } while ((param = hip_get_next_param(ctx->input_msg, param)));
         } else {
             HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
+        }
+        if (signaling_build_response_to_service_offer_u(ctx->output_msg, *recv_conn,
+                                                        &sig_state->pending_conn_context,
+                                                        flags_info_requested)) {
+            HIP_DEBUG("Building of application context parameter failed.\n");
+            err = 0;
         }
     }
 out_err:
