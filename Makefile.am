@@ -99,7 +99,6 @@ hipd_hipd_sources = hipd/accessor.c              \
                     hipd/close.c                 \
                     hipd/configfilereader.c      \
                     hipd/cookie.c                \
-                    hipd/dh.c                    \
                     hipd/esp_prot_anchordb.c     \
                     hipd/esp_prot_hipd_msg.c     \
                     hipd/esp_prot_light_update.c \
@@ -190,6 +189,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/conf.c            \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
+                                 lib/core/dh.c              \
                                  lib/core/esp_prot_common.c \
                                  lib/core/filemanip.c       \
                                  lib/core/hashchain.c       \
