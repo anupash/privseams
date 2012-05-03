@@ -100,6 +100,7 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                                   struct hip_packet_context *ctx);
 int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
                                              char *data, int *data_len, unsigned char *key_hint);
+int signaling_add_param_dh_to_hip_update(struct hip_common *msg);
 int signaling_build_hip_packet_from_hip_encrypted_param(struct hip_common *common,    struct hip_common **msg_buf,
                                                         const struct hip_encrypted_aes_sha1 *param,
                                                         unsigned char *symm_key,      uint8_t *symm_key_len,

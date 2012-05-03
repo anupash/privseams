@@ -1070,7 +1070,6 @@ int signaling_verify_service_ack_u(struct hip_common *msg,
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
                     HIP_HEXDUMP("Stored hash: ", stored_hash, HIP_AH_SHA_LEN);
                     HIP_HEXDUMP("Acked hash: ", ack->service_offer_hash, HIP_AH_SHA_LEN);
-                    hip_dump_msg(msg);
                 }
             }
         } while ((param = hip_get_next_param(msg, param)));
@@ -1786,6 +1785,40 @@ int signaling_build_param_encrypted_aes_sha1(struct hip_common *output_msg,
              -1, "Could not build the HIP Encrypted parameter\n");
 out_err:
     free(param_padded);
+    return err;
+}
+
+int signaling_add_param_dh_to_hip_update(struct hip_common *msg)
+{
+    int      err      = 0;
+    uint8_t *dh_data1 = NULL, *dh_data2 = NULL;
+    int      dh_size1 = 0, dh_size2 = 0;
+    int      written1 = 0;
+
+    /* Allocate memory for writing the first Diffie-Hellman shared secret */
+    HIP_IFEL((dh_size1 = hip_get_dh_size(DH_GROUP_ID)) == 0,
+             -1, "Could not get dh_size1\n");
+    HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
+             -1, "Failed to alloc memory for dh_data1\n");
+
+    /* Allocate memory for writing the second Diffie-Hellman shared secret */
+    HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
+             -1, "Could not get dh_size2\n");
+    HIP_IFEL(!(dh_data2 = calloc(1, dh_size2)),
+             -1, "Failed to alloc memory for dh_data2\n");
+
+    /* Parameter Diffie-Hellman */
+    HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+                                       DH_GROUP_ID)) < 0,
+             written1, "Could not extract the first DH public key\n");
+
+    /* Only one diffie hellman public value in this parameter */
+    HIP_IFEL((err = hip_build_param_diffie_hellman_contents(msg,
+                                                            DH_GROUP_ID, dh_data1, written1,
+                                                            HIP_MAX_DH_GROUP_ID, dh_data2, 0)),
+             err, "Building of DH failed.\n");
+
+out_err:
     return err;
 }
 

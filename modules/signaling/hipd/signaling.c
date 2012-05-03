@@ -20,7 +20,6 @@
 #define INBOUND_CHECK_USERINFO_PRIO             29100
 
 #define INBOUND_HANDLE_BEX_PRIO                     32000
-#define INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO   20935
 #define INBOUND_HANDLE_GROUP_SERVICE_OFFERS_PRIO    20945
 #define INBOUND_HANDLE_BEX_UPDATE_S_PRIO            20955
 #define INBOUND_HANDLE_BEX_UPDATE_PRIO              20975
@@ -42,6 +41,8 @@
 #define OUTBOUND_R2_CREATE_USER_SIG_PRIO                    45501
 #define OUTBOUND_R2_HIPD_STATE_CLEANUP_PRIO                 45503
 
+#define OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO   20725
+#define OUTBOUND_UPDATE_ADD_DIFFIE_HELLMAN   20735
 #define OUTBOUND_UPDATE_ADD_SERVCICE_ACK_S_PRIO             20965
 #define OUTBOUND_UPDATE_CREATE_USER_SIG_PRIO                29955
 #define OUTBOUND_UPDATE_HIPD_STATE_CLEANUP_PRIO             29956
@@ -246,13 +247,21 @@ int hip_signaling_init(void)
     /*=================================== Handle HIP_UPDATE ===================================*/
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
                                           &signaling_update_need_for_encryption,
-                                          INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO),
+                                          OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
                                           &signaling_update_need_for_encryption,
-                                          INBOUND_HANDLE_CHECK_NEED_ENCRYPTION_PRIO),
+                                          OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_update_add_diffie_hellman,
+                                          OUTBOUND_UPDATE_ADD_DIFFIE_HELLMAN),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_update_add_diffie_hellman,
+                                          OUTBOUND_UPDATE_ADD_DIFFIE_HELLMAN),
+             -1, "Error on registering Signaling handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
                                           &signaling_update_group_service_offers,

@@ -160,6 +160,12 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
             return NULL;
         }
 
+        if (signaling_add_param_dh_to_hip_update(msg_buf)) {
+            HIP_DEBUG("Could not add add Diffie Hellman parameter to the HIP Update\n");
+            free(msg_buf);
+            return NULL;
+        }
+
         if (signaling_build_param_signaling_connection(msg_buf, conn)) {
             HIP_ERROR("Building of connection identifier parameter failed\n");
             free(msg_buf);
@@ -1088,7 +1094,8 @@ out_err:
     return err;
 }
 
-int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
+                                           struct hip_packet_context *ctx)
 {
     int                            err = 0;
     const struct hip_notification *ntf = NULL;
@@ -1199,6 +1206,24 @@ int signaling_update_need_for_encryption(const uint8_t packet_type,
     HIP_DEBUG("Checking if need for encryption\n");
     HIP_IFEL(signaling_i2_need_for_encryption(packet_type, ha_state, ctx),
              -1, "Coud check if encrypting endpoint information required or not\n");
+out_err:
+    return err;
+}
+
+int signaling_update_add_diffie_hellman(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
+                                        struct hip_packet_context *ctx)
+{
+    int err         = 0;
+    int update_type = -1;
+    if (packet_type == HIP_UPDATE) {
+        HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
+                 -1, "This is no signaling update packet\n");
+    }
+
+    if (update_type != SIGNALING_THIRD_BEX_UPDATE) {
+        HIP_IFEL(signaling_add_param_dh_to_hip_update(ctx->output_msg), -1,
+                 "Could not add add Diffie Hellman parameter to the HIP Update\n");
+    }
 out_err:
     return err;
 }

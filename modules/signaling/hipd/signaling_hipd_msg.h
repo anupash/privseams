@@ -139,6 +139,9 @@ int signaling_r2_group_service_offers(const uint8_t packet_type,
 int signaling_update_need_for_encryption(const uint8_t packet_type,
                                          const uint32_t ha_state,
                                          struct hip_packet_context *ctx);
+int signaling_update_add_diffie_hellman(const uint8_t packet_type,
+                                        const uint32_t ha_state,
+                                        struct hip_packet_context *ctx);
 int signaling_update_group_service_offers(const uint8_t packet_type,
                                           const uint32_t ha_state,
                                           struct hip_packet_context *ctx);
