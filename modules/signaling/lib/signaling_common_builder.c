@@ -2899,7 +2899,6 @@ int signaling_hip_ecdsa_selective_sign(void *const priv_key, struct hip_common *
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     int     siglen = ECDSA_size(ecdsa);
     uint8_t signature[siglen];
-    int     len;
 
     if (!msg) {
         HIP_ERROR("NULL message\n");
@@ -2919,7 +2918,6 @@ int signaling_hip_ecdsa_selective_sign(void *const priv_key, struct hip_common *
         return -1;
     }
 
-    len = hip_get_msg_total_len(msg);
     if (signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest) < 0) {
         HIP_ERROR("Building of the sha1 digest from hash-tree failed.\n");
         return -1;
@@ -2954,9 +2952,7 @@ int signaling_hip_dsa_selective_sign(void *const priv_key, struct hip_common *co
     DSA *const dsa = priv_key;
     uint8_t    sha1_digest[HIP_AH_SHA_LEN];
     uint8_t    signature[HIP_DSA_SIGNATURE_LEN];
-    int        err = 0, len;
-
-    len = hip_get_msg_total_len(msg);
+    int        err = 0;
 
     HIP_IFEL(signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest), -1,
              "Building of the sha1 digest from hash-tree failed");
@@ -3162,7 +3158,7 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
                                                struct signaling_hipd_state *sig_state)
 {
     int                         err            = 0, i = 0, idx = 0;
-    int                         flag           = 0, j = 0, k = 0;
+    int                         j              = 0, k = 0;
     struct service_offer_groups temp_offer_grp = { { 0 } };
 
     uint8_t found                                = 0;
@@ -3170,7 +3166,6 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
                                                       0, 0, 0, 0, 0 };
 
     i    = 0;
-    flag = 1;
     int m = 0;
     for (k = 0; k < MAX_NUM_OFFER_GROUPS; k++) {
         if (offer_groups[k].info_requests[0] != 0 && offer_groups[k].num_mboxes > 0 && offer_groups[k].num_info_req > 0 && !entries_merged[k]) {
@@ -3214,7 +3209,6 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
         }
     }
 
-//out_err:
     return err;
 }
 
@@ -3229,7 +3223,6 @@ int signaling_add_offer_to_nack_list(struct signaling_hipd_state *sig_state, uin
     }
     sig_state->service_nack[i] = service_offer_id;
 
-//out_err:
     return err;
 }
 
