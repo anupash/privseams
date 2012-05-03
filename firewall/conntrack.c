@@ -1040,13 +1040,13 @@ static int hip_fw_verify_packet(struct hip_common *const common,
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
 #endif
 
-
     if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
                                        common)) {
         HIP_INFO("Signature verification failed\n");
 
         return 0;
     }
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
@@ -1110,7 +1110,32 @@ static int hip_fw_verify_and_store_host_id(struct hip_common *const common,
         goto out_err;
     }
 
-    err = !hip_fw_verify_packet(common, tuple);
+    /*Exception for R1 as it is pre-created no selective signing*/
+    if (common->type_hdr == HIP_R1) {
+        err = !hip_fw_verify_packet(common, tuple);
+    }
+
+    if ((ep_signaling == MIDDLE) && (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED)) {
+        switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
+        case HIP_HI_RSA:
+            tuple->hip_tuple->data->verify = signaling_hip_rsa_selective_verify;
+            break;
+        case HIP_HI_ECDSA:
+            tuple->hip_tuple->data->verify = signaling_hip_ecdsa_selective_verify;
+            break;
+        case HIP_HI_DSA:
+            tuple->hip_tuple->data->verify = signaling_hip_dsa_selective_verify;
+            break;
+        default:
+            HIP_ERROR("Could not store public key, because host id algorithm is unknown.\n");
+            err = -1;
+            goto out_err;
+        }
+    }
+
+    if (common->type_hdr != HIP_R1) {
+        err = !hip_fw_verify_packet(common, tuple);
+    }
 
 out_err:
     if (err) {
@@ -1237,7 +1262,7 @@ static int handle_i2(struct hip_common *const common,
                      struct tuple *const tuple,
                      struct hip_fw_context *const ctx)
 {
-    const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
+    const struct hip_esp_info *const esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
     if (hip_fw_verify_and_store_host_id(common, tuple)) {
         HIP_ERROR("unable to create security state from I2 packet\n");
@@ -1281,7 +1306,7 @@ static int handle_r2(struct hip_common *const common,
                      struct tuple *const tuple,
                      struct hip_fw_context *const ctx)
 {
-    const struct hip_esp_info *const esp_info  = hip_get_param(common, HIP_PARAM_ESP_INFO);
+    const struct hip_esp_info *const esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
     if (!hip_fw_verify_packet(common, tuple)) {
         HIP_ERROR("failed to verify R2 packet\n");
@@ -1554,10 +1579,10 @@ static int handle_update(struct hip_common *const common,
                          struct tuple **tuple,
                          struct hip_fw_context *const ctx)
 {
-    const struct hip_esp_info *esp_info  = NULL;
-    const struct hip_locator  *locator   = NULL;
-    const struct hip_seq      *seq       = NULL;
-    const struct hip_ack      *ack       = NULL;
+    const struct hip_esp_info *esp_info = NULL;
+    const struct hip_locator  *locator  = NULL;
+    const struct hip_seq      *seq      = NULL;
+    const struct hip_ack      *ack      = NULL;
 
     /* classify UPDATE message */
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);

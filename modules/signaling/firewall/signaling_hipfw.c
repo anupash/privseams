@@ -53,6 +53,7 @@ typedef struct {
 #include "lib/tool/pk.h"
 
 #include "firewall/hslist.h"
+#include "firewall/firewall.h"
 
 #include "modules/signaling/lib/signaling_user_management.h"
 #include "modules/signaling/lib/signaling_x509_api.h"
@@ -90,7 +91,7 @@ static uint16_t dh_priv_key_len = 192;
 static DH      *dh              = NULL;
 
 #define SERVICE_RESPONSE_ALGO_DH    1
-#define SERVICE_OFFER_TYPE          OFFER_SIGNED
+int SERVICE_OFFER_TYPE = OFFER_SELECTIVE_SIGNED;
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -197,9 +198,10 @@ int signaling_hipfw_init(const char *policy_file)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,         "HIP_PARAM_SIGNALING_SERVICE_ACK");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_HMAC, "HIP_PARAM_SIGNALING_SELECTIVE_HMAC");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE, "HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
-
 
     signaling_cdb_init();
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
@@ -1138,7 +1140,8 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
 
 
     if ((ctx_in->user.subject_name_len > 0) && (ctx_in->user.key_rr_len > 0)) {
-        if (!signaling_verify_user_signature_from_msg(common, &ctx_in->user)) {
+        if (!signaling_verify_user_signature_from_msg(common, &ctx_in->user,
+                                                      (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED ? 1 : 0))) {
             HIP_DEBUG("User Signature Verified.\n");
         } else {
             HIP_ERROR("User Signature Verification failed. Cannot accept the user information as true.\n");

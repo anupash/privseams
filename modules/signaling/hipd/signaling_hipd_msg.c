@@ -53,6 +53,8 @@
 #include "hipd/output.h"
 #include "hipd/close.h"
 #include "hipd/hipd.h"
+#include "hipd/hidb.h"
+#include "hipd/input.h"
 
 #include "modules/update/hipd/update.h"
 #include "modules/update/hipd/update_builder.h"
@@ -68,6 +70,32 @@
 #include "signaling_hipd_user_msg.h"
 
 int update_sent = 0;
+
+unsigned char mb_dh_pub_key[] = {
+    0x5F, 0x4A, 0x82, 0x8B, 0x95, 0x99, 0x9B, 0xEE, 0xCE, 0xD2,
+    0x90, 0x5C, 0xC8, 0x80, 0xD5, 0xCB, 0x76, 0x76, 0x1F, 0xEC,
+    0xF3, 0xC3, 0x29, 0x60, 0x85, 0x0C, 0xF5, 0x62, 0x77, 0x61,
+    0x04, 0x0F, 0x21, 0x00, 0x69, 0xF0, 0x31, 0xBA, 0xBF, 0x4E,
+    0x4B, 0xCE, 0x91, 0x38, 0xCB, 0x47, 0x82, 0xBB, 0x6D, 0xBB,
+    0xA4, 0x52, 0x9B, 0xC4, 0xC7, 0x6E, 0x2D, 0xB3, 0x99, 0x33,
+    0x67, 0x44, 0xDF, 0x42, 0xCF, 0xFA, 0x23, 0x3E, 0x2F, 0x98,
+    0x0F, 0x47, 0xD2, 0xEB, 0x8F, 0x02, 0xB4, 0xDD, 0x86, 0xB0,
+    0xA2, 0x30, 0xA8, 0x86, 0xB9, 0xCA, 0x0B, 0x68, 0xCE, 0xD1,
+    0xB0, 0xED, 0xEF, 0x69, 0x3D, 0xBA, 0x82, 0x13, 0xBC, 0x04,
+    0xB7, 0x7C, 0xF1, 0xFB, 0xEB, 0xD7, 0x3E, 0x08, 0x12, 0x7A,
+    0xE2, 0xCE, 0x3B, 0xCF, 0x9D, 0xC8, 0xFE, 0x34, 0xB2, 0x55,
+    0x16, 0xFB, 0xFA, 0x77, 0x0A, 0x1B, 0x32, 0x58, 0x4A, 0x52,
+    0xE2, 0xCF, 0x8A, 0xC0, 0x04, 0xFA, 0x58, 0xA6, 0x33, 0x3F,
+    0x0B, 0xB7, 0xE7, 0xEE, 0x8D, 0x2D, 0x74, 0x92, 0x4A, 0x16,
+    0x1D, 0x27, 0x49, 0x40, 0x60, 0xA7, 0xFB, 0xDB, 0x1E, 0xFC,
+    0x3D, 0x75, 0xA6, 0x69, 0x71, 0x0F, 0xC6, 0xA9, 0x2D, 0x51,
+    0x8E, 0x9B, 0xC6, 0xA0, 0x23, 0x58, 0x66, 0x9E, 0xD9, 0x1F,
+    0xFB, 0x33, 0x35, 0x41, 0xEF, 0x5C, 0xBB, 0xD2, 0x7C, 0xF3,
+    0xF5, 0x01
+};
+
+uint16_t mb_dh_pub_key_len = DH_PUB_KEY_SIZE;
+DH      *dh                = NULL;
 
 /*
  *   Wrapper for hip_send_close(...).
@@ -1137,6 +1165,29 @@ int signaling_mac_and_sign_handler(UNUSED const uint8_t packet_type, UNUSED cons
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+        HIP_IFEL(signaling_build_param_selective_hmac(ctx->output_msg, &ctx->hadb_entry->hip_hmac_out,
+                                                      HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
+                 "Building of Selective HMAC failed\n");
+        switch (HIP_DEFAULT_HI_ALGO) {
+        case HIP_HI_RSA:
+            if (signaling_hip_rsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        case HIP_HI_ECDSA:
+            if (signaling_hip_ecdsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        case HIP_HI_DSA:
+            if (signaling_hip_dsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        }
     } else {
         if (hip_mac_and_sign_packet(ctx->output_msg, ctx->hadb_entry)) {
             HIP_ERROR("failed to sign and mac outbound packet\n");
@@ -1159,6 +1210,32 @@ int signaling_hmac2_and_sign(const uint8_t packet_type, const uint32_t ha_state,
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+        if (signaling_build_param_selective_hmac2(ctx->output_msg,
+                                                  &ctx->hadb_entry->hip_hmac_out,
+                                                  ctx->hadb_entry->our_pub)) {
+            HIP_ERROR("Failed to build parameter HMAC2 contents.\n");
+            return -1;
+        }
+        switch (HIP_DEFAULT_HI_ALGO) {
+        case HIP_HI_RSA:
+            if (signaling_hip_rsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        case HIP_HI_ECDSA:
+            if (signaling_hip_ecdsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        case HIP_HI_DSA:
+            if (signaling_hip_dsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                HIP_ERROR("Could not create signature\n");
+                return -EINVAL;
+            }
+            break;
+        }
     } else {
         if (hip_hmac2_and_sign(packet_type, ha_state, ctx)) {
             HIP_ERROR("failed to sign and mac outbound packet\n");
@@ -1182,7 +1259,8 @@ int signaling_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const 
 
     if (sig_state->flag_user_sig == 1) {
         HIP_DEBUG("Request for the user to sign this packet.\n");
-        HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->uid),
+        HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->pending_conn->uid,
+                                                      (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED ? 1 : 0)),
                  0, "User failed to sign packet.\n");
     }
 
@@ -1328,6 +1406,85 @@ int signaling_update_add_signed_service_ack_and_sig_conn(const uint8_t packet_ty
     int err = 0;
     HIP_IFEL(signaling_i2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx),
              -1, "Could not add signed service acks and signalling connection to HIP_UPDATE\n");
+out_err:
+    return err;
+}
+
+int signaling_i2_check_hmac(UNUSED const uint8_t packet_type,
+                            UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+    /* Verify HMAC. */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+#endif
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
+        if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+            hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+            HIP_IFEL(signaling_verify_packet_selective_hmac(ctx->input_msg,
+                                                            &ctx->hadb_entry->hip_hmac_out,
+                                                            HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
+                     "Verification of selective hmac was not successful\n");
+        } else {
+            HIP_IFEL(signaling_verify_packet_selective_hmac(ctx->input_msg,
+                                                            &ctx->hadb_entry->hip_hmac_in,
+                                                            HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
+                     "Verification of selective hmac was not successful\n");
+        }
+    } else {
+        if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+            hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+            HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                            &ctx->hadb_entry->hip_hmac_out),
+                     -EPROTO,
+                     "HMAC loopback validation on I2 failed. Dropping\n");
+        } else {
+            HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                            &ctx->hadb_entry->hip_hmac_in),
+                     -EPROTO,
+                     "HMAC validation on I2 failed. Dropping the I2 packet.\n");
+        }
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_VERIFY_HMAC\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+#endif
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+int signaling_i2_check_signature(const uint8_t packet_type,
+                                 const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE))) {
+        switch (HIP_DEFAULT_HI_ALGO) {
+        case HIP_HI_RSA:
+            HIP_IFEL(signaling_hip_rsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                        ctx->input_msg), -1,
+                     "RSA Signature verification in I2 failed\n");
+            break;
+        case HIP_HI_ECDSA:
+            HIP_IFEL(signaling_hip_ecdsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                          ctx->input_msg), -1,
+                     "ECDSA Signature verification in I2 failed\n");
+            break;
+        case HIP_HI_DSA:
+            HIP_IFEL(signaling_hip_dsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                        ctx->input_msg), -1,
+                     "DSA Signature verification in I2 failed\n");
+            break;
+        }
+    } else {
+        HIP_IFEL(hip_check_i2_signature(packet_type, ha_state, ctx), -1,
+                 "Signature verification in i2 successful\n");
+    }
 out_err:
     return err;
 }
@@ -1500,13 +1657,13 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     }
 
     /* Now adding the signaling connection to the HIP_I2 message*/
-    if (flag == OFFER_UNSIGNED) {
+    if (flag == OFFER_UNSIGNED || flag == OFFER_SELECTIVE_SIGNED) {
         HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
                  -1, "build signaling_connection failed \n");
     }
 
     // Now Add the service acknowledgements
-    if (flag == OFFER_UNSIGNED) {
+    if (flag == OFFER_UNSIGNED || flag == OFFER_SELECTIVE_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
@@ -1560,11 +1717,96 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
         }
 
         /* ========== Create and send the ack for signed service offer  ===============*/
-        HIP_IFEL(signaling_build_service_ack_s(sig_state, ctx),
+        HIP_IFEL(signaling_build_service_ack_s(sig_state, ctx, mb_dh_pub_key, mb_dh_pub_key_len),
                  -1, "Could not build ack for signed service offer\n");
     }
     HIP_DEBUG("Signation connection and service acknowledgement added \n");
 out_err:
+    return err;
+}
+
+int signaling_r2_check_hmac2_and_sign(UNUSED const uint8_t packet_type,
+                                      UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+    /* Verify HMAC. */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+#endif
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
+        if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+            hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+            HIP_IFEL(signaling_verify_packet_selective_hmac2(ctx->input_msg,
+                                                             &ctx->hadb_entry->hip_hmac_out,
+                                                             ctx->hadb_entry->peer_pub), -1,
+                     "Verification of selective hmac was not successful\n");
+        } else {
+            HIP_IFEL(signaling_verify_packet_selective_hmac2(ctx->input_msg,
+                                                             &ctx->hadb_entry->hip_hmac_in,
+                                                             ctx->hadb_entry->peer_pub), -1,
+                     "Verification of selective hmac was not successful\n");
+        }
+    } else {
+        if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+            hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+            HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+                                             &ctx->hadb_entry->hip_hmac_out,
+                                             ctx->hadb_entry->peer_pub),
+                     -EPROTO,
+                     "HMAC loopback validation on I2 failed. Dropping\n");
+        } else {
+            HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+                                             &ctx->hadb_entry->hip_hmac_in,
+                                             ctx->hadb_entry->peer_pub),
+                     -EPROTO,
+                     "HMAC validation on I2 failed. Dropping the I2 packet.\n");
+        }
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2_VERIFY_HMAC\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+#endif
+
+    /* Validate signature */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+#endif
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE))) {
+        switch (HIP_DEFAULT_HI_ALGO) {
+        case HIP_HI_RSA:
+            HIP_IFEL(signaling_hip_rsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                        ctx->input_msg), -1,
+                     "RSA Signature verification in I2 failed\n");
+            break;
+        case HIP_HI_ECDSA:
+            HIP_IFEL(signaling_hip_ecdsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                          ctx->input_msg), -1,
+                     "ECDSA Signature verification in I2 failed\n");
+            break;
+        case HIP_HI_DSA:
+            HIP_IFEL(signaling_hip_dsa_selective_verify(ctx->hadb_entry->peer_pub_key,
+                                                        ctx->input_msg), -1,
+                     "DSA Signature verification in I2 failed\n");
+            break;
+        }
+    } else {
+        /* Validate signature */
+        HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                         ctx->input_msg),
+                 -EINVAL,
+                 "R2 signature verification failed.\n");
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+#endif
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
     return err;
 }
 
@@ -1651,6 +1893,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
     } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
     } else {
         if (packet_type != HIP_UPDATE) {
             HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,

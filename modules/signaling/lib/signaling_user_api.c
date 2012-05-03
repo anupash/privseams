@@ -24,6 +24,7 @@
 
 #include "signaling_x509_api.h"
 #include "signaling_prot_common.h"
+#include "signaling_common_builder.h"
 #include "signaling_user_api.h"
 
 /*
@@ -84,7 +85,8 @@ STACK_OF(X509) * signaling_user_api_get_user_certificate_chain(const uid_t uid) 
  * @param data the data to be signed
  * @return zero on success and negative on error
  */
-static int rsa_sign(RSA *const priv_key, void *data, UNUSED const int in_len, unsigned char *const out)
+static int rsa_sign(RSA *const priv_key, void *data, UNUSED const int in_len,
+                    unsigned char *const out, uint8_t flag_selective_sign)
 {
     int          err = 0;
     unsigned int sig_len;
@@ -92,12 +94,14 @@ static int rsa_sign(RSA *const priv_key, void *data, UNUSED const int in_len, un
 
     HIP_IFEL(!priv_key,
              -1, "No private key given.\n");
-    HIP_IFEL(hip_build_hash_tree_from_msg((struct hip_common *) data, (unsigned char *) sha1_digest), -1,
-             "Building of the sha1 digest from hash-tree failed");
-/*
- *  HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
- *           -1, "Building of SHA1 digest failed\n");
- */
+    if (flag_selective_sign) {
+        HIP_IFEL(signaling_build_hash_tree_and_get_root((struct hip_common *) data, (unsigned char *) sha1_digest), -1,
+                 "Building of the sha1 digest from hash-tree failed");
+    } else {
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
+                 -1, "Building of SHA1 digest failed\n");
+    }
+
     HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, out, &sig_len, priv_key),
              -1, "Signing error\n");
 out_err:
@@ -111,18 +115,20 @@ out_err:
  * @param data the data to be signed
  * @return zero on success and negative on error
  */
-static int ecdsa_sign(EC_KEY *const priv_key, void *data, UNUSED const int in_len, unsigned char *const out)
+static int ecdsa_sign(EC_KEY *const priv_key, void *data, UNUSED const int in_len,
+                      unsigned char *const out, uint8_t flag_selective_sign)
 {
     int     err = 0;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     HIP_IFEL(!priv_key,
              -1, "No private key given.\n");
-    HIP_IFEL(hip_build_hash_tree_from_msg((struct hip_common *) data, (unsigned char *) sha1_digest), -1,
-             "Building of the sha1 digest from hash-tree failed");
-/*
- *  HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
- *           -1, "Building of SHA1 digest failed\n");
- */
+    if (flag_selective_sign) {
+        HIP_IFEL(signaling_build_hash_tree_and_get_root((struct hip_common *) data, (unsigned char *) sha1_digest), -1,
+                 "Building of the sha1 digest from hash-tree failed");
+    } else {
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
+                 -1, "Building of SHA1 digest failed\n");
+    }
     HIP_IFEL(impl_ecdsa_sign(sha1_digest, priv_key, out),
              -1, "Signing error\n");
 out_err:
@@ -169,7 +175,9 @@ out_err:
 /*
  * @return < 0 on error, size of computed signature on success
  */
-int signaling_user_api_sign(const uid_t uid, void *data, const int in_len, unsigned char *out_buf, const uint8_t sig_type)
+int signaling_user_api_sign(const uid_t uid, void *data, const int in_len,
+                            unsigned char *out_buf, const uint8_t sig_type,
+                            uint8_t flag_selective_sign)
 {
     int     err     = 0;
     int     sig_len = -1;
@@ -208,7 +216,7 @@ int signaling_user_api_sign(const uid_t uid, void *data, const int in_len, unsig
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
 #endif
-        HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf),
+        HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf, flag_selective_sign),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
@@ -241,7 +249,7 @@ int signaling_user_api_sign(const uid_t uid, void *data, const int in_len, unsig
         hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
         hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
 #endif
-        HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf),
+        HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf, flag_selective_sign),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");

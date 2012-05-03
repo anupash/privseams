@@ -201,7 +201,7 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
     X509_NAME                *uname = NULL;
-    struct userdb_user_entry *new = NULL;
+    struct userdb_user_entry *new   = NULL;
 
     /* Check if we already have that user */
     if (signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname)) {
@@ -846,7 +846,8 @@ out_err:
 /**
  * @return 0 if signature verified correctly, < 0 otherwise
  */
-int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx)
+int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx,
+                                             uint8_t flag_selective_sign)
 {
     int             err = 0;
     int             hash_range_len;
@@ -875,13 +876,13 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
     hip_set_msg_total_len(msg, hash_range_len);
 
-    HIP_IFEL(hip_build_hash_tree_from_msg((struct hip_common *) msg, (unsigned char *) sha1_digest), -1,
-             "Building of the sha1 digest from hash-tree failed");
-/*
- *  HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
- *           -1, "Could not build message digest \n");
- */
-
+    if (flag_selective_sign) {
+        HIP_IFEL(signaling_build_hash_tree_and_get_root((struct hip_common *) msg, (unsigned char *) sha1_digest), -1,
+                 "Building of the sha1 digest from hash-tree failed");
+    } else {
+        HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
+                 -1, "Could not build message digest \n");
+    }
 
     switch (user_ctx->rdata.algorithm) {
     case HIP_HI_RSA:

@@ -292,8 +292,4 @@ int hip_build_param_relay_from(struct hip_common *msg,
                                const in_port_t port);
 int hip_build_param_from(struct hip_common *msg,
                          const struct in6_addr *addr);
-
-/* Utility functions hip signaling module*/
-int hip_build_hash_tree_from_msg(struct hip_common *msg,
-                                 unsigned char *root_hash_tree);
 #endif /* HIP_LIB_CORE_BUILDER_H */

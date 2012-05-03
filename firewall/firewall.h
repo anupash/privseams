@@ -30,6 +30,7 @@
 
 #include "lib/core/protodefs.h"
 
+
 enum { NONE, ENDPOINT, MIDDLE };
 
 /** globally used variables defined in firewall.c */
@@ -49,6 +50,7 @@ extern int hip_fw_sock;
 extern int system_based_opp_mode;
 extern int esp_speedup;
 extern int ep_signaling;
+extern int SERVICE_OFFER_TYPE;
 
 int hipfw_main(const char *const rule_file,
                const bool        kill_old,

@@ -81,7 +81,9 @@
 #define HIP_PARAM_SIGNALING_SERVICE_NACK        5123
 
 /*Parameter type for user signature*/
-#define HIP_PARAM_SIGNALING_USER_SIGNATURE      62504
+#define HIP_PARAM_SIGNALING_SELECTIVE_HMAC          62498
+#define HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE     62502
+#define HIP_PARAM_SIGNALING_USER_SIGNATURE          62504
 
 /* Have to be in unsigned part as Middlebox can't sign the message.*/
 #define HIP_PARAM_SIGNALING_SERVICE_OFFER       62505

@@ -49,6 +49,7 @@
 #include "lib/core/crypto.h"
 #include "lib/tool/pk.h"
 #include "hipd/hipd.h"
+#include "hipd/input.h"
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
@@ -315,7 +316,8 @@ out_err:
  *
  *  @return         0 on success, negative otherwise
  */
-int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid)
+int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid,
+                                         uint8_t flag_selective_sign)
 {
     int            err = 0;
     struct hip_sig sig;
@@ -332,7 +334,7 @@ int signaling_build_param_user_signature(struct hip_common *msg, const uid_t uid
 
     /* calculate the signature */
     in_len = hip_get_msg_total_len(msg);
-    HIP_IFEL((sig_len = signaling_user_api_sign(uid, msg, in_len, signature_buf, sig_type)) < 0,
+    HIP_IFEL((sig_len = signaling_user_api_sign(uid, msg, in_len, signature_buf, sig_type, flag_selective_sign)) < 0,
              -1, "Could not get user's signature \n");
 
     /* build the signature parameter */
@@ -921,6 +923,7 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     uint8_t                             *tmp_ptr = (uint8_t *) &param_service_offer;
 
     HIP_DEBUG("Adding service offer parameter according to the policy\n");
+    HIP_ASSERT(flag_sign == OFFER_SELECTIVE_SIGNED);
     /* build and append parameter */
     hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer, HIP_PARAM_SIGNALING_SERVICE_OFFER);
     tmp_service_offer.service_offer_id = htons(service_offer_id);
@@ -1044,6 +1047,137 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
              -1, "Could not build notification parameter into message \n");
 
 out_err:
+    return err;
+}
+
+/**
+ * Verifies a HMAC.
+ *
+ * @param buffer    the packet data used in HMAC calculation.
+ * @param buf_len   the length of the packet.
+ * @param hmac      the HMAC to be verified.
+ * @param hmac_key  integrity key used with HMAC.
+ * @param hmac_type type of the HMAC digest algorithm.
+ * @return          0 if calculated HMAC is same as @c hmac, otherwise < 0. On
+ *                  error < 0 is returned.
+ * @note            Fix the packet len before calling this function!
+ */
+static int signaling_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
+                                 const uint8_t *hmac, void *hmac_key, int hmac_type)
+{
+    uint8_t hmac_res[HIP_AH_SHA_LEN];
+
+    HIP_HEXDUMP("HMAC data", buffer, buf_len);
+
+    if (hip_write_hmac(hmac_type, hmac_key, buffer, buf_len, hmac_res)) {
+        HIP_ERROR("Could not build hmac\n");
+        return -EINVAL;
+    }
+
+    HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
+    if (memcmp(hmac_res, hmac, HIP_AH_SHA_LEN)) {
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+/**
+ * Verifies Selective HMAC in HIP msg
+ *
+ * @param msg HIP packet
+ * @param crypto_key The crypto key
+ * @param parameter_type
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated.
+ */
+int signaling_verify_packet_selective_hmac(struct hip_common *msg,
+                                           const struct hip_crypto_key *crypto_key,
+                                           const hip_tlv parameter_type)
+{
+    int                    len = 0, orig_len = 0;
+    struct hip_crypto_key  tmpkey;
+    const struct hip_hmac *hmac             = NULL;
+    uint8_t                orig_checksum    = 0;
+    unsigned char         *concat_of_leaves = NULL;
+    unsigned int           len_concat_of_leaves;
+
+    HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
+
+    if (!(hmac = hip_get_param(msg, parameter_type))) {
+        HIP_ERROR("No HMAC parameter\n");
+        return -ENOMSG;
+    }
+
+    /* hmac verification modifies the msg length temporarily, so we have
+     * to restore the length */
+    orig_len = hip_get_msg_total_len(msg);
+
+    /* hmac verification assumes that checksum is zero */
+    orig_checksum = hip_get_msg_checksum(msg);
+    hip_zero_msg_checksum(msg);
+
+    len = (const uint8_t *) hmac - (const uint8_t *) msg;
+    hip_set_msg_total_len(msg, len);
+
+    signaling_build_hash_tree_from_msg(msg, &concat_of_leaves, &len_concat_of_leaves);
+
+    memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+    if (signaling_verify_hmac((struct hip_common *) concat_of_leaves, len_concat_of_leaves, hmac->hmac_data,
+                              tmpkey.key, HIP_DIGEST_SHA1_HMAC)) {
+        HIP_ERROR("HMAC validation failed\n");
+        return -1;
+    }
+
+    /* revert the changes to the packet */
+    hip_set_msg_total_len(msg, orig_len);
+    hip_set_msg_checksum(msg, orig_checksum);
+
+    return 0;
+}
+
+/**
+ * Verifies packet HMAC
+ *
+ * @param msg HIP packet
+ * @param key The crypto key
+ * @param host_id The Host Identity
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated. Assumes that the hmac includes only the header
+ * and host id.
+ */
+int signaling_verify_packet_selective_hmac2(struct hip_common *msg,
+                                            struct hip_crypto_key *key,
+                                            struct hip_host_id *host_id)
+{
+    struct hip_crypto_key  tmpkey;
+    const struct hip_hmac *hmac;
+    struct hip_common     *msg_copy         = NULL;
+    int                    err              = 0;
+    unsigned char         *concat_of_leaves = NULL;
+    unsigned int           len_concat_of_leaves;
+
+    if (!(msg_copy = hip_msg_alloc())) {
+        return -ENOMEM;
+    }
+
+    HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
+             "Pseudo hmac2 pkt failed\n");
+
+    HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC)), -ENOMSG,
+             "Packet contained no HMAC parameter\n");
+    HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
+
+    memcpy(&tmpkey, key, sizeof(tmpkey));
+
+    HIP_IFEL(signaling_build_hash_tree_from_msg(msg_copy, &concat_of_leaves, &len_concat_of_leaves), -1,
+             "Building hash tree from the R2 message failed\n");
+    HIP_IFEL(signaling_verify_hmac((struct hip_common *) concat_of_leaves, len_concat_of_leaves,
+                                   hmac->hmac_data, tmpkey.key,
+                                   HIP_DIGEST_SHA1_HMAC),
+             -1, "HMAC validation failed\n");
+out_err:
+    free(msg_copy);
     return err;
 }
 
@@ -1198,75 +1332,56 @@ out_err:
 }
 
 int signaling_verify_service_ack_selective_s(struct hip_common *msg,
-                                             struct hip_common **msg_buf,
+                                             UNUSED struct hip_common **msg_buf,
                                              unsigned char *stored_hash,
                                              UNUSED RSA           *priv_key)
 {
-    int                          err = 0;
-    const struct hip_tlv_common *param;
-    struct signaling_service_ack ack = { 0 };
+    int                                 err = 0;
+    const struct hip_tlv_common        *param;
+    const struct signaling_service_ack *ack = NULL;
 //  struct hip_encrypted_aes_sha1 tmp_enc_param = { 0 };
 
-    int            param_len        = 0;
-    uint8_t       *tmp_service_ack  = NULL;
-    unsigned char *tmp_info_secrets = NULL;
-    unsigned char *dec_output       = NULL;
-    uint8_t       *tmp_ptr          = NULL;
+//    int            param_len        = 0;
+/*
+ *  uint8_t       *tmp_service_ack  = NULL;
+ *  unsigned char *tmp_info_secrets = NULL;
+ *  unsigned char *dec_output       = NULL;
+ *
+ *  uint8_t       *tmp_ptr          = NULL;*/
     //uint8_t       *enc_data         = NULL;
-    int      enc_data_len = 0;
-    uint16_t tmp_len      = 0;
-    uint16_t mask         = 0;
-    uint8_t *iv           = NULL;
-    //const uint8_t              *tmp_enc_ptr                 = NULL;
-    //uint16_t                    tmp_info_sec_len            = 0;
+/*
+ *  int      enc_data_len = 0;
+ *  uint16_t tmp_len      = 0;
+ */
+/* uint16_t mask         = 0;
+ * uint8_t *iv           = NULL;*/
+//const uint8_t              *tmp_enc_ptr                 = NULL;
+//uint16_t                    tmp_info_sec_len            = 0;
 
+    HIP_DEBUG("Inside verification of selectively signed ack\n");
     /*------------------ Find out the corresponding service acknowledgment --------------------*/
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
         HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
         do {
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
-                param_len       = hip_get_param_contents_len(param);
-                enc_data_len    = param_len - sizeof(struct signaling_service_ack) - 16 * sizeof(uint8_t);
-                tmp_service_ack = malloc(param_len + sizeof(struct hip_tlv_common));
-                memcpy(tmp_service_ack, param, param_len + sizeof(struct hip_tlv_common));
-                /* Check if the service acknowledgment is a signed ack */
-                if (!signaling_check_if_service_ack_signed((struct signaling_param_service_ack *) tmp_service_ack)) {
-                    HIP_DEBUG("Service Ack in the HIP msg in not a signed service ack\n");
-                    return 0;
+                ack = (const struct signaling_service_ack *) (param + 1);
+                /* Check if the service acknowledgment is a signed or an unsgined service ack */
+                if (signaling_check_if_service_ack_signed((const struct signaling_param_service_ack *) param)) {
+                    HIP_DEBUG("Service Ack in the HIP msg in not an unsigned service ack\n");
+                    err = 0;
+                    goto out_err;
                 }
-                tmp_ptr = (uint8_t *) tmp_service_ack;
-                memcpy(&ack, (const struct signaling_service_ack *) (param + 1), sizeof(struct signaling_service_ack));
-                if (!memcmp(stored_hash, ack.service_offer_hash, HIP_AH_SHA_LEN)) {
-                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Checking for signed service ack\n");
-                    break;
+                if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {
+                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Found unsigned service ack\n");
+                    return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
                     HIP_HEXDUMP("Stored hash: ", stored_hash, HIP_AH_SHA_LEN);
-                    HIP_HEXDUMP("Acked hash: ", ack.service_offer_hash, HIP_AH_SHA_LEN);
+                    HIP_HEXDUMP("Acked hash: ", ack->service_offer_hash, HIP_AH_SHA_LEN);
                 }
-                free(tmp_service_ack);
             }
         } while ((param = hip_get_next_param(msg, param)));
 
-        HIP_DEBUG("Packet content len = %d\n", enc_data_len);
-        HIP_HEXDUMP("Encrypted end point info secrets : ", (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) +
-                                                                        sizeof(struct hip_tlv_common) +
-                                                                        16 * sizeof(uint8_t)), enc_data_len);
-
-        /*--------- Extract the symmetric key information now ---------------*/
-
-        /*----------------- Allocate and build message buffer ----------------------*/
-        HIP_IFEL(!(*msg_buf = hip_msg_alloc()),
-                 -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
-        hip_build_network_hdr(*msg_buf, HIP_UPDATE, mask, &msg->hits, &msg->hitr); /*Just giving some dummy Packet type*/
-
-        HIP_IFEL(signaling_put_decrypted_secrets_to_msg_buf(msg, msg_buf, dec_output,  tmp_len),
-                 -1, "Could not add the decrypted endpoint info to the msg buffer for further processing. \n");
-
-        hip_dump_msg(*msg_buf);
-        free(dec_output);
-        free(tmp_info_secrets);
-        free(tmp_service_ack);
         return 1;
     } else {
         HIP_DEBUG("No Signed Service Offer from middleboxes. Nothing to do.\n");
@@ -1274,9 +1389,6 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
     HIP_DEBUG("None of the Service Acks matched.\n");
     //return 0;
 out_err:
-    if (iv != NULL && !SERVICE_RESPONSE_ALGO_DH) {
-        free(iv);
-    }
     return err;
 }
 
@@ -1694,7 +1806,9 @@ out_err:
  * Building Acknowledgment for signed signed service offer. Slightly tricky.
  */
 int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
-                                  struct hip_packet_context *ctx)
+                                  struct hip_packet_context *ctx,
+                                  const uint8_t *peer_pub_key,
+                                  const int peer_pub_key_len)
 {
     int                                  err = 0, i = 0;
     struct signaling_param_service_offer param_service_offer;
@@ -1781,7 +1895,7 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                 if (SERVICE_RESPONSE_ALGO_DH) {
                     HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)), -ENOMEM,
                              "Error on allocating memory for Diffie-Hellman shared key.\n");
-                    signaling_generate_shared_key_from_dh_shared_secret(dh_shared_key, &dh_shared_len, mb_dh_pub_key, mb_dh_pub_key_len);
+                    signaling_generate_shared_key_from_dh_shared_secret(dh_shared_key, &dh_shared_len, peer_pub_key, peer_pub_key_len);
                     iv = ack.iv;
                     get_random_bytes(iv, 16);
 
@@ -2091,6 +2205,223 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
            usr_ctx->subject_name_len);
 
 out_err:
+    return err;
+}
+
+/**
+ * build the contents of a HIP signature1 parameter
+ * (the type and length fields for the parameter should be set separately)
+ *
+ * @param msg the message
+ * @param contents pointer to the signature contents (the data to be written
+ *                 after the signature field)
+ * @param contents_size size of the contents of the signature (the data after the
+ *                 algorithm field)
+ * @param algorithm the algorithm as in the HIP drafts that was used for
+ *                 producing the signature
+ * @return zero for success, or non-zero on error
+ */
+int signaling_hip_build_param_selective_sign(struct hip_common *msg,
+                                             const void *contents,
+                                             hip_tlv_len contents_size,
+                                             uint8_t algorithm)
+{
+    /* note: if you make changes in this function, make them also in
+     * build_param_signature_contents2(), because it is almost the same */
+
+    struct hip_sig sig;
+
+    HIP_ASSERT(sizeof(struct hip_sig) >= sizeof(struct hip_tlv_common));
+
+    hip_set_param_type((struct hip_tlv_common *) &sig, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE);
+    hip_calc_generic_param_len((struct hip_tlv_common *) &sig, sizeof(struct hip_sig),
+                               contents_size);
+    sig.algorithm = algorithm;     /* algo is 8 bits, no htons */
+
+    return hip_build_generic_param(msg, &sig, sizeof(struct hip_sig), contents);
+}
+
+int signaling_build_hash_tree_from_msg(struct hip_common *msg,
+                                       unsigned char **concat_of_leaves,
+                                       unsigned int   *len_concat_of_leaves)
+{
+    int                        err                 = 0, i = 0;
+    struct hip_tlv_common     *param               = NULL;
+    uint8_t                   *tmp_ptr             = NULL;
+    uint16_t                   tmp_len             = 0;
+    uint32_t                   tmp_pos             = 0;
+    uint16_t                   num_leaf            = 1; /*header of the msg is already counted*/
+    struct hip_hash_tree_leaf *leaves              = NULL;
+    struct hip_hash_tree_leaf  tmp_leaf            = { 0 };
+    uint32_t                   HIP_PARAM_SIG_LIMIT = 0;
+
+
+    HIP_DEBUG("Building hash tree before signing\n");
+    /* Getting the number of leaves in the hash tree
+     * Range limit for the parameters those will be signed
+     * http://tools.ietf.org/html/rfc5201#section-5.2 and
+     * http://tools.ietf.org/html/rfc5201#section-5.2.11
+     */
+    if (hip_get_msg_type(msg) == HIP_R1) {
+        HIP_PARAM_SIG_LIMIT = HIP_PARAM_HIP_SIGNATURE2;
+    } else {
+        HIP_PARAM_SIG_LIMIT = HIP_PARAM_HIP_SIGNATURE;
+    }
+
+
+    while ((param = hip_get_next_param_readwrite(msg, param))) {
+        if ((hip_get_param_type((const struct hip_tlv_common *) param) < HIP_PARAM_SIG_LIMIT) ||
+            (hip_get_param_type((const struct hip_tlv_common *) param) == HIP_PARAM_SELECTIVE_HASH_LEAF)) {
+            num_leaf++;
+        }
+    }
+    HIP_DEBUG("number of leaves of the hash tree : %d\n", num_leaf);
+    leaves = malloc(num_leaf * sizeof(struct hip_hash_tree_leaf));
+    /* Initialize the leaves of the hash tree. Important to have the leaf_pos
+     * in struct hip_hash_tree_leaf to initialized to zero*/
+    for (i = 0; i < num_leaf; i++) {
+        *(leaves + i) = tmp_leaf;
+    }
+
+    tmp_ptr          = (uint8_t *) msg;
+    tmp_len          = sizeof(struct hip_common);
+    leaves->leaf_pos = 0;
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, tmp_ptr, tmp_len, leaves->leaf_hash) < 0,
+             -1, "Building of SHA1 digest failed\n");
+
+    i = 1;
+    /*Check the hip msg if some portion has been replaced by the mbox with its hash
+     * and insert the hash from the leaf at the correct position*/
+    param = NULL;
+    while ((param = hip_get_next_param_readwrite(msg, param))) {
+        if (hip_get_param_type((const struct hip_tlv_common *) param) == HIP_PARAM_SELECTIVE_HASH_LEAF) {
+            tmp_pos                                                      = ntohl(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
+            ((struct hip_hash_tree_leaf *) (leaves + tmp_pos))->leaf_pos = tmp_pos;
+            memcpy((leaves + tmp_pos)->leaf_hash, ((struct siganling_param_selective_hash_leaf *) param)->leaf_hash, HIP_AH_SHA_LEN);
+        }
+    }
+
+    while ((param = hip_get_next_param_readwrite(msg, param))) {
+        if (hip_get_param_type((struct hip_tlv_common *) param) < HIP_PARAM_SIG_LIMIT) {
+            // Check if at the current there is already an entry present
+            if ((leaves + i)->leaf_pos == 0) {
+                (leaves + i)->leaf_pos = i;
+                tmp_ptr                = (uint8_t *) param;
+                tmp_len                = hip_get_param_total_len((const struct hip_tlv_common *) param);
+
+                HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, tmp_ptr, tmp_len, (leaves + i)->leaf_hash) < 0,
+                         -1, "Building of SHA1 digest failed\n");
+                i++;
+            }
+        }
+    }
+
+    HIP_DEBUG("Leaves of the hash tree set\n");
+
+    // Concatenate the leaves of the HASH Tree
+    tmp_len               = num_leaf * HIP_AH_SHA_LEN;
+    *concat_of_leaves     = malloc(tmp_len);
+    *len_concat_of_leaves = tmp_len;
+    memset(*concat_of_leaves, 0, tmp_len);
+    tmp_ptr = (uint8_t *) (*concat_of_leaves);
+    for (i = 0; i < num_leaf; i++) {
+        HIP_IFEL(!memcpy(tmp_ptr, (leaves + i)->leaf_hash, HIP_AH_SHA_LEN), -1, "Error memcpying\n");
+        tmp_ptr += HIP_AH_SHA_LEN;
+    }
+    HIP_HEXDUMP("Concatenation of the leaves of the hash tree : ", *concat_of_leaves, *len_concat_of_leaves);
+out_err:
+    return err;
+}
+
+int signaling_build_hash_tree_and_get_root(struct hip_common *msg,
+                                           unsigned char *root_hash_tree)
+{
+    int            err              = 0;
+    unsigned char *concat_of_leaves = NULL;
+    unsigned int   len_concat_of_leaves;
+
+    HIP_ASSERT(root_hash_tree);
+    HIP_IFEL(signaling_build_hash_tree_from_msg(msg, &concat_of_leaves, &len_concat_of_leaves), -1,
+             "Could not build hash tree from message\n");
+    //Hash the concatenation of the leaves to form the root node
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, concat_of_leaves, len_concat_of_leaves, root_hash_tree) < 0,
+             -1, "Building of SHA1 digest failed\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * Builds a @c HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
+ *
+ * @param msg a pointer to the message where the @c HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @param param_type HIP_PARAM_HMAC, HIP_PARAM_RELAY_HMAC or HIP_PARAM_RVS_HMAC accordingly
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac2_contents()
+ * @see       hip_write_hmac().
+ */
+int signaling_build_param_selective_hmac(struct hip_common *msg,
+                                         const struct hip_crypto_key *key,
+                                         hip_tlv param_type)
+{
+    int             err = 0;
+    struct hip_hmac hmac;
+    unsigned char  *concat_of_leaves = NULL;
+    unsigned int    len_concat_of_leaves;
+
+    HIP_IFEL(signaling_build_hash_tree_from_msg(msg, &concat_of_leaves, &len_concat_of_leaves), -1,
+             "Could not build hash tree from message\n");
+
+    hip_set_param_type((struct hip_tlv_common *) &hmac, param_type);
+    hip_calc_generic_param_len((struct hip_tlv_common *) &hmac,
+                               sizeof(struct hip_hmac),
+                               0);
+
+    HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, (struct hip_common *) concat_of_leaves,
+                            len_concat_of_leaves,
+                            hmac.hmac_data), -EFAULT,
+             "Error while building HMAC\n");
+
+    err = hip_build_param(msg, &hmac);
+out_err:
+    return err;
+}
+
+int signaling_build_param_selective_hmac2(struct hip_common *msg,
+                                          struct hip_crypto_key *key,
+                                          struct hip_host_id *host_id)
+{
+    struct hip_hmac    hmac2;
+    struct hip_common *msg_copy         = NULL;
+    int                err              = 0;
+    unsigned char     *concat_of_leaves = NULL;
+    unsigned int       len_concat_of_leaves;
+
+
+    HIP_IFEL(!(msg_copy = hip_msg_alloc()), -ENOMEM, "Message alloc\n");
+
+    HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
+             "pseudo hmac pkt failed\n");
+    HIP_IFEL(signaling_build_hash_tree_from_msg(msg_copy, &concat_of_leaves, &len_concat_of_leaves), -1,
+             "Could not build hash tree from message\n");
+
+    hip_set_param_type((struct hip_tlv_common *) &hmac2, HIP_PARAM_SIGNALING_SELECTIVE_HMAC);
+    hip_calc_generic_param_len((struct hip_tlv_common *) &hmac2,
+                               sizeof(struct hip_hmac),
+                               0);
+
+    HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, concat_of_leaves,
+                            len_concat_of_leaves,
+                            hmac2.hmac_data),
+             -EFAULT,
+             "Error while building HMAC\n");
+
+    err = hip_build_param(msg, &hmac2);
+out_err:
+    free(msg_copy);
     return err;
 }
 
@@ -2521,6 +2852,249 @@ int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state
 
 //out_err:
     return err;
+}
+
+int signaling_hip_rsa_selective_sign(void *const priv_key, struct hip_common *const msg)
+{
+    RSA         *rsa = priv_key;
+    uint8_t      sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t     *signature = NULL;
+    int          err       = 0, len;
+    unsigned int sig_len;
+
+    len = hip_get_msg_total_len(msg);
+
+    HIP_IFEL(signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+
+    HIP_DEBUG("Build hash from the root of the hash tree\n");
+    len       = RSA_size(rsa);
+    signature = calloc(1, len);
+    HIP_IFEL(!signature, -1, "Malloc for signature failed.");
+    /* RSA_sign returns 0 on failure */
+    HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
+                       &sig_len, rsa), -1, "Signing error\n");
+
+    HIP_IFEL(signaling_hip_build_param_selective_sign(msg, signature, len, HIP_SIG_RSA),
+             -1, "Building of signature failed\n");
+
+out_err:
+    free(signature);
+    return err;
+}
+
+/**
+ * Sign a HIP control message with a private ECDSA key.
+ *
+ * @param priv_key the ECDSA private key of the local host
+ * @param msg The HIP control message to sign. The signature
+ *            is appended as a parameter to the message.
+ * @return zero on success and negative on error
+ * @note the order of parameters is significant so this function
+ *       must be called at the right time of building of the parameters
+ */
+int signaling_hip_ecdsa_selective_sign(void *const priv_key, struct hip_common *const msg)
+{
+    EC_KEY *ecdsa = priv_key;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+    int     siglen = ECDSA_size(ecdsa);
+    uint8_t signature[siglen];
+    int     len;
+
+    if (!msg) {
+        HIP_ERROR("NULL message\n");
+        return -1;
+    }
+    if (!priv_key) {
+        HIP_ERROR("NULL signing key\n");
+        return -1;
+    }
+
+    if (!priv_key) {
+        HIP_ERROR("Need key for signing \n");
+        return -1;
+    }
+    if (!msg) {
+        HIP_ERROR("Need message to sign \n");
+        return -1;
+    }
+
+    len = hip_get_msg_total_len(msg);
+    if (signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest) < 0) {
+        HIP_ERROR("Building of the sha1 digest from hash-tree failed.\n");
+        return -1;
+    }
+
+    if (impl_ecdsa_sign(sha1_digest, ecdsa, signature)) {
+        HIP_ERROR("Signing error\n");
+        return -1;
+    }
+
+    HIP_HEXDUMP("ECDSA signature = ", signature, siglen);
+    if (signaling_hip_build_param_selective_sign(msg, signature, siglen, HIP_SIG_ECDSA)) {
+        HIP_ERROR("Building of signature failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * sign a HIP control message with a private DSA key
+ *
+ * @param priv_key the DSA private key of the local host
+ * @param msg The HIP control message to sign. The signature
+ *            is appended as a parameter to the message.
+ * @return zero on success and negative on error
+ * @note the order of parameters is significant so this function
+ *       must be called at the right time of building of the parameters
+ */
+int signaling_hip_dsa_selective_sign(void *const priv_key, struct hip_common *const msg)
+{
+    DSA *const dsa = priv_key;
+    uint8_t    sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t    signature[HIP_DSA_SIGNATURE_LEN];
+    int        err = 0, len;
+
+    len = hip_get_msg_total_len(msg);
+
+    HIP_IFEL(signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+
+    HIP_IFEL(impl_dsa_sign(sha1_digest, dsa, signature),
+             -1, "Signing error\n");
+
+    HIP_IFEL(signaling_hip_build_param_selective_sign(msg, signature,
+                                                      HIP_DSA_SIGNATURE_LEN,
+                                                      HIP_SIG_DSA),
+             -1, "Building of signature failed\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * Generic signature verification function for DSA and RSA.
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @param type HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
+ * @return zero on success and non-zero on failure
+ */
+static int verify(void *const peer_pub, struct hip_common *const msg, const int type)
+{
+    int                err = 0, len, origlen = 0;
+    struct hip_sig    *sig;
+    uint8_t            sha1_digest[HIP_AH_SHA_LEN];
+    struct in6_addr    tmpaddr;
+    struct hip_puzzle *pz = NULL;
+    uint8_t            opaque[HIP_PUZZLE_OPAQUE_LEN];
+    uint8_t            rand_i[PUZZLE_LENGTH];
+
+    HIP_IFEL(!peer_pub, -1, "NULL public key\n");
+    HIP_IFEL(!msg, -1, "NULL message\n");
+
+    ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
+
+    origlen = hip_get_msg_total_len(msg);
+    if (hip_get_msg_type(msg) == HIP_R1) {
+        HIP_IFEL(!(sig = hip_get_param_readwrite(msg,
+                                                 HIP_PARAM_HIP_SIGNATURE2)),
+                 -ENOENT, "Could not find signature2\n");
+
+        memset(&msg->hitr, 0, sizeof(struct in6_addr));
+
+        HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)),
+                 -ENOENT, "Illegal R1 packet (puzzle missing)\n");
+
+        /* temporarily store original puzzle values */
+        memcpy(opaque, pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(rand_i, pz->I, PUZZLE_LENGTH);
+        /* R1 signature is computed over zero values */
+        memset(pz->opaque, 0, HIP_PUZZLE_OPAQUE_LEN);
+        memset(pz->I, 0, PUZZLE_LENGTH);
+    } else {
+        HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE)),
+                 -ENOENT, "Could not find signature\n");
+    }
+
+    len = ((uint8_t *) sig) - ((uint8_t *) msg);
+    hip_zero_msg_checksum(msg);
+    HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
+    hip_set_msg_total_len(msg, len);
+
+    HIP_IFEL(signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+    if (type == HIP_HI_RSA) {
+        /* RSA_verify returns 0 on failure */
+        err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
+                          sig->signature, RSA_size(peer_pub), peer_pub);
+    } else if (type == HIP_HI_ECDSA) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");
+        hip_perf_start_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
+#endif
+        err = impl_ecdsa_verify(sha1_digest, peer_pub, sig->signature);
+    } else {
+        err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
+    }
+
+    if (hip_get_msg_type(msg) == HIP_R1) {
+        memcpy(pz->opaque, opaque, HIP_PUZZLE_OPAQUE_LEN);
+        memcpy(pz->I, rand_i, PUZZLE_LENGTH);
+    }
+
+    ipv6_addr_copy(&msg->hitr, &tmpaddr);
+
+    if (err) {
+        err = -1;
+    }
+
+out_err:
+    if (msg) {
+        hip_set_msg_total_len(msg, origlen);
+    }
+    return err;
+}
+
+/**
+ * Verify the ECDSA signature from a message.
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
+int signaling_hip_ecdsa_selective_verify(void *const peer_pub, struct hip_common *const msg)
+{
+    return verify(peer_pub, msg, HIP_HI_ECDSA);
+}
+
+/**
+ * RSA signature verification function
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
+int signaling_hip_rsa_selective_verify(void *const peer_pub, struct hip_common *const msg)
+{
+    return verify(peer_pub, msg, HIP_HI_RSA);
+}
+
+/**
+ * DSA signature verification function
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
+int signaling_hip_dsa_selective_verify(void *const peer_pub, struct hip_common *const msg)
+{
+    return verify(peer_pub, msg, HIP_HI_DSA);
 }
 
 // For our implementation we will consider all the service offers of same type

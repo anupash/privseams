@@ -33,7 +33,7 @@ struct userdb_certificate_context {
     int             group;
     int             count;
     int             next_cert_id;
-                    STACK_OF(X509) *cert_chain;
+    STACK_OF(X509) * cert_chain;
 };
 
 struct userdb_user_entry {
@@ -92,6 +92,7 @@ int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key);
 int signaling_verify_user_signature(struct hip_common *msg, EVP_PKEY *pkey);
 int signaling_verify_user_signature_ecdsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest);
 int signaling_verify_user_signature_rsa(struct signaling_user_context *user_ctx, struct hip_sig *param_user_signature, unsigned char *sha1_digest);
-int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx);
+int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct signaling_user_context *user_ctx,
+                                             uint8_t flag_selective_sign);
 
 #endif /* HIP_HIPD_SIGNALING_USER_MANAGEMENT_H */

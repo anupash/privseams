@@ -183,9 +183,9 @@ int hip_verify_packet_hmac(struct hip_common *msg,
  * not be validated. Assumes that the hmac includes only the header
  * and host id.
  */
-static int hip_verify_packet_hmac2(struct hip_common *msg,
-                                   struct hip_crypto_key *key,
-                                   struct hip_host_id *host_id)
+int hip_verify_packet_hmac2(struct hip_common *msg,
+                            struct hip_crypto_key *key,
+                            struct hip_host_id *host_id)
 {
     struct hip_crypto_key  tmpkey;
     const struct hip_hmac *hmac;
@@ -1040,6 +1040,59 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
              "Dropping.\n");
 
     /* Verify HMAC */
+/*
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+ *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+ * #endif
+ *  if (ctx->hadb_entry->is_loopback) {
+ *      HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+ *                                       &ctx->hadb_entry->hip_hmac_out,
+ *                                       ctx->hadb_entry->peer_pub),
+ *               -1,
+ *               "HMAC validation on R2 failed.\n");
+ *  } else {
+ *      HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+ *                                       &ctx->hadb_entry->hip_hmac_in,
+ *                                       ctx->hadb_entry->peer_pub),
+ *               -1,
+ *               "HMAC validation on R2 failed.\n");
+ *  }
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+ *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+ * #endif
+ */
+
+    /* Signature validation */
+/*
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
+ *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+ * #endif
+ *  HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+ *                                   ctx->input_msg),
+ *           -EINVAL,
+ *           "R2 signature verification failed.\n");
+ * #ifdef CONFIG_HIP_PERFORMANCE
+ *  HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
+ *  hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+ * #endif
+ */
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+int hip_check_r2_hmac_and_sign(UNUSED const uint8_t packet_type,
+                               UNUSED const uint32_t ha_state,
+                               struct hip_packet_context *ctx)
+{
+    int err = 0;
+    /* Verify HMAC */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
     hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
@@ -1062,7 +1115,7 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
 #endif
 
-    /* Signature validation */
+    /* Validate signature */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
@@ -1075,11 +1128,7 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
 #endif
-
 out_err:
-    if (err) {
-        ctx->error = err;
-    }
     return err;
 }
 
@@ -1334,16 +1383,11 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  UNUSED const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int                             err            = 0, is_loopback = 0;
-    uint16_t                        mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
-    char                           *tmp_enc        = NULL;
-    const char                     *enc            = NULL;
-    unsigned char                  *iv             = NULL;
-    const struct hip_solution      *solution       = NULL;
-    const struct hip_r1_counter    *r1cntr         = NULL;
-    const struct hip_hip_transform *hip_transform  = NULL;
-    struct hip_host_id             *host_id_in_enc = NULL;
-    struct hip_host_id              host_id;
+    int                          err      = 0;
+    uint16_t                     mask     = HIP_PACKET_CTRL_ANON;
+    char                        *tmp_enc  = NULL;
+    const struct hip_solution   *solution = NULL;
+    const struct hip_r1_counter *r1cntr   = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1_I2\n");
@@ -1441,6 +1485,23 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
              -EPROTO,
              "Unable to produce keying material. Dropping the I2 packet.\n");
 
+    if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
+        ctx->hadb_entry->birthday = r1cntr->generation;
+    }
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    free(tmp_enc);
+    return err;
+}
+
+int hip_check_i2_hmac(UNUSED const uint8_t packet_type,
+                      UNUSED const uint32_t ha_state,
+                      struct hip_packet_context *ctx)
+{
+    int err = 0, is_loopback = 0;
     /* Verify HMAC. */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
@@ -1463,6 +1524,30 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Stop PERF_I2_VERIFY_HMAC\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
 #endif
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+int hip_check_transform_and_host_id(UNUSED const uint8_t packet_type,
+                                    UNUSED const uint32_t ha_state,
+                                    struct hip_packet_context *ctx)
+{
+    int                             err            = 0, is_loopback = 0;
+    uint16_t                        crypto_len     = 0;
+    char                           *tmp_enc        = NULL;
+    const char                     *enc            = NULL;
+    unsigned char                  *iv             = NULL;
+    const struct hip_hip_transform *hip_transform  = NULL;
+    struct hip_host_id             *host_id_in_enc = NULL;
+    struct hip_host_id              host_id;
+
+    if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+        hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        is_loopback = 1;
+    }
 
     HIP_IFEL(!(hip_transform = hip_get_param(ctx->input_msg,
                                              HIP_PARAM_HIP_TRANSFORM)),
@@ -1607,6 +1692,20 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 
     /* Store peer's public key and HIT to HA */
     HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    free(tmp_enc);
+    return err;
+}
+
+int hip_check_i2_signature(UNUSED const uint8_t packet_type,
+                           UNUSED const uint32_t ha_state,
+                           struct hip_packet_context *ctx)
+{
+    int err = 0;
     /* Validate signature */
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2_VERIFY_HOST_SIG\n");
@@ -1620,16 +1719,10 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Stop PERF_I2_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
 #endif
-
-    if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
-        ctx->hadb_entry->birthday = r1cntr->generation;
-    }
-
 out_err:
     if (err) {
         ctx->error = err;
     }
-    free(tmp_enc);
     return err;
 }
 

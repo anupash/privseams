@@ -58,6 +58,10 @@ static inline int hip_controls_sane(uint16_t controls, uint16_t legal)
 int hip_verify_packet_hmac(struct hip_common *msg,
                            struct hip_crypto_key *crypto_key);
 
+int hip_verify_packet_hmac2(struct hip_common *msg,
+                            struct hip_crypto_key *key,
+                            struct hip_host_id *host_id);
+
 int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
                                    const hip_tlv parameter_type);
@@ -73,6 +77,15 @@ int hip_check_i1(const uint8_t packet_type,
 int hip_check_i2(const uint8_t packet_type,
                  const uint32_t ha_state,
                  struct hip_packet_context *ctx);
+int hip_check_i2_hmac(const uint8_t packet_type,
+                      const uint32_t ha_state,
+                      struct hip_packet_context *ctx);
+int hip_check_transform_and_host_id(const uint8_t packet_type,
+                                    const uint32_t ha_state,
+                                    struct hip_packet_context *ctx);
+int hip_check_i2_signature(const uint8_t packet_type,
+                           const uint32_t ha_state,
+                           struct hip_packet_context *ctx);
 
 int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
@@ -125,6 +138,10 @@ int hip_add_diffie_hellman(UNUSED const uint8_t packet_type,
 int hip_check_r2(const uint8_t packet_type,
                  const uint32_t ha_state,
                  struct hip_packet_context *ctx);
+
+int hip_check_r2_hmac_and_sign(const uint8_t packet_type,
+                               const uint32_t ha_state,
+                               struct hip_packet_context *ctx);
 
 int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,

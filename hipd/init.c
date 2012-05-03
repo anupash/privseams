@@ -707,6 +707,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I1, HIP_STATE_NONE, &hip_send_r1,   40000);
 
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_check_i2_signature,  20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_create_r2, 40000);
@@ -715,6 +718,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_check_i2_signature,  20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_create_r2, 40000);
@@ -722,7 +728,10 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_hmac2_and_sign, 42000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_send_r2, 50000);
-    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_check_i2,             20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_check_i2, 20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_handle_i2_in_i2_sent, 21000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_handle_i2,            30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_setup_ipsec_sa, 30500);
@@ -732,6 +741,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_create_r2, 40000);
@@ -740,6 +752,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_create_r2, 40000);
@@ -748,6 +763,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_ESTABLISHED, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_create_r2, 40000);
@@ -756,6 +774,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSING, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_create_r2, 40000);
@@ -764,6 +785,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_add_rvs_relay_to, 43000);
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED, &hip_send_r2, 50000);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_check_i2,  20000);
+    hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_check_i2_hmac,  20001);
+    hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_check_transform_and_host_id,  20003);
+    hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_check_i2_signature,   20004);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_setup_ipsec_sa, 30500);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_create_r2, 40000);
@@ -842,6 +866,7 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_send_i2, 50000);
 
     hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_check_r2,  20000);
+    hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_check_r2_hmac_and_sign,  20001);
     hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_handle_r2, 30000);
     hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_setup_ipsec_sa, 30500);
 

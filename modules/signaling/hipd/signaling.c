@@ -8,6 +8,7 @@
 #include "hipd/pkt_handling.h"
 #include "hipd/user.h"
 #include "hipd/output.h"
+#include "hipd/input.h"
 #include "signaling.h"
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
@@ -108,6 +109,10 @@ int hip_signaling_init(void)
 
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,
                                  "HIP_PARAM_SIGNALING_SERVICE_ACK");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_HMAC,
+                                 "HIP_PARAM_SIGNALING_SELECTIVE_HMAC");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE,
+                                 "HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,
                                  "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,
@@ -218,6 +223,33 @@ int hip_signaling_init(void)
                                            HIP_STATE_R2_SENT,
                                            HIP_STATE_NONE };
     for (unsigned i = 0; i < ARRAY_SIZE(mbox_service_I2_states); i++) {
+        /* Verify signatures in our extension differently*/
+        // Unregister the handler from hipd_init
+        if (hip_unregister_handle_function(HIP_I2, mbox_service_I2_states[i],
+                                           &hip_check_i2_hmac)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+        if (hip_unregister_handle_function(HIP_I2, mbox_service_I2_states[i],
+                                           &hip_check_i2_signature)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+        if (hip_register_handle_function(HIP_I2,
+                                         mbox_service_I2_states[i],
+                                         &signaling_i2_check_hmac,
+                                         20002)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+        if (hip_register_handle_function(HIP_I2,
+                                         mbox_service_I2_states[i],
+                                         &signaling_i2_check_signature,
+                                         20005)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+
         HIP_IFEL(hip_register_handle_function(HIP_I2, mbox_service_I2_states[i],
                                               &signaling_r2_check_offer_type,
                                               OUTBOUND_R2_CHECK_NEED_ENCRYPTION_PRIO),
@@ -273,6 +305,17 @@ int hip_signaling_init(void)
     }
 
     /*=================================== Handle HIP_R2 ===================================*/
+    /* Handle signatures in our extension differently*/
+    // Unregister the handler from hipd_init
+    HIP_IFEL(hip_unregister_handle_function(HIP_R2, HIP_STATE_I2_SENT,
+                                            &hip_check_r2_hmac_and_sign),
+             -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
+    // Register our handler
+    HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT,
+                                          &signaling_r2_check_hmac2_and_sign,
+                                          20002),
+             -1, "Error on registering Signaling handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT,
                                           &signaling_handle_incoming_r2,
                                           INBOUND_HANDLE_BEX_PRIO),
