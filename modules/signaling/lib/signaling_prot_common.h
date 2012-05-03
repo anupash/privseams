@@ -960,6 +960,11 @@ struct signaling_param_service_offer_s {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                                                               /
  * /                         SERVICE_OFFER_HASH                    /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               |
+ * |         Initial Vector for DH Symmetric encryption            |
+ * |           (Set to 0 when RSA used instead of DH)              |
+ * |                                                               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
  * /    Length   |     Algo        |            KEY_HINT           /                     |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                     |
@@ -969,7 +974,7 @@ struct signaling_param_service_offer_s {
  * /         Symmetric Key used in HIP_ENCRYPT                     /                     |
  * /                                               +-+-+-+-+-+-+-+-+                     |
  * /                                               |   Padding     |                     |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---*
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                  ---
  */
 
 struct signaling_param_service_ack {

@@ -1152,9 +1152,15 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
             HIP_HEXDUMP("Decrypted data = ", dec_output, enc_data_len);
             tmp_len = enc_data_len;
         } else {
+            iv = malloc(16 * sizeof(uint8_t));
+            memset(iv, 0, 16 * sizeof(uint8_t));
+            HIP_IFEL(memcmp(iv, ((struct signaling_param_service_ack *) tmp_service_ack)->iv, 16 * sizeof(uint8_t)), -1,
+                     "The initial vector not set to 0 even though DH not used\n");
+            free(iv);
             tmp_info_secrets = malloc(RSA_size(priv_key));
-            memcpy(tmp_info_secrets, (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) +
-                                                  sizeof(struct hip_tlv_common)), enc_data_len);
+            enc_data         = (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) + sizeof(struct hip_tlv_common)
+                                            + 16 * sizeof(uint8_t));
+            memcpy(tmp_info_secrets, (uint8_t *) enc_data, enc_data_len);
             dec_output = malloc(RSA_size(priv_key));
             tmp_len    = RSA_private_decrypt(enc_data_len, tmp_info_secrets, dec_output, priv_key, RSA_PKCS1_OAEP_PADDING);
             if (tmp_len > 0 && tmp_len < RSA_size(priv_key)) {
@@ -1184,6 +1190,9 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
     HIP_DEBUG("None of the Service Acks matched.\n");
     //return 0;
 out_err:
+    if (iv != NULL && !SERVICE_RESPONSE_ALGO_DH) {
+        free(iv);
+    }
     return err;
 }
 
@@ -1722,6 +1731,8 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                     tmp_len    = RSA_public_encrypt(tmp_info_sec_len, tmp_info_secrets, enc_output, rsa, RSA_PKCS1_OAEP_PADDING);
 
                     ack.service_option = htons(tmp_info_sec_len);
+                    iv                 = ack.iv;
+                    memset(iv, 0, 16 * sizeof(uint8_t));
                     HIP_DEBUG("Length of encrypted info secrets after encryption = %d\n", tmp_len);
                     HIP_HEXDUMP("Encrypted end point info secrets : ", enc_output, tmp_len);
 
