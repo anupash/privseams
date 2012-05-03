@@ -367,8 +367,8 @@ int hip_add_r1_counter(UNUSED const uint8_t packet_type,
                        struct hip_packet_context *ctx)
 {
     /* we build this, if we have recorded some value (from previous R1s) */
-    if(ctx->hadb_entry->birthday &&
-       hip_build_param_r1_counter(ctx->output_msg, ctx->hadb_entry->birthday)) {
+    if (ctx->hadb_entry->birthday &&
+        hip_build_param_r1_counter(ctx->output_msg, ctx->hadb_entry->birthday)) {
         HIP_ERROR("Could not build R1 GENERATION parameter\n");
         return -1;
     }
@@ -382,10 +382,10 @@ int hip_select_and_add_hip_transform(UNUSED const uint8_t packet_type,
 {
     const struct hip_param *param = NULL;
     hip_transform_suite     transform_hip_suite;
-    int err = 0;
+    int                     err = 0;
 
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
-            -ENOENT, "Could not find HIP transform in received message\n");
+             -ENOENT, "Could not find HIP transform in received message\n");
     HIP_IFEL((transform_hip_suite = hip_select_hip_transform((const struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not find acceptable HIP transform suite.\n");
 
@@ -411,10 +411,10 @@ int hip_add_i2_host_id(UNUSED const uint8_t packet_type,
                        UNUSED const uint32_t ha_state,
                        struct hip_packet_context *ctx)
 {
-    struct local_host_id   *host_id_entry = NULL;
-    char                   *enc_in_msg = NULL, *host_id_in_enc = NULL;
-    unsigned char          *iv         = NULL;
-    int                     err        = 0, host_id_in_enc_len = 0;
+    struct local_host_id *host_id_entry = NULL;
+    char                 *enc_in_msg    = NULL, *host_id_in_enc = NULL;
+    unsigned char        *iv            = NULL;
+    int                   err           = 0, host_id_in_enc_len = 0;
 
     /* Check if we should add encrypted HI */
     if (hip_encrypt_i2_hi) {
@@ -528,7 +528,7 @@ int hip_select_and_add_esp_tranform(UNUSED const uint8_t packet_type,
     int                     err   = 0;
 
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
-            -ENOENT, "Could not find ESP transform in received message\n");
+             -ENOENT, "Could not find ESP transform in received message\n");
 
     /* Select only one transform */
     HIP_IFEL((transform_esp_suite = hip_select_esp_transform((const struct hip_esp_transform *) param)) == 0,

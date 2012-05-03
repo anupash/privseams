@@ -2347,7 +2347,7 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
                         /*Processing the information requests in the service offer*/
                         while ((i < num_req_info_items) && ((tmp_info = ntohs(param_service_offer.endpoint_info_req[i])) != 0)) {
                             j = tmp_info;
-                            for (idx = 0; idx < 10; idx++) {
+                            for (idx = 0; idx < MAX_NUM_OFFER_GROUPS; idx++) {
                                 if (offer_groups[j].mbox[idx] ==  0) {
                                     break;
                                 }
@@ -2377,16 +2377,14 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
     int                         flag           = 0, j = 0, k = 0;
     struct service_offer_groups temp_offer_grp = { { 0 } };
 
-    uint8_t found              = 0;
-    uint8_t entries_merged[20] = {  0, 0, 0, 0, 0,
-                                    0, 0, 0, 0, 0,
-                                    0, 0, 0, 0, 0,
-                                    0, 0, 0, 0, 0 };
+    uint8_t found                                = 0;
+    uint8_t entries_merged[MAX_NUM_OFFER_GROUPS] = {  0, 0, 0, 0, 0,
+                                                      0, 0, 0, 0, 0 };
 
     i    = 0;
     flag = 1;
     int m = 0;
-    for (k = 0; k < 20; k++) {
+    for (k = 0; k < MAX_NUM_OFFER_GROUPS; k++) {
         if (offer_groups[k].info_requests[0] != 0 && offer_groups[k].num_mboxes > 0 && offer_groups[k].num_info_req > 0 && !entries_merged[k]) {
             idx = 0;
             if (sig_state->offer_groups[i] == NULL) {
@@ -2402,7 +2400,7 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
                 idx++;
             }
             //Assumption here if all goes well then the entries before should already have been merged
-            for (j = k; j < 20; j++) {
+            for (j = k; j < MAX_NUM_OFFER_GROUPS; j++) {
                 if (j != k && (offer_groups[j].num_mboxes == offer_groups[k].num_mboxes) && !entries_merged[j]) {
                     found = 1;
                     HIP_DEBUG("Finding an entry j = %d, k = %d\n", j, k);

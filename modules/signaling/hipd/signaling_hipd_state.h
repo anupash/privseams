@@ -16,12 +16,14 @@
 #include "lib/core/linkedlist.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
+#define MAX_NUM_OFFER_GROUPS 10
+
 struct user_certificate_context {
     uint32_t network_id;
     int      group;
     int      count;
     int      next_cert_id;
-    STACK_OF(X509) * cert_chain;
+             STACK_OF(X509) *cert_chain;
 };
 
 struct mbox_certificates {
@@ -59,10 +61,10 @@ struct signaling_hipd_state {
     struct signaling_connection_context pending_conn_context;
     uint8_t                             flag_user_sig;
     uint8_t                             flag_need_encryption;
-    void                               *service_ack[10];
-    uint16_t                            service_nack[10]; /*Place holder for the service offer ids which will not be acked*/
-    struct service_offer_groups        *offer_groups[10];
-    struct mbox_certificates           *mb_certs[10];
+    void                               *service_ack[MAX_NUM_OFFER_GROUPS];
+    uint16_t                            service_nack[MAX_NUM_OFFER_GROUPS]; /*Place holder for the service offer ids which will not be acked*/
+    struct service_offer_groups        *offer_groups[MAX_NUM_OFFER_GROUPS];
+    struct mbox_certificates           *mb_certs[MAX_NUM_OFFER_GROUPS];
 
     /* Collects user certificates accross multiple updates */
     struct user_certificate_context user_cert_ctx;

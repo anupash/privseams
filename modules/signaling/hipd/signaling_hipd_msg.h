@@ -38,10 +38,10 @@
 
 #include <stdint.h>
 
+#include "lib/core/dh.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/modularization.h"
 #include "hipd/pkt_handling.h"
-#include "hipd/dh.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 

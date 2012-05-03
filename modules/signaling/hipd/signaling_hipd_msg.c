@@ -1282,7 +1282,7 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
     int                          err       = 0;
     int                          j         = 0, k = 0;
     struct signaling_hipd_state *sig_state = NULL;
-    struct service_offer_groups  offer_groups[20];
+    struct service_offer_groups  offer_groups[MAX_NUM_OFFER_GROUPS];
     struct service_offer_groups  temp_offer_grp = { { 0 } };
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
@@ -1302,6 +1302,7 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
         /* Merge the groups which have similar requests */
         signaling_merge_info_req_to_similar_groups(offer_groups, sig_state);
 
+        /*Now print the offer groups*/
         for (j = 0; sig_state->offer_groups[j] != NULL; j++) {
             HIP_DEBUG("=============================================================\n");
             for (k = 0; k < sig_state->offer_groups[j]->num_info_req; k++) {
