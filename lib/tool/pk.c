@@ -48,8 +48,12 @@ int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
     unsigned int sig_len;
 
     len = hip_get_msg_total_len(msg);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
-             -1, "Building of SHA1 digest failed\n");
+    HIP_IFEL(hip_build_hash_tree_from_msg(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+/*
+ *  HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
+ *           -1, "Building of SHA1 digest failed\n");
+ */
 
     len       = RSA_size(rsa);
     signature = calloc(1, len);
@@ -124,10 +128,16 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
     }
 
     len = hip_get_msg_total_len(msg);
-    if (hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0) {
-        HIP_ERROR("Digest error.\n");
+    if (hip_build_hash_tree_from_msg(msg, (unsigned char *) sha1_digest) < 0) {
+        HIP_ERROR("Building of the sha1 digest from hash-tree failed.\n");
         return -1;
     }
+/*
+ *  if (hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0) {
+ *      HIP_ERROR("Digest error.\n");
+ *      return -1;
+ *  }*/
+    HIP_HEXDUMP("SHA1 digest = ", sha1_digest, HIP_AH_SHA_LEN);
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2_HOST_SIGN, PERF_R2_HOST_SIGN, PERF_I3_HOST_SIGN, PERF_UPDATE_HOST_SIGN\n");
     hip_perf_start_benchmark(perf_set, PERF_I2_HOST_SIGN);
@@ -146,6 +156,8 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *const msg)
     hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_UPDATE_HOST_SIGN);
 #endif
+
+    HIP_HEXDUMP("ECDSA signature = ", signature, siglen);
 
     if (hip_get_msg_type(msg) == HIP_R1) {
         if (hip_build_param_signature2_contents(
@@ -182,8 +194,10 @@ int hip_dsa_sign(void *const priv_key, struct hip_common *const msg)
     int        err = 0, len;
 
     len = hip_get_msg_total_len(msg);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
-             -1, "Building of SHA1 digest failed\n");
+    HIP_IFEL(hip_build_hash_tree_from_msg(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+/*    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
+ *           -1, "Building of SHA1 digest failed\n");*/
     HIP_IFEL(impl_dsa_sign(sha1_digest, dsa, signature),
              -1, "Signing error\n");
 
@@ -254,8 +268,10 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
     HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
     hip_set_msg_total_len(msg, len);
 
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest),
-             -1, "Could not calculate SHA1 digest\n");
+    HIP_IFEL(hip_build_hash_tree_from_msg(msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+/*    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest),
+ *           -1, "Could not calculate SHA1 digest\n");*/
     if (type == HIP_HI_RSA) {
         /* RSA_verify returns 0 on failure */
         err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,

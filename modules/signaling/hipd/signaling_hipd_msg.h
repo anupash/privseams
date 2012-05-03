@@ -72,12 +72,6 @@ UNUSED static unsigned char mb_dh_pub_key[] = {
 UNUSED static uint16_t mb_dh_pub_key_len = 192;
 UNUSED static DH      *dh                = NULL;
 
-/* FLags to be used in case the offer is signed or unsigned */
-enum  offer_signed_or_unsigned {
-    OFFER_SIGNED,
-    OFFER_UNSIGNED
-};
-
 /* Handler for incoming messages */
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
@@ -90,7 +84,7 @@ int signaling_update_add_signed_service_ack_and_sig_conn(const uint8_t packet_ty
                                                          const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hip_packet_context *ctx,
                                             struct signaling_connection *recv_conn,
-                                            uint8_t flag_service_offer_signed,
+                                            uint16_t flag_service_offer_signed,
                                             struct signaling_flags_info_req   *flags_info_requested,
                                             uint8_t role);
 int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
@@ -122,23 +116,22 @@ int signaling_send_user_certificate_chain_ack(struct hip_hadb_state *ha,
 /* utility functions */
 int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
                                               struct hip_packet_context *ctx, uint8_t flag);
-int signaling_i2_need_for_encryption(const uint8_t packet_type,
-                                     const uint32_t ha_state,
-                                     struct hip_packet_context *ctx);
+int signaling_i2_check_offer_type(const uint8_t packet_type,
+                                  const uint32_t ha_state,
+                                  struct hip_packet_context *ctx);
 int signaling_i2_group_service_offers(const uint8_t packet_type,
                                       const uint32_t ha_state,
                                       struct hip_packet_context *ctx);
 
-int signaling_r2_need_for_encryption(const uint8_t packet_type,
-                                     const uint32_t ha_state,
-                                     struct hip_packet_context *ctx);
+int signaling_r2_check_offer_type(const uint8_t packet_type,
+                                  const uint32_t ha_state,
+                                  struct hip_packet_context *ctx);
 int signaling_r2_group_service_offers(const uint8_t packet_type,
                                       const uint32_t ha_state,
                                       struct hip_packet_context *ctx);
-
-int signaling_update_need_for_encryption(const uint8_t packet_type,
-                                         const uint32_t ha_state,
-                                         struct hip_packet_context *ctx);
+int signaling_update_check_offer_type(const uint8_t packet_type,
+                                      const uint32_t ha_state,
+                                      struct hip_packet_context *ctx);
 int signaling_update_add_diffie_hellman(const uint8_t packet_type,
                                         const uint32_t ha_state,
                                         struct hip_packet_context *ctx);

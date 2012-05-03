@@ -362,8 +362,8 @@ static void tcp_do_one(int lnr, const char *line, int src_port, int dst_port)
     int                 num, local_port, rem_port, d, state, uid, timer_run, timeout;
     char                rem_addr[128], local_addr[128], timers[64], buffer[1024], more[512];
     char               *protname;
-    char                tcp[3]  = "tcp";
-    char                tcp6[4] = "tcp6";
+    char                tcp[]  = { 't', 'c', 'p', '\0' };
+    char                tcp6[] = { 't', 'c', 'p', '6', '\0' };
     struct aftype      *ap;
     struct in6_addr_own in6_own;
 

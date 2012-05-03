@@ -120,6 +120,7 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     struct hip_common                 *locator_msg = NULL;
     struct hip_locator_info_addr_item *locators    = NULL;
     struct update_state               *localstate  = NULL;
+    struct signaling_hipd_state       *sig_state   = NULL;
 
     /* Allocate and build message */
     if (type == SIGNALING_FIRST_BEX_UPDATE) {
@@ -196,9 +197,15 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
 #endif
     } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
-        /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
-        if (!signaling_hip_msg_contains_signed_service_offer(ctx->input_msg)) {
-            signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
+        if ((sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state"))) {
+            /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
+            if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
+                signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
+            }
+        } else {
+            HIP_DEBUG("No hipd state found, could not build HIP Update\n");
+            free(msg_buf);
+            return NULL;
         }
     } else if (type == SIGNALING_THIRD_BEX_UPDATE) {
         signaling_r2_handle_service_offers(HIP_UPDATE, ha->state, ctx);
@@ -264,7 +271,6 @@ int signaling_send_second_update(UNUSED const uint8_t packet_type,
     int                          err                   = 0;
     const struct in6_addr       *src_hit               = NULL;
     const struct in6_addr       *dst_hit               = NULL;
-    struct signaling_hipd_state *sig_state             = NULL;
     struct hip_common           *update_packet_to_send = NULL;
     struct signaling_connection *conn                  = NULL;
 
@@ -278,8 +284,6 @@ int signaling_send_second_update(UNUSED const uint8_t packet_type,
         HIP_IFEL(!(ctx->hadb_entry = hip_hadb_find_byhits(src_hit, dst_hit)),
                  -1, "Failed to retrieve hadb entry.\n");
     }
-    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             -1, "failed to retrieve state for signaling ports\n");
 
     /* Build and send the second update */
     HIP_IFEL(!(update_packet_to_send = build_update_message(ctx->hadb_entry, SIGNALING_SECOND_BEX_UPDATE, conn,  ctx)),
@@ -1148,7 +1152,7 @@ out_err:
 
 int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hip_packet_context *ctx,
                                             struct signaling_connection *recv_conn,
-                                            uint8_t flag_service_offer_signed,
+                                            uint16_t flag_service_offer_signed,
                                             struct signaling_flags_info_req   *flags_info_requested,
                                             uint8_t role /*Role of the end-point on receiving HIP_UPDATE*/)
 {
@@ -1176,14 +1180,13 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
 
     if (flag_service_offer_signed == OFFER_SIGNED) {
         signaling_build_response_to_service_offer_s(ctx, *recv_conn, sig_state, flags_info_requested);
-    } else {
+    } else if (flag_service_offer_signed == OFFER_UNSIGNED || flag_service_offer_signed == OFFER_SELECTIVE_SIGNED) {
         if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
             do {
                 if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                     HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                              -1, "Could not copy connection context\n");
-
-                    if (signaling_get_info_req_from_service_offer_u(&param_service_offer, flags_info_requested)) {
+                    if (signaling_get_info_req_from_service_offer(&param_service_offer, flags_info_requested)) {
                         HIP_DEBUG("Building of application context parameter failed.\n");
                         err = 0;
                     }
@@ -1203,12 +1206,12 @@ out_err:
     return err;
 }
 
-int signaling_update_need_for_encryption(const uint8_t packet_type,
-                                         const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_update_check_offer_type(const uint8_t packet_type,
+                                      const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
     HIP_DEBUG("Checking if need for encryption\n");
-    HIP_IFEL(signaling_i2_need_for_encryption(packet_type, ha_state, ctx),
+    HIP_IFEL(signaling_i2_check_offer_type(packet_type, ha_state, ctx),
              -1, "Coud check if encrypting endpoint information required or not\n");
 out_err:
     return err;
@@ -1263,7 +1266,7 @@ int signaling_update_handle_signed_service_offers(const uint8_t packet_type, con
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type == OFFER_SIGNED) {
         HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
                  "Could not handle service Service Offers for I2\n");
@@ -1284,22 +1287,18 @@ out_err:
     return err;
 }
 
-int signaling_i2_need_for_encryption(UNUSED const uint8_t packet_type,
-                                     UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_check_offer_type(UNUSED const uint8_t packet_type,
+                                  UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                          err;
-    int                          flag      = -1;
+    int                          err       = 0;
     struct signaling_hipd_state *sig_state = NULL;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
-    flag = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
-    if (flag) {
-        sig_state->flag_need_encryption = 1;
-    } else {
-        sig_state->flag_need_encryption = 0;
-    }
+    sig_state->flag_offer_type = signaling_hip_msg_contains_signed_service_offer(ctx->input_msg);
+
+    HIP_DEBUG("OFFER_TYPE = %u \n", sig_state->flag_offer_type);
 out_err:
     return err;
 }
@@ -1318,7 +1317,7 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type == OFFER_SIGNED) {
         signaling_hipd_state_initialize_offer_groups(sig_state);
         HIP_DEBUG("Inside group_Service_offers\n");
         for (j = 0; j < MAX_NUM_OFFER_GROUPS; j++) {
@@ -1363,7 +1362,7 @@ int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const u
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type == OFFER_SIGNED) {
         HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
 
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
@@ -1386,9 +1385,9 @@ int signaling_i2_handle_unsigned_service_offers(const uint8_t packet_type, const
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (!sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type != OFFER_SIGNED) {
         HIP_DEBUG("Message contains unsigned service offer. Handling them accordingly! \n");
-        HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_UNSIGNED), -1,
+        HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, sig_state->flag_offer_type), -1,
                  "Could not handle service Service Offers for I2\n");
     }
 out_err:
@@ -1498,7 +1497,7 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type == OFFER_SIGNED) {
         if (packet_type == HIP_UPDATE) {
             HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
                      -1, "This is no signaling update packet\n");
@@ -1519,15 +1518,16 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
         HIP_IFEL(signaling_build_service_ack_s(sig_state, ctx),
                  -1, "Could not build ack for signed service offer\n");
     }
+    HIP_DEBUG("Signation connection and service acknowledgement added \n");
 out_err:
     return err;
 }
 
-int signaling_r2_need_for_encryption(const uint8_t packet_type,
-                                     const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_check_offer_type(const uint8_t packet_type,
+                                  const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    HIP_IFEL(signaling_i2_need_for_encryption(packet_type, ha_state, ctx),
+    HIP_IFEL(signaling_i2_check_offer_type(packet_type, ha_state, ctx),
              -1, "Coud check if encrypting endpoint information required or not\n");
 out_err:
     return err;
@@ -1580,9 +1580,9 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
              "Could not reinitialize the service ack storage\n");
 
 
-    if (!sig_state->flag_need_encryption || packet_type != HIP_UPDATE) {
+    if (sig_state->flag_offer_type != OFFER_SIGNED || packet_type != HIP_UPDATE) {
         HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx, &new_conn,
-                                                         (sig_state->flag_need_encryption ? OFFER_SIGNED : OFFER_UNSIGNED),
+                                                         sig_state->flag_offer_type,
                                                          &flags_info_requested, INITIATOR), -1,
                  "Could not handle service offer\n");
         // Now adding the signaling connection to the HIP_R2 message
@@ -1603,8 +1603,9 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
     hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
 #endif
-    if (!sig_state->flag_need_encryption) {
+    if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+    } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
     } else {
         if (packet_type != HIP_UPDATE) {
             HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,

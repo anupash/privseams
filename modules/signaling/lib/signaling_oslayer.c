@@ -214,7 +214,6 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
 #endif
     }
 
-
     /*Sanity Checking*/
     if (strlen(sys_ctx->progname) > 0) {
         HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", sys_ctx->progname, sys_ctx->pid, sys_ctx->uid, sys_ctx->proto);
@@ -231,7 +230,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
 
         HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
     } else {
-        HIP_DEBUG("No suitable application found found!\n");
+        HIP_DEBUG("No suitable application found!\n");
         return -1;
     }
 out_err:

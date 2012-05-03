@@ -112,6 +112,8 @@ int hip_signaling_init(void)
                                  "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,
                                  "HIP_PARAM_SIGNALING_PORTS");
+    lmod_register_parameter_type(HIP_PARAM_SELECTIVE_HASH_LEAF,
+                                 "HIP_PARAM_SELECTIVE_HASH_LEAF");
 
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);
@@ -119,11 +121,11 @@ int hip_signaling_init(void)
     // FIXME Service offers are always unsigned. The function name suggests that there is also a signed counterpart, though.
     /*=================================== Handle HIP_R1 ===================================*/
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
-                                          &signaling_i2_need_for_encryption,
+                                          &signaling_i2_check_offer_type,
                                           OUTBOUND_I2_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
-                                          &signaling_i2_need_for_encryption,
+                                          &signaling_i2_check_offer_type,
                                           OUTBOUND_I2_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
@@ -199,7 +201,7 @@ int hip_signaling_init(void)
                                            HIP_STATE_NONE };
     for (unsigned i = 0; i < ARRAY_SIZE(mbox_service_I2_states); i++) {
         HIP_IFEL(hip_register_handle_function(HIP_I2, mbox_service_I2_states[i],
-                                              &signaling_r2_need_for_encryption,
+                                              &signaling_r2_check_offer_type,
                                               OUTBOUND_R2_CHECK_NEED_ENCRYPTION_PRIO),
                  -1, "Error on registering Signaling handle function.\n");
 
@@ -245,11 +247,11 @@ int hip_signaling_init(void)
 
     /*=================================== Handle HIP_UPDATE ===================================*/
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
-                                          &signaling_update_need_for_encryption,
+                                          &signaling_update_check_offer_type,
                                           OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
-                                          &signaling_update_need_for_encryption,
+                                          &signaling_update_check_offer_type,
                                           OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 

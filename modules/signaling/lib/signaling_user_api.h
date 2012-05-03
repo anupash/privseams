@@ -20,6 +20,6 @@ EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid);
 
 /* Every user supplied cryptography module should implement this function.
  * The HIPD calls this function to build the user's signature. */
-int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, const uint8_t sig_type);
+int signaling_user_api_sign(const uid_t uid, void *data, const int in_len, unsigned char *out_buf, const uint8_t sig_type);
 
 #endif /* HIP_HIPD_SIGNALING_USER_API_H */

@@ -792,11 +792,11 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  */
 int signaling_add_service_offer_to_msg(struct hip_common *msg,
                                        struct signaling_connection_flags *flags,
-                                       int service_offer_id,
+                                       int            service_offer_id,
                                        unsigned char *hash,
                                        UNUSED void   *mb_key,
                                        X509          *mb_cert,
-                                       uint8_t        flag_sign)
+                                       uint8_t       flag_sign)
 {
     int                                  err = 0;
     int                                  len;
@@ -809,64 +809,66 @@ int signaling_add_service_offer_to_msg(struct hip_common *msg,
     HIP_DEBUG("Adding service offer parameter according to the policy\n");
     /* build and append parameter */
     hip_set_param_type((struct hip_tlv_common *) &param_service_offer, HIP_PARAM_SIGNALING_SERVICE_OFFER);
-    param_service_offer.service_offer_id = htons(service_offer_id);
-    //TODO check for the following values to be assigned to the parameter types
+    param_service_offer.service_offer_id    = htons(service_offer_id);
+    param_service_offer.service_type        = flag_sign;
     param_service_offer.service_description = htonl(0);
-    param_service_offer.service_type        = htons(0);
 
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_OS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(HOST_INFO_OS);
+        param_service_offer.endpoint_info_req[idx] = HOST_INFO_OS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_KERNEL)) {
-        param_service_offer.endpoint_info_req[idx] = htons(HOST_INFO_KERNEL);
+        param_service_offer.endpoint_info_req[idx] = HOST_INFO_KERNEL;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_ID)) {
-        param_service_offer.endpoint_info_req[idx] = htons(HOST_INFO_ID);
+        param_service_offer.endpoint_info_req[idx] = HOST_INFO_ID;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_CERTS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(HOST_INFO_CERTS);
+        param_service_offer.endpoint_info_req[idx] = HOST_INFO_CERTS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_ID)) {
-        param_service_offer.endpoint_info_req[idx] = htons(USER_INFO_ID);
+        param_service_offer.endpoint_info_req[idx] = USER_INFO_ID;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_CERTS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(USER_INFO_CERTS);
+        param_service_offer.endpoint_info_req[idx] = USER_INFO_CERTS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_NAME)) {
-        param_service_offer.endpoint_info_req[idx] = htons(APP_INFO_NAME);
+        param_service_offer.endpoint_info_req[idx] = APP_INFO_NAME;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(APP_INFO_CONNECTIONS);
+        param_service_offer.endpoint_info_req[idx] = APP_INFO_CONNECTIONS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_QOS_CLASS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(APP_INFO_QOS_CLASS);
+        param_service_offer.endpoint_info_req[idx] = APP_INFO_QOS_CLASS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_REQUIREMENTS)) {
-        param_service_offer.endpoint_info_req[idx] = htons(APP_INFO_REQUIREMENTS);
+        param_service_offer.endpoint_info_req[idx] = APP_INFO_REQUIREMENTS;
         idx++;
     }
 
     HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
+    param_service_offer.service_info_len = idx;
 
-    /* Certificate hint if flag is set to create a signed service offer */
-    if (flag_sign) {
+    len = sizeof(param_service_offer.service_offer_id) +
+          sizeof(param_service_offer.service_type) + sizeof(param_service_offer.service_info_len) +
+          sizeof(param_service_offer.service_description) + idx * sizeof(uint8_t);
+
+    if (flag_sign == OFFER_SIGNED) {
+        /* Certificate hint if flag is set to create a signed service offer */
         cert_hint = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_cert, &cert_hint_len);
         memcpy(&param_service_offer.endpoint_info_req[idx], cert_hint, cert_hint_len);
         HIP_DEBUG("Certificate Hint copied\n");
         HIP_HEXDUMP("Certificate hint = ", cert_hint, HIP_AH_SHA_LEN);
+        len += HIP_AH_SHA_LEN;
     }
-
-    len = sizeof(struct signaling_param_service_offer)
-          - sizeof(uint16_t) * (MAX_NUM_INFO_ITEMS - idx) - sizeof(struct hip_tlv_common);
 
     //Computing the hash of the service offer and storing it in tuple
     hip_set_param_contents_len((struct hip_tlv_common *) &param_service_offer, len);
@@ -898,119 +900,118 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
                                          int service_offer_id,
                                          unsigned char *hash,
                                          void          *mb_key,
-                                         X509          *mb_cert)
+                                         X509          *mb_cert,
+                                         uint8_t        flag_sign)
 {
     int err        = 0;
     int tmp_len    = 0;
     int header_len = 0;
     ;
-    int                                    info_len              = 0;
-    int                                    skid_len              = 0;
-    int                                    idx                   = 0;
-    int                                    contents_len          = 0;
-    struct signaling_param_service_offer_s param_service_offer_s = { 0 };
-    struct signaling_param_service_offer_s tmp_service_offer_s   = { 0 };
-    uint8_t                                sha1_digest[HIP_AH_SHA_LEN];
-    uint8_t                               *signature = NULL;
-    unsigned int                           sig_len;
-    uint8_t                               *cert_hint = NULL;
-    unsigned int                           cert_hint_len;
-    uint8_t                               *tmp_ptr = (uint8_t *) &param_service_offer_s;
+    int                                  info_len            = 0;
+    int                                  skid_len            = 0;
+    int                                  idx                 = 0;
+    int                                  contents_len        = 0;
+    struct signaling_param_service_offer param_service_offer = { 0 };
+    struct signaling_param_service_offer tmp_service_offer   = { 0 };
+    uint8_t                              sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t                             *signature = NULL;
+    unsigned int                         sig_len;
+    uint8_t                             *cert_hint = NULL;
+    unsigned int                         cert_hint_len;
+    uint8_t                             *tmp_ptr = (uint8_t *) &param_service_offer;
 
     HIP_DEBUG("Adding service offer parameter according to the policy\n");
     /* build and append parameter */
-    hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer_s, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
-    tmp_service_offer_s.service_offer_id = htons(service_offer_id);
+    hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer, HIP_PARAM_SIGNALING_SERVICE_OFFER);
+    tmp_service_offer.service_offer_id = htons(service_offer_id);
     //TODO check for the following values to be assigned to the parameter types
-    tmp_service_offer_s.service_type        = htons(0);
-    tmp_service_offer_s.service_description = htonl(0);
-    tmp_service_offer_s.service_sig_algo    = HIP_DEFAULT_HIPFW_ALGO;
+    tmp_service_offer.service_type        = flag_sign;
+    tmp_service_offer.service_description = htonl(0);
+    tmp_service_offer.service_sig_algo    = HIP_DEFAULT_HIPFW_ALGO;
 
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_OS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_OS);
+        tmp_service_offer.endpoint_info_req[idx] = HOST_INFO_OS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_KERNEL)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_KERNEL);
+        tmp_service_offer.endpoint_info_req[idx] = HOST_INFO_KERNEL;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_ID)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_ID);
+        tmp_service_offer.endpoint_info_req[idx] = HOST_INFO_ID;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, HOST_INFO_CERTS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(HOST_INFO_CERTS);
+        tmp_service_offer.endpoint_info_req[idx] = HOST_INFO_CERTS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_ID)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(USER_INFO_ID);
+        tmp_service_offer.endpoint_info_req[idx] = USER_INFO_ID;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, USER_INFO_CERTS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(USER_INFO_CERTS);
+        tmp_service_offer.endpoint_info_req[idx] = USER_INFO_CERTS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_NAME)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_NAME);
+        tmp_service_offer.endpoint_info_req[idx] = APP_INFO_NAME;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_CONNECTIONS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_CONNECTIONS);
+        tmp_service_offer.endpoint_info_req[idx] = APP_INFO_CONNECTIONS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_QOS_CLASS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_QOS_CLASS);
+        tmp_service_offer.endpoint_info_req[idx] = APP_INFO_QOS_CLASS;
         idx++;
     }
     if (signaling_info_req_flag_check(&flags->flag_info_requests, APP_INFO_REQUIREMENTS)) {
-        tmp_service_offer_s.endpoint_info_req[idx] = htons(APP_INFO_REQUIREMENTS);
+        tmp_service_offer.endpoint_info_req[idx] = APP_INFO_REQUIREMENTS;
         idx++;
     }
     HIP_DEBUG("Number of Info Request Parameters in Service Offer = %d.\n", idx);
+    tmp_service_offer.service_info_len = idx;
     //print_hash(hash);
 
-    cert_hint                                 = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_cert, &cert_hint_len);
-    tmp_service_offer_s.service_cert_hint_len =  htons(cert_hint_len);
-    memcpy(tmp_service_offer_s.service_cert_hint, cert_hint, cert_hint_len);
+    cert_hint = (uint8_t *) signaling_extract_skey_ident_from_cert(mb_cert, &cert_hint_len);
+    memcpy(tmp_service_offer.service_cert_hint, cert_hint, cert_hint_len);
     skid_len = cert_hint_len;
     HIP_DEBUG(" Service cert hint copied successfully \n");
 
     if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
-        tmp_len = RSA_size((RSA *) mb_key);
-        sig_len = tmp_len;
+        sig_len = RSA_size((RSA *) mb_key);
     } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
-        tmp_len = ECDSA_size((EC_KEY *) mb_key);
-        sig_len = tmp_len;
+        sig_len = ECDSA_size((EC_KEY *) mb_key);
     }
 
-    signature = calloc(1, tmp_len);
+    signature = calloc(1, sig_len);
     HIP_IFEL(!signature, -1, "Malloc for signature failed.");
-    memset(signature, '\0', tmp_len);
-    tmp_service_offer_s.service_sig_len = tmp_len;
-    HIP_DEBUG("RSA_size determined to be  %d. This is the probabilistic length of signature \n", tmp_len);
+    memset(signature, '\0', sig_len);
+    tmp_service_offer.service_sig_len = sig_len;
 
-    header_len = sizeof(struct hip_tlv_common) + sizeof(tmp_service_offer_s.service_type) + sizeof(tmp_service_offer_s.service_offer_id) +
-                 sizeof(tmp_service_offer_s.service_description) + sizeof(tmp_service_offer_s.service_cert_hint_len) +
-                 sizeof(tmp_service_offer_s.service_sig_algo) + sizeof(tmp_service_offer_s.service_sig_len);
-    info_len = sizeof(uint16_t) * idx;
-
+    header_len = sizeof(struct hip_tlv_common) + sizeof(tmp_service_offer.service_offer_id) +
+                 sizeof(tmp_service_offer.service_type) + sizeof(tmp_service_offer.service_info_len) +
+                 sizeof(tmp_service_offer.service_description)/* +
+                                                               * sizeof(tmp_service_offer.service_sig_algo) + sizeof(tmp_service_offer.service_sig_len)*/;
+    info_len = sizeof(uint8_t) * idx;
+    tmp_len  = sizeof(tmp_service_offer.service_sig_algo) + sizeof(tmp_service_offer.service_sig_len) + sig_len;
 
     contents_len =  header_len + info_len + skid_len + tmp_len - sizeof(struct hip_tlv_common);
-    hip_set_param_contents_len((struct hip_tlv_common *) &tmp_service_offer_s, contents_len);
-    hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer_s, HIP_PARAM_SIGNALING_SERVICE_OFFER_S);
+    hip_set_param_contents_len((struct hip_tlv_common *) &tmp_service_offer, contents_len);
+    hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer, HIP_PARAM_SIGNALING_SERVICE_OFFER);
 
     HIP_DEBUG("Param contents length and type set contents_len = %d\n", contents_len);
 
-    memcpy(&param_service_offer_s, &tmp_service_offer_s, header_len);
+    memcpy(&param_service_offer, &tmp_service_offer, header_len);
     HIP_DEBUG("Signed Service Offer header len = %d \n", header_len);
-    memcpy(&param_service_offer_s.endpoint_info_req[0], &tmp_service_offer_s.endpoint_info_req[0], info_len);
+    memcpy(&param_service_offer.endpoint_info_req[0], &tmp_service_offer.endpoint_info_req[0], info_len);
     HIP_DEBUG("Signed Service Offer endpoint info len = %d  \n", info_len);
-    memcpy(&param_service_offer_s.endpoint_info_req[idx], &tmp_service_offer_s.service_cert_hint[0], skid_len);
+    memcpy(&param_service_offer.endpoint_info_req[idx], &tmp_service_offer.service_cert_hint[0], skid_len);
     HIP_DEBUG("Signed Service Offer service_cert hint len = %d \n", skid_len);
 
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer_s, header_len + info_len + skid_len, sha1_digest) < 0,
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, header_len + info_len + skid_len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
-    tmp_ptr += (header_len + info_len + skid_len);
+    tmp_ptr += (header_len + info_len + skid_len + sizeof(uint16_t));
 
     if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
         /* RSA_sign returns 0 on failure */
@@ -1030,7 +1031,7 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_HASH_SERVICE_OFFER);
     hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
 #endif
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer_s, contents_len, hash),
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, contents_len, hash),
              -1, "Could not build hash of the service offer \n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_MBOX_R1_HASH_SERVICE_OFFER, PERF_MBOX_I2_HASH_SERVICE_OFFER\n");
@@ -1038,8 +1039,8 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_HASH_SERVICE_OFFER);
 #endif
 
-    HIP_DEBUG("Param contents length = %d\n", hip_get_param_contents_len((struct hip_tlv_common *) &param_service_offer_s));
-    HIP_IFEL(hip_build_param(msg, &param_service_offer_s),
+    HIP_DEBUG("Param contents length = %d\n", hip_get_param_contents_len((struct hip_tlv_common *) &param_service_offer));
+    HIP_IFEL(hip_build_param(msg, &param_service_offer),
              -1, "Could not build notification parameter into message \n");
 
 out_err:
@@ -1196,6 +1197,89 @@ out_err:
     return err;
 }
 
+int signaling_verify_service_ack_selective_s(struct hip_common *msg,
+                                             struct hip_common **msg_buf,
+                                             unsigned char *stored_hash,
+                                             UNUSED RSA           *priv_key)
+{
+    int                          err = 0;
+    const struct hip_tlv_common *param;
+    struct signaling_service_ack ack = { 0 };
+//  struct hip_encrypted_aes_sha1 tmp_enc_param = { 0 };
+
+    int            param_len        = 0;
+    uint8_t       *tmp_service_ack  = NULL;
+    unsigned char *tmp_info_secrets = NULL;
+    unsigned char *dec_output       = NULL;
+    uint8_t       *tmp_ptr          = NULL;
+    //uint8_t       *enc_data         = NULL;
+    int      enc_data_len = 0;
+    uint16_t tmp_len      = 0;
+    uint16_t mask         = 0;
+    uint8_t *iv           = NULL;
+    //const uint8_t              *tmp_enc_ptr                 = NULL;
+    //uint16_t                    tmp_info_sec_len            = 0;
+
+    /*------------------ Find out the corresponding service acknowledgment --------------------*/
+    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
+        HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
+                param_len       = hip_get_param_contents_len(param);
+                enc_data_len    = param_len - sizeof(struct signaling_service_ack) - 16 * sizeof(uint8_t);
+                tmp_service_ack = malloc(param_len + sizeof(struct hip_tlv_common));
+                memcpy(tmp_service_ack, param, param_len + sizeof(struct hip_tlv_common));
+                /* Check if the service acknowledgment is a signed ack */
+                if (!signaling_check_if_service_ack_signed((struct signaling_param_service_ack *) tmp_service_ack)) {
+                    HIP_DEBUG("Service Ack in the HIP msg in not a signed service ack\n");
+                    return 0;
+                }
+                tmp_ptr = (uint8_t *) tmp_service_ack;
+                memcpy(&ack, (const struct signaling_service_ack *) (param + 1), sizeof(struct signaling_service_ack));
+                if (!memcmp(stored_hash, ack.service_offer_hash, HIP_AH_SHA_LEN)) {
+                    HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Checking for signed service ack\n");
+                    break;
+                } else {
+                    HIP_DEBUG("The stored hash and the acked hash do not match.\n");
+                    HIP_HEXDUMP("Stored hash: ", stored_hash, HIP_AH_SHA_LEN);
+                    HIP_HEXDUMP("Acked hash: ", ack.service_offer_hash, HIP_AH_SHA_LEN);
+                }
+                free(tmp_service_ack);
+            }
+        } while ((param = hip_get_next_param(msg, param)));
+
+        HIP_DEBUG("Packet content len = %d\n", enc_data_len);
+        HIP_HEXDUMP("Encrypted end point info secrets : ", (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) +
+                                                                        sizeof(struct hip_tlv_common) +
+                                                                        16 * sizeof(uint8_t)), enc_data_len);
+
+        /*--------- Extract the symmetric key information now ---------------*/
+
+        /*----------------- Allocate and build message buffer ----------------------*/
+        HIP_IFEL(!(*msg_buf = hip_msg_alloc()),
+                 -ENOMEM, "Out of memory while allocation memory for the notify packet\n");
+        hip_build_network_hdr(*msg_buf, HIP_UPDATE, mask, &msg->hits, &msg->hitr); /*Just giving some dummy Packet type*/
+
+        HIP_IFEL(signaling_put_decrypted_secrets_to_msg_buf(msg, msg_buf, dec_output,  tmp_len),
+                 -1, "Could not add the decrypted endpoint info to the msg buffer for further processing. \n");
+
+        hip_dump_msg(*msg_buf);
+        free(dec_output);
+        free(tmp_info_secrets);
+        free(tmp_service_ack);
+        return 1;
+    } else {
+        HIP_DEBUG("No Signed Service Offer from middleboxes. Nothing to do.\n");
+    }
+    HIP_DEBUG("None of the Service Acks matched.\n");
+    //return 0;
+out_err:
+    if (iv != NULL && !SERVICE_RESPONSE_ALGO_DH) {
+        free(iv);
+    }
+    return err;
+}
+
 /*
  * Verify the mbox signature on the signed service offer
  *
@@ -1307,8 +1391,8 @@ out_err:
  *
  * @return 0 on success
  */
-int signaling_get_info_req_from_service_offer_u(const struct signaling_param_service_offer *offer,
-                                                struct signaling_flags_info_req    *flags)
+int signaling_get_info_req_from_service_offer(const struct signaling_param_service_offer *offer,
+                                              struct signaling_flags_info_req    *flags)
 {
     int      err                = 0;
     int      num_req_info_items = 0;
@@ -1320,16 +1404,14 @@ int signaling_get_info_req_from_service_offer_u(const struct signaling_param_ser
     HIP_IFEL((hip_get_param_type(offer) != HIP_PARAM_SIGNALING_SERVICE_OFFER),
              -1, "Parameter has wrong type, Following parameters expected: %d \n", HIP_PARAM_SIGNALING_SERVICE_OFFER);
     HIP_DEBUG("Processing requests in the Service Offer parameter.\n");
-    num_req_info_items = (hip_get_param_contents_len(offer) - (sizeof(offer->service_offer_id) +
-                                                               sizeof(offer->service_type) +
-                                                               sizeof(offer->service_description) +
-                                                               HIP_AH_SHA_LEN)) / sizeof(uint16_t);
+
+    num_req_info_items = offer->service_info_len;
 
     /* number of service offers to be accepted, if more than the limit drop it */
     if (num_req_info_items > 0) {
         HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
         /*Processing the information requests in the service offer*/
-        while ((i < num_req_info_items) && ((tmp_info = ntohs(offer->endpoint_info_req[i])) != 0)) {
+        while ((i < num_req_info_items) && ((tmp_info = offer->endpoint_info_req[i]) != 0)) {
             HIP_DEBUG("Service Offer  = %u\n", tmp_info);
             switch (tmp_info) {
             case HOST_INFO_OS:
@@ -1512,11 +1594,12 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
         hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ctx->output_msg->hits, &ctx->output_msg->hitr); /*Just giving some dummy Packet type*/
 
         /* We use two flags below because one (tmp_flags) is used locally to build the dummy msg_buf for encryption
-         *  the other flag (flags) just collects all the information request over all service offers
-         *  Reason: as we set the flag for user signature in hipd_state using the flag we set here*/
-        HIP_IFEL(signaling_get_info_req_from_service_offer_u(&tmp_service_offer_u, &tmp_flags),  -1,
+         * the other flag (flags) just collects all the information request over all service offers
+         * Reason: as we set the flag for user signature in hipd_state using the flag (flags) we set here
+         */
+        HIP_IFEL(signaling_get_info_req_from_service_offer(&tmp_service_offer_u, &tmp_flags),  -1,
                  "Could not get info request from service offer.\n");
-        HIP_IFEL(signaling_get_info_req_from_service_offer_u(&tmp_service_offer_u, flags),  -1,
+        HIP_IFEL(signaling_get_info_req_from_service_offer(&tmp_service_offer_u, flags),  -1,
                  "Could not get info request from service offer.\n");
         HIP_IFEL(signaling_build_response_to_service_offer_u(msg_buf, conn, &sig_state->pending_conn_context,  &tmp_flags), -1,
                  "Could not building responses to the signed service offer\n");
@@ -1921,13 +2004,15 @@ int signaling_build_service_offer_u_from_offer_groups(struct signaling_param_ser
     HIP_ASSERT(offer_u);
 
     HIP_DEBUG("Now building the service offer unsigned param from the offer groups\n");
+    offer_u->service_info_len = group->num_info_req;
+    offer_u->service_type     = OFFER_UNSIGNED;
     for (i = 0; i < group->num_info_req; i++) {
         HIP_DEBUG("Info requested added from flag  = %u\n", group->info_requests[i]);
-        offer_u->endpoint_info_req[i] = htons(group->info_requests[i]);
+        offer_u->endpoint_info_req[i] = group->info_requests[i];
     }
     tmp_len =  sizeof(offer_u->service_offer_id) + sizeof(offer_u->service_type) +
-              sizeof(offer_u->service_description) + (group->num_info_req) * sizeof(uint16_t) +
-              sizeof(offer_u->service_cert_hint);
+              sizeof(offer_u->service_info_len) + sizeof(offer_u->service_description) +
+              (group->num_info_req) * sizeof(uint8_t) + sizeof(offer_u->service_cert_hint);
     hip_set_param_contents_len((struct hip_tlv_common *) offer_u, tmp_len);
     hip_set_param_type((struct hip_tlv_common *) offer_u, HIP_PARAM_SIGNALING_SERVICE_OFFER);
     return 0;
@@ -2089,6 +2174,15 @@ out_err:
     return err;
 }
 
+/*
+ * int signaling_build_hash_tree_from_hip_msg()
+ * {
+ *  int err = 0;
+ *
+ * out_err:
+ *  return err;
+ * }
+ */
 int signaling_get_connection_context(struct signaling_connection *conn,
                                      struct signaling_connection_context *ctx,
                                      uint8_t end_point_role)
@@ -2323,13 +2417,9 @@ int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx)
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                 HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                          -1, "Could not copy connection context\n");
-                num_req_info_items = (hip_get_param_contents_len(&param_service_offer) -
-                                      (sizeof(param_service_offer.service_offer_id) +
-                                       sizeof(param_service_offer.service_type) +
-                                       sizeof(param_service_offer.service_description) +
-                                       HIP_AH_SHA_LEN)) / sizeof(uint16_t);
+                num_req_info_items = param_service_offer.service_info_len;
                 while (i < num_req_info_items) {
-                    tmp_info = ntohs(param_service_offer.endpoint_info_req[i]);
+                    tmp_info = param_service_offer.endpoint_info_req[i];
                     if (tmp_info == APP_INFO_NAME || tmp_info == APP_INFO_QOS_CLASS ||
                         tmp_info == APP_INFO_REQUIREMENTS || tmp_info == APP_INFO_CONNECTIONS ||
                         tmp_info == USER_INFO_ID || tmp_info == USER_INFO_CERTS) {
@@ -2349,18 +2439,10 @@ out_err:
 /* FIXME This check seems too complicated!
  *       It may be worth adding a field to an offer that indicates the type
  *       (unauthed, signature-authed, DH-authed) and use this field here. */
-int signaling_check_if_service_offer_signed(const struct signaling_param_service_offer *param_service_offer)
+int signaling_check_service_offer_type(const struct signaling_param_service_offer *param_service_offer)
 {
-    const uint8_t *tmp_ptr = NULL;
-    uint16_t       tmp_len = 0;
-    unsigned char  temp_check[HIP_AH_SHA_LEN];
     HIP_ASSERT(param_service_offer);
-
-    tmp_len = hip_get_param_contents_len(param_service_offer);
-    tmp_ptr = (const uint8_t *) param_service_offer + (tmp_len + sizeof(struct hip_tlv_common) - HIP_AH_SHA_LEN);
-
-    memset(temp_check, 0, HIP_AH_SHA_LEN);
-    return memcmp(temp_check, tmp_ptr, HIP_AH_SHA_LEN) ? 1 : 0;
+    return param_service_offer->service_type;
 }
 
 int signaling_check_if_service_ack_signed(const struct signaling_param_service_ack *param_service_ack)
@@ -2392,10 +2474,11 @@ int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig
     X509       *mb_certificate = NULL;
 
 
-    header_len = sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
+    header_len = sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) +
+                 sizeof(offer->service_type) + sizeof(offer->service_info_len) +
                  sizeof(offer->service_description);
     cert_hint_len = HIP_AH_SHA_LEN;
-    info_len      = (hip_get_param_contents_len(offer) - (header_len + cert_hint_len - sizeof(struct hip_tlv_common)));
+    info_len      = offer->service_info_len * sizeof(uint8_t);
 
 
     tmp_ptr += (header_len + info_len);
@@ -2440,20 +2523,17 @@ int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state
     return err;
 }
 
+// For our implementation we will consider all the service offers of same type
+// No mixing of service offers
 int signaling_hip_msg_contains_signed_service_offer(struct hip_common *msg)
 {
-    int                          flag  = 0;
     const struct hip_tlv_common *param = NULL;
-
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
-            flag =  signaling_check_if_service_offer_signed((const struct signaling_param_service_offer *) (param));
-            if (flag) {
-                return 1;
-            }
+            return signaling_check_service_offer_type((const struct signaling_param_service_offer *) (param));
         } while ((param = hip_get_next_param(msg, param)));
     }
-    return 0;
+    return -1; // No service offers present
 }
 
 int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
@@ -2463,7 +2543,7 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
     int                                  err                = 0, i = 0, idx = 0;
     int                                  j                  = 0;
     int                                  num_req_info_items = 0;
-    uint16_t                             tmp_info           = 0;
+    uint8_t                              tmp_info           = 0;
     const struct hip_tlv_common         *param              = NULL;
     struct signaling_param_service_offer param_service_offer;
 
@@ -2472,17 +2552,14 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
             HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                      -1, "Could not copy connection context\n");
             i = 0;
-            if (signaling_check_if_service_offer_signed(&param_service_offer)) {
+            if (signaling_check_service_offer_type(&param_service_offer) == OFFER_SIGNED) {
                 if (signaling_check_if_mb_certificate_available(sig_state, &param_service_offer)) {
-                    num_req_info_items = (hip_get_param_contents_len(&param_service_offer) - (sizeof(param_service_offer.service_offer_id) +
-                                                                                              sizeof(param_service_offer.service_type) +
-                                                                                              sizeof(param_service_offer.service_description) +
-                                                                                              HIP_AH_SHA_LEN)) / sizeof(uint16_t);
+                    num_req_info_items = param_service_offer.service_info_len;
                     /* number of service offers to be accepted, if more than the limit drop it */
                     if (num_req_info_items > 0) {
                         HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
                         /*Processing the information requests in the service offer*/
-                        while ((i < num_req_info_items) && ((tmp_info = ntohs(param_service_offer.endpoint_info_req[i])) != 0)) {
+                        while ((i < num_req_info_items) && ((tmp_info = param_service_offer.endpoint_info_req[i]) != 0)) {
                             j = tmp_info;
                             for (idx = 0; idx < MAX_NUM_OFFER_GROUPS; idx++) {
                                 if (offer_groups[j].mbox[idx] ==  0) {

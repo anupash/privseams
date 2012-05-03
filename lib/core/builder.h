@@ -55,6 +55,11 @@ struct hip_srv {
     uint8_t             max_lifetime;
 };
 
+struct hip_hash_tree_leaf {
+    uint32_t      leaf_pos;
+    unsigned char leaf_hash[HIP_AH_SHA_LEN];
+};
+
 int hip_build_netlink_dummy_header(struct hip_common *);
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
 int hip_build_param_transform_order(struct hip_common *msg, int order);
@@ -65,9 +70,9 @@ void hip_build_network_hdr(struct hip_common *,
                            const struct in6_addr *);
 int hip_host_id_hits(struct hip_hadb_state *entry, struct hip_common *msg);
 int hip_build_generic_param(struct hip_common *msg,
-                                   const void *parameter_hdr,
-                                   hip_tlv_len param_hdr_size,
-                                   const void *contents);
+                            const void *parameter_hdr,
+                            hip_tlv_len param_hdr_size,
+                            const void *contents);
 int hip_build_param_contents(struct hip_common *,
                              const void *,
                              hip_tlv,
@@ -288,4 +293,7 @@ int hip_build_param_relay_from(struct hip_common *msg,
 int hip_build_param_from(struct hip_common *msg,
                          const struct in6_addr *addr);
 
+/* Utility functions hip signaling module*/
+int hip_build_hash_tree_from_msg(struct hip_common *msg,
+                                 unsigned char *root_hash_tree);
 #endif /* HIP_LIB_CORE_BUILDER_H */

@@ -87,6 +87,7 @@
 #define HIP_PARAM_SIGNALING_SERVICE_OFFER       62505
 #define HIP_PARAM_SIGNALING_SERVICE_OFFER_S     62506
 
+#define HIP_PARAM_SELECTIVE_HASH_LEAF           62507
 
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE              33001
@@ -140,7 +141,7 @@
  * Information items is a data structure to store values requested by the middlebox
  */
 #define MAX_INFO_LENGTH                             200
-#define MAX_NUM_INFO_ITEMS                          10
+#define MAX_NUM_INFO_ITEMS                          12
 #define MAX_NUM_SERVICE_OFFER_ACCEPTABLE            10
 #define MAX_SIZE_HOST_KERNEL                        24
 #define MAX_SIZE_HOST_OS                            24
@@ -870,11 +871,11 @@ struct signaling_param_app_info_requirements {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |       SERVICE_OFFER_ID        |          SERVICE_TYPE         |
+ * |       SERVICE_OFFER_ID        | SERVICE_TYPE  |   INFO_LEN    |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                          SERVICE_DESCRIPTION                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |       ENDPOINT_INFO_REQ       |              ...              |
+ * | EP_INFO_REQ   | EP_INFO_REQ   | EP_INFO_REQ   |   ...         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * /                              ...                              /
  * /                              ...                              /
@@ -883,6 +884,11 @@ struct signaling_param_app_info_requirements {
  * |                        SERVICE_CERT_HINT                      /
  * /                                                               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   SIG_ALGO    |    SIG_LEN    |                               /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+.                              /
+ * /                       SERVICE_SIGNATURE                       /
+ * /                              ...                              /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
 
@@ -890,10 +896,15 @@ struct signaling_param_service_offer {
     hip_tlv       type;
     hip_tlv_len   length;
     uint16_t      service_offer_id;
-    uint16_t      service_type;
+    uint8_t       service_type;
+    uint8_t       service_info_len;
     uint32_t      service_description;
-    uint16_t      endpoint_info_req[MAX_NUM_INFO_ITEMS];
+    uint8_t       endpoint_info_req[MAX_NUM_INFO_ITEMS];
     unsigned char service_cert_hint[HIP_AH_SHA_LEN];
+    /* To be used only in the case of selective signature*/
+    uint8_t       service_sig_algo;
+    uint8_t       service_sig_len;
+    unsigned char service_signature[HIP_MAX_RSA_KEY_LEN / 8];
 } __attribute__((packed));
 
 
@@ -1021,6 +1032,32 @@ struct signaling_param_service_nack {
     uint16_t      service_offer_id;
     uint16_t      nack_reason;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
+} __attribute__((packed));
+
+
+/*
+ *   Parameter for storing the hash of the portion of hip_msg when
+ *   endpoint secret is removed by the mbox after processing
+ *   All integers are in network byte order.
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |             Type              |             Length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                 POSITION OF THE LEAF IN THE HASH TREE         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                                                               /
+ * /                         LEAF_HASH                             /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+
+struct siganling_param_selective_hash_leaf {
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint32_t      leaf_pos;
+    unsigned char leaf_hash[HIP_AH_SHA_LEN];
 } __attribute__((packed));
 
 

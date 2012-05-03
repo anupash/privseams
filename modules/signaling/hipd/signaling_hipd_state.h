@@ -41,7 +41,7 @@ struct info_enc_parameter {
 struct service_offer_groups {
     uint16_t mbox[5];   /* List of middleboxes who have requested for this service offer. Service Offer Ids stored here */
     uint16_t num_mboxes;
-    uint16_t info_requests[5];
+    uint8_t  info_requests[5];
     uint16_t num_info_req;
 
     struct info_enc_parameter key_data;
@@ -60,7 +60,7 @@ struct signaling_hipd_state {
     struct signaling_connection        *pending_conn;
     struct signaling_connection_context pending_conn_context;
     uint8_t                             flag_user_sig;
-    uint8_t                             flag_need_encryption;
+    uint8_t                             flag_offer_type;
     void                               *service_ack[MAX_NUM_OFFER_GROUPS];
     uint16_t                            service_nack[MAX_NUM_OFFER_GROUPS]; /*Place holder for the service offer ids which will not be acked*/
     struct service_offer_groups        *offer_groups[MAX_NUM_OFFER_GROUPS];

@@ -13,6 +13,13 @@
 #include "modules/signaling/hipd/signaling_hipd_state.h"
 #include "modules/signaling/hipd/signaling.h"
 
+
+enum service_offer_type {
+    OFFER_SIGNED           = 0,
+    OFFER_UNSIGNED         = 1,
+    OFFER_SELECTIVE_SIGNED = 2
+};
+
 /* Builders for on the wire parameters */
 int signaling_build_param_signaling_connection(struct hip_common *output_msg,
                                                const struct signaling_connection *conn);
@@ -51,7 +58,8 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *output_msg,
                                          int service_offer_id,
                                          unsigned char *hash,
                                          void          *mb_key,
-                                         X509          *mb_cert);
+                                         X509          *mb_cert,
+                                         uint8_t        flag_sign);
 int signaling_verify_service_ack_u(struct hip_common *output_msg,
                                    unsigned char *stored_hash);
 int signaling_verify_service_ack_s(struct hip_common *msg,
@@ -59,6 +67,10 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
                                    unsigned char *stored_hash,
                                    RSA           *priv_key,
                                    unsigned char *dh_shared_key);
+int signaling_verify_service_ack_selective_s(struct hip_common *msg,
+                                             struct hip_common **msg_buf,
+                                             unsigned char *stored_hash,
+                                             RSA           *priv_key);
 int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
                                        uint8_t *signature, uint8_t sig_len);
 
@@ -115,11 +127,11 @@ int signaling_get_update_type(const struct hip_common *output_msg);
 int signaling_get_free_message_space(const struct hip_common *output_msg, struct hip_hadb_state *ha);
 int signaling_get_verified_user_context(struct signaling_connection_context *ctx);
 X509 *signaling_get_mbox_cert_from_offer_id(struct signaling_hipd_state *sig_state, uint16_t service_offer_id);
-int signaling_get_info_req_from_service_offer_u(const struct signaling_param_service_offer *offer,
-                                                struct signaling_flags_info_req    *flags);
+int signaling_get_info_req_from_service_offer(const struct signaling_param_service_offer *offer,
+                                              struct signaling_flags_info_req    *flags);
 int signaling_check_if_user_info_req(struct hip_packet_context *ctx);
 int signaling_check_if_app_or_user_info_req(struct hip_packet_context *ctx);
-int signaling_check_if_service_offer_signed(const struct signaling_param_service_offer *param_service_offer);
+int signaling_check_service_offer_type(const struct signaling_param_service_offer *param_service_offer);
 int signaling_check_if_service_ack_signed(const struct signaling_param_service_ack *param_service_ack);
 int signaling_check_if_offer_in_nack_list(struct signaling_hipd_state *sig_state, uint16_t service_offer_id);
 int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig_state,

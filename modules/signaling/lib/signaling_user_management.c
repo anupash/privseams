@@ -201,7 +201,7 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
     X509_NAME                *uname = NULL;
-    struct userdb_user_entry *new   = NULL;
+    struct userdb_user_entry *new = NULL;
 
     /* Check if we already have that user */
     if (signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname)) {
@@ -874,8 +874,13 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     hip_zero_msg_checksum(msg);
     HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
     hip_set_msg_total_len(msg, hash_range_len);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
-             -1, "Could not build message digest \n");
+
+    HIP_IFEL(hip_build_hash_tree_from_msg((struct hip_common *) msg, (unsigned char *) sha1_digest), -1,
+             "Building of the sha1 digest from hash-tree failed");
+/*
+ *  HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, hash_range_len, sha1_digest),
+ *           -1, "Could not build message digest \n");
+ */
 
 
     switch (user_ctx->rdata.algorithm) {
