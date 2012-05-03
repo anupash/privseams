@@ -982,9 +982,11 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     HIP_DEBUG(" Service cert hint copied successfully \n");
 
     if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
-        sig_len = RSA_size((RSA *) mb_key);
+        sig_len                            = RSA_size((RSA *) mb_key);
+        tmp_service_offer.service_sig_algo = HIP_HI_RSA;
     } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
-        sig_len = ECDSA_size((EC_KEY *) mb_key);
+        sig_len                            = ECDSA_size((EC_KEY *) mb_key);
+        tmp_service_offer.service_sig_algo = HIP_HI_ECDSA;
     }
 
     signature = calloc(1, sig_len);
@@ -1014,7 +1016,11 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
 
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, header_len + info_len + skid_len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
-    tmp_ptr += (header_len + info_len + skid_len + sizeof(uint16_t));
+    tmp_ptr += (header_len + info_len + skid_len);
+    memcpy(tmp_ptr, &tmp_service_offer.service_sig_algo, sizeof(uint8_t));
+    tmp_ptr += sizeof(uint8_t);
+    memcpy(tmp_ptr, &tmp_service_offer.service_sig_len, sizeof(uint8_t));
+    tmp_ptr += sizeof(uint8_t);
 
     if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
         /* RSA_sign returns 0 on failure */
@@ -1437,6 +1443,61 @@ int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t v
         break;
     }
 out_err:
+    return err;
+}
+
+int signaling_verify_mb_sig_selective_s(struct signaling_param_service_offer *offer)
+{
+    int           err        = 0;
+    EVP_PKEY     *pub_key    = NULL;
+    X509         *cert       = NULL;
+    int           header_len = 0;
+    int           info_len   = 0;
+    unsigned char certificate_hint[HIP_AH_SHA_LEN];
+    uint16_t      cert_hint_len = 0;
+    uint8_t      *signature     = NULL;
+    uint8_t       sig_len;
+    uint8_t      *tmp_ptr  = (uint8_t *) offer;
+    const char   *dir_path = "/usr/local/etc/hip/trusted_mb_certs";
+
+    header_len = sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
+                 sizeof(offer->service_info_len) + sizeof(offer->service_description);
+    info_len      = (offer->service_info_len) * sizeof(uint8_t);
+    cert_hint_len = HIP_AH_SHA_LEN;
+
+    tmp_ptr += header_len + info_len;
+    memcpy(certificate_hint, tmp_ptr, HIP_AH_SHA_LEN);
+    HIP_HEXDUMP("Certificate hint = ", certificate_hint, HIP_AH_SHA_LEN);
+
+    /* ========== Locate the mbox certificate from store and load the certificate into memory ===============*/
+    HIP_IFEL(signaling_locate_mb_certificate(&cert, dir_path, certificate_hint, cert_hint_len),
+             -1, "Could not locate Middlebox certificate\n");
+
+    /*---- Fetch the certificate and the public key corresponding to the mbox -----*/
+    HIP_IFEL(!(pub_key = X509_get_pubkey(cert)), -1,
+             "Could not find the mbox public key\n");
+
+    tmp_ptr += cert_hint_len + sizeof(uint8_t);
+    memcpy(&sig_len, tmp_ptr, sizeof(uint8_t));
+    tmp_ptr  += sizeof(uint8_t);
+    signature = malloc(sig_len);
+    memcpy(signature, tmp_ptr, sig_len);
+    HIP_HEXDUMP("Signature received in the service offer = ", signature, sig_len);
+
+    /*---- Verifying mbox signature  ----*/
+    HIP_DEBUG("Verifying mbox signature in the Selectively Signed Service Offer parameter.\n");
+    if (!signaling_verify_service_signature(cert, (uint8_t *) offer, header_len + info_len + cert_hint_len,
+                                            (uint8_t *) signature, sig_len)) {
+        HIP_DEBUG("Service Signature verified Successfully\n");
+        err = 1;
+        goto out_err;
+    } else {
+        HIP_DEBUG("Service Signature did not verify Successfully\n");
+        err = -1;
+        goto out_err;
+    }
+out_err:
+    free(signature);
     return err;
 }
 
@@ -3165,7 +3226,7 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
     uint8_t entries_merged[MAX_NUM_OFFER_GROUPS] = {  0, 0, 0, 0, 0,
                                                       0, 0, 0, 0, 0 };
 
-    i    = 0;
+    i = 0;
     int m = 0;
     for (k = 0; k < MAX_NUM_OFFER_GROUPS; k++) {
         if (offer_groups[k].info_requests[0] != 0 && offer_groups[k].num_mboxes > 0 && offer_groups[k].num_info_req > 0 && !entries_merged[k]) {

@@ -227,8 +227,9 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
         if ((sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state"))) {
             /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
-            if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
-                signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, OFFER_UNSIGNED);
+            if (sig_state->flag_offer_type == OFFER_UNSIGNED ||
+                sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+                signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, sig_state->flag_offer_type);
             }
         } else {
             HIP_DEBUG("No hipd state found, could not build HIP Update\n");
@@ -1309,6 +1310,11 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
                 if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                     HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                              -1, "Could not copy connection context\n");
+                    /* Verify Service Signature for Selective Signing*/
+                    if (flag_service_offer_signed == OFFER_SELECTIVE_SIGNED) {
+                        HIP_IFEL((signaling_verify_mb_sig_selective_s(&param_service_offer) != 1),
+                                 -1, " Error verifying service signature on selective ack\n");
+                    }
                     if (signaling_get_info_req_from_service_offer(&param_service_offer, flags_info_requested)) {
                         HIP_DEBUG("Building of application context parameter failed.\n");
                         err = 0;
@@ -1329,6 +1335,39 @@ out_err:
     return err;
 }
 
+int signaling_update_check_packet(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
+                                  struct hip_packet_context *ctx)
+{
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_UPDATE\n");
+    hip_perf_start_benchmark(perf_set, PERF_UPDATE);
+#endif
+
+    /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
+     * the implementation MAY reply with an ICMP Parameter Problem. */
+    HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
+
+    /* The HMAC parameter covers the same parts of a packet as the PK signature.
+     * Therefore, we can omit the signature check at the end-host. */
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
+        HIP_IFEL(signaling_verify_packet_selective_hmac(ctx->input_msg,
+                                                        &ctx->hadb_entry->hip_hmac_in,
+                                                        HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
+                 "Verification of selective hmac was not successful\n");
+    } else {
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                        &ctx->hadb_entry->hip_hmac_in),
+                 -1,
+                 "HMAC validation on UPDATE failed.\n");
+    }
+out_err:
+    ctx->error = err;
+    return err;
+}
+
 int signaling_update_check_offer_type(const uint8_t packet_type,
                                       const uint32_t ha_state, struct hip_packet_context *ctx)
 {
@@ -1345,6 +1384,7 @@ int signaling_update_add_diffie_hellman(UNUSED const uint8_t packet_type, UNUSED
 {
     int err         = 0;
     int update_type = -1;
+
     if (packet_type == HIP_UPDATE) {
         HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
                  -1, "This is no signaling update packet\n");

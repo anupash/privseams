@@ -126,7 +126,9 @@ union hip_locator_info_addr {
 } __attribute__((packed));
 
 uint32_t hip_update_get_out_id(const struct update_state *const state);
-
+int hip_check_update_packet(const uint8_t packet_type,
+                            const uint32_t ha_state,
+                            struct hip_packet_context *ctx);
 int hip_trigger_update(struct hip_hadb_state *const hadb_entry);
 
 enum update_types hip_classify_update_type(const struct hip_common *const hip_msg);
@@ -135,7 +137,3 @@ int hip_update_init(void);
 
 
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */
-
-
-
-

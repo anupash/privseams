@@ -1039,47 +1039,6 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
              "No entry in host association database when receiving R2." \
              "Dropping.\n");
 
-    /* Verify HMAC */
-/*
- * #ifdef CONFIG_HIP_PERFORMANCE
- *  HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
- *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
- * #endif
- *  if (ctx->hadb_entry->is_loopback) {
- *      HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
- *                                       &ctx->hadb_entry->hip_hmac_out,
- *                                       ctx->hadb_entry->peer_pub),
- *               -1,
- *               "HMAC validation on R2 failed.\n");
- *  } else {
- *      HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
- *                                       &ctx->hadb_entry->hip_hmac_in,
- *                                       ctx->hadb_entry->peer_pub),
- *               -1,
- *               "HMAC validation on R2 failed.\n");
- *  }
- * #ifdef CONFIG_HIP_PERFORMANCE
- *  HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
- *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
- * #endif
- */
-
-    /* Signature validation */
-/*
- * #ifdef CONFIG_HIP_PERFORMANCE
- *  HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
- *  hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
- * #endif
- *  HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
- *                                   ctx->input_msg),
- *           -EINVAL,
- *           "R2 signature verification failed.\n");
- * #ifdef CONFIG_HIP_PERFORMANCE
- *  HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
- *  hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
- * #endif
- */
-
 out_err:
     if (err) {
         ctx->error = err;

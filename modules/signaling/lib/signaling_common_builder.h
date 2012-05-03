@@ -137,6 +137,7 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                                              RSA           *priv_key);
 int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
                                        uint8_t *signature, uint8_t sig_len);
+int signaling_verify_mb_sig_selective_s(struct signaling_param_service_offer *offer);
 int signaling_verify_packet_selective_hmac(struct hip_common *msg,
                                            const struct hip_crypto_key *crypto_key,
                                            const hip_tlv parameter_type);

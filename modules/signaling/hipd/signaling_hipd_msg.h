@@ -121,6 +121,9 @@ int signaling_r2_check_offer_type(const uint8_t packet_type,
 int signaling_r2_group_service_offers(const uint8_t packet_type,
                                       const uint32_t ha_state,
                                       struct hip_packet_context *ctx);
+int signaling_update_check_packet(UNUSED const uint8_t packet_type,
+                                  UNUSED const uint32_t ha_state,
+                                  struct hip_packet_context *ctx);
 int signaling_update_check_offer_type(const uint8_t packet_type,
                                       const uint32_t ha_state,
                                       struct hip_packet_context *ctx);

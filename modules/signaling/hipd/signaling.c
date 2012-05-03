@@ -16,6 +16,7 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_user_management.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
+#include "modules/update/hipd/update.h"
 
 #define INBOUND_CHECK_APPINFO_PRIO              29000
 #define INBOUND_CHECK_USERINFO_PRIO             29100
@@ -323,6 +324,24 @@ int hip_signaling_init(void)
 
 
     /*=================================== Handle HIP_UPDATE ===================================*/
+    /* Handle signatures in our extension differently*/
+    // Unregister the handler from update module
+    HIP_IFEL(hip_unregister_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                            &hip_check_update_packet),
+             -1, "Could not unregister hip_check_update_packet()\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                            &hip_check_update_packet),
+             -1, "Could not unregister hip_check_update_packet()\n");
+    // Register our handler
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_update_check_packet,
+                                          20101),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_update_check_packet,
+                                          20101),
+             -1, "Error on registering Signaling handle function.\n");
+
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
                                           &signaling_update_check_offer_type,
                                           OUTBOUND_UPDATE_CHECK_NEED_ENCRYPTION_PRIO),
@@ -378,6 +397,21 @@ int hip_signaling_init(void)
                                           &signaling_update_add_signed_service_ack_and_sig_conn,
                                           OUTBOUND_UPDATE_ADD_SERVCICE_ACK_S_PRIO),
              -1, "Could not register handler signaling_i2_add_signed_service_ack_and_sig_conn()\n");
+
+    HIP_IFEL(hip_unregister_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                            &hip_mac_and_sign_handler),
+             -1, "Could not unregister hip_check_update_packet()\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                            &hip_mac_and_sign_handler),
+             -1, "Could not unregister hip_check_update_packet()\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT,
+                                          &signaling_mac_and_sign_handler,
+                                          29901),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,
+                                          &signaling_mac_and_sign_handler,
+                                          29901),
+             -1, "Error on registering UPDATE handle function.\n");
 
     /* Addition of user signature has to handled differently than before as now we use the update module*/
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED,

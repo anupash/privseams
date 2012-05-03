@@ -283,9 +283,9 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-static int hip_check_update_packet(UNUSED const uint8_t packet_type,
-                                   UNUSED const uint32_t ha_state,
-                                   struct hip_packet_context *ctx)
+int hip_check_update_packet(UNUSED const uint8_t packet_type,
+                            UNUSED const uint32_t ha_state,
+                            struct hip_packet_context *ctx)
 {
     int err = 0;
 
@@ -456,8 +456,8 @@ static int hip_set_active_addresses(UNUSED const uint8_t packet_type,
  * @return zero on success, or negative error value on error.
  */
 UNUSED static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
-                               UNUSED const uint32_t ha_state,
-                               struct hip_packet_context *ctx)
+                                      UNUSED const uint32_t ha_state,
+                                      struct hip_packet_context *ctx)
 {
     enum update_types update_type = UNKNOWN_UPDATE_PACKET;
 
@@ -851,10 +851,10 @@ int hip_update_init(void)
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
 /*HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_R2_SENT,
-                                          &hip_update_ipsec_sa,
-                                          30500),
-           -1, "Error on registering UPDATE handle function.\n"); */
+ *                                        HIP_STATE_R2_SENT,
+ *                                        &hip_update_ipsec_sa,
+ *                                        30500),
+ *         -1, "Error on registering UPDATE handle function.\n"); */
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
                                           &hip_update_change_state,
@@ -931,11 +931,11 @@ int hip_update_init(void)
                                           &hip_send_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
- /*   HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_ESTABLISHED,
-                                          &hip_update_ipsec_sa,
-                                          30500),
-             -1, "Error on registering UPDATE handle function.\n"); */
+    /*   HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+     *                                       HIP_STATE_ESTABLISHED,
+     *                                       &hip_update_ipsec_sa,
+     *                                       30500),
+     *          -1, "Error on registering UPDATE handle function.\n"); */
 
     HIP_IFEL(hip_user_register_handle(HIP_MSG_MANUAL_UPDATE_PACKET,
                                       &hip_update_manual_update,
