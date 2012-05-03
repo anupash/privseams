@@ -84,6 +84,9 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
                                                           int *ret);
 
 /* Utility functions*/
-DH *signaling_hipfw_generate_mb_dh_key(const int group_id);
+int signaling_hipfw_get_dh_shared_key(struct hip_common *msg, DH *dh_key,
+                                      unsigned char **dh_shared_key,
+                                      uint16_t *dh_shared_len);
+int signaling_hipfw_generate_mb_dh_key(const int group_id, DH **dh_key);
 DH *signaling_hipfw_get_mb_dh_key(void);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

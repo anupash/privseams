@@ -89,6 +89,7 @@ static unsigned char dh_priv_key[] = {
 static uint16_t dh_priv_key_len = 192;
 static DH      *dh              = NULL;
 
+#define SERVICE_RESPONSE_ALGO_DH    1
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -96,11 +97,12 @@ static DH      *dh              = NULL;
  * for later use. */
 int do_conntrack = 0;
 
-static uint16_t next_service_offer_id;
+static uint16_t       next_service_offer_id;
+static unsigned char *signaling_dh_shared_key_r     = NULL;
+static uint16_t       signaling_dh_shared_key_r_len = 1024;
 
 /* Paths to configuration elements */
 const char *default_policy_file = { "/usr/local/etc/hip/signaling_firewall_policy.cfg" };
-
 const char *path_do_conntracking = { "do_conntracking" };
 const char *path_key_file = { "/usr/local/etc/hip/mb-key.pem" };
 const char *path_cert_file = { "/usr/local/etc/hip/mb-cert.pem" };
@@ -228,7 +230,8 @@ int signaling_hipfw_init(const char *policy_file)
     /* Init firewall identity */
     HIP_IFEL(signaling_hipfw_feedback_init(path_key_file, path_cert_file), -1, "Problem installing the middlebox key and certificate.\n");
 
-    dh =  signaling_hipfw_generate_mb_dh_key(DH_GROUP_ID);
+    signaling_hipfw_generate_mb_dh_key(DH_GROUP_ID, &dh);
+    HIP_ASSERT(dh);
 out_err:
     return err;
 }
@@ -329,11 +332,14 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
     HIP_IFEL(signaling_hipfw_initialize_connection_contexts_and_flags(common, &new_conn, &ctx_in, &ctx_out, &ctx_flags, &ret),
              -1, "Could not initialize the contexts and flags successfully\n");
 
+    HIP_IFEL(signaling_hipfw_get_dh_shared_key(common, dh,
+                                               &signaling_dh_shared_key_r,
+                                               &signaling_dh_shared_key_r_len), -1,
+             "Could not get the mb shared key using DH public value from responder\n");
     /* Step b) */
     HIP_IFEL(signaling_hipfw_check_policy_and_create_service_offer(common, tuple, other_dir, ctx, &ctx_in, &ctx_out,
                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
              -1, "Could not check policy and add service offers\n");
-    ;
 
 #ifdef DEMO_MODE
     if (ret) {
@@ -381,7 +387,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct signaling_connection_flags  *ctx_flags     = NULL;
     struct policy_tuple                *matched_tuple = NULL;
     struct signaling_cdb_entry         *old_conn;
-    struct hip_common                  *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
+    struct hip_common                  *msg_buf       = NULL; /* It will be used in building the HIP Encrypted param*/
+    unsigned char                      *dh_shared_key = NULL;
+    uint16_t                            dh_shared_len = 1024;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -433,6 +441,12 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
 #endif
         if (strlen((char *) tuple->offer_hash) > 0) {
+            /*Generating the DH shared key*/
+            HIP_IFEL(signaling_hipfw_get_dh_shared_key(common, dh,
+                                                       &dh_shared_key,
+                                                       &dh_shared_len), -1,
+                     "Could not get the mb shared key using DH public value from responder\n");
+
             if (signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
@@ -443,7 +457,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                          "Could not check and verify the info in response with the policy\n");
-            } else if (signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key())) {
+            } else if (dh_shared_len > 0 && dh_shared_key != NULL &&
+                       signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash,
+                                                      signaling_hipfw_feedback_get_mb_key(),
+                                                      dh_shared_key)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
@@ -472,6 +489,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         }
     }
 
+    free(dh_shared_key);
     memset(tuple->offer_hash, '\0', HIP_AH_SHA_LEN);
     if (!ret) {
         free(matched_tuple);
@@ -614,7 +632,10 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
-                } else if (signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash, signaling_hipfw_feedback_get_mb_key())) {
+                } else if (signaling_dh_shared_key_r != NULL &&
+                           signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash,
+                                                          signaling_hipfw_feedback_get_mb_key(),
+                                                          signaling_dh_shared_key_r)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
@@ -646,6 +667,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     memset(tuple->offer_hash, '\0', HIP_AH_SHA_LEN);
+    free(signaling_dh_shared_key_r);
+    signaling_dh_shared_key_r_len = 1024;
     if (!ret) {
         free(ctx_flags);
         free(matched_tuple);
@@ -1189,27 +1212,28 @@ out_err:
     return err;
 }
 
-DH *signaling_hipfw_generate_mb_dh_key(const int group_id)
+int signaling_hipfw_generate_mb_dh_key(UNUSED const int group_id, DH **dh_key)
 {
     int err;
     DH *temp_dh;
-    DH *dh_key;
 
     BIGNUM *priv_key = NULL;
 
     temp_dh  = hip_generate_dh_key(DH_GROUP_ID);
     priv_key = BN_bin2bn(dh_priv_key, dh_priv_key_len, NULL);
 
-    dh_key    = DH_new();
-    dh_key->g = BN_new();
-    dh_key->p = BN_new();
+    *dh_key      = DH_new();
+    (*dh_key)->g = BN_new();
+    (*dh_key)->p = BN_new();
 
-    dh_key->p = temp_dh->p;
-    dh_key->g = temp_dh->g;
+    /* Put generator corresponding to group_id into dh->g */
+    BN_copy(dh->p, temp_dh->p);
+    BN_copy(dh->g, temp_dh->g);
+
     /*Setting the private key so that the corresponding public key can be generated*/
-    dh_key->priv_key = priv_key;
+    (*dh_key)->priv_key = priv_key;
 
-    if ((err = DH_generate_key(dh_key)) != 1) {
+    if ((err = DH_generate_key(*dh_key)) != 1) {
         HIP_ERROR("DH key generation failed (%d).\n", err);
         exit(1);
     }
@@ -1218,7 +1242,7 @@ DH *signaling_hipfw_generate_mb_dh_key(const int group_id)
     BIO *bio_out;
     bio_out = BIO_new_fp(stdout, BIO_NOCLOSE);
     HIP_DEBUG("DH parameters\n");
-    DHparams_print(bio_out, dh_key);
+    DHparams_print(bio_out, *dh_key);
     BIO_free(bio_out);
 
     uint8_t *buffer  = NULL;
@@ -1226,22 +1250,60 @@ DH *signaling_hipfw_generate_mb_dh_key(const int group_id)
     bufsize = hip_get_dh_size(group_id);
     buffer  = calloc(1, bufsize);
     HIP_DEBUG("Size of the public key : %d\n", bufsize);
-    hip_encode_dh_publickey(dh_key, buffer, bufsize);
+    hip_encode_dh_publickey(*dh_key, buffer, bufsize);
     HIP_HEXDUMP("Public Key :", buffer, bufsize);
     free(buffer);
 
     uint8_t *buffer1  = NULL;
     int      bufsize1 = 0;
-    bufsize1 = BN_num_bytes(dh_key->priv_key);
+    bufsize1 = BN_num_bytes((*dh_key)->priv_key);
     buffer1  = calloc(1, bufsize1);
     HIP_DEBUG("Size of the private key : %d\n", bufsize1);
-    err = bn2bin_safe(dh_key->priv_key, buffer1, bufsize1);
+    err = bn2bin_safe((*dh_key)->priv_key, buffer1, bufsize1);
     HIP_HEXDUMP("Private Key :", buffer1, bufsize1);
     free(buffer1);
     HIP_DEBUG("========================================================================\n");
 
     DH_free(temp_dh);
-    return dh_key;
+    return 1;
+}
+
+int signaling_hipfw_get_dh_shared_key(struct hip_common *msg,
+                                      DH *dh_key,
+                                      unsigned char **dh_shared_key,
+                                      uint16_t *dh_shared_len)
+{
+    int                        err                         = 0;
+    struct hip_diffie_hellman *dhf                         = NULL;
+    uint8_t                    sha1_digest[HIP_AH_SHA_LEN] = { 0 };
+    int                        tmp_len                     = 0;
+    HIP_ASSERT(dh_key);
+    HIP_IFEL(!(*dh_shared_key = calloc(1, *dh_shared_len)),
+             -ENOMEM,
+             "Error on allocating memory for Diffie-Hellman shared key.\n");
+    HIP_IFEL(!(dhf = hip_get_param_readwrite(msg, HIP_PARAM_DIFFIE_HELLMAN)),
+             -ENOENT, "No Diffie-Hellman parameter found.\n");
+
+    /* If the message has two DH keys, select (the stronger, usually) one. */
+    const struct hip_dh_public_value *dhpv = hip_dh_select_key(dhf);
+    tmp_len = hip_gen_dh_shared_key(dh_key, dhpv->public_value,
+                                    ntohs(dhpv->pub_len), (unsigned char *) *dh_shared_key, *dh_shared_len);
+    if (tmp_len < 0) {
+        HIP_ERROR("Could not create shared secret\n");
+        return -1;
+    } else {
+        *dh_shared_len = tmp_len;
+    }
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, *dh_shared_key, *dh_shared_len, sha1_digest),
+             -1, "Could not build message digest \n");
+
+    *dh_shared_len = 16;
+    memcpy(*dh_shared_key, sha1_digest, *dh_shared_len);
+    memset((*dh_shared_key + *dh_shared_len), 0, 1024 - *dh_shared_len);
+
+    HIP_HEXDUMP("DH Shared key : ", *dh_shared_key, *dh_shared_len);
+out_err:
+    return err;
 }
 
 DH *signaling_hipfw_get_mb_dh_key()

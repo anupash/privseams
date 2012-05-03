@@ -978,6 +978,7 @@ struct signaling_param_service_ack {
     uint16_t      service_offer_id;
     uint16_t      service_option;
     unsigned char service_offer_hash[HIP_AH_SHA_LEN];
+    uint8_t       iv[16];
     // The field below is used only when building acknowledgment for signed service offer
     //unsigned char end_point_info_secret[HIP_MAX_RSA_KEY_LEN / 8];
     /*

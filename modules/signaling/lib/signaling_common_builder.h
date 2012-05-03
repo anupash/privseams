@@ -56,8 +56,9 @@ int signaling_verify_service_ack_u(struct hip_common *output_msg,
                                    unsigned char *stored_hash);
 int signaling_verify_service_ack_s(struct hip_common *msg,
                                    struct hip_common **msg_buf,
-                                   unsigned char     *stored_hash,
-                                   RSA               *priv_key);
+                                   unsigned char *stored_hash,
+                                   RSA           *priv_key,
+                                   unsigned char *dh_shared_key);
 int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
                                        uint8_t *signature, uint8_t sig_len);
 
@@ -145,7 +146,12 @@ int signaling_locate_mb_certificate(X509 **mb_certificate, const char *dir_path,
                                     unsigned char *certificate_hint, uint16_t cert_hint_len);
 int generate_key_for_hip_encrypt(unsigned char *key, int *key_len, unsigned char *key_hint);
 int signaling_generate_shared_key_from_dh_shared_secret(uint8_t *shared_key,
-                                                        uint8_t *shared_key_length,
+                                                        int     *shared_key_length,
                                                         const uint8_t *peer_key,
                                                         const int peer_key_len);
+int signaling_generate_shared_secret_from_mbox_dh(const int groupid,
+                                                  const uint8_t *peer_key,
+                                                  size_t peer_len,
+                                                  uint8_t *dh_shared_key,
+                                                  size_t outlen);
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

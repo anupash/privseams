@@ -145,10 +145,4 @@ int signaling_update_group_service_offers(const uint8_t packet_type,
 
 int signaling_hipd_state_cleanup(const uint8_t packet_type,
                                  const uint32_t ha_state, struct hip_packet_context *ctx);
-
-int signaling_generate_shared_secret_from_mbox_dh(const int groupid,
-                                                  const uint8_t *peer_key,
-                                                  size_t peer_len,
-                                                  uint8_t *dh_shared_key,
-                                                  size_t outlen);
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/
