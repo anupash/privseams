@@ -1125,6 +1125,51 @@ out_err:
     return err;
 }
 
+int signaling_mac_and_sign_handler(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
+                                   struct hip_packet_context *ctx)
+{
+    int                          err = 0;
+    struct signaling_hipd_state *sig_state;
+
+
+    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             0, "failed to retrieve state for signaling\n");
+
+    if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+    } else {
+        if (hip_mac_and_sign_packet(ctx->output_msg, ctx->hadb_entry)) {
+            HIP_ERROR("failed to sign and mac outbound packet\n");
+            return -1;
+        }
+    }
+
+out_err:
+    return err;
+}
+
+int signaling_hmac2_and_sign(const uint8_t packet_type, const uint32_t ha_state,
+                             struct hip_packet_context *ctx)
+{
+    int                          err = 0;
+    struct signaling_hipd_state *sig_state;
+
+    HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             0, "failed to retrieve state for signaling\n");
+
+    if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+    } else {
+        if (hip_hmac2_and_sign(packet_type, ha_state, ctx)) {
+            HIP_ERROR("failed to sign and mac outbound packet\n");
+            return -1;
+        }
+    }
+
+out_err:
+    return err;
+}
+
 int signaling_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int                          err = 0;

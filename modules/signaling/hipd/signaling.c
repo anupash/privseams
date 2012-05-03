@@ -118,7 +118,6 @@ int hip_signaling_init(void)
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);
 
-    // FIXME Service offers are always unsigned. The function name suggests that there is also a signed counterpart, though.
     /*=================================== Handle HIP_R1 ===================================*/
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
                                           &signaling_i2_check_offer_type,
@@ -170,6 +169,25 @@ int hip_signaling_init(void)
              -1, "Error on registering handle function "
                  "hip_create_i2_encrypt_host_id_and_setup_inbound_ipsec() HIP_STATE_I2_SENT\n");
 
+    /* Handle signatures in our extension differently*/
+    // Unregister the handler from hipd_init
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                            &hip_mac_and_sign_handler),
+             -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
+    HIP_IFEL(hip_unregister_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                            &hip_mac_and_sign_handler),
+             -1, "Could not unregister signaling_i2_handle_unsigned_service_offers()\n");
+    // Register our handler
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
+                                          &signaling_mac_and_sign_handler,
+                                          45001),
+             -1, "Error on registering Signaling handle function.\n");
+
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,
+                                          &signaling_mac_and_sign_handler,
+                                          45001),
+             -1, "Error on registering Signaling handle function.\n");
+
     /* Add user signature to I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
                                           &signaling_add_user_signature,
@@ -181,7 +199,7 @@ int hip_signaling_init(void)
                                           OUTBOUND_I2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
-    /* Add user signature to I2 */
+    /* Cleanup hipd state after building I2 */
     HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,
                                           &signaling_hipd_state_cleanup,
                                           OUTBOUND_I2_HIPD_STATE_CLEANUP_PRIO),
@@ -218,6 +236,22 @@ int hip_signaling_init(void)
             HIP_ERROR("Error on registering signaling handle function.\n");
             return -1;
         }
+
+        /* Handle signatures in our extension differently*/
+        // Unregister the handler from hipd_init
+        if (hip_unregister_handle_function(HIP_I2, mbox_service_I2_states[i],
+                                           &hip_hmac2_and_sign)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+        if (hip_register_handle_function(HIP_I2,
+                                         mbox_service_I2_states[i],
+                                         &signaling_hmac2_and_sign,
+                                         42001)) {
+            HIP_ERROR("Error on registering signaling handle function.\n");
+            return -1;
+        }
+
 
         /* Add user signature to R2 */
         if (hip_register_handle_function(HIP_I2,

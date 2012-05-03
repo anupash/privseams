@@ -90,7 +90,7 @@ static uint16_t dh_priv_key_len = 192;
 static DH      *dh              = NULL;
 
 #define SERVICE_RESPONSE_ALGO_DH    1
-#define SERVICE_OFFER_TYPE          OFFER_UNSIGNED
+#define SERVICE_OFFER_TYPE          OFFER_SIGNED
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
