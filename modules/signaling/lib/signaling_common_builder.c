@@ -1364,6 +1364,9 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
 //const uint8_t              *tmp_enc_ptr                 = NULL;
 //uint16_t                    tmp_info_sec_len            = 0;
 
+    const uint8_t *tmp_ptr = NULL;
+    uint16_t       tmp_len = 0;
+
     HIP_DEBUG("Inside verification of selectively signed ack\n");
     /*------------------ Find out the corresponding service acknowledgment --------------------*/
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
@@ -1379,6 +1382,15 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                 }
                 if (!memcmp(stored_hash, ack->service_offer_hash, HIP_AH_SHA_LEN)) {
                     HIP_DEBUG("Hash in the Service ACK matches the hash of Service Offer. Found unsigned service ack\n");
+
+                    tmp_ptr  = (const uint8_t *) ack;
+                    tmp_ptr +=  sizeof(ack->service_offer_id) +
+                               sizeof(ack->service_option) + sizeof(ack->service_offer_hash);
+                    HIP_DEBUG("tmp_ptr set\n");
+                    tmp_len = hip_get_param_contents_len(param) - (sizeof(ack->service_offer_id) +
+                                                                   sizeof(ack->service_option) + sizeof(ack->service_offer_hash));
+                    HIP_DEBUG("tmp_len = %u\n", tmp_len);
+                    HIP_HEXDUMP("Info remove list = ", tmp_ptr, tmp_len);
                     return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
@@ -1848,6 +1860,65 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
                 // print_hash(ack.service_offer_hash);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
                 int len_contents = sizeof(ack.service_offer_id) + sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
+                hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
+                hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
+
+                /* Append the parameter to the message */
+                if (hip_build_param(output_msg, (struct hip_tlv_common *) &ack)) {
+                    HIP_ERROR("Failed to acknowledge the service offer to the message.\n");
+                    return -1;
+                }
+            }
+        } while ((param = hip_get_next_param(input_msg, param)));
+    }
+out_err:
+    return err;
+}
+
+/*
+ * Building Acknowledgment for selectively signed service offer
+ */
+int signaling_build_service_ack_selective_s(struct hip_common *input_msg,
+                                            struct hip_common *output_msg,
+                                            struct signaling_hipd_state *sig_state)
+{
+    int                                  err = 0, i = 0, found = 0;
+    struct signaling_param_service_offer param_service_offer;
+    const struct hip_tlv_common         *param;
+    struct signaling_param_service_ack   ack          = { 0 };
+    uint8_t                             *tmp_ptr      = NULL;
+    uint16_t                             tmp_len      = 0;
+    uint16_t                             tmp_offer_id = 0;
+
+    if ((param = hip_get_param(input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
+                         -1, "Could not copy connection context\n");
+
+                ack.service_offer_id = param_service_offer.service_offer_id;
+                ack.service_option   = htons(0);
+                /*Generate the hash of the service offer*/
+                HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer), ack.service_offer_hash),
+                         -1, "Could not build hash of the service offer \n");
+
+                tmp_ptr  = (uint8_t *) &ack;
+                tmp_ptr +=  sizeof(struct hip_tlv_common) + sizeof(ack.service_offer_id) +
+                           sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
+                tmp_offer_id = ntohs(param_service_offer.service_offer_id);
+                found        = 0;
+
+                for (i = 0; i < MAX_NUM_OFFER_GROUPS && sig_state->offer_groups[i] != NULL; i++) {
+                    if (sig_state->offer_groups[i]->mbox[0] == tmp_offer_id) {
+                        tmp_len = sizeof(uint8_t) * (sig_state->offer_groups[i]->num_info_req);
+                        memcpy(tmp_ptr, &sig_state->offer_groups[i]->info_requests[0], tmp_len);
+                        break;
+                    }
+                }
+
+                // print_hash(ack.service_offer_hash);
+                HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
+                int len_contents = sizeof(ack.service_offer_id) + sizeof(ack.service_option) + sizeof(ack.service_offer_hash) + tmp_len;
                 hip_set_param_contents_len((struct hip_tlv_common *) &ack, len_contents);
                 hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_SIGNALING_SERVICE_ACK);
 
@@ -3183,7 +3254,8 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
             HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                      -1, "Could not copy connection context\n");
             i = 0;
-            if (signaling_check_service_offer_type(&param_service_offer) == OFFER_SIGNED) {
+            if (signaling_check_service_offer_type(&param_service_offer) == OFFER_SIGNED ||
+                signaling_check_service_offer_type(&param_service_offer) == OFFER_SELECTIVE_SIGNED) {
                 if (signaling_check_if_mb_certificate_available(sig_state, &param_service_offer)) {
                     num_req_info_items = param_service_offer.service_info_len;
                     /* number of service offers to be accepted, if more than the limit drop it */
@@ -3270,6 +3342,39 @@ int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offe
         }
     }
 
+    return err;
+}
+
+int signaling_remove_list_info_req(struct service_offer_groups *offer_groups,
+                                   struct signaling_hipd_state *sig_state)
+{
+    int                         err            = 0, i = 0;
+    int                         k              = 0, found = 0;
+    struct service_offer_groups temp_offer_grp = { { 0 } };
+
+    for (k = 0; k < MAX_NUM_OFFER_GROUPS; k++) {
+        if (offer_groups[k].info_requests[0] != 0 && offer_groups[k].mbox[0] != 0 &&
+            offer_groups[k].num_mboxes == 1 && offer_groups[k].num_info_req == 1) {
+            found = 0;
+            for (i = 0; i < MAX_NUM_OFFER_GROUPS && sig_state->offer_groups[i] != NULL; i++) {
+                if (sig_state->offer_groups[i]->mbox[0] == offer_groups[k].mbox[0]) {
+                    found                                                                   = 1;
+                    sig_state->offer_groups[i]->info_requests[offer_groups[k].num_info_req] = offer_groups[k].info_requests[0];
+                    sig_state->offer_groups[i]->num_info_req++;
+                    break;
+                }
+            }
+            if (i < MAX_NUM_OFFER_GROUPS && sig_state->offer_groups[i] == NULL && !found) {
+                sig_state->offer_groups[i] = malloc(sizeof(struct service_offer_groups));
+                memcpy(sig_state->offer_groups[i], &temp_offer_grp, sizeof(struct service_offer_groups));
+
+                sig_state->offer_groups[i]->info_requests[0] = offer_groups[k].info_requests[0];
+                sig_state->offer_groups[i]->mbox[0]          = offer_groups[k].mbox[0];
+                sig_state->offer_groups[i]->num_info_req     = offer_groups[k].num_info_req;
+                sig_state->offer_groups[i]->num_mboxes       = offer_groups[k].num_mboxes;
+            }
+        }
+    }
     return err;
 }
 

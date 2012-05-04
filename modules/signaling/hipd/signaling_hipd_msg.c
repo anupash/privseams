@@ -1586,6 +1586,34 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
             }
             HIP_DEBUG("=============================================================\n");
         }
+    } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+        signaling_hipd_state_initialize_offer_groups(sig_state);
+        HIP_DEBUG("Inside group_Service_offers\n");
+        for (j = 0; j < MAX_NUM_OFFER_GROUPS; j++) {
+            offer_groups[j] = temp_offer_grp;
+        }
+
+        /* Information requests into individual place holders. We will merge the groups later */
+        signaling_split_info_req_to_groups(sig_state, offer_groups, ctx);
+        HIP_DEBUG("Service_offers split into groups\n");
+
+        /* Build the info remove list to be used when building selective
+         * service acknowledgement*/
+        signaling_remove_list_info_req(offer_groups, sig_state);
+        HIP_DEBUG("Info req remove list built.\n");
+
+        /*Now print the offer groups*/
+        for (j = 0; sig_state->offer_groups[j] != NULL; j++) {
+            HIP_DEBUG("=============================================================\n");
+            for (k = 0; k < sig_state->offer_groups[j]->num_info_req; k++) {
+                HIP_DEBUG("Info to be removed =  %d at j = %d\n", sig_state->offer_groups[j]->info_requests[k], j);
+            }
+
+            for (k = 0; k < sig_state->offer_groups[j]->num_mboxes; k++) {
+                HIP_DEBUG("Info to be removed by %d\n", sig_state->offer_groups[j]->mbox[k]);
+            }
+            HIP_DEBUG("=============================================================\n");
+        }
     }
 
 out_err:
@@ -1703,13 +1731,25 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     }
 
     // Now Add the service acknowledgements
-    if (flag == OFFER_UNSIGNED || flag == OFFER_SELECTIVE_SIGNED) {
+    if (flag == OFFER_UNSIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
         hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
 #endif
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+    } else if (flag == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+#endif
+        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state), -1, "Building Acknowledgment to Service Offer failed");
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
         hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
@@ -1933,7 +1973,7 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
     if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
         HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
     } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
-        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state), -1, "Building Acknowledgment to Service Offer failed");
     } else {
         if (packet_type != HIP_UPDATE) {
             HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,

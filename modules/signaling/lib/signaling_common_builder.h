@@ -78,6 +78,9 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context   *ctx
                                                 struct signaling_flags_info_req    *flags);
 int signaling_build_service_ack_u(struct hip_common *input_msg,
                                   struct hip_common *output_msg);
+int signaling_build_service_ack_selective_s(struct hip_common *input_msg,
+                                            struct hip_common *output_msg,
+                                            struct signaling_hipd_state *sig_state);
 int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                                   struct hip_packet_context *ctx,
                                   const uint8_t *mb_dh_pub_key,
@@ -180,6 +183,8 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
                                        struct hip_packet_context *ctx);
 int signaling_merge_info_req_to_similar_groups(struct service_offer_groups *offer_groups,
                                                struct signaling_hipd_state *sig_state);
+int signaling_remove_list_info_req(struct service_offer_groups *offer_groups,
+                                   struct signaling_hipd_state *sig_state);
 int signaling_add_offer_to_nack_list(struct signaling_hipd_state *sig_state,
                                      uint16_t service_offer_id);
 char *signaling_concatenate_paths(const char *str1, char *str2);

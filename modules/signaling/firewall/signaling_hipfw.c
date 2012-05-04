@@ -630,7 +630,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
             hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
 #endif
             if (strlen((char *) tuple->offer_hash) > 0) {
-                if (signaling_verify_service_ack_u(common, tuple->offer_hash)) {
+                if (SERVICE_OFFER_TYPE == OFFER_UNSIGNED &&
+                    signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
@@ -640,7 +641,20 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
-                } else if (signaling_dh_shared_key_r != NULL &&
+                } else if (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED &&
+                           signaling_verify_service_ack_selective_s(common, &msg_buf, tuple->offer_hash,
+                                                                    signaling_hipfw_feedback_get_mb_key())) {
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
+#endif
+                    HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
+                             "Could not initialize the connection context from the message\n");
+                    HIP_IFEL(signaling_hipfw_check_policy_and_verify_info_response(common, tuple, ctx, &ctx_in,
+                                                                                   ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
+                             "Could not check and verify the info in response with the policy\n");
+                } else if (SERVICE_OFFER_TYPE == OFFER_SIGNED &&
+                           signaling_dh_shared_key_r != NULL &&
                            signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash,
                                                           signaling_hipfw_feedback_get_mb_key(),
                                                           signaling_dh_shared_key_r)) {
