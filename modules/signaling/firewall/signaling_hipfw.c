@@ -197,11 +197,12 @@ int signaling_hipfw_init(const char *policy_file)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_ENCRYPTED,             "HIP_PARAM_SIGNALING_ENCRYPTED");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER,         "HIP_PARAM_SIGNALING_SERVICE_OFFER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_OFFER_S,       "HIP_PARAM_SIGNALING_SERVICE_OFFER_S");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,         "HIP_PARAM_SIGNALING_SERVICE_ACK");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_HMAC, "HIP_PARAM_SIGNALING_SELECTIVE_HMAC");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE, "HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SERVICE_ACK,           "HIP_PARAM_SIGNALING_SERVICE_ACK");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_HMAC,        "HIP_PARAM_SIGNALING_SELECTIVE_HMAC");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE,   "HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,        "HIP_PARAM_SIGNALING_USER_SIGNATURE");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTS,                 "HIP_PARAM_SIGNALING_PORTS");
+    lmod_register_parameter_type(HIP_PARAM_SELECTIVE_HASH_LEAF,             "HIP_PARAM_SELECTIVE_HASH_LEAF");
 
     signaling_cdb_init();
     HIP_IFEL(signaling_user_mgmt_init(), -1, "Could not initialize user database. \n");
@@ -393,6 +394,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     struct hip_common                  *msg_buf       = NULL; /* It will be used in building the HIP Encrypted param*/
     unsigned char                      *dh_shared_key = NULL;
     uint16_t                            dh_shared_len = 1024;
+    int                                 offset_list[10];
+    int                                 offset_list_len = 0;
 
     //This tuple is different
     struct tuple *other_dir = NULL;
@@ -478,7 +481,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                          "Could not check and verify the info in response with the policy\n");
             } else if (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED &&
                        signaling_verify_service_ack_selective_s(common, &msg_buf, tuple->offer_hash,
-                                                                signaling_hipfw_feedback_get_mb_key())) {
+                                                                signaling_hipfw_feedback_get_mb_key(),
+                                                                offset_list, &offset_list_len)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK);
@@ -529,6 +533,10 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
              -1, "Could not check policy and add service offers\n");
 
+    if (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED &&
+        !signaling_remove_params_from_hip_msg(common, offset_list, &offset_list_len)) {
+        ctx->modified = 1;
+    }
 #ifdef DEMO_MODE
     printf("\033[22;32mAccepted I2/U2 packet\033[22;37m\n\n\033[01;37m");
 #endif
@@ -574,7 +582,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     struct in6_addr                    hit_i;
     struct in6_addr                    hit_r;
     struct hip_common                 *msg_buf = NULL;  /* It will be used in building the HIP Encrypted param*/
-
+    int                                offset_list[10];
+    int                                offset_list_len = 0
+    ;
 #ifdef DEMO_MODE
     printf("\033[22;34mReceived R2/U3 packet\033[22;37m\n\033[22;37m");
 #endif
@@ -643,7 +653,8 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                              "Could not check and verify the info in response with the policy\n");
                 } else if (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED &&
                            signaling_verify_service_ack_selective_s(common, &msg_buf, tuple->offer_hash,
-                                                                    signaling_hipfw_feedback_get_mb_key())) {
+                                                                    signaling_hipfw_feedback_get_mb_key(),
+                                                                    offset_list, &offset_list_len)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK);
@@ -686,6 +697,11 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                 ret = 1;
             }
         }
+    }
+
+    if (SERVICE_OFFER_TYPE == OFFER_SELECTIVE_SIGNED &&
+        !signaling_remove_params_from_hip_msg(common, offset_list, &offset_list_len)) {
+        ctx->modified = 1;
     }
 
     memset(tuple->offer_hash, '\0', HIP_AH_SHA_LEN);

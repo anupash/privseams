@@ -792,6 +792,42 @@ int signaling_build_param_user_auth_req_s(struct hip_common *msg,
  *  return build_param_host_info_request(msg, network_id, HIP_PARAM_SIGNALING_HOST_INFO_REQ_U, flags);
  * }
  */
+int signlaing_insert_service_offer_in_hip_msg(struct hip_common *msg,
+                                              struct signaling_param_service_offer *offer)
+{
+    int                    err      = 0;
+    struct hip_tlv_common *param    = NULL;
+    uint8_t               *tmp_ptr  = (uint8_t *) msg;
+    uint16_t               tmp_len  = 0;
+    uint16_t               orig_len = hip_get_msg_total_len(msg);
+    uint8_t               *buffer;
+    uint16_t               buf_len = 0;
+
+    while ((param = hip_get_next_param_readwrite(msg, param)) && hip_get_param_type(param) != HIP_PARAM_SELECTIVE_HASH_LEAF) {
+        ;
+    }
+    if (param) {
+        HIP_IFEL(orig_len + hip_get_param_total_len(offer) > HIP_MAX_PACKET, -1,
+                 "Cannot add the service offer as the packet size is already large\n")
+        tmp_len = ((uint8_t *) param - (uint8_t *) msg);
+        buf_len = orig_len - tmp_len;
+        buffer  = malloc(buf_len);
+        memcpy(buffer, (uint8_t *) param, buf_len);
+        hip_set_msg_total_len(msg, tmp_len);
+        HIP_IFEL(hip_build_param(msg, offer), -1,
+                 "Could not build service offer to the message\n");
+        tmp_ptr += hip_get_msg_total_len(msg);
+        memcpy(tmp_ptr, buffer, buf_len);
+        hip_set_msg_total_len(msg, hip_get_msg_total_len(msg) + buf_len);
+    } else {
+        HIP_DEBUG("No need to insert");
+        HIP_IFEL(hip_build_param(msg, offer), -1,
+                 "Could not build service offer to the message\n");
+    }
+out_err:
+    return err;
+}
+
 int signaling_add_service_offer_to_msg(struct hip_common *msg,
                                        struct signaling_connection_flags *flags,
                                        int            service_offer_id,
@@ -1049,8 +1085,13 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
 #endif
 
     HIP_DEBUG("Param contents length = %d\n", hip_get_param_contents_len((struct hip_tlv_common *) &param_service_offer));
-    HIP_IFEL(hip_build_param(msg, &param_service_offer),
-             -1, "Could not build notification parameter into message \n");
+    HIP_IFEL(signlaing_insert_service_offer_in_hip_msg(msg, &param_service_offer), -1,
+             "Could not build notification parameter into message \n");
+
+/*
+ *  HIP_IFEL(hip_build_param(msg, &param_service_offer),
+ *           -1, "Could not build notification parameter into message \n");
+ */
 
 out_err:
     return err;
@@ -1124,7 +1165,7 @@ int signaling_verify_packet_selective_hmac(struct hip_common *msg,
     hip_zero_msg_checksum(msg);
 
     len = (const uint8_t *) hmac - (const uint8_t *) msg;
-    hip_set_msg_total_len(msg, len);
+    //hip_set_msg_total_len(msg, len);
 
     signaling_build_hash_tree_from_msg(msg, &concat_of_leaves, &len_concat_of_leaves);
 
@@ -1140,6 +1181,64 @@ int signaling_verify_packet_selective_hmac(struct hip_common *msg,
     hip_set_msg_checksum(msg, orig_checksum);
 
     return 0;
+}
+
+/**
+ * calculate and create a HMAC2 parameter that includes also a host id
+ * which is not included in the message
+ *
+ * @param msg a HIP control message from the HMAC should be calculated from
+ * @param msg_copy an extra, temporary buffer allocated by the caller
+ * @param host_id the host id parameter that should be included in the calculated
+ *                HMAC value
+ * @return zero for success and negative on failure
+ */
+static int signaling_hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
+                                                 struct hip_common *msg_copy,
+                                                 struct hip_host_id *host_id)
+{
+    const struct hip_tlv_common *param = NULL;
+    int                          err   = 0;
+
+    uint8_t *buffer;
+    uint16_t buf_len  = 0;
+    uint16_t orig_len = hip_get_msg_total_len(msg);
+    uint16_t tmp_len  = 0;
+    uint8_t *tmp_ptr  = NULL;
+
+    HIP_HEXDUMP("host id", host_id,
+                hip_get_param_total_len(host_id));
+
+    memcpy(msg_copy, msg, sizeof(struct hip_common));
+    hip_set_msg_total_len(msg_copy, 0);
+    hip_zero_msg_checksum(msg_copy);
+
+    /* copy parameters to a temporary buffer to calculate
+     * pseudo-hmac (includes the host id) */
+    while ((param = hip_get_next_param(msg, param)) &&
+           hip_get_param_type(param) < HIP_PARAM_HMAC2) {
+        HIP_IFEL(hip_build_param(msg_copy, param),
+                 -1,
+                 "Failed to build param\n");
+    }
+
+    // we need to rebuild the compressed parameter format for host ids
+    HIP_IFEL(hip_build_param_host_id(msg_copy, host_id), -1,
+             "Failed to append pseudo host id to R2\n");
+    tmp_ptr = (uint8_t *) msg_copy + hip_get_msg_total_len(msg_copy);
+
+    if (param) {
+        tmp_len = ((const uint8_t *) param - (const uint8_t *) msg);
+        buf_len = orig_len - tmp_len;
+        buffer  = malloc(buf_len);
+        memcpy(buffer, (const uint8_t *) param, buf_len);
+
+        memcpy(tmp_ptr, buffer, buf_len);
+        hip_set_msg_total_len(msg_copy, hip_get_msg_total_len(msg_copy) + buf_len);
+    }
+
+out_err:
+    return err;
 }
 
 /**
@@ -1167,7 +1266,7 @@ int signaling_verify_packet_selective_hmac2(struct hip_common *msg,
         return -ENOMEM;
     }
 
-    HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
+    HIP_IFEL(signaling_hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
              "Pseudo hmac2 pkt failed\n");
 
     HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC)), -ENOMSG,
@@ -1340,10 +1439,12 @@ out_err:
 int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                                              UNUSED struct hip_common **msg_buf,
                                              unsigned char *stored_hash,
-                                             UNUSED RSA           *priv_key)
+                                             UNUSED RSA    *priv_key,
+                                             int           *offset_list,
+                                             int           *offset_list_len)
 {
     int                                 err = 0;
-    const struct hip_tlv_common        *param;
+    struct hip_tlv_common              *param;
     const struct signaling_service_ack *ack = NULL;
 //  struct hip_encrypted_aes_sha1 tmp_enc_param = { 0 };
 
@@ -1364,18 +1465,20 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
 //const uint8_t              *tmp_enc_ptr                 = NULL;
 //uint16_t                    tmp_info_sec_len            = 0;
 
-    const uint8_t *tmp_ptr = NULL;
-    uint16_t       tmp_len = 0;
+    const uint8_t *tmp_ptr         = NULL;
+    uint16_t       tmp_len         = 0;
+    uint8_t        info_remove[10] = { 0 };
+    uint8_t        info_rem_len    = 0;
 
     HIP_DEBUG("Inside verification of selectively signed ack\n");
     /*------------------ Find out the corresponding service acknowledgment --------------------*/
-    if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
+    if ((param = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
         HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
         do {
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_ACK) {
                 ack = (const struct signaling_service_ack *) (param + 1);
                 /* Check if the service acknowledgment is a signed or an unsgined service ack */
-                if (signaling_check_if_service_ack_signed((const struct signaling_param_service_ack *) param)) {
+                if (signaling_check_if_service_ack_signed((struct signaling_param_service_ack *) param)) {
                     HIP_DEBUG("Service Ack in the HIP msg in not an unsigned service ack\n");
                     err = 0;
                     goto out_err;
@@ -1391,6 +1494,14 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                                                                    sizeof(ack->service_option) + sizeof(ack->service_offer_hash));
                     HIP_DEBUG("tmp_len = %u\n", tmp_len);
                     HIP_HEXDUMP("Info remove list = ", tmp_ptr, tmp_len);
+                    info_rem_len = tmp_len;
+                    memcpy(info_remove, tmp_ptr, tmp_len);
+
+                    offset_list[tmp_len] = (uint8_t *) param - (uint8_t *) msg;
+                    *offset_list_len     = tmp_len + 1;
+
+                    signaling_build_offset_list_to_remove_params(msg, offset_list, offset_list_len,
+                                                                 info_remove, &info_rem_len);
                     return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
@@ -1398,12 +1509,13 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                     HIP_HEXDUMP("Acked hash: ", ack->service_offer_hash, HIP_AH_SHA_LEN);
                 }
             }
-        } while ((param = hip_get_next_param(msg, param)));
+        } while ((param = hip_get_next_param_readwrite(msg, param)));
 
         return 1;
     } else {
         HIP_DEBUG("No Signed Service Offer from middleboxes. Nothing to do.\n");
     }
+
     HIP_DEBUG("None of the Service Acks matched.\n");
     //return 0;
 out_err:
@@ -2377,16 +2489,16 @@ int signaling_build_hash_tree_from_msg(struct hip_common *msg,
                                        unsigned char **concat_of_leaves,
                                        unsigned int   *len_concat_of_leaves)
 {
-    int                        err                 = 0, i = 0;
+    int                        err                 = 0, i = 0, origlen = 0;
     struct hip_tlv_common     *param               = NULL;
     uint8_t                   *tmp_ptr             = NULL;
     uint16_t                   tmp_len             = 0;
-    uint32_t                   tmp_pos             = 0;
+    uint16_t                   tmp_pos             = 0;
     uint16_t                   num_leaf            = 1; /*header of the msg is already counted*/
     struct hip_hash_tree_leaf *leaves              = NULL;
     struct hip_hash_tree_leaf  tmp_leaf            = { 0 };
     uint32_t                   HIP_PARAM_SIG_LIMIT = 0;
-
+    int                        param_rem_total_len = 0;
 
     HIP_DEBUG("Building hash tree before signing\n");
     /* Getting the number of leaves in the hash tree
@@ -2400,13 +2512,18 @@ int signaling_build_hash_tree_from_msg(struct hip_common *msg,
         HIP_PARAM_SIG_LIMIT = HIP_PARAM_HIP_SIGNATURE;
     }
 
+    origlen = hip_get_msg_total_len(msg);
 
     while ((param = hip_get_next_param_readwrite(msg, param))) {
-        if ((hip_get_param_type((const struct hip_tlv_common *) param) < HIP_PARAM_SIG_LIMIT) ||
-            (hip_get_param_type((const struct hip_tlv_common *) param) == HIP_PARAM_SELECTIVE_HASH_LEAF)) {
+        if ((hip_get_param_type((struct hip_tlv_common *) param) < HIP_PARAM_SIG_LIMIT) ||
+            (hip_get_param_type((struct hip_tlv_common *) param) == HIP_PARAM_SELECTIVE_HASH_LEAF)) {
             num_leaf++;
         }
     }
+    while ((param = hip_get_next_param_readwrite(msg, param))) {
+        ;
+    }
+
     HIP_DEBUG("number of leaves of the hash tree : %d\n", num_leaf);
     leaves = malloc(num_leaf * sizeof(struct hip_hash_tree_leaf));
     /* Initialize the leaves of the hash tree. Important to have the leaf_pos
@@ -2415,40 +2532,44 @@ int signaling_build_hash_tree_from_msg(struct hip_common *msg,
         *(leaves + i) = tmp_leaf;
     }
 
+    hip_set_msg_total_len(msg, 0);
     tmp_ptr          = (uint8_t *) msg;
     tmp_len          = sizeof(struct hip_common);
     leaves->leaf_pos = 0;
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, tmp_ptr, tmp_len, leaves->leaf_hash) < 0,
              -1, "Building of SHA1 digest failed\n");
-
+    hip_set_msg_total_len(msg, origlen);
+    //HIP_DEBUG("Leaves of the hash tree set\n");
     i = 1;
+
     /*Check the hip msg if some portion has been replaced by the mbox with its hash
      * and insert the hash from the leaf at the correct position*/
     param = NULL;
     while ((param = hip_get_next_param_readwrite(msg, param))) {
         if (hip_get_param_type((const struct hip_tlv_common *) param) == HIP_PARAM_SELECTIVE_HASH_LEAF) {
-            tmp_pos                                                      = ntohl(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
+            tmp_pos                                                      = ntohs(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
             ((struct hip_hash_tree_leaf *) (leaves + tmp_pos))->leaf_pos = tmp_pos;
+
+            param_rem_total_len += ntohs(((struct siganling_param_selective_hash_leaf *) param)->len_param_rem);
             memcpy((leaves + tmp_pos)->leaf_hash, ((struct siganling_param_selective_hash_leaf *) param)->leaf_hash, HIP_AH_SHA_LEN);
+/*          HIP_DEBUG("Postion of the leaf = %u\n", tmp_pos);
+ *          HIP_HEXDUMP("Leaf hash = ", (leaves + tmp_pos)->leaf_hash, HIP_AH_SHA_LEN);*/
         }
     }
+    param = NULL;
+    while (i < num_leaf) {
+        if ((leaves + i)->leaf_pos == 0 && (param = hip_get_next_param_readwrite(msg, param))) {
+            (leaves + i)->leaf_pos = i;
+            tmp_ptr                = (uint8_t *) param;
+            tmp_len                = hip_get_param_total_len((const struct hip_tlv_common *) param);
 
-    while ((param = hip_get_next_param_readwrite(msg, param))) {
-        if (hip_get_param_type((struct hip_tlv_common *) param) < HIP_PARAM_SIG_LIMIT) {
-            // Check if at the current there is already an entry present
-            if ((leaves + i)->leaf_pos == 0) {
-                (leaves + i)->leaf_pos = i;
-                tmp_ptr                = (uint8_t *) param;
-                tmp_len                = hip_get_param_total_len((const struct hip_tlv_common *) param);
-
-                HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, tmp_ptr, tmp_len, (leaves + i)->leaf_hash) < 0,
-                         -1, "Building of SHA1 digest failed\n");
-                i++;
-            }
+            HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, tmp_ptr, tmp_len, (leaves + i)->leaf_hash) < 0,
+                     -1, "Building of SHA1 digest failed\n");
+/*          HIP_DEBUG("leaf position where hash leaf to be inserted i = %d ", i);
+ *          HIP_HEXDUMP("",(leaves + i)->leaf_hash, HIP_AH_SHA_LEN);*/
         }
+        i++;
     }
-
-    HIP_DEBUG("Leaves of the hash tree set\n");
 
     // Concatenate the leaves of the HASH Tree
     tmp_len               = num_leaf * HIP_AH_SHA_LEN;
@@ -2461,6 +2582,7 @@ int signaling_build_hash_tree_from_msg(struct hip_common *msg,
         tmp_ptr += HIP_AH_SHA_LEN;
     }
     HIP_HEXDUMP("Concatenation of the leaves of the hash tree : ", *concat_of_leaves, *len_concat_of_leaves);
+
 out_err:
     return err;
 }
@@ -2637,15 +2759,179 @@ out_err:
     return err;
 }
 
+static int signaling_get_param_type_from_info_req(uint8_t info)
+{
+    HIP_DEBUG("Getting parameter for info type = %u\n", info);
+    switch (info) {
+    case HOST_INFO_OS:
+        return HIP_PARAM_SIGNALING_HOST_INFO_OS;
+        break;
+    case HOST_INFO_KERNEL:
+        return HIP_PARAM_SIGNALING_HOST_INFO_KERNEL;
+        break;
+    case HOST_INFO_ID:
+        return HIP_PARAM_SIGNALING_HOST_INFO_ID;
+        break;
+    case HOST_INFO_CERTS:
+        return HIP_PARAM_SIGNALING_HOST_INFO_CERTS;
+        break;
+
+    case USER_INFO_ID:
+        return HIP_PARAM_SIGNALING_USER_INFO_ID;
+        break;
+    case USER_INFO_CERTS:
+        return HIP_PARAM_SIGNALING_USER_INFO_CERTS;
+        break;
+
+    case APP_INFO_NAME:
+        return HIP_PARAM_SIGNALING_APP_INFO_NAME;
+        break;
+    case APP_INFO_QOS_CLASS:
+        return HIP_PARAM_SIGNALING_APP_INFO_QOS_CLASS;
+        break;
+    case APP_INFO_REQUIREMENTS:
+        return HIP_PARAM_SIGNALING_APP_INFO_REQUIREMENTS;
+        break;
+    case APP_INFO_CONNECTIONS:
+        return HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS;
+        break;
+    }
+
+    return -1;
+}
+
+int signaling_build_offset_list_to_remove_params(struct hip_common *msg,
+                                                 int               *offset_list,
+                                                 int               *offset_list_len,
+                                                 uint8_t           *info_remove,
+                                                 UNUSED uint8_t    *info_rem_len)
+{
+    int                    err        = 0, i = 0;
+    int                    j          = *offset_list_len;
+    struct hip_tlv_common *param      = NULL;
+    uint8_t                tmp_info   = 0;
+    uint16_t               param_type = 0;
+
+    HIP_DEBUG("Offest list length = %d\n", j);
+    for (i = 0; i < j; i++) {
+        tmp_info   = info_remove[i];
+        param_type = signaling_get_param_type_from_info_req(tmp_info);
+        if ((param = hip_get_param_readwrite(msg, param_type))) {
+            HIP_DEBUG("Signed Ack received corresponding to the service offer.\n");
+            do {
+                if (hip_get_param_type(param) == param_type) {
+                    offset_list[i] = (uint8_t *) param - (uint8_t *) msg;
+                    HIP_DEBUG("Offset for param = %u is %d\n", signaling_get_param_type_from_info_req(tmp_info), offset_list[i]);
+                }
+            } while ((param = hip_get_next_param_readwrite(msg, param)));
+        }
+    }
+
+//out_err:
+    return err;
+}
+
+int signaling_remove_params_from_hip_msg(struct hip_common *msg,
+                                         int               *offset_list,
+                                         int               *offset_list_len)
+{
+    int                    err         = 0;
+    struct hip_common     *msg_buf     = NULL;
+    struct hip_tlv_common *param       = NULL;
+    int                    msg_new_len = hip_get_msg_total_len(msg);
+    uint8_t               *tmp_ptr     = NULL;
+    uint8_t               *start_ptr   = NULL;
+    uint16_t               tmp_len     = 0;
+    int                    i           = 0;
+
+    uint8_t params_removed[20] = { 0, 0, 0, 0, 0,
+                                   0, 0, 0, 0, 0,
+                                   0, 0, 0, 0, 0,
+                                   0, 0, 0, 0, 0 };
+
+    if (!(msg_buf = hip_msg_alloc())) {
+        HIP_ERROR("Out of memory while allocation memory for the temp hip packet\n");
+        return -1;
+    }
+    //HIP_DEBUG("Inside remove params from hip msg\n");
+
+    memcpy(msg_buf, msg, hip_get_msg_total_len(msg));
+    //HIP_DEBUG("Original hip msg copied\n");
+    tmp_ptr   = (uint8_t *) msg;
+    start_ptr = (uint8_t *) msg_buf;
+    tmp_len   = offset_list[0];
+
+    for (i = 0; i <= *offset_list_len; i++) {
+        memcpy(tmp_ptr, start_ptr, tmp_len);
+        //HIP_DEBUG("i = %d, tmp_len = %u, copied portion of the new message\n", i, tmp_len);
+        tmp_ptr   += tmp_len;
+        start_ptr += tmp_len;
+
+        if (i < *offset_list_len) {
+            param = (struct hip_tlv_common *) ((uint8_t *) msg_buf + offset_list[i]);
+            //HIP_DEBUG("parameter correct at this positon\n");
+            tmp_len      = hip_get_param_total_len(param);
+            msg_new_len -= tmp_len;
+            start_ptr   += tmp_len;
+            //HIP_DEBUG("Length of the parameter at this position = %d, new hip msg length = %d\n", tmp_len, msg_new_len);
+            if (i < *offset_list_len - 1) {
+                HIP_DEBUG("next offset = %d\n", offset_list[i + 1]);
+                tmp_len = offset_list[i + 1] - (offset_list[i] + tmp_len);
+            } else {
+                tmp_len = hip_get_msg_total_len(msg_buf) - (offset_list[i] + tmp_len);
+            }
+            //HIP_DEBUG("Sizeof of the next chunk to be copied = %u\n", tmp_len);
+        }
+    }
+    hip_set_msg_total_len(msg, msg_new_len);
 /*
- * int signaling_build_hash_tree_from_hip_msg()
- * {
- *  int err = 0;
- *
- * out_err:
- *  return err;
- * }
+ *  HIP_DEBUG("HIP message after removal of secrets and ack msg_len = %d\n", msg_new_len);
+ *  hip_dump_msg(msg);
  */
+
+    param = NULL;
+    while ((param = hip_get_next_param_readwrite(msg_buf, param))) {
+        if (hip_get_param_type(param) == HIP_PARAM_SELECTIVE_HASH_LEAF) {
+            int idx = ntohs(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
+            params_removed[idx] = 1;
+        }
+    }
+
+    tmp_ptr = (uint8_t *) msg_buf;
+    i       = 1;
+    int j = 0;
+    param = NULL;
+    while (i < 20) {
+        if (params_removed[i]) {
+            i++;
+            continue;
+        } else if ((param = hip_get_next_param_readwrite(msg_buf, param)) &&
+                   j < *offset_list_len &&
+                   ((uint8_t *) param - (uint8_t *) msg_buf) == offset_list[j]) {
+            j++;
+            HIP_DEBUG("Position of the parameter to be removed i = %d\n", i);
+            struct siganling_param_selective_hash_leaf tmp_leaf = { 0 };
+            tmp_leaf.leaf_pos      = htons(i);
+            tmp_leaf.len_param_rem = htons(hip_get_param_total_len(param));
+            HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, param, hip_get_param_total_len(param), tmp_leaf.leaf_hash) < 0,
+                     -1, "Building of SHA1 digest failed\n");
+            hip_set_param_contents_len((struct hip_tlv_common *) &tmp_leaf, sizeof(struct siganling_param_selective_hash_leaf) - sizeof(struct hip_tlv_common));
+            hip_set_param_type((struct hip_tlv_common *) &tmp_leaf, HIP_PARAM_SELECTIVE_HASH_LEAF);
+            HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *) &tmp_leaf),
+                     -1, "Failed to append appinfo parameter to message.\n");
+        }
+        i++;
+    }
+/*
+ *  HIP_DEBUG("HIP message after addition of hash leafs\n");
+ *  hip_dump_msg(msg);
+ *
+ */
+out_err:
+    free(msg_buf);
+    return err;
+}
+
 int signaling_get_connection_context(struct signaling_connection *conn,
                                      struct signaling_connection_context *ctx,
                                      uint8_t end_point_role)
@@ -3126,31 +3412,14 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
     ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
 
     origlen = hip_get_msg_total_len(msg);
-    if (hip_get_msg_type(msg) == HIP_R1) {
-        HIP_IFEL(!(sig = hip_get_param_readwrite(msg,
-                                                 HIP_PARAM_HIP_SIGNATURE2)),
-                 -ENOENT, "Could not find signature2\n");
 
-        memset(&msg->hitr, 0, sizeof(struct in6_addr));
-
-        HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)),
-                 -ENOENT, "Illegal R1 packet (puzzle missing)\n");
-
-        /* temporarily store original puzzle values */
-        memcpy(opaque, pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
-        memcpy(rand_i, pz->I, PUZZLE_LENGTH);
-        /* R1 signature is computed over zero values */
-        memset(pz->opaque, 0, HIP_PUZZLE_OPAQUE_LEN);
-        memset(pz->I, 0, PUZZLE_LENGTH);
-    } else {
-        HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE)),
-                 -ENOENT, "Could not find signature\n");
-    }
+    HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE)),
+             -ENOENT, "Could not find signature\n");
 
     len = ((uint8_t *) sig) - ((uint8_t *) msg);
     hip_zero_msg_checksum(msg);
     HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
-    hip_set_msg_total_len(msg, len);
+    //hip_set_msg_total_len(msg, len);
 
     HIP_IFEL(signaling_build_hash_tree_and_get_root(msg, (unsigned char *) sha1_digest), -1,
              "Building of the sha1 digest from hash-tree failed");
@@ -3251,33 +3520,35 @@ int signaling_split_info_req_to_groups(struct signaling_hipd_state *sig_state,
 
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
         do {
-            HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
-                     -1, "Could not copy connection context\n");
-            i = 0;
-            if (signaling_check_service_offer_type(&param_service_offer) == OFFER_SIGNED ||
-                signaling_check_service_offer_type(&param_service_offer) == OFFER_SELECTIVE_SIGNED) {
-                if (signaling_check_if_mb_certificate_available(sig_state, &param_service_offer)) {
-                    num_req_info_items = param_service_offer.service_info_len;
-                    /* number of service offers to be accepted, if more than the limit drop it */
-                    if (num_req_info_items > 0) {
-                        HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
-                        /*Processing the information requests in the service offer*/
-                        while ((i < num_req_info_items) && ((tmp_info = param_service_offer.endpoint_info_req[i]) != 0)) {
-                            j = tmp_info;
-                            for (idx = 0; idx < MAX_NUM_OFFER_GROUPS; idx++) {
-                                if (offer_groups[j].mbox[idx] ==  0) {
-                                    break;
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
+                         -1, "Could not copy connection context\n");
+                i = 0;
+                if (signaling_check_service_offer_type(&param_service_offer) == OFFER_SIGNED ||
+                    signaling_check_service_offer_type(&param_service_offer) == OFFER_SELECTIVE_SIGNED) {
+                    if (signaling_check_if_mb_certificate_available(sig_state, &param_service_offer)) {
+                        num_req_info_items = param_service_offer.service_info_len;
+                        /* number of service offers to be accepted, if more than the limit drop it */
+                        if (num_req_info_items > 0) {
+                            HIP_DEBUG("Number of parameters received in the Service Offer = %d.\n", num_req_info_items);
+                            /*Processing the information requests in the service offer*/
+                            while ((i < num_req_info_items) && ((tmp_info = param_service_offer.endpoint_info_req[i]) != 0)) {
+                                j = tmp_info;
+                                for (idx = 0; idx < MAX_NUM_OFFER_GROUPS; idx++) {
+                                    if (offer_groups[j].mbox[idx] ==  0) {
+                                        break;
+                                    }
                                 }
+                                offer_groups[j].info_requests[0] = tmp_info;
+                                offer_groups[j].num_info_req     = 1;
+                                offer_groups[j].mbox[idx]        = ntohs(param_service_offer.service_offer_id);
+                                offer_groups[j].num_mboxes       = idx + 1;
+                                i++;
                             }
-                            offer_groups[j].info_requests[0] = tmp_info;
-                            offer_groups[j].num_info_req     = 1;
-                            offer_groups[j].mbox[idx]        = ntohs(param_service_offer.service_offer_id);
-                            offer_groups[j].num_mboxes       = idx + 1;
-                            i++;
                         }
+                    } else {
+                        signaling_add_offer_to_nack_list(sig_state, ntohs(param_service_offer.service_offer_id));
                     }
-                } else {
-                    signaling_add_offer_to_nack_list(sig_state, ntohs(param_service_offer.service_offer_id));
                 }
             }
         } while ((param = hip_get_next_param(ctx->input_msg, param)));

@@ -1068,7 +1068,7 @@ struct signaling_param_service_nack {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |             Type              |             Length            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |                 POSITION OF THE LEAF IN THE HASH TREE         |
+ * |   LEAF POS IN THE HASH TREE   |  Len Parameter removed        |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                                                               /
  * /                         LEAF_HASH                             /
@@ -1079,7 +1079,8 @@ struct signaling_param_service_nack {
 struct siganling_param_selective_hash_leaf {
     hip_tlv       type;
     hip_tlv_len   length;
-    uint32_t      leaf_pos;
+    uint16_t      leaf_pos;
+    uint16_t      len_param_rem;
     unsigned char leaf_hash[HIP_AH_SHA_LEN];
 } __attribute__((packed));
 

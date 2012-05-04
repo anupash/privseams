@@ -111,7 +111,13 @@ int signaling_build_hash_tree_from_msg(struct hip_common *msg,
                                        unsigned int   *len_concat_of_leaves);
 int signaling_build_hash_tree_and_get_root(struct hip_common *msg,
                                            unsigned char *root_hash_tree);
-
+int signaling_build_offset_list_to_remove_params(struct hip_common *msg,
+                                                 int               *offset_list,
+                                                 int               *offset_list_len,
+                                                 uint8_t           *info_remove,
+                                                 uint8_t           *info_rem_len);
+int signlaing_insert_service_offer_in_hip_msg(struct hip_common *msg,
+                                              struct signaling_param_service_offer *offer);
 int signaling_add_service_offer_to_msg(struct hip_common *msg,
                                        struct signaling_connection_flags *flags,
                                        int service_offer_id,
@@ -127,6 +133,9 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *output_msg,
                                          X509          *mb_cert,
                                          uint8_t        flag_sign);
 int signaling_add_param_dh_to_hip_update(struct hip_common *msg);
+int signaling_remove_params_from_hip_msg(struct hip_common *msg,
+                                         int               *offset_list,
+                                         int               *offset_list_len);
 int signaling_verify_service_ack_u(struct hip_common *output_msg,
                                    unsigned char *stored_hash);
 int signaling_verify_service_ack_s(struct hip_common *msg,
@@ -135,9 +144,11 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
                                    RSA           *priv_key,
                                    unsigned char *dh_shared_key);
 int signaling_verify_service_ack_selective_s(struct hip_common *msg,
-                                             struct hip_common **msg_buf,
+                                             UNUSED struct hip_common **msg_buf,
                                              unsigned char *stored_hash,
-                                             RSA           *priv_key);
+                                             UNUSED RSA    *priv_key,
+                                             int           *offset_list,
+                                             int           *offset_list_len);
 int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t verify_it_len,
                                        uint8_t *signature, uint8_t sig_len);
 int signaling_verify_mb_sig_selective_s(struct signaling_param_service_offer *offer);
