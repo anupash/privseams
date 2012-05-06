@@ -1142,7 +1142,7 @@ int signaling_verify_packet_selective_hmac(struct hip_common *msg,
                                            const struct hip_crypto_key *crypto_key,
                                            const hip_tlv parameter_type)
 {
-    int                    len = 0, orig_len = 0;
+    int                    orig_len = 0;
     struct hip_crypto_key  tmpkey;
     const struct hip_hmac *hmac             = NULL;
     uint8_t                orig_checksum    = 0;
@@ -1163,9 +1163,6 @@ int signaling_verify_packet_selective_hmac(struct hip_common *msg,
     /* hmac verification assumes that checksum is zero */
     orig_checksum = hip_get_msg_checksum(msg);
     hip_zero_msg_checksum(msg);
-
-    len = (const uint8_t *) hmac - (const uint8_t *) msg;
-    //hip_set_msg_total_len(msg, len);
 
     signaling_build_hash_tree_from_msg(msg, &concat_of_leaves, &len_concat_of_leaves);
 
@@ -1994,7 +1991,7 @@ int signaling_build_service_ack_selective_s(struct hip_common *input_msg,
                                             struct hip_common *output_msg,
                                             struct signaling_hipd_state *sig_state)
 {
-    int                                  err = 0, i = 0, found = 0;
+    int                                  err = 0, i = 0;
     struct signaling_param_service_offer param_service_offer;
     const struct hip_tlv_common         *param;
     struct signaling_param_service_ack   ack          = { 0 };
@@ -2018,7 +2015,6 @@ int signaling_build_service_ack_selective_s(struct hip_common *input_msg,
                 tmp_ptr +=  sizeof(struct hip_tlv_common) + sizeof(ack.service_offer_id) +
                            sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
                 tmp_offer_id = ntohs(param_service_offer.service_offer_id);
-                found        = 0;
 
                 for (i = 0; i < MAX_NUM_OFFER_GROUPS && sig_state->offer_groups[i] != NULL; i++) {
                     if (sig_state->offer_groups[i]->mbox[0] == tmp_offer_id) {
