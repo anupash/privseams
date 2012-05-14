@@ -82,7 +82,13 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
                                                           struct in6_addr                     *hit_i,
                                                           struct in6_addr                     *hit_r,
                                                           int *ret);
+int signaling_hipfw_handle_incoming_certificate_udpate(const struct hip_common *common,
+                                                       struct tuple *tuple,
+                                                       struct hip_fw_context *ctx);
 
+int signaling_hipfw_handle_incoming_certificate_update_ack(const struct hip_common *common,
+                                                           struct tuple *tuple,
+                                                           struct hip_fw_context *ctx);
 /* Utility functions*/
 int signaling_hipfw_get_dh_shared_key(struct hip_common *msg, DH *dh_key,
                                       unsigned char **dh_shared_key,

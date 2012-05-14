@@ -25,6 +25,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
+ * @author Anupam Ashish <anupam.ashish@rwth-aachen.de>
  *
  */
 
@@ -820,7 +821,7 @@ int signlaing_insert_service_offer_in_hip_msg(struct hip_common *msg,
         memcpy(tmp_ptr, buffer, buf_len);
         hip_set_msg_total_len(msg, hip_get_msg_total_len(msg) + buf_len);
     } else {
-        HIP_DEBUG("No need to insert");
+        HIP_DEBUG("No need to insert service offer\n");
         HIP_IFEL(hip_build_param(msg, offer), -1,
                  "Could not build service offer to the message\n");
     }
@@ -1338,8 +1339,6 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
     uint16_t       tmp_len          = 0;
     uint16_t       mask             = 0;
     uint8_t       *iv               = NULL;
-    //const uint8_t              *tmp_enc_ptr                 = NULL;
-    //uint16_t                    tmp_info_sec_len            = 0;
 
     /*------------------ Find out the corresponding service acknowledgment --------------------*/
     if ((param = hip_get_param(msg, HIP_PARAM_SIGNALING_SERVICE_ACK))) {
@@ -1376,6 +1375,15 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
 
         /*--------- Extract the symmetric key information now ---------------*/
         if (SERVICE_RESPONSE_ALGO_DH) {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_I2_DEC_SYMM_KEY_DH, PERF_MBOX_R2_DEC_SYMM_KEY_DH,"
+                      "PERF_MBOX_U2_DEC_SYMM_KEY_DH, PERF_MBOX_U3_DEC_SYMM_KEY_DH\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_DEC_SYMM_KEY_DH);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_DH);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_DEC_SYMM_KEY_DH);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_DEC_SYMM_KEY_DH);
+#endif
+
             enc_data = (uint8_t *) (tmp_ptr + sizeof(struct signaling_service_ack) + sizeof(struct hip_tlv_common)
                                     + 16 * sizeof(uint8_t));
             iv         = ((struct signaling_param_service_ack *) tmp_service_ack)->iv;
@@ -1388,7 +1396,25 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
                      -1, "Building of param encrypted failed\n");
             HIP_HEXDUMP("Decrypted data = ", dec_output, enc_data_len);
             tmp_len = enc_data_len;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_I2_DEC_SYMM_KEY_DH, PERF_MBOX_R2_DEC_SYMM_KEY_DH,"
+                      "PERF_MBOX_U2_DEC_SYMM_KEY_DH, PERF_MBOX_U3_DEC_SYMM_KEY_DH\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_DEC_SYMM_KEY_DH);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_DH);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_DEC_SYMM_KEY_DH);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_DEC_SYMM_KEY_DH);
+#endif
         } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_MBOX_I2_DEC_SYMM_KEY_RSA, PERF_MBOX_R2_DEC_SYMM_KEY_RSA,"
+                      "PERF_MBOX_U2_DEC_SYMM_KEY_RSA, PERF_MBOX_U3_DEC_SYMM_KEY_RSA\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_DEC_SYMM_KEY_RSA);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_RSA);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_DEC_SYMM_KEY_RSA);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_DEC_SYMM_KEY_RSA);
+#endif
+
             iv = malloc(16 * sizeof(uint8_t));
             memset(iv, 0, 16 * sizeof(uint8_t));
             HIP_IFEL(memcmp(iv, ((struct signaling_param_service_ack *) tmp_service_ack)->iv, 16 * sizeof(uint8_t)), -1,
@@ -1406,7 +1432,25 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
                 HIP_DEBUG("Could not decrypt successfully\n");
                 return -1;
             }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_MBOX_I2_DEC_SYMM_KEY_RSA, PERF_MBOX_R2_DEC_SYMM_KEY_RSA,"
+                      "PERF_MBOX_U2_DEC_SYMM_KEY_RSA, PERF_MBOX_U3_DEC_SYMM_KEY_RSA\n");
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_DEC_SYMM_KEY_RSA);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_RSA);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_DEC_SYMM_KEY_RSA);
+            hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_DEC_SYMM_KEY_RSA);
+#endif
         }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_MBOX_I2_DEC_ENDPOINT_SECRET, PERF_MBOX_R2_DEC_ENDPOINT_SECRET,"
+                  "PERF_MBOX_U2_DEC_ENDPOINT_SECRET, PERF_MBOX_U3_DEC_ENDPOINT_SECRET\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_DEC_ENDPOINT_SECRET);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_DEC_ENDPOINT_SECRET);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_DEC_ENDPOINT_SECRET);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_DEC_ENDPOINT_SECRET);
+#endif
 
         /*----------------- Allocate and build message buffer ----------------------*/
         HIP_IFEL(!(*msg_buf = hip_msg_alloc()),
@@ -1415,6 +1459,15 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
 
         HIP_IFEL(signaling_put_decrypted_secrets_to_msg_buf(msg, msg_buf, dec_output,  tmp_len),
                  -1, "Could not add the decrypted endpoint info to the msg buffer for further processing. \n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_MBOX_I2_DEC_ENDPOINT_SECRET, PERF_MBOX_R2_DEC_ENDPOINT_SECRET,"
+                  "PERF_MBOX_U2_DEC_ENDPOINT_SECRET, PERF_MBOX_U3_DEC_ENDPOINT_SECRET\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_DEC_ENDPOINT_SECRET);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_DEC_ENDPOINT_SECRET);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_DEC_ENDPOINT_SECRET);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_DEC_ENDPOINT_SECRET);
+#endif
 
         hip_dump_msg(*msg_buf);
         free(dec_output);
@@ -1440,32 +1493,13 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                                              int           *offset_list,
                                              int           *offset_list_len)
 {
-    int                                 err = 0;
-    struct hip_tlv_common              *param;
-    const struct signaling_service_ack *ack = NULL;
-//  struct hip_encrypted_aes_sha1 tmp_enc_param = { 0 };
-
-//    int            param_len        = 0;
-/*
- *  uint8_t       *tmp_service_ack  = NULL;
- *  unsigned char *tmp_info_secrets = NULL;
- *  unsigned char *dec_output       = NULL;
- *
- *  uint8_t       *tmp_ptr          = NULL;*/
-    //uint8_t       *enc_data         = NULL;
-/*
- *  int      enc_data_len = 0;
- *  uint16_t tmp_len      = 0;
- */
-/* uint16_t mask         = 0;
- * uint8_t *iv           = NULL;*/
-//const uint8_t              *tmp_enc_ptr                 = NULL;
-//uint16_t                    tmp_info_sec_len            = 0;
-
-    const uint8_t *tmp_ptr         = NULL;
-    uint16_t       tmp_len         = 0;
-    uint8_t        info_remove[10] = { 0 };
-    uint8_t        info_rem_len    = 0;
+    int                                 err             = 0;
+    struct hip_tlv_common              *param           = NULL;
+    const struct signaling_service_ack *ack             = NULL;
+    const uint8_t                      *tmp_ptr         = NULL;
+    uint16_t                            tmp_len         = 0;
+    uint8_t                             info_remove[10] = { 0 };
+    uint8_t                             info_rem_len    = 0;
 
     HIP_DEBUG("Inside verification of selectively signed ack\n");
     /*------------------ Find out the corresponding service acknowledgment --------------------*/
@@ -1497,8 +1531,24 @@ int signaling_verify_service_ack_selective_s(struct hip_common *msg,
                     offset_list[tmp_len] = (uint8_t *) param - (uint8_t *) msg;
                     *offset_list_len     = tmp_len + 1;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Start PERF_MBOX_I2_BUILD_PARAM_REM_LIST, PERF_MBOX_R2_BUILD_PARAM_REM_LIST, "
+                              "PERF_MBOX_U2_BUILD_PARAM_REM_LIST, PERF_MBOX_U3_BUILD_PARAM_REM_LIST\n");
+                    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_BUILD_PARAM_REM_LIST);
+                    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_BUILD_PARAM_REM_LIST);
+                    hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_BUILD_PARAM_REM_LIST);
+                    hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_BUILD_PARAM_REM_LIST);
+#endif
                     signaling_build_offset_list_to_remove_params(msg, offset_list, offset_list_len,
                                                                  info_remove, &info_rem_len);
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_MBOX_I2_BUILD_PARAM_REM_LIST, PERF_MBOX_R2_BUILD_PARAM_REM_LIST, "
+                              "PERF_MBOX_U2_BUILD_PARAM_REM_LIST, PERF_MBOX_U3_BUILD_PARAM_REM_LIST\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_BUILD_PARAM_REM_LIST);
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_BUILD_PARAM_REM_LIST);
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_BUILD_PARAM_REM_LIST);
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_BUILD_PARAM_REM_LIST);
+#endif
                     return 1;
                 } else {
                     HIP_DEBUG("The stored hash and the acked hash do not match.\n");
@@ -1567,7 +1617,8 @@ out_err:
     return err;
 }
 
-int signaling_verify_mb_sig_selective_s(struct signaling_param_service_offer *offer)
+int signaling_verify_mb_sig_selective_s(struct signaling_hipd_state          *sig_state,
+                                        struct signaling_param_service_offer *offer)
 {
     int           err        = 0;
     EVP_PKEY     *pub_key    = NULL;
@@ -1577,24 +1628,24 @@ int signaling_verify_mb_sig_selective_s(struct signaling_param_service_offer *of
     unsigned char certificate_hint[HIP_AH_SHA_LEN];
     uint16_t      cert_hint_len = 0;
     uint8_t      *signature     = NULL;
-    uint8_t       sig_len;
-    uint8_t      *tmp_ptr  = (uint8_t *) offer;
-    const char   *dir_path = "/usr/local/etc/hip/trusted_mb_certs";
+    uint8_t       sig_len       = 0;
+    uint8_t      *tmp_ptr       = (uint8_t *) offer;
+    uint16_t      tmp_offer_id  = 0;
 
     header_len = sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) + sizeof(offer->service_type) +
                  sizeof(offer->service_info_len) + sizeof(offer->service_description);
     info_len      = (offer->service_info_len) * sizeof(uint8_t);
     cert_hint_len = HIP_AH_SHA_LEN;
 
-    tmp_ptr += header_len + info_len;
+    tmp_offer_id = ntohs(offer->service_offer_id);
+    tmp_ptr     += header_len + info_len;
     memcpy(certificate_hint, tmp_ptr, HIP_AH_SHA_LEN);
     HIP_HEXDUMP("Certificate hint = ", certificate_hint, HIP_AH_SHA_LEN);
 
-    /* ========== Locate the mbox certificate from store and load the certificate into memory ===============*/
-    HIP_IFEL(signaling_locate_mb_certificate(&cert, dir_path, certificate_hint, cert_hint_len),
-             -1, "Could not locate Middlebox certificate\n");
-
     /*---- Fetch the certificate and the public key corresponding to the mbox -----*/
+    HIP_IFEL(!(cert = signaling_get_mbox_cert_from_offer_id(sig_state, tmp_offer_id)),
+             -1, "Could not find the mbox certificate\n");
+
     HIP_IFEL(!(pub_key = X509_get_pubkey(cert)), -1,
              "Could not find the mbox public key\n");
 
@@ -1792,11 +1843,6 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
 
     /* sanity checks */
     HIP_ASSERT(flags);
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
-    hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
-    hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
-#endif
     if (signaling_info_req_flag_check(flags, HOST_INFO_OS)) {
         HIP_IFEL(signaling_build_param_host_info_response(output_msg, conn, ctx_out, HOST_INFO_OS),
                  -1, "Could not add HOST_INFO_OS parameter");
@@ -1837,13 +1883,6 @@ int signaling_build_response_to_service_offer_u(struct hip_common *output_msg,
         HIP_IFEL(signaling_build_param_app_info_response(output_msg, conn, ctx_out, APP_INFO_CONNECTIONS),
                  -1, "Could not add APP_INFO_CONNECTIONS parameter");
     }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_HANDLE_SERVICE_OFFER, PERF_R2_HANDLE_SERVICE_OFFER\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
-    hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
-#endif
-
 out_err:
     return err;
 }
@@ -1899,9 +1938,18 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
                  "Could not building responses to the signed service offer\n");
         hip_dump_msg(msg_buf);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER);
+#endif
         /* ========== Generate 128 -bit key for encrypting the payload of HIP_ENCRYPTED param ===============*/
         HIP_IFEL(generate_key_for_hip_encrypt(key_data, &key_data_len, key_hint), -1, "Could not generate the random key for HIP Encrypted\n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER);
+#endif
         /* ========== Create the HIP_ENCRYPTED param. The payload will not be encrypted here ===============*/
         tmp_ptr = (uint8_t *) msg_buf + sizeof(struct hip_common);
         tmp_len = hip_get_msg_total_len(msg_buf) - sizeof(struct hip_common);
@@ -1925,9 +1973,19 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
 
         /* ========== Encrypt the payload of HIP_ENCRYPTED param.  ===============*/
         HIP_HEXDUMP("enc key = ", key_data, key_data_len);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_start_benchmark(perf_set, PERF_R2_ENCRYPT_ENDPOINT_SECRETS);
+#endif
         HIP_IFEL(hip_crypto_encrypted(info_secret_enc, iv, HIP_HIP_AES_SHA1,
                                       tmp_len, key_data, HIP_DIRECTION_ENCRYPT),
                  -1, "Building of param encrypted failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_ENCRYPT_ENDPOINT_SECRETS);
+#endif
         HIP_HEXDUMP("Encrypted data = ", info_secret_enc, tmp_len);
 
         memcpy(&sig_state->offer_groups[i]->key_data.key_hint, key_hint, 4);
@@ -1962,10 +2020,19 @@ int signaling_build_service_ack_u(struct hip_common *input_msg,
 
                 ack.service_offer_id = param_service_offer.service_offer_id;
                 ack.service_option   = 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 /*Generate the hash of the service offer*/
                 HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer), ack.service_offer_hash),
                          -1, "Could not build hash of the service offer \n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 // print_hash(ack.service_offer_hash);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
                 int len_contents = sizeof(ack.service_offer_id) + sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
@@ -2007,10 +2074,19 @@ int signaling_build_service_ack_selective_s(struct hip_common *input_msg,
 
                 ack.service_offer_id = param_service_offer.service_offer_id;
                 ack.service_option   = htons(0);
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 /*Generate the hash of the service offer*/
                 HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer), ack.service_offer_hash),
                          -1, "Could not build hash of the service offer \n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_stop_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_stop_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 tmp_ptr  = (uint8_t *) &ack;
                 tmp_ptr +=  sizeof(struct hip_tlv_common) + sizeof(ack.service_offer_id) +
                            sizeof(ack.service_option) + sizeof(ack.service_offer_hash);
@@ -2080,19 +2156,28 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
             if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                 HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                          -1, "Could not copy connection context\n");
-
                 tmp_offer_id         = ntohs(param_service_offer.service_offer_id);
                 tmp_len              = 0;
                 tmp_ptr              = (uint8_t *) param_buf;
                 ack.service_offer_id = htons(tmp_offer_id);
                 HIP_DEBUG("Building ack for offer_id = %u\n", tmp_offer_id);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_start_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_start_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 /*Generate the hash of the service offer*/
                 HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, &param_service_offer, hip_get_param_contents_len(&param_service_offer), ack.service_offer_hash),
                          -1, "Could not build hash of the service offer \n");
                 HIP_HEXDUMP("Service offer hash = ", ack.service_offer_hash, HIP_AH_SHA_LEN);
                 HIP_DEBUG("Hash calculated for Service Acknowledgement\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Stop PERF_I2_HASH_SERVICE_OFFER, PERF_R2_HASH_SERVICE_OFFER\n");
+                hip_perf_stop_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+                hip_perf_stop_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+#endif
                 // print_hash(ack.service_offer_hash);
-
                 if (!signaling_check_if_offer_in_nack_list(sig_state, tmp_offer_id)) {
                     for (i = 0; sig_state->offer_groups[i] != NULL; i++) {
                         int j    = 0;
@@ -2133,6 +2218,11 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                 tmp_info_sec_len = tmp_len;
 
                 if (SERVICE_RESPONSE_ALGO_DH) {
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH\n");
+                    hip_perf_start_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_start_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
+#endif
                     HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)), -ENOMEM,
                              "Error on allocating memory for Diffie-Hellman shared key.\n");
                     signaling_generate_shared_key_from_dh_shared_secret(dh_shared_key, &dh_shared_len, peer_pub_key, peer_pub_key_len);
@@ -2155,7 +2245,17 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                                          16 * sizeof(uint8_t);
                     free(dh_shared_key);
                     dh_shared_len = 1024;
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_stop_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
+#endif
                 } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA\n");
+                    hip_perf_start_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_start_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA);
+#endif
                     /*---- Fetch the certificate and the public key corresponding to the mbox -----*/
                     HIP_IFEL(!(cert = signaling_get_mbox_cert_from_offer_id(sig_state, tmp_offer_id)),
                              -1, "Could not find the mbox certificate\n");
@@ -2179,7 +2279,11 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                     len_contents = tmp_len + sizeof(ack.service_offer_id) +
                                    sizeof(ack.service_option) + sizeof(ack.service_offer_hash) +
                                    16 * sizeof(uint8_t);
-                    // print_hash(ack.service_offer_hash);
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_stop_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA);
+#endif
                 }
 
                 /*---- Building of the HIP PARAM SECVICE ACK Signed ----*/
@@ -3071,9 +3175,12 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
 
     HIP_DEBUG("Getting User context.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP\n");   // test 1.1
+    HIP_DEBUG("Start PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP, "
+              "PERF_CONN_U_I_USER_CTX_LOOKUP, PERF_CONN_U_R_USER_CTX_LOOKUP\n");               // test 1.1
     hip_perf_start_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
     hip_perf_start_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_USER_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_USER_CTX_LOOKUP);
 #endif
 
     HIP_IFEL(signaling_user_api_get_uname(ctx->user.uid, &ctx->user), -1, "Could not get user name, assuming ANY USER. \n");
@@ -3092,9 +3199,12 @@ int signaling_get_verified_user_context(struct signaling_connection_context *ctx
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP\n");   // test 1.1
+    HIP_DEBUG("Stop PERF_I_USER_CTX_LOOKUP, PERF_R_USER_CTX_LOOKUP, "
+              "PERF_CONN_U_I_USER_CTX_LOOKUP, PERF_CONN_U_R_USER_CTX_LOOKUP\n");              // test 1.1
     hip_perf_stop_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
     hip_perf_stop_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_USER_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_USER_CTX_LOOKUP);
 #endif
     return 0;
 out_err:
@@ -3218,7 +3328,14 @@ int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig
     const char *dir_path       = "/usr/local/etc/hip/trusted_mb_certs";
     X509       *mb_certificate = NULL;
 
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_LOCATE_MBOX_CERT, PERF_R2_LOCATE_MBOX_CERT, "
+              "PERF_CONN_U1_LOCATE_MBOX_CERT, PERF_CONN_U2_LOCATE_MBOX_CERT\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_LOCATE_MBOX_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_R2_LOCATE_MBOX_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_LOCATE_MBOX_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_LOCATE_MBOX_CERT);
+#endif
     header_len = sizeof(struct hip_tlv_common) + sizeof(offer->service_offer_id) +
                  sizeof(offer->service_type) + sizeof(offer->service_info_len) +
                  sizeof(offer->service_description);
@@ -3245,11 +3362,18 @@ int signaling_check_if_mb_certificate_available(struct signaling_hipd_state *sig
         sig_state->mb_certs[i]                   = malloc(sizeof(struct mbox_certificates));
         sig_state->mb_certs[i]->mb_certificate   = mb_certificate;
         sig_state->mb_certs[i]->service_offer_id = ntohs(offer->service_offer_id);
-        return 1;
+        err                                      = 1;
     } else {
-        return 0;
+        err = 0;
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_I2_LOCATE_MBOX_CERT, PERF_R2_LOCATE_MBOX_CERT, "
+              "PERF_CONN_U1_LOCATE_MBOX_CERT, PERF_CONN_U2_LOCATE_MBOX_CERT\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_LOCATE_MBOX_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_LOCATE_MBOX_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_LOCATE_MBOX_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_LOCATE_MBOX_CERT);
+#endif
 out_err:
     return err;
 }

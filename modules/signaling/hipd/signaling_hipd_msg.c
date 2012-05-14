@@ -25,6 +25,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
+ * @author Anupam Ashish <anupam.ashish@rwth-aachen.de>
  *
  */
 
@@ -188,19 +189,28 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
             free(msg_buf);
             return NULL;
         }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_DIFFIE_HELLMAN\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
+#endif
         if (signaling_add_param_dh_to_hip_update(msg_buf)) {
             HIP_DEBUG("Could not add add Diffie Hellman parameter to the HIP Update\n");
             free(msg_buf);
             return NULL;
         }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U1_DIFFIE_HELLMAN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
+#endif
         if (signaling_build_param_signaling_connection(msg_buf, conn)) {
             HIP_ERROR("Building of connection identifier parameter failed\n");
             free(msg_buf);
             return NULL;
         }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HMAC);
+#endif
         /* Add host authentication */
         if (hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out)) {
             HIP_ERROR("Building of HMAC failed\n");
@@ -208,10 +218,12 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
             return NULL;
         }
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
+        HIP_DEBUG("Stop PERF_CONN_U1_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HMAC);
+#endif
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_HOST_SIGN\n");
         hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
 #endif
         if (ha->sign(ha->our_priv_key, msg_buf)) {
             HIP_ERROR("Could not sign UPDATE. Failing\n");
@@ -219,16 +231,19 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
             return NULL;
         }
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");
+        HIP_DEBUG("Stop PERF_CONN_U1_HOST_SIGN\n");
         hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
 #endif
     } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
         if ((sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state"))) {
             /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
             if (sig_state->flag_offer_type == OFFER_UNSIGNED ||
                 sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+                HIP_DEBUG("Start PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER\n");
+                hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
+                hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER);
+#endif
                 signaling_i2_handle_service_offers_common(HIP_UPDATE, ha->state, ctx, sig_state->flag_offer_type);
             }
         } else {
@@ -237,6 +252,13 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
             return NULL;
         }
     } else if (type == SIGNALING_THIRD_BEX_UPDATE) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER, "
+                  "PERF_CONN_U2_HANDLE_SIGNED_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HANDLE_SIGNED_OFFER);
+#endif
         signaling_r2_handle_service_offers(HIP_UPDATE, ha->state, ctx);
     }
 
@@ -621,9 +643,9 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     if (packet_type == HIP_R2) {
         HIP_DEBUG("Handling an R2\n");
     } else if (packet_type == HIP_UPDATE) {
-        HIP_DEBUG("Handling a second bex update like R2\n");
+        HIP_DEBUG("Handling the third bex update like R2\n");
     } else {
-        HIP_ERROR("Packet is neither R2 nor second bex update.\n");
+        HIP_ERROR("Packet is neither R2 nor third bex update.\n");
         err = -1;
         goto out_err;
     }
@@ -658,10 +680,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+    HIP_DEBUG("Stop PERF_CONN_U3\n");
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
-    hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-
 
     HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
     hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
@@ -686,9 +706,8 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_HIPD_R2_FINISH);
     hip_perf_write_benchmark(perf_set, PERF_COMPLETE_BEX);
 
-    HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+    HIP_DEBUG("Write PERF_CONN_U3\n");
     hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
-    hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
 #endif
 
     return err;
@@ -872,46 +891,16 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
              -1, "This is no signaling update packet\n");
 
-/*
- * #ifdef CONFIG_HIP_PERFORMANCE
- *   HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
- *   hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
- * #endif
- *
- *    // FIXME PK signature verification is not necessary. The packet is verified via HMAC in the update module!
- *    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
- *                                     ctx->input_msg),
- *             -EINVAL,
- *             "Verification of Update signature failed\n");
- * #ifdef CONFIG_HIP_PERFORMANCE
- *    HIP_DEBUG("Stop PERF_UPDATE_VERIFY_HOST_SIG\n");
- *    hip_perf_stop_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
- * #endif
- */
-
     /* Handle the different update types */
     switch (update_type) {
     case SIGNALING_FIRST_BEX_UPDATE:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_NEW_UPDATE_CONN, PERF_CONN_U1\n");
-        hip_perf_start_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U1);
-#endif
         /* This can be handled like R1 */
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_send_second_update(packet_type, ha_state, ctx),
                  -1, "failed to trigger second bex update. \n");
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_CONN_U1\n");
-        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1);
-#endif
         break;
 
     case SIGNALING_SECOND_BEX_UPDATE:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_CONN_U2\n");
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U2);
-#endif
         /* This can be handled like an R2 */
         HIP_DEBUG("Received SECOND BEX Update... \n");
         HIP_IFEL(signaling_send_third_update(packet_type, ha_state, ctx),
@@ -919,10 +908,6 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         break;
 
     case SIGNALING_THIRD_BEX_UPDATE:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_CONN_U3\n");
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U3);
-#endif
         /* This can be handled like an I3 */
         HIP_DEBUG("Received THIRD BEX Update... \n");
         HIP_IFEL(signaling_handle_incoming_r2(packet_type, ha_state, ctx),
@@ -941,39 +926,8 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
 
     default:
         HIP_DEBUG("Received unknown UPDATE type. \n");
-    }
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    switch (update_type) {
-    case SIGNALING_FIRST_BEX_UPDATE:
-        HIP_DEBUG("Write PERF_CONN_U1_VERIFY_USER_SIG, PERF_CONN_U1, PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U1);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
-        break;
-    case SIGNALING_SECOND_BEX_UPDATE:
-        HIP_DEBUG("Write PERF_CONN_U2_VERIFY_USER_SIG, PERF_CONN_U3_HOST_SIGN, PERF_CONN_U2\n");
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
-        break;
-    case SIGNALING_THIRD_BEX_UPDATE:
-        hip_perf_write_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     }
-    hip_perf_write_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
-
-
-
-
-
-#endif
 
 out_err:
     return err;
@@ -1159,41 +1113,76 @@ int signaling_mac_and_sign_handler(UNUSED const uint8_t packet_type, UNUSED cons
 {
     int                          err = 0;
     struct signaling_hipd_state *sig_state;
-
+    int                          update_type = -1;
 
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
+    if (packet_type == HIP_UPDATE) {
+        HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0, -1,
+                 "Can't handle HIP_UPDATE of this type\n");
+    }
 
-    if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
-        HIP_IFEL(signaling_build_param_selective_hmac(ctx->output_msg, &ctx->hadb_entry->hip_hmac_out,
-                                                      HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
-                 "Building of Selective HMAC failed\n");
-        switch (HIP_DEFAULT_HI_ALGO) {
-        case HIP_HI_RSA:
-            if (signaling_hip_rsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
-                HIP_ERROR("Could not create signature\n");
-                return -EINVAL;
+    if (packet_type == HIP_R1 || (update_type == SIGNALING_FIRST_BEX_UPDATE || update_type == SIGNALING_SECOND_BEX_UPDATE)) {
+        if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Start PERF_CONN_U2_SELECTIVE_HMAC, PERF_CONN_U3_SELECTIVE_HMAC, "
+                      "PERF_I2_SELECTIVE_HMAC\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_SELECTIVE_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HMAC);
+#endif
+            HIP_IFEL(signaling_build_param_selective_hmac(ctx->output_msg, &ctx->hadb_entry->hip_hmac_out,
+                                                          HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
+                     "Building of Selective HMAC failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_CONN_U2_SELECTIVE_HMAC, PERF_CONN_U3_SELECTIVE_HMAC, "
+                      "PERF_I2_SELECTIVE_HMAC\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_SELECTIVE_HMAC);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HMAC);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HMAC);
+
+            HIP_DEBUG("Start PERF_CONN_U2_SELECTIVE_HOST_SIGN, PERF_CONN_U3_SELECTIVE_HOST_SIGN, "
+                      "PERF_I2_SELECTIVE_HOST_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_SELECTIVE_HOST_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HOST_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HOST_SIGN);
+#endif
+            switch (HIP_DEFAULT_HI_ALGO) {
+            case HIP_HI_RSA:
+                if (signaling_hip_rsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                    HIP_ERROR("Could not create signature\n");
+                    return -EINVAL;
+                }
+                break;
+            case HIP_HI_ECDSA:
+                if (signaling_hip_ecdsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                    HIP_ERROR("Could not create signature\n");
+                    return -EINVAL;
+                }
+                break;
+            case HIP_HI_DSA:
+                if (signaling_hip_dsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+                    HIP_ERROR("Could not create signature\n");
+                    return -EINVAL;
+                }
+                break;
             }
-            break;
-        case HIP_HI_ECDSA:
-            if (signaling_hip_ecdsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
-                HIP_ERROR("Could not create signature\n");
-                return -EINVAL;
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_CONN_U2_SELECTIVE_HOST_SIGN, PERF_CONN_U3_SELECTIVE_HOST_SIGN, "
+                      "PERF_I2_SELECTIVE_HOST_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_SELECTIVE_HOST_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HOST_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HOST_SIGN);
+#endif
+        } else {
+            if (hip_mac_and_sign_packet(ctx->output_msg, ctx->hadb_entry)) {
+                HIP_ERROR("failed to sign and mac outbound packet\n");
+                return -1;
             }
-            break;
-        case HIP_HI_DSA:
-            if (signaling_hip_dsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
-                HIP_ERROR("Could not create signature\n");
-                return -EINVAL;
-            }
-            break;
         }
-    } else {
-        if (hip_mac_and_sign_packet(ctx->output_msg, ctx->hadb_entry)) {
-            HIP_ERROR("failed to sign and mac outbound packet\n");
-            return -1;
-        }
+    } else if (update_type == SIGNALING_THIRD_BEX_UPDATE) {
+        sig_state->flag_user_sig = 0;
     }
 
 out_err:
@@ -1211,12 +1200,23 @@ int signaling_hmac2_and_sign(const uint8_t packet_type, const uint32_t ha_state,
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_SELECTIVE_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_SELECTIVE_HMAC);
+#endif
         if (signaling_build_param_selective_hmac2(ctx->output_msg,
                                                   &ctx->hadb_entry->hip_hmac_out,
                                                   ctx->hadb_entry->our_pub)) {
             HIP_ERROR("Failed to build parameter HMAC2 contents.\n");
             return -1;
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_SELECTIVE_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SELECTIVE_HMAC);
+
+        HIP_DEBUG("Start PERF_R2_SELECTIVE_HOST_SIGN\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_SELECTIVE_HOST_SIGN);
+#endif
         switch (HIP_DEFAULT_HI_ALGO) {
         case HIP_HI_RSA:
             if (signaling_hip_rsa_selective_sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
@@ -1237,6 +1237,10 @@ int signaling_hmac2_and_sign(const uint8_t packet_type, const uint32_t ha_state,
             }
             break;
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_SELECTIVE_HOST_SIGN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SELECTIVE_HOST_SIGN);
+#endif
     } else {
         if (hip_hmac2_and_sign(packet_type, ha_state, ctx)) {
             HIP_ERROR("failed to sign and mac outbound packet\n");
@@ -1312,8 +1316,30 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
                              -1, "Could not copy connection context\n");
                     /* Verify Service Signature for Selective Signing*/
                     if (flag_service_offer_signed == OFFER_SELECTIVE_SIGNED) {
-                        HIP_IFEL((signaling_verify_mb_sig_selective_s(&param_service_offer) != 1),
+#ifdef CONFIG_HIP_PERFORMANCE
+                        if (packet_type == HIP_UPDATE) {
+                            HIP_DEBUG("Start PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
+                            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
+                            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
+                        } else {
+                            HIP_DEBUG("Start PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
+                            hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
+                            hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
+                        }
+#endif
+                        HIP_IFEL((signaling_verify_mb_sig_selective_s(sig_state, &param_service_offer) != 1),
                                  -1, " Error verifying service signature on selective ack\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+                        if (packet_type == HIP_UPDATE) {
+                            HIP_DEBUG("Stop PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
+                            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
+                            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
+                        } else {
+                            HIP_DEBUG("Stop PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
+                            hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
+                            hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
+                        }
+#endif
                     }
                     if (signaling_get_info_req_from_service_offer(&param_service_offer, flags_info_requested)) {
                         HIP_DEBUG("Building of application context parameter failed.\n");
@@ -1338,8 +1364,9 @@ out_err:
 int signaling_update_check_packet(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state,
                                   struct hip_packet_context *ctx)
 {
-    int                          err   = 0;
-    const struct hip_tlv_common *param = NULL;
+    int                          err         = 0;
+    const struct hip_tlv_common *param       = NULL;
+    int                          update_type = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_UPDATE\n");
@@ -1350,8 +1377,27 @@ int signaling_update_check_packet(UNUSED const uint8_t packet_type, UNUSED const
      * the implementation MAY reply with an ICMP Parameter Problem. */
     HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
 
+    HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0, -1,
+             "HIP Update type can't be determined\n");
+    ;
     /* The HMAC parameter covers the same parts of a packet as the PK signature.
      * Therefore, we can omit the signature check at the end-host. */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_CONN_U1, PERF_CONN_U2, PERF_CONN_U3\n");
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3);
+
+    HIP_DEBUG("Start PERF_CONN_U1_VERIFY_HMAC, PERF_CONN_U2_VERIFY_HMAC, PERF_CONN_U3_VERIFY_HMAC\n");
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_HMAC);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_HMAC);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_HMAC);
+
+    if (update_type == SIGNALING_FIRST_BEX_UPDATE) {
+        HIP_DEBUG("Start PERF_NEW_UPDATE_CONN_RESPONDER\n");
+        hip_perf_start_benchmark(perf_set, PERF_NEW_UPDATE_CONN_RESPONDER);
+    }
+#endif
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
         HIP_IFEL(signaling_verify_packet_selective_hmac(ctx->input_msg,
                                                         &ctx->hadb_entry->hip_hmac_in,
@@ -1363,6 +1409,12 @@ int signaling_update_check_packet(UNUSED const uint8_t packet_type, UNUSED const
                  -1,
                  "HMAC validation on UPDATE failed.\n");
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CONN_U1_VERIFY_HMAC, PERF_CONN_U2_VERIFY_HMAC, PERF_CONN_U3_VERIFY_HMAC\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_HMAC);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_HMAC);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_HMAC);
+#endif
 out_err:
     ctx->error = err;
     return err;
@@ -1390,9 +1442,19 @@ int signaling_update_add_diffie_hellman(UNUSED const uint8_t packet_type, UNUSED
                  -1, "This is no signaling update packet\n");
     }
 
-    if (update_type != SIGNALING_THIRD_BEX_UPDATE) {
+    if (update_type == SIGNALING_FIRST_BEX_UPDATE) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_DIFFIE_HELLMAN, PERF_CONN_U2_DIFFIE_HELLMAN\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_DIFFIE_HELLMAN);
+#endif
         HIP_IFEL(signaling_add_param_dh_to_hip_update(ctx->output_msg), -1,
                  "Could not add add Diffie Hellman parameter to the HIP Update\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U1_DIFFIE_HELLMAN, PERF_CONN_U2_DIFFIE_HELLMAN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_DIFFIE_HELLMAN);
+#endif
     }
 out_err:
     return err;
@@ -1409,9 +1471,19 @@ int signaling_update_group_service_offers(const uint8_t packet_type,
     }
 
     if (update_type == SIGNALING_FIRST_BEX_UPDATE || update_type == SIGNALING_SECOND_BEX_UPDATE) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_GROUP_SERVICE_OFFERS, PERF_CONN_U2_GROUP_SERVICE_OFFERS\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
+#endif
         HIP_DEBUG("Grouping sevice offers\n");
         HIP_IFEL(signaling_i2_group_service_offers(packet_type, ha_state, ctx),
                  -1, "Could not group service offers\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_GROUP_SERVICE_OFFERS, PERF_CONN_U2_GROUP_SERVICE_OFFERS\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
+#endif
     }
 
 out_err:
@@ -1423,16 +1495,29 @@ out_err:
  */
 int signaling_update_handle_signed_service_offers(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int                          err       = 0;
-    struct signaling_hipd_state *sig_state = NULL;
+    int                          err         = 0;
+    struct signaling_hipd_state *sig_state   = NULL;
+    int                          update_type = 0;
 
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
-    if (sig_state->flag_offer_type == OFFER_SIGNED) {
+    HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0, -1,
+             "Can't handle HIP_UPDATE of this type\n");
+
+    if (sig_state->flag_offer_type == OFFER_SIGNED && (update_type == SIGNALING_FIRST_BEX_UPDATE ||
+                                                       update_type == SIGNALING_SECOND_BEX_UPDATE)) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U1_HANDLE_SIGNED_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HANDLE_SIGNED_OFFER);
+#endif
         HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
                  "Could not handle service Service Offers for I2\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U1_HANDLE_SIGNED_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HANDLE_SIGNED_OFFER);
+#endif
     } else {
         HIP_DEBUG("No signed service offers in the HIP message. Will look for unsigned service offers in a few moment!\n");
     }
@@ -1443,9 +1528,26 @@ out_err:
 int signaling_update_add_signed_service_ack_and_sig_conn(const uint8_t packet_type,
                                                          const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int err = 0;
-    HIP_IFEL(signaling_i2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx),
-             -1, "Could not add signed service acks and signalling connection to HIP_UPDATE\n");
+    int err         = 0;
+    int update_type = 0;
+
+    HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0, -1,
+             "Can't handle HIP_UPDATE of this type\n");
+
+    if (update_type == SIGNALING_FIRST_BEX_UPDATE || update_type == SIGNALING_SECOND_BEX_UPDATE) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CONN_U2_SIGNED_ACK, PERF_CONN_U3_SIGNED_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SIGNED_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SIGNED_ACK);
+#endif
+        HIP_IFEL(signaling_i2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx),
+                 -1, "Could not add signed service acks and signalling connection to HIP_UPDATE\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U2_SIGNED_ACK, PERF_CONN_U3_SIGNED_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SIGNED_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SIGNED_ACK);
+#endif
+    }
 out_err:
     return err;
 }
@@ -1456,11 +1558,11 @@ int signaling_i2_check_hmac(UNUSED const uint8_t packet_type,
     int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
     /* Verify HMAC. */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
-    hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
-#endif
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_VERIFY_SELECTIVE_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_HMAC);
+#endif
         if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
             hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
             HIP_IFEL(signaling_verify_packet_selective_hmac(ctx->input_msg,
@@ -1473,7 +1575,15 @@ int signaling_i2_check_hmac(UNUSED const uint8_t packet_type,
                                                             HIP_PARAM_SIGNALING_SELECTIVE_HMAC), -1,
                      "Verification of selective hmac was not successful\n");
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_VERIFY_SELECTIVE_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_HMAC);
+#endif
     } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_VERIFY_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+#endif
         if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
             hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
             HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
@@ -1486,11 +1596,11 @@ int signaling_i2_check_hmac(UNUSED const uint8_t packet_type,
                      -EPROTO,
                      "HMAC validation on I2 failed. Dropping the I2 packet.\n");
         }
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_VERIFY_HMAC\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
+        HIP_DEBUG("Stop PERF_I2_VERIFY_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
 #endif
+    }
 out_err:
     if (err) {
         ctx->error = err;
@@ -1504,6 +1614,10 @@ int signaling_i2_check_signature(const uint8_t packet_type,
     int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_VERIFY_SELECTIVE_HOST_SIG\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_HOST_SIG);
+#endif
         switch (HIP_DEFAULT_HI_ALGO) {
         case HIP_HI_RSA:
             HIP_IFEL(signaling_hip_rsa_selective_verify(ctx->hadb_entry->peer_pub_key,
@@ -1521,6 +1635,10 @@ int signaling_i2_check_signature(const uint8_t packet_type,
                      "DSA Signature verification in I2 failed\n");
             break;
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_VERIFY_SELECTIVE_HOST_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_HOST_SIG);
+#endif
     } else {
         HIP_IFEL(hip_check_i2_signature(packet_type, ha_state, ctx), -1,
                  "Signature verification in i2 successful\n");
@@ -1559,6 +1677,11 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2_GROUP_SERVICE_OFFERS, PERF_I2_GROUP_SERVICE_OFFERS\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_GROUP_SERVICE_OFFERS);
+    hip_perf_start_benchmark(perf_set, PERF_R2_GROUP_SERVICE_OFFERS);
+#endif
     if (sig_state->flag_offer_type == OFFER_SIGNED) {
         signaling_hipd_state_initialize_offer_groups(sig_state);
         HIP_DEBUG("Inside group_Service_offers\n");
@@ -1615,7 +1738,11 @@ int signaling_i2_group_service_offers(UNUSED const uint8_t packet_type,
             HIP_DEBUG("=============================================================\n");
         }
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_R2_GROUP_SERVICE_OFFERS, PERF_I2_GROUP_SERVICE_OFFERS\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2_GROUP_SERVICE_OFFERS);
+    hip_perf_stop_benchmark(perf_set, PERF_R2_GROUP_SERVICE_OFFERS);
+#endif
 out_err:
     return err;
 }
@@ -1633,10 +1760,17 @@ int signaling_i2_handle_signed_service_offers(const uint8_t packet_type, const u
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_offer_type == OFFER_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_HANDLE_SIGNED_SERVICE_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SIGNED_SERVICE_OFFER);
+#endif
         HIP_DEBUG("Message contains signed service offer. Handling them accordingly! \n");
-
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, OFFER_SIGNED), -1,
                  "Could not handle service Service Offers for I2\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I2_HANDLE_SIGNED_SERVICE_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SIGNED_SERVICE_OFFER);
+#endif
     } else {
         HIP_DEBUG("No signed service offers in the HIP message. Will look for unsigned service offers in a few moment!\n");
     }
@@ -1655,11 +1789,17 @@ int signaling_i2_handle_unsigned_service_offers(const uint8_t packet_type, const
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              0, "failed to retrieve state for signaling\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER);
+    hip_perf_start_benchmark(perf_set, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER);
+#endif
     if (sig_state->flag_offer_type != OFFER_SIGNED) {
         HIP_DEBUG("Message contains unsigned service offer. Handling them accordingly! \n");
         HIP_IFEL(signaling_i2_handle_service_offers_common(packet_type, ha_state, ctx, sig_state->flag_offer_type), -1,
                  "Could not handle service Service Offers for I2\n");
     }
+
 out_err:
     return err;
 }
@@ -1720,12 +1860,24 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
                                                      &flags_info_requested, RESPONDER),
              -1, "Could not handle service offer\n");
 
+
     if (signaling_info_req_flag_check(&flags_info_requested, USER_INFO_ID)) {
         sig_state->flag_user_sig = 1;
     }
 
     /* Now adding the signaling connection to the HIP_I2 message*/
     if (flag == OFFER_UNSIGNED || flag == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (packet_type == HIP_R1) {
+            HIP_DEBUG("Stop PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER);
+            hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER);
+        } else if (packet_type == HIP_UPDATE) {
+            HIP_DEBUG("Stop PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER\n");
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER);
+        }
+#endif
         HIP_IFEL(hip_build_param_contents(ctx->output_msg, &temp_conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
                  -1, "build signaling_connection failed \n");
     }
@@ -1733,27 +1885,29 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     // Now Add the service acknowledgements
     if (flag == OFFER_UNSIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-        hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+        HIP_DEBUG("Start PERF_I2_UNSIGNED_SERVICE_ACK, PERF_CONN_U2_UNSIGNED_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_UNSIGNED_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_UNSIGNED_ACK);
 #endif
-        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg),
+                 -1, "Building Acknowledgment to Service Offer failed");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-        hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+        HIP_DEBUG("Stop PERF_I2_UNSIGNED_SERVICE_ACK, PERF_CONN_U2_UNSIGNED_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_UNSIGNED_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_UNSIGNED_ACK);
 #endif
     } else if (flag == OFFER_SELECTIVE_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-        hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+        HIP_DEBUG("Start PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK, PERF_CONN_U2_SELECTIVE_SIGNED_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_SIGNED_ACK);
 #endif
-        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state), -1, "Building Acknowledgment to Service Offer failed");
+        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state),
+                 -1, "Building Acknowledgment to Service Offer failed");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-        hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+        HIP_DEBUG("Stop PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK, PERF_CONN_U2_SELECTIVE_SIGNED_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_SIGNED_ACK);
 #endif
     }
 
@@ -1780,6 +1934,10 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
              0, "failed to retrieve state for signaling\n");
 
     if (sig_state->flag_offer_type == OFFER_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_SIGNED_SERVICE_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+#endif
         if (packet_type == HIP_UPDATE) {
             HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
                      -1, "This is no signaling update packet\n");
@@ -1799,6 +1957,10 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
         /* ========== Create and send the ack for signed service offer  ===============*/
         HIP_IFEL(signaling_build_service_ack_s(sig_state, ctx, mb_dh_pub_key, mb_dh_pub_key_len),
                  -1, "Could not build ack for signed service offer\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_I2_SIGNED_SERVICE_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+#endif
     }
     HIP_DEBUG("Signation connection and service acknowledgement added \n");
 out_err:
@@ -1811,11 +1973,11 @@ int signaling_r2_check_hmac2_and_sign(UNUSED const uint8_t packet_type,
     int                          err   = 0;
     const struct hip_tlv_common *param = NULL;
     /* Verify HMAC. */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
-    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
-#endif
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_HMAC))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_VERIFY_SELECTIVE_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_SELECTIVE_HMAC);
+#endif
         if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
             hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
             HIP_IFEL(signaling_verify_packet_selective_hmac2(ctx->input_msg,
@@ -1828,7 +1990,15 @@ int signaling_r2_check_hmac2_and_sign(UNUSED const uint8_t packet_type,
                                                              ctx->hadb_entry->peer_pub), -1,
                      "Verification of selective hmac was not successful\n");
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_VERIFY_SELECTIVE_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_SELECTIVE_HMAC);
+#endif
     } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_VERIFY_HMAC\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+#endif
         if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
             hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
             HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
@@ -1843,18 +2013,18 @@ int signaling_r2_check_hmac2_and_sign(UNUSED const uint8_t packet_type,
                      -EPROTO,
                      "HMAC validation on I2 failed. Dropping the I2 packet.\n");
         }
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R2_VERIFY_HMAC\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
+        HIP_DEBUG("Stop PERF_R2_VERIFY_HMAC\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HMAC);
 #endif
+    }
 
     /* Validate signature */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
-    hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
-#endif
     if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SELECTIVE_SIGNATURE))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_VERIFY_SELECTIVE_HOST_SIG\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_SELECTIVE_HOST_SIG);
+#endif
         switch (HIP_DEFAULT_HI_ALGO) {
         case HIP_HI_RSA:
             HIP_IFEL(signaling_hip_rsa_selective_verify(ctx->hadb_entry->peer_pub_key,
@@ -1872,17 +2042,25 @@ int signaling_r2_check_hmac2_and_sign(UNUSED const uint8_t packet_type,
                      "DSA Signature verification in I2 failed\n");
             break;
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_VERIFY_SELECTIVE_HOST_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_SELECTIVE_HOST_SIG);
+#endif
     } else {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_VERIFY_HOST_SIG\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+#endif
         /* Validate signature */
         HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                          ctx->input_msg),
                  -EINVAL,
                  "R2 signature verification failed.\n");
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
+        HIP_DEBUG("Stop PERF_R2_VERIFY_HOST_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_HOST_SIG);
 #endif
+    }
 out_err:
     if (err) {
         ctx->error = err;
@@ -1948,6 +2126,12 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
 
 
     if (sig_state->flag_offer_type != OFFER_SIGNED || packet_type != HIP_UPDATE) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_R2_HANDLE_SIGNED_SERVICE_OFFER\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_R2_HANDLE_SIGNED_SERVICE_OFFER);
+#endif
         HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx, &new_conn,
                                                          sig_state->flag_offer_type,
                                                          &flags_info_requested, INITIATOR), -1,
@@ -1960,31 +2144,54 @@ int signaling_r2_handle_service_offers(UNUSED const uint8_t packet_type, UNUSED 
                  -1, "build signaling_connection failed \n");
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    if (packet_type == HIP_UPDATE) {
+        HIP_DEBUG("Stop PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER, "
+                  "PERF_CONN_U2_HANDLE_SIGNED_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HANDLE_SIGNED_OFFER);
+    } else {
+        HIP_DEBUG("Stop PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_R2_HANDLE_SIGNED_SERVICE_OFFER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_HANDLE_SIGNED_SERVICE_OFFER);
+    }
+#endif
+
     if (signaling_info_req_flag_check(&flags_info_requested, USER_INFO_ID)) {
         sig_state->flag_user_sig = 1;
     }
 
     // Now Add the service acknowledgements
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-    hip_perf_start_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-    hip_perf_start_benchmark(perf_set, PERF_I2_SERVICE_ACK);
-#endif
     if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
-        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
-    } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
-        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state), -1, "Building Acknowledgment to Service Offer failed");
-    } else {
-        if (packet_type != HIP_UPDATE) {
-            HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,
-                     "Building Acknowledgment to signed Service Offer failed\n");
-        }
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R2_SERVICE_ACK, PERF_I2_SERVICE_ACK\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-    hip_perf_stop_benchmark(perf_set, PERF_I2_SERVICE_ACK);
+        HIP_DEBUG("Start PERF_R2_UNSIGNED_SERVICE_ACK, PERF_CONN_U3_UNSIGNED_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_UNSIGNED_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_UNSIGNED_ACK);
 #endif
+        HIP_IFEL(signaling_build_service_ack_u(ctx->input_msg, ctx->output_msg), -1, "Building Acknowledgment to Service Offer failed");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_UNSIGNED_SERVICE_ACK, PERF_CONN_U3_UNSIGNED_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_UNSIGNED_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_UNSIGNED_ACK);
+#endif
+    } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK, PERF_CONN_U3_SELECTIVE_SIGNED_ACK\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_SIGNED_ACK);
+#endif
+        HIP_IFEL(signaling_build_service_ack_selective_s(ctx->input_msg, ctx->output_msg, sig_state), -1, "Building Acknowledgment to Service Offer failed");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK, PERF_CONN_U3_SELECTIVE_SIGNED_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_SIGNED_ACK);
+#endif
+    } else if (packet_type != HIP_UPDATE) {
+        HIP_IFEL(signaling_r2_add_signed_service_ack_and_sig_conn(packet_type, ha_state, ctx), -1,
+                 "Building Acknowledgment to signed Service Offer failed\n");
+    }
 
     if (packet_type == HIP_I2) {
         HIP_DEBUG("Adding the connection information to the hipd state.\n");

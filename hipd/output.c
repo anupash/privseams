@@ -316,21 +316,35 @@ int hip_mac_and_sign_packet(struct hip_common *msg,
                             const struct hip_hadb_state *const hadb_entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_HMAC\n");  // test 1.1.1
+    HIP_DEBUG("Start PERF_I2_HMAC, PERF_CONN_U2_HMAC, PERF_CONN_U3_HMAC\n");  // test 1.1.1
     hip_perf_start_benchmark(perf_set, PERF_I2_HMAC);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HMAC);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HMAC);
 #endif
     if (hip_build_param_hmac_contents(msg, &hadb_entry->hip_hmac_out)) {
         HIP_ERROR("Building of HMAC failed\n");
         return -1;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_HMAC\n");  // test 1.1.1
+    HIP_DEBUG("Stop PERF_I2_HMAC, PERF_CONN_U2_HMAC, PERF_CONN_U3_HMAC\n");  // test 1.1.1
     hip_perf_stop_benchmark(perf_set, PERF_I2_HMAC);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HMAC);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HMAC);
+#endif
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");  // test 1.1.1
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
 #endif
     if (hadb_entry->sign(hadb_entry->our_priv_key, msg)) {
         HIP_ERROR("Could not create signature\n");
         return -EINVAL;
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CONN_U2_HOST_SIGN, PERF_CONN_U3_HOST_SIGN\n");  // test 1.1.1
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+#endif
     return 0;
 }
 
@@ -581,20 +595,41 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_R1);
 
     /* The packet is on the wire, so write all tests now.. */
-    HIP_DEBUG("Write PERF_R1, PERF_I1_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_I_LOAD_USER_KEY, "
-              "PERF_I_LOAD_USER_PUBKEY, PERF_I2_HMAC, PERF_HASH, PERF_I2_SERVICE_ACK, PERF_I2_DH_CREATE, PERF_I2_HANDLE_SERVICE_OFFER\n");
-    hip_perf_write_benchmark(perf_set, PERF_R1);
+    HIP_DEBUG("Write PERF_I1_R1, PERF_R1, PERF_R1_VERIFY_HOST_SIG, PERF_I2_DH_CREATE, PERF_I2_GROUP_SERVICE_OFFERS, "
+              "PERF_I2_LOCATE_MBOX_CERT, PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER,"
+              "PERF_I2_HANDLE_SIGNED_SERVICE_OFFER, PERF_I2_VERIFY_MBOX_SIGN, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, "
+              "PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_I2_UNSIGNED_SERVICE_ACK, PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK, "
+              "PERF_I2_SIGNED_SERVICE_ACK, PERF_I2_HASH_SERVICE_OFFER, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, "
+              "PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_I2_HMAC, PERF_I2_HOST_SIGN, PERF_I2_USER_SIGN, PERF_I_LOAD_USER_KEY, "
+              "PERF_I_LOAD_USER_PUBKEY, PERF_I2_HMAC, PERF_I2_SELECTIVE_HMAC, PERF_I2_HOST_SIGN, PERF_I2_SELECTIVE_HOST_SIGN, "
+              "PERF_I2_USER_SIGN, PERF_I2_SELECTIVE_USER_SIGN, PERF_I_LOAD_USER_KEY, PERF_I_LOAD_USER_PUBKEY, PERF_HASH\n");
     hip_perf_write_benchmark(perf_set, PERF_I1_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
     hip_perf_write_benchmark(perf_set, PERF_R1_VERIFY_HOST_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_I2_DH_CREATE);
+    hip_perf_write_benchmark(perf_set, PERF_I2_GROUP_SERVICE_OFFERS);
+    hip_perf_write_benchmark(perf_set, PERF_I2_LOCATE_MBOX_CERT);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HANDLE_SIGNED_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_I2_ENCRYPT_ENDPOINT_SECRETS);
+    hip_perf_write_benchmark(perf_set, PERF_I2_UNSIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_I2_SELECTIVE_SIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HASH_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
+    hip_perf_write_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA);
+    hip_perf_write_benchmark(perf_set, PERF_I2_HMAC);
+    hip_perf_write_benchmark(perf_set, PERF_I2_SELECTIVE_HMAC);
     hip_perf_write_benchmark(perf_set, PERF_I2_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_I2_SELECTIVE_HOST_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_I2_USER_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_I2_SELECTIVE_USER_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
     hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
-    hip_perf_write_benchmark(perf_set, PERF_I2_HMAC);
     hip_perf_write_benchmark(perf_set, PERF_HASH);
-    hip_perf_write_benchmark(perf_set, PERF_I2_SERVICE_ACK);
-    hip_perf_write_benchmark(perf_set, PERF_I2_DH_CREATE);
-    hip_perf_write_benchmark(perf_set, PERF_I2_HANDLE_SERVICE_OFFER);
 
     HIP_DEBUG("Start PERF_I2_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2_R2);
@@ -1127,38 +1162,58 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN_RESPONDER);
 
     /* The packet is on the wire, so write all tests now.. */
-    HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HOST_SIG, PERF_I2_VERIFY_USER_SIG, PERF_R_LOAD_USER_PUBKEY, "
-              "PERF_I2_VERIFY_USER_SIG, PERF_R2_HOST_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U1_VERIFY_USER_SIG, PERF_R2_HMAC, "
-              "PERF_HASH, PERF_R_NETSTAT_LOOKUP, PERF_R_USER_CTX_LOOKUP, PERF_R_X509AC_VERIFY_CERT_CHAIN, "
-              "PERF_R2_SERVICE_ACK, PERF_R_APP_CTX_LOOKUP, PERF_R_VERIFY_APPLICATION, PERF_R_LOAD_USER_CERT, PERF_R_LOAD_USER_KEY, "
-              "PERF_R2_DH_CREATE, PERF_R2_HANDLE_SERVICE_OFFER, PERF_R2_VERIFY_HMAC, PERF_NEW_CONN_RESPONDER, PERF_R_LOAD_USER_NAME, "
-              "PERF_R_NETSTAT_CMD\n");
+    HIP_DEBUG("Write PERF_I2, PERF_USER_COMM, PERF_R1_I2, PERF_I2_VERIFY_HMAC, PERF_I2_VERIFY_HOST_SIG, PERF_I2_VERIFY_SELECTIVE_HOST_SIG,"
+              "PERF_I2_VERIFY_USER_SIG, PERF_I2_VERIFY_SELECTIVE_USER_SIG, PERF_R2_DH_CREATE, PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER,"
+              "PERF_R2_HANDLE_SIGNED_SERVICE_OFFER, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_R2_LOCATE_MBOX_CERT,"
+              "PERF_R_APP_CTX_LOOKUP, PERF_R_NETSTAT_LOOKUP, PERF_R_NETSTAT_CMD, PERF_R_VERIFY_APPLICATION, PERF_R_X509AC_VERIFY_CERT_CHAIN, "
+              "PERF_R_USER_CTX_LOOKUP, PERF_R_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_NAME, PERF_R_LOAD_USER_CERT, PERF_R2_VERIFY_MBOX_SIGN, "
+              "PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_UNSIGNED_SERVICE_ACK, PERF_R2_SIGNED_SERVICE_ACK, "
+              "PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK, PERF_R2_HASH_SERVICE_OFFER, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA,"
+              "PERF_R2_HMAC, PERF_R2_SELECTIVE_HMAC, PERF_R2_HOST_SIGN, PERF_R2_SELECTIVE_HOST_SIGN, PERF_R_LOAD_USER_KEY, PERF_R2_USER_SIGN, "
+              "PERF_R2_SELECTIVE_USER_SIGN, PERF_NEW_CONN_RESPONDER\n");
     hip_perf_write_benchmark(perf_set, PERF_I2);
     hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
     hip_perf_write_benchmark(perf_set, PERF_R1_I2);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_HMAC);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_HOST_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_HOST_SIG);
     hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_SELECTIVE_USER_SIG);
+
     hip_perf_write_benchmark(perf_set, PERF_R2_DH_CREATE);
-    hip_perf_write_benchmark(perf_set, PERF_R2_HOST_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_R2_SERVICE_ACK);
-    hip_perf_write_benchmark(perf_set, PERF_R2_USER_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_R2_HANDLE_SERVICE_OFFER);
-    hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
-    hip_perf_write_benchmark(perf_set, PERF_R_VERIFY_APPLICATION);
-    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
-    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
-    hip_perf_write_benchmark(perf_set, PERF_I2_VERIFY_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HANDLE_UNSIGNED_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HANDLE_SIGNED_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HANDLE_SELECTIVE_SIGNED_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_R2_LOCATE_MBOX_CERT);
+    hip_perf_write_benchmark(perf_set, PERF_R_APP_CTX_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_R_NETSTAT_LOOKUP);
     hip_perf_write_benchmark(perf_set, PERF_R_NETSTAT_CMD);
-    hip_perf_write_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_R_APP_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
-    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+    hip_perf_write_benchmark(perf_set, PERF_R_VERIFY_APPLICATION);
     hip_perf_write_benchmark(perf_set, PERF_R_X509AC_VERIFY_CERT_CHAIN);
-    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN_RESPONDER);
-    hip_perf_write_benchmark(perf_set, PERF_HASH);
+    hip_perf_write_benchmark(perf_set, PERF_R_USER_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+    hip_perf_write_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_R2_ENCRYPT_ENDPOINT_SECRETS);
+    hip_perf_write_benchmark(perf_set, PERF_R2_UNSIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_R2_SIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_R2_SELECTIVE_SIGNED_SERVICE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HASH_SERVICE_OFFER);
+    hip_perf_write_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
+    hip_perf_write_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA);
     hip_perf_write_benchmark(perf_set, PERF_R2_HMAC);
+    hip_perf_write_benchmark(perf_set, PERF_R2_SELECTIVE_HMAC);
+    hip_perf_write_benchmark(perf_set, PERF_R2_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_R2_SELECTIVE_HOST_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+    hip_perf_write_benchmark(perf_set, PERF_R2_USER_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_R2_SELECTIVE_USER_SIGN);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN_RESPONDER);
+
+    hip_perf_write_benchmark(perf_set, PERF_HASH);
+    hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
 
     return err;

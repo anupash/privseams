@@ -318,16 +318,22 @@ int signaling_verify_application(const char *app_path)
 
     /* Now verify the chain */
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_X509AC_VERIFY_CERT_CHAIN, PERF_R_X509AC_VERIFY_CERT_CHAIN\n");   // test 1.1.2
+    HIP_DEBUG("Start PERF_I_X509AC_VERIFY_CERT_CHAIN, PERF_R_X509AC_VERIFY_CERT_CHAIN, "
+              "PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN, PERF_CONN_U_R_X509AC_VERIFY_CERT_CHAIN\n");   // test 1.1.2
     hip_perf_start_benchmark(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN);
     hip_perf_start_benchmark(perf_set, PERF_R_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN);
 #endif
     HIP_IFEL(verify_ac_certificate_chain(app_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, untrusted_chain),
              -1, "Attribute certificate for application %s did not verify correctly.\n", app_path);
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_X509AC_VERIFY_CERT_CHAIN, PERF_R_X509AC_VERIFY_CERT_CHAIN\n");
+    HIP_DEBUG("Stop PERF_I_X509AC_VERIFY_CERT_CHAIN, PERF_R_X509AC_VERIFY_CERT_CHAIN, "
+              "PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN, PERF_CONN_U_R_X509AC_VERIFY_CERT_CHAIN\n");
     hip_perf_stop_benchmark(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN);
     hip_perf_stop_benchmark(perf_set, PERF_R_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_X509AC_VERIFY_CERT_CHAIN);
 #endif
 
     /* Add to verified applications */
@@ -362,13 +368,19 @@ int signaling_get_verified_application_context_by_ports(struct signaling_connect
     struct system_app_context sys_ctx = { 0 };
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_APP_CTX_LOOKUP, PERF_R_APP_CTX_LOOKUP\n");   // test 1.1
+    HIP_DEBUG("Start PERF_I_APP_CTX_LOOKUP, PERF_R_APP_CTX_LOOKUP, "
+              "PERF_CONN_U_I_APP_CTX_LOOKUP, PERF_CONN_U_R_APP_CTX_LOOKUP\n");   // test 1.1
     hip_perf_start_benchmark(perf_set, PERF_I_APP_CTX_LOOKUP);
     hip_perf_start_benchmark(perf_set, PERF_R_APP_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_APP_CTX_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_APP_CTX_LOOKUP);
 
-    HIP_DEBUG("Start PERF_I_NETSTAT_LOOKUP, PERF_R_NETSTAT_LOOKUP\n");  // test 1.1.1
+    HIP_DEBUG("Start PERF_I_NETSTAT_LOOKUP, PERF_R_NETSTAT_LOOKUP, "
+              "PERF_CONN_U_I_NETSTAT_LOOKUP, PERF_CONN_U_R_NETSTAT_LOOKUP\n");  // test 1.1.1
     hip_perf_start_benchmark(perf_set, PERF_I_NETSTAT_LOOKUP);
     hip_perf_start_benchmark(perf_set, PERF_R_NETSTAT_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_NETSTAT_LOOKUP);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_NETSTAT_LOOKUP);
 #endif
 
     HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(conn->src_port, conn->dst_port, &sys_ctx, endpoint),
@@ -379,22 +391,29 @@ int signaling_get_verified_application_context_by_ports(struct signaling_connect
     memcpy(&conn->application_name, &sys_ctx.progname, strlen(sys_ctx.progname));
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_NETSTAT_LOOKUP, PERF_R_NETSTAT_LOOKUP\n");
+    HIP_DEBUG("Stop PERF_I_NETSTAT_LOOKUP, PERF_R_NETSTAT_LOOKUP, "
+              "PERF_CONN_U_I_NETSTAT_LOOKUP, PERF_CONN_U_R_NETSTAT_LOOKUP\n");
     hip_perf_stop_benchmark(perf_set, PERF_I_NETSTAT_LOOKUP);
     hip_perf_stop_benchmark(perf_set, PERF_R_NETSTAT_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_NETSTAT_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_NETSTAT_LOOKUP);
 
-    HIP_DEBUG("Start PERF_I_VERIFY_APPLICATION, PERF_R_VERIFY_APPLICATION\n");   // test 1.1.2
+    HIP_DEBUG("Start PERF_I_VERIFY_APPLICATION, PERF_R_VERIFY_APPLICATION, "
+              "PERF_CONN_U_I_VERIFY_APPLICATION, PERF_CONN_U_R_VERIFY_APPLICATION\n");   // test 1.1.2
     hip_perf_start_benchmark(perf_set, PERF_I_VERIFY_APPLICATION);
     hip_perf_start_benchmark(perf_set, PERF_R_VERIFY_APPLICATION);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_VERIFY_APPLICATION);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_VERIFY_APPLICATION);
 #endif
-
     HIP_IFEL(signaling_verify_application(sys_ctx.path),
              -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
-
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_VERIFY_APPLICATION, PERF_R_VERIFY_APPLICATION\n");
+    HIP_DEBUG("Stop PERF_I_VERIFY_APPLICATION, PERF_R_VERIFY_APPLICATION, "
+              "PERF_CONN_U_I_VERIFY_APPLICATION, PERF_CONN_U_R_VERIFY_APPLICATION\n");
     hip_perf_stop_benchmark(perf_set, PERF_I_VERIFY_APPLICATION);
     hip_perf_stop_benchmark(perf_set, PERF_R_VERIFY_APPLICATION);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_VERIFY_APPLICATION);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_VERIFY_APPLICATION);
 #endif
 
     HIP_IFEL(!(ac = get_application_attribute_certificate_chain(sys_ctx.path, NULL)),
@@ -403,9 +422,12 @@ int signaling_get_verified_application_context_by_ports(struct signaling_connect
              -1, "Could not build application context for application: %s.\n", sys_ctx.path);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_APP_CTX_LOOKUP, PERF_R_APP_CTX_LOOKUP\n");
+    HIP_DEBUG("Stop PERF_I_APP_CTX_LOOKUP, PERF_R_APP_CTX_LOOKUP, "
+              "PERF_CONN_U_I_APP_CTX_LOOKUP, PERF_CONN_U_R_APP_CTX_LOOKUP\n");
     hip_perf_stop_benchmark(perf_set, PERF_I_APP_CTX_LOOKUP);
     hip_perf_stop_benchmark(perf_set, PERF_R_APP_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_APP_CTX_LOOKUP);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_APP_CTX_LOOKUP);
 #endif
 out_err:
     return err;

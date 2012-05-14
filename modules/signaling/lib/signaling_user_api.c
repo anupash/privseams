@@ -54,9 +54,12 @@ STACK_OF(X509) * signaling_user_api_get_user_certificate_chain(const uid_t uid) 
     STACK_OF(X509) * ret = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n");   // test 1.1
+    HIP_DEBUG("Start PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT, "
+              "PERF_CONN_U_I_LOAD_USER_CERT, PERF_CONN_U_R_LOAD_USER_CERT\n"); // test 1.1
     hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
     hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_CERT);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_CERT);
 #endif
     homedir = get_user_homedir(uid);
     sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
@@ -64,16 +67,22 @@ STACK_OF(X509) * signaling_user_api_get_user_certificate_chain(const uid_t uid) 
         HIP_ERROR("Could not get user certificate \n");
         sk_X509_free(ret);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n"); // test 1.1
+        HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT,"
+                  "PERF_CONN_U_I_LOAD_USER_CERT, PERF_CONN_U_R_LOAD_USER_CERT\n"); // test 1.1
         hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
         hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_CERT);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_CERT);
 #endif
         return NULL;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT\n");   // test 1.1
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_CERT, PERF_R_LOAD_USER_CERT,"
+              "PERF_CONN_U_I_LOAD_USER_CERT, PERF_CONN_U_R_LOAD_USER_CERT\n"); // test 1.1
     hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
     hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_CERT);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_CERT);
 #endif
     return ret;
 }
@@ -145,9 +154,12 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     int            out_len;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME\n");   // test 1.1
+    HIP_DEBUG("Start PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME, "
+              "PERF_CONN_U_I_LOAD_USER_NAME, PERF_CONN_U_R_LOAD_USER_NAME\n");   // test 1.1
     hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
     hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_NAME);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_NAME);
 #endif
     if ((usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
         usercert = sk_X509_pop(usercert_chain);
@@ -161,9 +173,12 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
         err = -1;
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME\n");   // test 1.1
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_NAME, PERF_R_LOAD_USER_NAME, "
+              "PERF_CONN_U_I_LOAD_USER_NAME, PERF_CONN_U_R_LOAD_USER_NAME\n");   // test 1.1
     hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
     hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_NAME);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_NAME);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_NAME);
 #endif
 out_err:
     sk_X509_free(usercert_chain);
@@ -199,29 +214,59 @@ int signaling_user_api_sign(const uid_t uid, void *data, const int in_len,
                  -1, "Could not get homedir for user %d.\n", uid);
         sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY\n");
+        HIP_DEBUG("Start PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY, "
+                  "PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U_R_LOAD_USER_KEY\n");
         hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
         hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
 #endif
         HIP_IFEL(load_rsa_private_key(filebuf, &rsa),
                  -1, "Could not get private key for signing \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY\n");
+        HIP_DEBUG("Stop PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY, "
+                  "PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U_R_LOAD_USER_KEY\n");
         hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
-        hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+        hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
 #endif
         sig_len = RSA_size(rsa);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start  PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
+        if (flag_selective_sign) {
+            HIP_DEBUG("Start  PERF_I2_SELECTIVE_USER_SIGN, PERF_R2_SELECTIVE_USER_SIGN, "
+                      "PERF_CONN_U2_SELECTIVE_USER_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_R2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_USER_SIGN);
+        } else {
+            HIP_DEBUG("Start  PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U2_USER_SIGN, "
+                      "PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        }
 #endif
         HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf, flag_selective_sign),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
+        if (flag_selective_sign) {
+            HIP_DEBUG("Stop I2_SELECTIVE_USER_SIGN, PERF_R2_SELECTIVE_USER_SIGN, "
+                      "PERF_CONN_U2_SELECTIVE_USER_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_R2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_USER_SIGN);
+        } else {
+            HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U2_USER_SIGN, "
+                      "PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        }
 #endif
         break;
 
@@ -231,30 +276,60 @@ int signaling_user_api_sign(const uid_t uid, void *data, const int in_len,
                  -1, "Could not get homedir for user %d.\n", uid);
         sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY\n");
+        HIP_DEBUG("Start PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY, "
+                  "PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U_R_LOAD_USER_KEY\n");
         hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
         hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
 #endif
         HIP_IFEL(load_ecdsa_private_key(filebuf, &ecdsa),
                  -1, "Could not get private key for signing \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY\n");
+        HIP_DEBUG("Stop PERF_I_LOAD_USER_KEY, PERF_R_LOAD_USER_KEY, "
+                  "PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U_R_LOAD_USER_KEY\n");
         hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_KEY);
         hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_KEY);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
 #endif
 
         sig_len = ECDSA_size(ecdsa);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
-        hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
+        if (flag_selective_sign) {
+            HIP_DEBUG("Start  PERF_I2_SELECTIVE_USER_SIGN, PERF_R2_SELECTIVE_USER_SIGN, "
+                      "PERF_CONN_U2_SELECTIVE_USER_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_R2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_USER_SIGN);
+        } else {
+            HIP_DEBUG("Start  PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U2_USER_SIGN, "
+                      "PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_R2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        }
 #endif
         HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf, flag_selective_sign),
                  -1, "Signature function failed \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
-        hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
+        if (flag_selective_sign) {
+            HIP_DEBUG("Stop I2_SELECTIVE_USER_SIGN, PERF_R2_SELECTIVE_USER_SIGN, "
+                      "PERF_CONN_U2_SELECTIVE_USER_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_R2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_USER_SIGN);
+        } else {
+            HIP_DEBUG("Stop PERF_I2_USER_SIGN, PERF_R2_USER_SIGN, PERF_CONN_U2_USER_SIGN, "
+                      "PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_R2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        }
 #endif
         break;
     default:
@@ -279,17 +354,23 @@ EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid)
     HIP_IFEL(!(user_cert_chain = signaling_user_api_get_user_certificate_chain(uid)),
              -1, "Could not find user's certificate \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY\n");
+    HIP_DEBUG("Start PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY, "
+              "PERF_CONN_U_I_LOAD_USER_PUBKEY, PERF_CONN_U_R_LOAD_USER_PUBKEY\n");
     hip_perf_start_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
     hip_perf_start_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_PUBKEY);
+    hip_perf_start_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_PUBKEY);
 #endif
     user_cert = sk_X509_pop(user_cert_chain);
     HIP_IFEL(!(pkey = X509_get_pubkey(user_cert)),
              -1, "Error getting public key from users certificate \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY\n");
+    HIP_DEBUG("Stop PERF_I_LOAD_USER_PUBKEY, PERF_R_LOAD_USER_PUBKEY, "
+              "PERF_CONN_U_I_LOAD_USER_PUBKEY, PERF_CONN_U_R_LOAD_USER_PUBKEY\n");
     hip_perf_stop_benchmark(perf_set, PERF_I_LOAD_USER_PUBKEY);
     hip_perf_stop_benchmark(perf_set, PERF_R_LOAD_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_PUBKEY);
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_PUBKEY);
 #endif
 out_err:
     if (err) {

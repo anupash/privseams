@@ -25,6 +25,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
+ * @author Anupam Ashish <anupam.ashish@rwth-aachen.de>
  *
  */
 
@@ -94,7 +95,6 @@ static int handle_new_connection(const struct hip_fw_context *const ctx,
         HIP_ERROR("Could not add entry to scdb.\n");
         return -1;
     }
-
 
 #ifdef CONFIG_HIP_PERFORMANCE
     hip_perf_start_benchmark(perf_set, PERF_CONN_REQUEST);

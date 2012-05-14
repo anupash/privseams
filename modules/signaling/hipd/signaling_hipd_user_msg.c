@@ -157,6 +157,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
     /* Now check whether we need to trigger a BEX or an UPDATE */
     if (entry) {   // UPDATE
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_COMPLETE_UPDATE_EX\n");
+        hip_perf_start_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
+#endif
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
 
@@ -192,6 +196,24 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
         HIP_DEBUG("Started new UPDATE for following connection context:\n");
         signaling_connection_print(conn, "");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_CONN_U1_DIFFIE_HELLMAN, PERF_CONN_U1_HMAC, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U_I_APP_CTX_LOOKUP, "
+                  "PERF_CONN_U_I_NETSTAT_LOOKUP, PERF_CONN_U_I_VERIFY_APPLICATION, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN"
+                  "PERF_CONN_U_I_USER_CTX_LOOKUP, PERF_CONN_U_I_LOAD_USER_NAME, PERF_CONN_U_I_LOAD_USER_CERT\n");
+        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HMAC);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
+
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_APP_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_NETSTAT_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_VERIFY_APPLICATION);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_USER_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_NAME);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_CERT);
+#endif
     } else {        // BEX
         HIP_DEBUG("Triggering BEX \n");
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
@@ -223,27 +245,25 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_print(conn, "");
-    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN, PERF_I_HOST_CTX_LOOKUP,"
-              "PERF_I_NETSTAT_LOOKUP, PERF_I_USER_CTX_LOOKUP, PERF_I_APP_CTX_LOOKUP, PERF_I_X509AC_VERIFY_CERT_CHAIN,"
-              "PERF_I_VERIFY_APPLICATION, PERF_I_LOAD_USER_CERT, PERF_I_LOAD_USER_NAME, PERF_I_NETSTAT_CMD\n");
-    hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
-    hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
-    hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
+        HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_I_HOST_CTX_LOOKUP, PERF_I_APP_CTX_LOOKUP, PERF_I_NETSTAT_LOOKUP, PERF_I_NETSTAT_CMD, "
+                  "PERF_I_X509AC_VERIFY_CERT_CHAIN, PERF_I_VERIFY_APPLICATION, PERF_I_USER_CTX_LOOKUP, "
+                  "PERF_I_LOAD_USER_CERT, PERF_I_LOAD_USER_NAME, \n");
+        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
 
-    hip_perf_write_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_I_APP_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_CMD);
-    hip_perf_write_benchmark(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN);
-    hip_perf_write_benchmark(perf_set, PERF_I_VERIFY_APPLICATION);
-    hip_perf_write_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
-    hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
-    hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
-
+        hip_perf_write_benchmark(perf_set, PERF_I_HOST_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_I_APP_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_I_NETSTAT_CMD);
+        hip_perf_write_benchmark(perf_set, PERF_I_X509AC_VERIFY_CERT_CHAIN);
+        hip_perf_write_benchmark(perf_set, PERF_I_VERIFY_APPLICATION);
+        hip_perf_write_benchmark(perf_set, PERF_I_USER_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_CERT);
+        hip_perf_write_benchmark(perf_set, PERF_I_LOAD_USER_NAME);
 #endif
+    }
+
 
 out_err:
     return err;

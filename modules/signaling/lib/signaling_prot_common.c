@@ -2,7 +2,8 @@
  * signaling_prot_common.c
  *
  *  Created on: Nov 11, 2010
- *      Author: ziegeldorf
+ *     Authors: Henrik Ziegeldorf, <henrik.ziegeldorf@rwth-aachen.de>
+ *              Anupam Ashish,     <anupam.ashish@rwth-aachen.de>
  */
 
 #include <string.h>

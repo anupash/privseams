@@ -279,9 +279,17 @@ static int verify(void *const peer_pub, struct hip_common *const msg, const int 
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest),
              -1, "Could not calculate SHA1 digest\n");
     if (type == HIP_HI_RSA) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
+        hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+#endif
         /* RSA_verify returns 0 on failure */
         err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
                           sig->signature, RSA_size(peer_pub), peer_pub);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_ECDSA_VERIFY_IMPL\n");
+        hip_perf_stop_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+#endif
     } else if (type == HIP_HI_ECDSA) {
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_ECDSA_VERIFY_IMPL\n");

@@ -1034,24 +1034,42 @@ static int hip_fw_verify_packet(struct hip_common *const common,
      * 1.) HI -> HIT matching must be ensured when saving HI in this tuple
      * 2.) tuple is looked up corresponding to HITs */
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG\n");
+    HIP_DEBUG("Start PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG,"
+              "PERF_MBOX_I2_VERIFY_HOST_SELECTIVE_SIG, PERF_MBOX_R2_VERIFY_HOST_SELECTIVE_SIG,"
+              "PERF_MBOX_U1_VERIFY_HOST_SIG, PERF_MBOX_U2_VERIFY_HOST_SIG, PERF_MBOX_U3_VERIFY_HOST_SIG,"
+              "PERF_MBOX_U2_VERIFY_HOST_SELECTIVE_SIG, PERF_MBOX_U3_VERIFY_HOST_SELECTIVE_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
     hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
     hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U1_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SELECTIVE_SIG);
 #endif
-
     if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
                                        common)) {
         HIP_INFO("Signature verification failed\n");
 
         return 0;
     }
-
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG\n");
+    HIP_DEBUG("Stop PERF_MBOX_R1_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_HOST_SIG,"
+              "PERF_MBOX_I2_VERIFY_HOST_SELECTIVE_SIG, PERF_MBOX_R2_VERIFY_HOST_SELECTIVE_SIG"
+              "PERF_MBOX_U1_VERIFY_HOST_SIG, PERF_MBOX_U2_VERIFY_HOST_SIG, PERF_MBOX_U3_VERIFY_HOST_SIG,"
+              "PERF_MBOX_U2_VERIFY_HOST_SELECTIVE_SIG, PERF_MBOX_U3_VERIFY_HOST_SELECTIVE_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SELECTIVE_SIG);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SELECTIVE_SIG);
 #endif
     HIP_INFO("Signature successfully verified\n");
 
@@ -1583,6 +1601,10 @@ static int handle_update(struct hip_common *const common,
     const struct hip_locator  *locator  = NULL;
     const struct hip_seq      *seq      = NULL;
     const struct hip_ack      *ack      = NULL;
+    int                        update_type;
+
+    /* Sanity checks */
+    update_type = signaling_get_update_type(common);
 
     /* classify UPDATE message */
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -1601,6 +1623,12 @@ static int handle_update(struct hip_common *const common,
         if (!(*tuple)) {
             *tuple = get_tuple_by_hits(&common->hits, &common->hitr);
         }
+
+        HIP_DEBUG("Received FIRST BEX Update... \n");
+        if (!signaling_hipfw_handle_r1(common, *tuple, ctx)) {
+            HIP_ERROR("failed to process First BEX UPDATE packet\n");
+            return 0;
+        }
     } else if (esp_info && seq && ack) {
         if (!(*tuple)) {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
@@ -1616,6 +1644,11 @@ static int handle_update(struct hip_common *const common,
             HIP_ERROR("unable to process second UPDATE message\n");
             return 0;
         }
+        HIP_DEBUG("Received SECOND BEX Update... \n");
+        if (!signaling_hipfw_handle_i2(common, *tuple, ctx)) {
+            HIP_ERROR("failed to process Second BEX UPDATE packet\n");
+            return 0;
+        }
     } else if (ack) {
         if (!(*tuple)) {
             HIP_ERROR("Insufficient stored state to process UPDATE\n");
@@ -1626,8 +1659,25 @@ static int handle_update(struct hip_common *const common,
             HIP_ERROR("failed to verify UPDATE packet\n");
             return 0;
         }
+        HIP_DEBUG("Received THIRD BEX Update... \n");
+        if (!signaling_hipfw_handle_r2(common, *tuple, ctx)) {
+            HIP_ERROR("failed to process Third BEX UPDATE packet\n");
+            return 0;
+        }
     } else {
-        HIP_DEBUG("Unknown parameter combination in UPDATE\n");
+        switch (update_type) {
+        case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:
+            HIP_DEBUG("Received certificate Update... \n");
+            return signaling_hipfw_handle_incoming_certificate_udpate(common, *tuple, ctx);
+            break;
+        case SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE:
+            HIP_DEBUG("Received certificate Update Ack... \n");
+            return signaling_hipfw_handle_incoming_certificate_update_ack(common, *tuple, ctx);
+            break;
+        default:
+            HIP_DEBUG("Unknown parameter combination in UPDATE\n");
+            break;
+        }
         return 0;
     }
 
@@ -1746,11 +1796,7 @@ static int check_packet(struct hip_common *common,
     } else if (common->type_hdr == HIP_R2) {
         err = handle_r2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_UPDATE) {
-        if (signaling_get_update_type(common)) {
-            err = signaling_hipfw_handle_update(common, tuple, ctx);
-        } else if (err) {
-            err = handle_update(common, &tuple, ctx);
-        }
+        err = handle_update(common, &tuple, ctx);
     } else if (common->type_hdr == HIP_NOTIFY) {
         err = signaling_hipfw_handle_notify(common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE) {

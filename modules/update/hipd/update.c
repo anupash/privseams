@@ -326,15 +326,24 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
                                   UNUSED const uint32_t ha_state,
                                   struct hip_packet_context *ctx)
 {
-    int                  err        = 0;
-    struct in6_addr     *dst_addr   = NULL;
-    struct update_state *localstate = NULL;
+    int                          err        = 0;
+    struct in6_addr             *dst_addr   = NULL;
+    struct update_state         *localstate = NULL;
+    struct signaling_hipd_state *sig_state  = NULL;
+
+    if (!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state"))) {
+        HIP_DEBUG("failed to get the signaling hipd state for this connection\n");
+    }
 
     switch (hip_classify_update_type(ctx->input_msg)) {
     case FIRST_UPDATE_PACKET:
         // send challenge to all advertised locators
         localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U1\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1);
+#endif
         for (unsigned i = 0; i < localstate->valid_locators; i++) {
             dst_addr = &localstate->addresses_to_send_echo_request[i];
 
@@ -353,8 +362,113 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
                                ctx->hadb_entry,
                                1);
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Write PERF_CONN_U1, PERF_CONN_U1_VERIFY_HMAC, PERF_CONN_U1_GROUP_SERVICE_OFFERS, "
+                  "PERF_CONN_U2_DIFFIE_HELLMAN, PERF_CONN_U_R_LOAD_USER_KEY\n");
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_VERIFY_HMAC);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_DIFFIE_HELLMAN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
+        if (sig_state->flag_offer_type == OFFER_SIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U1_HANDLE_SIGNED_OFFER, PERF_CONN_U2_SIGNED_ACK, PERF_CONN_U2_HMAC,"
+                      "PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HANDLE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SIGNED_ACK);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+        } else if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_CONN_U2_UNSIGNED_ACK, PERF_CONN_U2_HMAC,"
+                      "PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_UNSIGNED_ACK);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+        } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U2_SELECTIVE_SIGNED_ACK, "
+                      "PERF_CONN_U2_SELECTIVE_HMAC, PERF_CONN_U2_SELECTIVE_HOST_SIGN, PERF_CONN_U2_SELECTIVE_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_SIGNED_ACK);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HMAC);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_USER_SIGN);
+        }
+        HIP_DEBUG("Write PERF_CONN_U_R_APP_CTX_LOOKUP, PERF_CONN_U_R_NETSTAT_LOOKUP, PERF_CONN_U_R_VERIFY_APPLICATION, "
+                  "PERF_CONN_U_R_X509AC_VERIFY_CERT_CHAIN, PERF_CONN_U_R_USER_CTX_LOOKUP, PERF_CONN_U_R_LOAD_USER_NAME, "
+                  "PERF_CONN_U_R_LOAD_USER_CERT\n");
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_APP_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_NETSTAT_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_VERIFY_APPLICATION);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_X509AC_VERIFY_CERT_CHAIN);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_USER_CTX_LOOKUP);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_NAME);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_CERT);
+#endif
+        break;
+    case SECOND_UPDATE_PACKET:
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U2, PERF_COMPLETE_UPDATE_EX\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2);
+        hip_perf_stop_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
+#endif
+        // send a response to default peer IP
+        err = hip_send_pkt(&ctx->hadb_entry->our_addr,
+                           &ctx->hadb_entry->peer_addr,
+                           (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                           ctx->hadb_entry->peer_udp_port,
+                           ctx->output_msg,
+                           ctx->hadb_entry,
+                           1);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+
+        HIP_DEBUG("Write PERF_CONN_U2, PERF_COMPLETE_UPDATE_EX, PERF_CONN_U2_VERIFY_HMAC, "
+                  "PERF_CONN_U2_GROUP_SERVICE_OFFERS, PERF_CONN_U_I_LOAD_USER_KEY\n");
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
+        hip_perf_write_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_HMAC);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
+
+        if (sig_state->flag_offer_type == OFFER_SIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U2_HANDLE_SIGNED_OFFER, PERF_CONN_U3_SIGNED_ACK, PERF_CONN_U3_HMAC, "
+                      "PERF_CONN_U3_HOST_SIGN, PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HANDLE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SIGNED_ACK);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        } else if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_CONN_U3_UNSIGNED_ACK, PERF_CONN_U3_HMAC, "
+                      "PERF_CONN_U3_HOST_SIGN, PERF_CONN_U3_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_UNSIGNED_ACK);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HMAC);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
+        } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+            HIP_DEBUG("Write PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U3_SELECTIVE_SIGNED_ACK, PERF_CONN_U3_SELECTIVE_HMAC, "
+                      "PERF_CONN_U3_SELECTIVE_HOST_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_SIGNED_ACK);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HMAC);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HOST_SIGN);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_USER_SIGN);
+        }
+#endif
         break;
     case THIRD_UPDATE_PACKET:
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_CONN_U3, PERF_NEW_UPDATE_CONN_RESPONDER\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_UPDATE_CONN_RESPONDER);
+
+        HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN_RESPONDER\n");
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN_RESPONDER);
+#endif
         // mobility update is concluded after 3rd packet has been received
         break;
     default:
@@ -366,8 +480,8 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
                            ctx->output_msg,
                            ctx->hadb_entry,
                            1);
+        break;
     }
-
     return err;
 }
 
