@@ -237,7 +237,7 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
         if ((sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state"))) {
             /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
-            if (sig_state->flag_offer_type != OFFER_UNSIGNED) {
+            if (sig_state->flag_offer_type != OFFER_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Start PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER\n");
                 hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
