@@ -1063,7 +1063,7 @@ void signaling_flag_init(struct flags_connection_context *flags)
     flags->HOST_AUTHED       = 0;
 }
 
-void signaling_info_req_flags_print(struct signaling_flags_info_req *flags, const char *const prefix)
+void signaling_info_req_flags_print(struct signaling_flags_info_req *flags, UNUSED const char *const prefix)
 {
     char buf[100];
     memset(buf, 0, sizeof(buf));
@@ -1303,7 +1303,7 @@ void signaling_info_req_flag_init(struct signaling_flags_info_req *flags)
     flags->APP_INFO_REQUIREMENTS_RECV = 0;
 }
 
-void signaling_service_info_flags_print(struct signaling_flags_service_info *flags, const char *const prefix)
+void signaling_service_info_flags_print(struct signaling_flags_service_info *flags, UNUSED const char *const prefix)
 {
     char buf[100];
     memset(buf, 0, sizeof(buf));

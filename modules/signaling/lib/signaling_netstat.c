@@ -361,7 +361,7 @@ static const char *tcp_state[] = {
 
 #endif
 
-static void finish_this_one(int uid, unsigned long inode, const char *timers)
+static void finish_this_one(int uid, unsigned long inode, UNUSED const char *timers)
 {
     struct passwd *pw;
     char           temp[20];

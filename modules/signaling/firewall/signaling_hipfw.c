@@ -1070,7 +1070,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
         HIP_DEBUG("Found matching policy tuple\n");
         if (policy_check == 1) {
             HIP_DEBUG("HIP Msg Dump before adding Service Offer.\n");
-            hip_dump_msg(common);
+            HIP_DUMP_MSG(common);
 #ifdef CONFIG_HIP_PERFORMANCE
             HIP_DEBUG("Start PERF_MBOX_R1_ADD_INFO_REQ_U, PERF_MBOX_R1_ADD_INFO_REQ_S, PERF_MBOX_R1_ADD_INFO_REQ_SELECTIVE_S,"
                       "PERF_MBOX_I2_ADD_INFO_REQ_U, PERF_MBOX_I2_ADD_INFO_REQ_S, PERF_MBOX_I2_ADD_INFO_REQ_SELECTIVE_S,"
@@ -1126,7 +1126,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
  */
 
             HIP_DEBUG("HIP Msg Dump after adding Service Offer.\n");
-            hip_dump_msg(common);
+            HIP_DUMP_MSG(common);
             ctx->modified = 1;
             signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
             next_service_offer_id++;

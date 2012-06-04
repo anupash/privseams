@@ -1469,7 +1469,7 @@ int signaling_verify_service_ack_s(struct hip_common *msg,
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_DEC_ENDPOINT_SECRET);
 #endif
 
-        hip_dump_msg(*msg_buf);
+        HIP_DUMP_MSG(*msg_buf);
         free(dec_output);
         free(tmp_info_secrets);
         free(tmp_service_ack);
@@ -1936,7 +1936,7 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
                  "Could not get info request from service offer.\n");
         HIP_IFEL(signaling_build_response_to_service_offer_u(msg_buf, conn, &sig_state->pending_conn_context,  &tmp_flags), -1,
                  "Could not building responses to the signed service offer\n");
-        hip_dump_msg(msg_buf);
+        HIP_DUMP_MSG(msg_buf);
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER\n");
