@@ -237,8 +237,7 @@ static struct hip_common *build_update_message(struct hip_hadb_state *ha,
     } else if (type == SIGNALING_SECOND_BEX_UPDATE) {
         if ((sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state"))) {
             /* Handle only unsigned service offers only. Signed service offers will be handled separately*/
-            if (sig_state->flag_offer_type == OFFER_UNSIGNED ||
-                sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
+            if (sig_state->flag_offer_type != OFFER_UNSIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Start PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER\n");
                 hip_perf_start_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
@@ -1873,7 +1872,7 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     }
 
     /* Now adding the signaling connection to the HIP_I2 message*/
-    if (flag == OFFER_UNSIGNED || flag == OFFER_SELECTIVE_SIGNED) {
+    if (flag != OFFER_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
         if (packet_type == HIP_R1) {
             HIP_DEBUG("Stop PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER\n");
