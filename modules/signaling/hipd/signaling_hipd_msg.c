@@ -1816,6 +1816,7 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     struct signaling_connection     new_conn;
     struct signaling_connection    *conn;
     struct signaling_flags_info_req flags_info_requested;
+    int                             update_type = 0;
 
     /* sanity checks */
     HIP_IFEL(!ctx->hadb_entry, 0, "No hadb entry.\n");
@@ -1823,13 +1824,19 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
              0, "failed to retrieve state for signaling\n");
 
     if (packet_type == HIP_UPDATE) {
-        HIP_DEBUG("Handling a first update U1 just like R1\n");
-        HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
-                 -1, "Could not init connection context from I2 \n");
-        HIP_DEBUG("Adding the connection information to the hipd state.\n");
-        HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
-                 -1, "Could not add new connection to hipd state. \n");
-        HIP_DEBUG("Adding to hipd state since it's an update\n");
+        HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0, -1,
+                 "Can't handle HIP_UPDATE of this type\n");
+        if (update_type == SIGNALING_FIRST_BEX_UPDATE) {
+            HIP_DEBUG("Handling a first update U1 just like R1\n");
+            HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
+                     -1, "Could not init connection context from I2 \n");
+            HIP_DEBUG("Adding the connection information to the hipd state.\n");
+            HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
+                     -1, "Could not add new connection to hipd state. \n");
+            HIP_DEBUG("Adding to hipd state since it's an update\n");
+        } else if (update_type == SIGNALING_SECOND_BEX_UPDATE) {
+            HIP_DEBUG("Handling a second update U2 just like I2\n");
+        }
     } else if (packet_type == HIP_R1) {
         HIP_DEBUG("Handling an R1\n");
         // We have already looked for connection context after sending I1 or the FIRST BEX UPDATE, so must not be NULL
@@ -1857,9 +1864,9 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
     // Adding response to service offers
     HIP_IFEL(signaling_generic_handle_service_offers(packet_type, ctx,
                                                      sig_state->pending_conn, flag,
-                                                     &flags_info_requested, RESPONDER),
+                                                     &flags_info_requested, (packet_type == HIP_UPDATE &&
+                                                                             update_type == SIGNALING_SECOND_BEX_UPDATE) ? INITIATOR : RESPONDER),
              -1, "Could not handle service offer\n");
-
 
     if (signaling_info_req_flag_check(&flags_info_requested, USER_INFO_ID)) {
         sig_state->flag_user_sig = 1;

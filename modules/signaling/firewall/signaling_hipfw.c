@@ -91,7 +91,7 @@ static unsigned char dh_priv_key[] = {
 static uint16_t dh_priv_key_len = 192;
 static DH      *dh              = NULL;
 
-int SERVICE_OFFER_TYPE = OFFER_SELECTIVE_SIGNED;
+int SERVICE_OFFER_TYPE = OFFER_SIGNED;
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
