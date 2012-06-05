@@ -71,7 +71,7 @@ int hip_rsa_sign(void *const priv_key, struct hip_common *const msg)
     HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
                        &sig_len, rsa), -1, "Signing error\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_HOST_SIGN\n");
+    HIP_DEBUG("Stop PERF_I2_HOST_SIGN, PERF_R2_HOST_SIGN, PERF_I3_HOST_SIGN, PERF_UPDATE_HOST_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_HOST_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_R2_HOST_SIGN);
     hip_perf_stop_benchmark(perf_set, PERF_I3_HOST_SIGN);

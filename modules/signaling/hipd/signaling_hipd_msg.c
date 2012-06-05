@@ -1479,9 +1479,9 @@ int signaling_update_group_service_offers(const uint8_t packet_type,
         HIP_IFEL(signaling_i2_group_service_offers(packet_type, ha_state, ctx),
                  -1, "Could not group service offers\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_CONN_U1_GROUP_SERVICE_OFFERS, PERF_CONN_U2_GROUP_SERVICE_OFFERS\n");
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
-        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
+        HIP_DEBUG("Stop PERF_CONN_U1_GROUP_SERVICE_OFFERS, PERF_CONN_U2_GROUP_SERVICE_OFFERS\n");
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
 #endif
     }
 
