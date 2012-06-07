@@ -158,6 +158,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
     /* Now check whether we need to trigger a BEX or an UPDATE */
     if (entry) {   // UPDATE
 #ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_TRIGGER_UPDATE\n");
+        hip_perf_start_benchmark(perf_set, PERF_TRIGGER_UPDATE);
         HIP_DEBUG("Start PERF_COMPLETE_UPDATE_EX\n");
         hip_perf_start_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
 #endif
@@ -178,8 +180,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
             HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, &new_conn),
                      -1, "Failed triggering first bex update.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-            HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
-            hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+            HIP_DEBUG("Stop PERF_TRIGGER_UPDATE\n");
+            hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_UPDATE);
 #endif
             HIP_DEBUG("Triggered UPDATE for following connection context:\n");
             signaling_connection_print(&new_conn, "");
@@ -198,10 +200,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
         signaling_connection_print(conn, "");
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Write PERF_TRIGGER_CONN, PERF_CONN_U1_DIFFIE_HELLMAN, PERF_CONN_U1_HMAC, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U_I_APP_CTX_LOOKUP, "
+        HIP_DEBUG("Write PERF_TRIGGER_UPDATE, PERF_CONN_U1_DIFFIE_HELLMAN, PERF_CONN_U1_HMAC, PERF_CONN_U1_HOST_SIGN, PERF_CONN_U_I_APP_CTX_LOOKUP, "
                   "PERF_CONN_U_I_NETSTAT_LOOKUP, PERF_CONN_U_I_VERIFY_APPLICATION, PERF_CONN_U_I_X509AC_VERIFY_CERT_CHAIN, "
                   "PERF_CONN_U_I_USER_CTX_LOOKUP, PERF_CONN_U_I_LOAD_USER_NAME, PERF_CONN_U_I_LOAD_USER_CERT\n");
-        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_UPDATE);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_DIFFIE_HELLMAN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HMAC);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);

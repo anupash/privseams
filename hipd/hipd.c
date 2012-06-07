@@ -313,6 +313,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "/root/results/PERF_CLOSE_COMPLETE.csv");
     //hip_perf_set_name(perf_set, PERF_VERIFY_USER_SIG, "/root/results/PERF_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_TRIGGER_CONN, "/root/results/PERF_TRIGGER_CONN.csv");
+    hip_perf_set_name(perf_set, PERF_TRIGGER_UPDATE, "/root/results/PERF_TRIGGER_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_COMPLETE_BEX, "/root/results/PERF_COMPLETE_BEX.csv");
     hip_perf_set_name(perf_set, PERF_COMPLETE_UPDATE_EX, "/root/results/PERF_COMPLETE_UPDATE_EX.csv");
     hip_perf_set_name(perf_set, PERF_HIPD_R2_FINISH, "/root/results/PERF_HIPD_R2_FINISH.csv");

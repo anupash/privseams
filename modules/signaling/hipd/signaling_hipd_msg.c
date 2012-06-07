@@ -661,9 +661,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get connection state for connection in R2\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_R2, PERF_CONN_U2, PERF_COMPLETE_BEX\n");
+    HIP_DEBUG("Stop PERF_R2, PERF_COMPLETE_BEX\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2);
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2);
     hip_perf_stop_benchmark(perf_set, PERF_COMPLETE_BEX);
 #endif
 
@@ -679,9 +678,6 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_CONN_U3\n");
-    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3);
-
     HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
     hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
     hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
@@ -1296,6 +1292,8 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
     if (packet_type == HIP_I2 || (packet_type == HIP_UPDATE && role == RESPONDER)) {
         if (signaling_check_if_app_or_user_info_req(ctx) == 1) {
             signaling_get_connection_context(recv_conn, &sig_state->pending_conn_context, RESPONDER);
+        } else {
+            memcpy(&sig_state->pending_conn_context.host, &signaling_persistent_host, sizeof(struct signaling_host_context));
         }
         signaling_port_pairs_from_hipd_state_by_app_name(sig_state, recv_conn->application_name,
                                                          sig_state->pending_conn_context.app.sockets);

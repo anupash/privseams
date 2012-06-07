@@ -415,6 +415,7 @@ enum perf_sensor {
     PERF_RSA_VERIFY_IMPL,       // time for openssl ecdsa do verify
     PERF_RSA_SIGN_IMPL,         // time for openssl ecdsa do sign
     PERF_TRIGGER_CONN,          // hipd side of test SEND_CONN_REQUEST
+    PERF_TRIGGER_UPDATE,
     PERF_COMPLETE_BEX,          // hipd side of test SEND_CONN_REQUEST
     PERF_I2_HMAC,                       // HMAC
     PERF_R2_HMAC,                       // HMAC
