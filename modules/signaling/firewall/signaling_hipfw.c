@@ -335,20 +335,23 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
     HIP_IFEL(signaling_hipfw_initialize_connection_contexts_and_flags(common, &new_conn, &ctx_in, &ctx_out, &ctx_flags, &ret),
              -1, "Could not initialize the contexts and flags successfully\n");
+    if (SERVICE_OFFER_TYPE == OFFER_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_MBOX_R1_GEN_DH_SHARED_SECRET, PERF_MBOX_U1_GEN_DH_SHARED_SECRET\n");
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_SECRET);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_SECRET);
+        HIP_DEBUG("Start PERF_MBOX_R1_GEN_DH_SHARED_SECRET, PERF_MBOX_U1_GEN_DH_SHARED_SECRET\n");
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_SECRET);
+        hip_perf_start_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_SECRET);
 #endif
-    HIP_IFEL(signaling_hipfw_get_dh_shared_key(common, dh,
-                                               &signaling_dh_shared_key_r,
-                                               &signaling_dh_shared_key_r_len), -1,
-             "Could not get the mb shared key using DH public value from responder\n");
+        HIP_IFEL(signaling_hipfw_get_dh_shared_key(common, dh,
+                                                   &signaling_dh_shared_key_r,
+                                                   &signaling_dh_shared_key_r_len), -1,
+                 "Could not get the mb shared key using DH public value from responder\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_MBOX_R1_GEN_DH_SHARED_SECRET, PERF_MBOX_U1_GEN_DH_SHARED_SECRET\n");
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_SECRET);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_SECRET);
+        HIP_DEBUG("Stop PERF_MBOX_R1_GEN_DH_SHARED_SECRET, PERF_MBOX_U1_GEN_DH_SHARED_SECRET\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_SECRET);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_SECRET);
 #endif
+    }
+
     /* Step b) */
     HIP_IFEL(signaling_hipfw_check_policy_and_create_service_offer(common, tuple, other_dir, ctx, &ctx_in, &ctx_out,
                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret),
@@ -1399,10 +1402,24 @@ int signaling_hipfw_get_dh_shared_key(struct hip_common *msg,
     HIP_IFEL(!(dhf = hip_get_param_readwrite(msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT, "No Diffie-Hellman parameter found.\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_GEN_DH_SHARED_KEY, PERF_MBOX_I2_GEN_DH_SHARED_KEY, PERF_MBOX_U1_GEN_DH_SHARED_KEY, PERF_MBOX_U2_GEN_DH_SHARED_KEY\n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_KEY);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_GEN_DH_SHARED_KEY);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_KEY);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_GEN_DH_SHARED_KEY);
+#endif
     /* If the message has two DH keys, select (the stronger, usually) one. */
     const struct hip_dh_public_value *dhpv = hip_dh_select_key(dhf);
     tmp_len = hip_gen_dh_shared_key(dh_key, dhpv->public_value,
                                     ntohs(dhpv->pub_len), (unsigned char *) *dh_shared_key, *dh_shared_len);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_R1_GEN_DH_SHARED_KEY, PERF_MBOX_I2_GEN_DH_SHARED_KEY, PERF_MBOX_U1_GEN_DH_SHARED_KEY, PERF_MBOX_U2_GEN_DH_SHARED_KEY\n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_KEY);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_GEN_DH_SHARED_KEY);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_GEN_DH_SHARED_KEY);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_GEN_DH_SHARED_KEY);
+#endif
     if (tmp_len < 0) {
         HIP_ERROR("Could not create shared secret\n");
         return -1;

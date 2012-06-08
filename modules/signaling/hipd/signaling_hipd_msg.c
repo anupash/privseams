@@ -1877,7 +1877,7 @@ int signaling_i2_handle_service_offers_common(UNUSED const uint8_t packet_type, 
             hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_UNSIGNED_SERVICE_OFFER);
             hip_perf_stop_benchmark(perf_set, PERF_I2_HANDLE_SELECTIVE_SIGNED_OFFER);
         } else if (packet_type == HIP_UPDATE) {
-            HIP_DEBUG("Stop PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER\n");
+            HIP_DEBUG("Stop PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER\n");
             hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER);
             hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER);
         }
