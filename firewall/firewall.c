@@ -1910,6 +1910,7 @@ out_err:
                       "PERF_MBOX_U2_DEC_ENDPOINT_SECRET, PERF_MBOX_U2_VERIFY_INFO_REQ, PERF_MBOX_U2_VERIFY_WITH_POLICY, "
                       "PERF_MBOX_U2_ADD_INFO_REQ_U, PERF_MBOX_U2_ADD_INFO_REQ_S, PERF_MBOX_U2_ADD_INFO_REQ_SELECTIVE_S, "
                       "PERF_MBOX_U2_SERVICE_SIGNATURE, PERF_MBOX_U2_HASH_SERVICE_OFFER, PERF_MBOX_U2_REM_PARAMS \n");
+            hip_perf_write_benchmark(perf_set, PERF_MBOX_U2);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SIG);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U2_VERIFY_HOST_SELECTIVE_SIG);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U2_VERIFY_USER_SIG);
@@ -1938,6 +1939,7 @@ out_err:
                       "PERF_MBOX_U3_VERIFY_ACK_S, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_SELECTIVELY_S, PERF_MBOX_U3_BUILD_PARAM_REM_LIST, "
                       "PERF_MBOX_U3_DEC_SYMM_KEY_DH, PERF_MBOX_U3_DEC_SYMM_KEY_RSA, PERF_MBOX_U3_DEC_ENDPOINT_SECRET, "
                       "PERF_MBOX_U3_VERIFY_INFO_REQ \n");
+            hip_perf_write_benchmark(perf_set, PERF_MBOX_U3);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SIG);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U3_VERIFY_HOST_SELECTIVE_SIG);
             hip_perf_write_benchmark(perf_set, PERF_MBOX_U3_VERIFY_USER_SIG);
