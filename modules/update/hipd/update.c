@@ -364,10 +364,11 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
         }
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Write PERF_CONN_U1, PERF_CONN_U1_VERIFY_HMAC, PERF_CONN_U1_GROUP_SERVICE_OFFERS, "
-                  "PERF_CONN_U2_DIFFIE_HELLMAN, PERF_CONN_U_R_LOAD_USER_KEY\n");
+                  "PERF_CONN_U2_DIFFIE_HELLMAN, PERF_CONN_U_R_LOAD_USER_KEY, PERF_CONN_U2_LOCATE_MBOX_CERT\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_VERIFY_HMAC);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_GROUP_SERVICE_OFFERS);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U1_LOCATE_MBOX_CERT);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_DIFFIE_HELLMAN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
         if (sig_state->flag_offer_type == OFFER_SIGNED) {
@@ -388,8 +389,10 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
         } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
             HIP_DEBUG("Write PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U2_SELECTIVE_SIGNED_ACK, "
-                      "PERF_CONN_U2_SELECTIVE_HMAC, PERF_CONN_U2_SELECTIVE_HOST_SIGN, PERF_CONN_U2_SELECTIVE_USER_SIGN\n");
+                      "PERF_CONN_U2_SELECTIVE_HMAC, PERF_CONN_U2_SELECTIVE_HOST_SIGN, PERF_CONN_U2_SELECTIVE_USER_SIGN, "
+                      "PERF_CONN_U2_VERIFY_MBOX_SIGN\n");
             hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HANDLE_SELECTIVE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_SIGNED_ACK);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HMAC);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SELECTIVE_HOST_SIGN);
@@ -428,11 +431,12 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Write PERF_CONN_U2, PERF_COMPLETE_UPDATE_EX, PERF_CONN_U2_VERIFY_HMAC, "
-                  "PERF_CONN_U2_GROUP_SERVICE_OFFERS, PERF_CONN_U_I_LOAD_USER_KEY\n");
+                  "PERF_CONN_U2_GROUP_SERVICE_OFFERS, PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U2_LOCATE_MBOX_CERT\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
         hip_perf_write_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_HMAC);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_GROUP_SERVICE_OFFERS);
+        hip_perf_write_benchmark(perf_set, PERF_CONN_U2_LOCATE_MBOX_CERT);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U_I_LOAD_USER_KEY);
 
         if (sig_state->flag_offer_type == OFFER_SIGNED) {
@@ -453,8 +457,9 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
         } else if (sig_state->flag_offer_type == OFFER_SELECTIVE_SIGNED) {
             HIP_DEBUG("Write PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER, PERF_CONN_U3_SELECTIVE_SIGNED_ACK, PERF_CONN_U3_SELECTIVE_HMAC, "
-                      "PERF_CONN_U3_SELECTIVE_HOST_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
+                      "PERF_CONN_U3_VERIFY_MBOX_SIGN, PERF_CONN_U3_SELECTIVE_HOST_SIGN, PERF_CONN_U3_SELECTIVE_USER_SIGN\n");
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HANDLE_SELECTIVE_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_SIGNED_ACK);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HMAC);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SELECTIVE_HOST_SIGN);
