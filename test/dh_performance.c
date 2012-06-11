@@ -348,7 +348,7 @@ int main(int argc, char **argv)
     int              sw_dh_group_id    = HIP_FIRST_DH_GROUP_ID;
     RSA            **rsa_key_pool      = NULL;
     DSA            **dsa_key_pool      = NULL;
-    DH             **dh_key_pool       = NULL;
+    EVP_PKEY       **dh_key_pool       = NULL;
     BN_CTX          *ctx               = NULL;
     float            bench_secs        = 0.0;
     struct timeval   bench_time;
@@ -660,7 +660,7 @@ int main(int argc, char **argv)
          *       DH_generate_key(dh_key_pool[1]); */
         sw_create_dh = 2;
     }
-    dh_key_pool = malloc((sw_create_dh == 0 ? 2 : sw_create_dh) * sizeof(DH *));
+    dh_key_pool = malloc((sw_create_dh == 0 ? 2 : sw_create_dh) * sizeof(EVP_PKEY *));
     printf("Creating key pool of %d keys (Group %d).\n",
            (sw_create_dh == 0 ? 2 : sw_create_dh), sw_dh_group_id);
 
@@ -677,8 +677,8 @@ int main(int argc, char **argv)
         }
         if (sw_print_keys == TRUE) {
             printf("\nKey %d\n", i + 1);
-            printf("pub_key =%s\n", BN_bn2hex(dh_key_pool[i]->pub_key));
-            printf("priv_key =%s\n", BN_bn2hex(dh_key_pool[i]->priv_key));
+            printf("pub_key =%s\n", BN_bn2hex(EVP_PKEY_get1_DH(dh_key_pool[i])->pub_key));
+            printf("priv_key =%s\n", BN_bn2hex(EVP_PKEY_get1_DH(dh_key_pool[i])->priv_key));
         }
     }
     printf("\n");
@@ -700,12 +700,12 @@ int main(int argc, char **argv)
         if (i % sw_create_dh == 0) {
             k++;
         }
-        bn2bin_safe(dh_key_pool[(i + k) % sw_create_dh]->pub_key,
+        bn2bin_safe(EVP_PKEY_get1_DH(dh_key_pool[(i + k) % sw_create_dh])->pub_key,
                     pub_key, dh_size);
         if (sw_file_output) {
             hip_perf_start_benchmark(perf_set, PS_DH_SHARE);
         }
-        hip_gen_dh_shared_key(dh_key_pool[i % sw_create_dh],
+        hip_gen_dh_shared_key(EVP_PKEY_get1_DH(dh_key_pool[i % sw_create_dh]),
                               pub_key,
                               dh_size,
                               shared_key,

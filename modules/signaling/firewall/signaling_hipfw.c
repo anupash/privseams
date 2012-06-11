@@ -1370,12 +1370,14 @@ out_err:
 
 int signaling_hipfw_generate_mb_dh_key(UNUSED const int group_id, DH **dh_key)
 {
-    int err;
-    DH *temp_dh;
+    int       err;
+    DH       *temp_dh;
+    EVP_PKEY *evp_pkey;
+    BIGNUM   *priv_key = NULL;
 
-    BIGNUM *priv_key = NULL;
+    evp_pkey = hip_generate_dh_key(DH_GROUP_ID);
+    temp_dh  = EVP_PKEY_get1_DH(evp_pkey);
 
-    temp_dh  = hip_generate_dh_key(DH_GROUP_ID);
     priv_key = BN_bin2bn(dh_priv_key, dh_priv_key_len, NULL);
 
     *dh_key      = DH_new();

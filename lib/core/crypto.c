@@ -667,10 +667,11 @@ out_err:
  * @param group_id the group id of the D-H
  * @return a new Diffie-Hellman key (caller deallocates)
  */
-DH *hip_generate_dh_key(const int group_id)
+EVP_PKEY *hip_generate_dh_key(const int group_id)
 {
     int            err;
     DH            *dh;
+    EVP_PKEY      *evp_pkey;
     char           rnd_seed[20];
     struct timeval time1;
 
@@ -692,7 +693,9 @@ DH *hip_generate_dh_key(const int group_id)
         HIP_ERROR("DH key generation failed (%d).\n", err);
         exit(1);
     }
-    return dh;
+    evp_pkey = EVP_PKEY_new();
+    EVP_PKEY_set1_DH(evp_pkey, dh);
+    return evp_pkey;
 }
 
 /**

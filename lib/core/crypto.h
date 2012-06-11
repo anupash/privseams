@@ -87,7 +87,7 @@ int ssl_dsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature);
 int hip_gen_dh_shared_key(DH *dh, const uint8_t *peer_key, size_t peer_len, uint8_t *out,
                           size_t outlen);
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
-DH *hip_generate_dh_key(const int group_id);
+EVP_PKEY *hip_generate_dh_key(const int group_id);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 DSA *create_dsa_key(const int bits);
 RSA *create_rsa_key(const int bits);

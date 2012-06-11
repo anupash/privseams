@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <openssl/ossl_typ.h>
+#include <openssl/evp.h>
 
 #include "lib/core/crypto.h"
 #include "lib/core/debug.h"
@@ -45,7 +46,7 @@
  * This array is indexed by the Group ID value defined in the RFC.
  * Note that this means that the array element at index 0 is thus unused.
  */
-static DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
+static EVP_PKEY *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
 
 /**
  * insert the current DH-key into the buffer
@@ -55,8 +56,8 @@ static DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
  */
 int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
-    int res;
-    DH *tmp;
+    int       res;
+    EVP_PKEY *tmp;
 
     if (group_id <= 0 || group_id >= HIP_MAX_DH_GROUP_ID) {
         HIP_ERROR("The Group ID %d is invalid\n", group_id);
@@ -83,7 +84,7 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 
     tmp = dh_table[group_id];
 
-    res = hip_encode_dh_publickey(tmp, buffer, bufsize);
+    res = hip_encode_dh_publickey(EVP_PKEY_get1_DH(tmp), buffer, bufsize);
     if (res < 0) {
         HIP_ERROR("Encoding error\n");
         res = -1;
@@ -113,8 +114,8 @@ int hip_calculate_shared_secret(const uint8_t *public_value,
                                 unsigned char *buffer,
                                 int bufsize)
 {
-    int err = 0;
-    DH *tmp;
+    int       err = 0;
+    EVP_PKEY *tmp;
 
     if (group_id <= 0 || group_id >= HIP_MAX_DH_GROUP_ID) {
         HIP_ERROR("The Group ID %d is invalid\n", group_id);
@@ -136,7 +137,7 @@ int hip_calculate_shared_secret(const uint8_t *public_value,
         }
     }
 
-    err = hip_gen_dh_shared_key(dh_table[group_id], public_value,
+    err = hip_gen_dh_shared_key(EVP_PKEY_get1_DH(dh_table[group_id]), public_value,
                                 len, buffer, bufsize);
     if (err < 0) {
         HIP_ERROR("Could not create shared secret\n");
@@ -154,9 +155,9 @@ int hip_calculate_shared_secret(const uint8_t *public_value,
  */
 static void hip_regen_dh_keys(uint32_t bitmask)
 {
-    DH *tmp, *okey;
-    int maxmask, i;
-    int cnt = 0;
+    EVP_PKEY *tmp, *okey;
+    int       maxmask, i;
+    int       cnt = 0;
 
     /* if MAX_DH_GROUP_ID = 4 --> maxmask = 0...01111 */
     maxmask  = (1 << (HIP_MAX_DH_GROUP_ID + 1)) - 1;
@@ -173,7 +174,7 @@ static void hip_regen_dh_keys(uint32_t bitmask)
             okey        = dh_table[i];
             dh_table[i] = tmp;
 
-            DH_free(okey);
+            EVP_PKEY_free(okey);
 
             cnt++;
 
@@ -190,7 +191,7 @@ void hip_dh_uninit(void)
 {
     int i;
     for (i = 1; i < HIP_MAX_DH_GROUP_ID; i++) {
-        DH_free(dh_table[i]);
+        EVP_PKEY_free(dh_table[i]);
         dh_table[i] = NULL;
     }
     CRYPTO_cleanup_all_ex_data();
