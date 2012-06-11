@@ -230,6 +230,22 @@ if test x"$ac_cv_use_performance" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
+AC_ARG_ENABLE(ecdh,
+               AS_HELP_STRING([--enable-ecdh],
+                              [Enable ECDH (default is NO)]),
+               [ac_cv_use_ecdh=$enableval],
+               [ac_cv_use_ecdh=no])
+AC_CACHE_CHECK([whether to use ecdh instead of regular diffie hellman],
+               [ac_cv_use_ecdh],
+               [ac_cv_use_ecdh=no])
+if test x"$ac_cv_use_ecdh" = x"yes"; then
+    AC_DEFINE(CONFIG_HIP_ECDH)
+    AH_TEMPLATE(CONFIG_HIP_ECDH,
+                [Defined to 1 if ecdh is enabled.])
+fi
+AM_CONDITIONAL(HIP_ECDH, test x"$ac_cv_use_ecdh" = x"yes")
+
+
 AC_ARG_WITH(nomodules,
             AS_HELP_STRING([--with-nomodules=list],
                            [comma-separated list of disabled modules]))
