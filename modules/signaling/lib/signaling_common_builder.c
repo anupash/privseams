@@ -1059,6 +1059,15 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     memcpy(tmp_ptr, &tmp_service_offer.service_sig_len, sizeof(uint8_t));
     tmp_ptr += sizeof(uint8_t);
 
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_MBOX_R1_SERVICE_SIGNATURE, PERF_MBOX_I2_SERVICE_SIGNATURE, "
+              "PERF_MBOX_U1_SERVICE_SIGNATURE, PERF_MBOX_U2_SERVICE_SIGNATURE \n");
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_SERVICE_SIGNATURE);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_SERVICE_SIGNATURE);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U1_SERVICE_SIGNATURE);
+    hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_SERVICE_SIGNATURE);
+#endif
     if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_RSA) {
         /* RSA_sign returns 0 on failure */
         HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
@@ -1067,6 +1076,14 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
         HIP_IFEL(impl_ecdsa_sign(sha1_digest, (EC_KEY *) mb_key, signature), -1,
                  "Could not sign Service offer using ECDSA key\n");
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_MBOX_R1_SERVICE_SIGNATURE, PERF_MBOX_I2_SERVICE_SIGNATURE, "
+              "PERF_MBOX_U1_SERVICE_SIGNATURE, PERF_MBOX_U2_SERVICE_SIGNATURE \n");
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_SERVICE_SIGNATURE);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_SERVICE_SIGNATURE);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_SERVICE_SIGNATURE);
+    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_SERVICE_SIGNATURE);
+#endif
 
     HIP_HEXDUMP("Signature = ", signature, sig_len);
     memcpy(tmp_ptr, signature, sig_len);

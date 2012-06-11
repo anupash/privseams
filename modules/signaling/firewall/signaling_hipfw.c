@@ -91,7 +91,7 @@ static unsigned char dh_priv_key[] = {
 static uint16_t dh_priv_key_len = 192;
 static DH      *dh              = NULL;
 
-int SERVICE_OFFER_TYPE = OFFER_UNSIGNED;
+int SERVICE_OFFER_TYPE = OFFER_SELECTIVE_SIGNED;
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -474,12 +474,20 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_S);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_U);
             hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_SELECTIVE_S);
+
+            HIP_DEBUG("Start PERF_MBOX_U2_VERIFY_ACK_U, PERF_MBOX_U2_VERIFY_ACK_S, PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S\n");
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_U);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_S);
+            hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S);
 #endif
             if (SERVICE_OFFER_TYPE == OFFER_UNSIGNED &&
                 signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK_U\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_U);
+
+                HIP_DEBUG("Stop PERF_MBOX_U2_VERIFY_ACK_U\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_U);
 #endif
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
                          "Could not initialize the connection context from the message\n");
@@ -494,6 +502,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK_S\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_S);
+
+                HIP_DEBUG("Stop PERF_MBOX_U2_VERIFY_ACK_S\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_S);
 #endif
                 HIP_DEBUG("Verifying the Signed service ack succeeded\n");
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
@@ -508,6 +519,9 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK_SELECTIVE_S\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_SELECTIVE_S);
+
+                HIP_DEBUG("Stop PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S);
 #endif
                 HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
                          "Could not initialize the connection context from the message\n");
@@ -520,6 +534,11 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_U);
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_S);
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_SELECTIVE_S);
+
+                HIP_DEBUG("Stop PERF_MBOX_U2_VERIFY_ACK_U, PERF_MBOX_U2_VERIFY_ACK_S, PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S\n");
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_U);
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_S);
+                hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_ACK_SELECTIVE_S);
 #endif
                 HIP_DEBUG("Service Ack in I2/U2 could not be found or verified. Blocking the connection.\n");
                 signaling_cdb_add_connection(hit_i, hit_r, new_conn.src_port, new_conn.dst_port, SIGNALING_CONN_BLOCKED);
@@ -672,12 +691,20 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                 hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_S);
                 hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_U);
                 hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_SELECTIVE_S);
+
+                HIP_DEBUG("Start PERF_MBOX_U3_VERIFY_ACK_U, PERF_MBOX_U3_VERIFY_ACK_S, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S\n");
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_U);
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_S);
+                hip_perf_start_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S);
 #endif
                 if (SERVICE_OFFER_TYPE == OFFER_UNSIGNED &&
                     signaling_verify_service_ack_u(common, tuple->offer_hash)) {
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK_U\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_U);
+
+                    HIP_DEBUG("Stop PERF_MBOX_U3_VERIFY_ACK_U\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_U);
 #endif
                     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
                              "Could not initialize the connection context from the message\n");
@@ -691,6 +718,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK_SELECTIVE_S\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_SELECTIVE_S);
+
+                    HIP_DEBUG("Stop PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S);
 #endif
                     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, common, FWD), -1,
                              "Could not initialize the connection context from the message\n");
@@ -705,6 +735,9 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK_S\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_S);
+
+                    HIP_DEBUG("Stop PERF_MBOX_U3_VERIFY_ACK_S\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_S);
 #endif
                     HIP_IFEL(signaling_init_connection_context_from_msg(&ctx_in, msg_buf, FWD), -1,
                              "Could not initialize the connection context from the message\n");
@@ -717,6 +750,11 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_U);
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_SELECTIVE_S);
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_S);
+
+                    HIP_DEBUG("Stop PERF_MBOX_U3_VERIFY_ACK_U, PERF_MBOX_U3_VERIFY_ACK_S, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_U);
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_S);
+                    hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_ACK_SELECTIVE_S);
 #endif
                     //Service Acknowledgement didn't veriy correctly.
                     HIP_DEBUG("Service Acknowledgement didn't verify correctly.\n");
