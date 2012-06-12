@@ -351,7 +351,7 @@ int signaling_hipfw_handle_r1(struct hip_common *common, UNUSED struct tuple *tu
 
     HIP_IFEL(signaling_hipfw_initialize_connection_contexts_and_flags(common, &new_conn, &ctx_in, &ctx_out, &ctx_flags, &ret),
              -1, "Could not initialize the contexts and flags successfully\n");
-    if (SERVICE_OFFER_TYPE == OFFER_SIGNED) {
+    if (SERVICE_OFFER_TYPE == OFFER_SIGNED && SERVICE_RESPONSE_ALGO_DH) {
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_MBOX_R1_GEN_DH_SHARED_SECRET, PERF_MBOX_U1_GEN_DH_SHARED_SECRET\n");
         hip_perf_start_benchmark(perf_set, PERF_MBOX_R1_GEN_DH_SHARED_SECRET);
@@ -475,7 +475,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
         //Check for acknowledgement
         HIP_DEBUG("Verifying Ack to Service Offer.\n");
         if (strlen((char *) tuple->offer_hash) > 0) {
-            if (SERVICE_OFFER_TYPE == OFFER_SIGNED) {
+            if (SERVICE_OFFER_TYPE == OFFER_SIGNED && SERVICE_RESPONSE_ALGO_DH) {
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Start PERF_MBOX_I2_GEN_DH_SHARED_SECRET, PERF_MBOX_U2_GEN_DH_SHARED_SECRET\n");
                 hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_GEN_DH_SHARED_SECRET);
@@ -526,10 +526,13 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
                                                                                ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                          "Could not check and verify the info in response with the policy\n");
             } else if (SERVICE_OFFER_TYPE == OFFER_SIGNED &&
-                       dh_shared_len > 0 && dh_shared_key != NULL &&
                        signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash,
                                                       signaling_hipfw_feedback_get_mb_key(),
                                                       dh_shared_key)) {
+                if (SERVICE_RESPONSE_ALGO_DH) {
+                    HIP_ASSERT(dh_shared_len > 0 && dh_shared_key);
+                }
+
 #ifdef CONFIG_HIP_PERFORMANCE
                 HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_ACK_S\n");
                 hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_ACK_S);
@@ -759,10 +762,12 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
                                                                                    ctx_flags, &new_conn, &hit_i, &hit_r, &ret), -1,
                              "Could not check and verify the info in response with the policy\n");
                 } else if (SERVICE_OFFER_TYPE == OFFER_SIGNED &&
-                           signaling_dh_shared_key_r != NULL &&
                            signaling_verify_service_ack_s(common, &msg_buf, tuple->offer_hash,
                                                           signaling_hipfw_feedback_get_mb_key(),
                                                           signaling_dh_shared_key_r)) {
+                    if (SERVICE_RESPONSE_ALGO_DH) {
+                        HIP_ASSERT(signaling_dh_shared_key_r);
+                    }
 #ifdef CONFIG_HIP_PERFORMANCE
                     HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_ACK_S\n");
                     hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_ACK_S);

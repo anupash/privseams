@@ -64,9 +64,6 @@
 #define CALLBUF_SIZE            60
 #define SYMLINKBUF_SIZE         16
 
-#define HIP_DEFAULT_HIPFW_ALGO       HIP_HI_RSA
-#define SERVICE_RESPONSE_ALGO_DH     1
-
 /**
  * Builds a hip_param_connection_identifier parameter into msg,
  * using the values in the connection context .
