@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 
-int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id);
+int hip_insert_dh(uint8_t **buffer, int *bufsize, int group_id);
 void hip_dh_uninit(void);
 int hip_calculate_shared_secret(const uint8_t *public_value,
                                 uint8_t group_id,

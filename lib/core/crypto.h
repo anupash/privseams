@@ -53,9 +53,10 @@
 #define HIP_DH_OAKLEY_15              4 /* 3072-bit MODP group */
 #define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
+#define HIP_ECDH_NIST_256P            7 /* NIST 256bit prime Elliptic Curve*/
 #define HIP_FIRST_DH_GROUP_ID         HIP_DH_OAKLEY_5
 #define HIP_SECOND_DH_GROUP_ID        HIP_DH_384
-#define HIP_MAX_DH_GROUP_ID           7
+#define HIP_MAX_DH_GROUP_ID           8
 
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
@@ -86,7 +87,13 @@ int ssl_dsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature);
 /* In kernel these come from crypto/dh.h, included above */
 int hip_gen_dh_shared_key(DH *dh, const uint8_t *peer_key, size_t peer_len, uint8_t *out,
                           size_t outlen);
+int hip_gen_ecdh_shared_key(EC_KEY *ec,
+                            const uint8_t *peer_key,
+                            size_t peer_len,
+                            uint8_t *ecdh_shared_key,
+                            size_t outlen);
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
+int hip_encode_ecdh_publickey(EC_KEY *eckey, uint8_t **out, int *outlen);
 EVP_PKEY *hip_generate_dh_key(const int group_id);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 DSA *create_dsa_key(const int bits);

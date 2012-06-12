@@ -2240,9 +2240,15 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                     hip_perf_start_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
                     hip_perf_start_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
 #endif
+#ifdef CONFIG_HIP_ECDH
+                    HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)), -ENOMEM,
+                             "Error on allocating memory for Diffie-Hellman shared key.\n");
+                    signaling_generate_shared_key_from_ecdh_shared_secret(dh_shared_key, &dh_shared_len, peer_pub_key, peer_pub_key_len);
+#else
                     HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)), -ENOMEM,
                              "Error on allocating memory for Diffie-Hellman shared key.\n");
                     signaling_generate_shared_key_from_dh_shared_secret(dh_shared_key, &dh_shared_len, peer_pub_key, peer_pub_key_len);
+#endif
                     iv = ack.iv;
                     get_random_bytes(iv, 16);
 
@@ -2403,12 +2409,21 @@ out_err:
 
 int signaling_add_param_dh_to_hip_update(struct hip_common *msg)
 {
-    int      err      = 0;
-    uint8_t *dh_data1 = NULL, *dh_data2 = NULL;
-    int      dh_size1 = 0, dh_size2 = 0;
-    int      written1 = 0;
+    int        err      = 0;
+    uint8_t   *dh_data1 = NULL, *dh_data2 = NULL;
+    UNUSED int dh_size1 = 0, dh_size2 = 0;
+    int        written1 = 0;
 
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
+#ifdef CONFIG_HIP_ECDH
+    HIP_IFEL((written1 = hip_insert_dh(&dh_data1, &dh_size1,
+                                       HIP_ECDH_NIST_256P)) < 0,
+             written1, "Could not extract ECDH public key\n");
+    HIP_IFEL((err = hip_build_param_diffie_hellman_contents(msg,
+                                                            HIP_ECDH_NIST_256P, dh_data1, written1,
+                                                            HIP_MAX_DH_GROUP_ID, dh_data2, 0)),
+             err, "Building of DH failed.\n");
+#else
     HIP_IFEL((dh_size1 = hip_get_dh_size(DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
     HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
@@ -2421,7 +2436,7 @@ int signaling_add_param_dh_to_hip_update(struct hip_common *msg)
              -1, "Failed to alloc memory for dh_data2\n");
 
     /* Parameter Diffie-Hellman */
-    HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+    HIP_IFEL((written1 = hip_insert_dh(&dh_data1, &dh_size1,
                                        DH_GROUP_ID)) < 0,
              written1, "Could not extract the first DH public key\n");
 
@@ -2430,6 +2445,7 @@ int signaling_add_param_dh_to_hip_update(struct hip_common *msg)
                                                             DH_GROUP_ID, dh_data1, written1,
                                                             HIP_MAX_DH_GROUP_ID, dh_data2, 0)),
              err, "Building of DH failed.\n");
+#endif
 
 out_err:
     return err;
@@ -3869,6 +3885,24 @@ int signaling_generate_shared_key_from_dh_shared_secret(uint8_t *shared_key,
     *shared_key_length = 16;
     memcpy(shared_key, sha1_digest, *shared_key_length);
     memset((shared_key + *shared_key_length), 0, tmp_len - *shared_key_length);
+out_err:
+    return err;
+}
+
+int signaling_generate_shared_key_from_ecdh_shared_secret(uint8_t *shared_key,
+                                                          int     *shared_key_length,
+                                                          const uint8_t *peer_key,
+                                                          const int peer_key_len)
+{
+    int     err = 0;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+
+    *shared_key_length = signaling_generate_shared_secret_from_mbox_dh(DH_GROUP_ID, peer_key, peer_key_len, sha1_digest, HIP_AH_SHA_LEN);
+
+    HIP_IFEL(*shared_key_length < 0, -1, "Could not generate shared secret\n");
+    *shared_key_length = 16;
+    memcpy(shared_key, sha1_digest, *shared_key_length);
+    memset((shared_key + *shared_key_length), 0, 1024 - *shared_key_length);
 out_err:
     return err;
 }

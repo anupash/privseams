@@ -32,8 +32,12 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
+#ifdef CONFIG_HIP_ECDH
+#define DH_GROUP_ID HIP_ECDH_NIST_256P
+#else
+#define DH_GROUP_ID HIP_DH_OAKLEY_5
+#endif
 
-#define DH_GROUP_ID 3
 #define DH_PUB_KEY_SIZE 192
 
 #ifndef HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H
@@ -51,6 +55,10 @@
 extern unsigned char mb_dh_pub_key[];
 extern uint16_t      mb_dh_pub_key_len;
 extern DH           *dh;
+
+extern unsigned char mb_ec_pub_key[];
+extern uint16_t      mb_ec_pub_key_len;
+extern EVP_PKEY     *evp;
 
 /* Handler for incoming messages */
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);

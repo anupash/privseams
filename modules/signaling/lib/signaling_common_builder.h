@@ -208,6 +208,10 @@ int signaling_generate_shared_key_from_dh_shared_secret(uint8_t *shared_key,
                                                         int     *shared_key_length,
                                                         const uint8_t *peer_key,
                                                         const int peer_key_len);
+int signaling_generate_shared_key_from_ecdh_shared_secret(uint8_t *shared_key,
+                                                          int     *shared_key_length,
+                                                          const uint8_t *peer_key,
+                                                          const int peer_key_len);
 int signaling_generate_shared_secret_from_mbox_dh(const int groupid,
                                                   const uint8_t *peer_key,
                                                   size_t peer_len,

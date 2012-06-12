@@ -310,9 +310,14 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
+#ifdef CONFIG_HIP_ECDH
+    dh_shared_len = HIP_AH_SHA_LEN;
+    dh_shared_key = (char *) OPENSSL_malloc(dh_shared_len);
+#else
     HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
+#endif
 
     HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg,
                                              HIP_PARAM_DIFFIE_HELLMAN)),
@@ -948,7 +953,7 @@ int hip_add_diffie_hellman(UNUSED const uint8_t packet_type,
         HIP_ERROR("Failed to allocate memory for public value\n");
         return -ENOMEM;
     }
-    if ((pub_len = hip_insert_dh(public_value, pub_len, dhpv->group_id)) < 0) {
+    if ((pub_len = hip_insert_dh(&public_value, &pub_len, dhpv->group_id)) < 0) {
         HIP_ERROR("Could not extract the DH public key\n");
         return -1;
     }

@@ -661,12 +661,12 @@ int hip_create_r1(struct hip_common *const msg,
     struct hip_srv service_list[HIP_TOTAL_EXISTING_SERVICES];
     uint8_t       *dh_data1      = NULL, *dh_data2 = NULL;
     char           order[]       = "000";
-    int            dh_size1      = 0, dh_size2 = 0;
-    int            mask          = 0, i = 0, written1 = 0, written2 = 0;
+    UNUSED int     dh_size1      = 0, dh_size2 = 0;
+    UNUSED int     mask          = 0, i = 0, written1 = 0, written2 = 0;
     unsigned int   service_count = 0;
 
     enum number_dh_keys_t { ONE, TWO };
-    enum number_dh_keys_t number_dh_keys = TWO;
+    UNUSED enum number_dh_keys_t number_dh_keys = TWO;
 
 
     /* Supported HIP and ESP transforms. */
@@ -707,6 +707,9 @@ int hip_create_r1(struct hip_common *const msg,
     hip_msg_init(msg);
 
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
+#ifdef CONFIG_HIP_ECDH
+
+#else
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
     HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
@@ -717,6 +720,7 @@ int hip_create_r1(struct hip_common *const msg,
              -1, "Could not get dh_size2\n");
     HIP_IFEL(!(dh_data2 = calloc(1, dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
+#endif
 
     /* Ready to begin building of the R1 packet */
 
@@ -735,12 +739,21 @@ int hip_create_r1(struct hip_common *const msg,
              err, "Cookies were burned. Bummer!\n");
 
     /* Parameter Diffie-Hellman */
-    HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+#ifdef CONFIG_HIP_ECDH
+    HIP_IFEL((written1 = hip_insert_dh(&dh_data1, &dh_size1,
+                                       HIP_ECDH_NIST_256P)) < 0,
+             written1, "Could not extract ECDH public key\n");
+    HIP_IFEL((err = hip_build_param_diffie_hellman_contents(msg,
+                                                            HIP_ECDH_NIST_256P, dh_data1, written1,
+                                                            HIP_MAX_DH_GROUP_ID, dh_data2, 0)),
+             err, "Building of DH failed.\n");
+#else
+    HIP_IFEL((written1 = hip_insert_dh(&dh_data1, &dh_size1,
                                        HIP_FIRST_DH_GROUP_ID)) < 0,
              written1, "Could not extract the first DH public key\n");
 
     if (number_dh_keys == TWO) {
-        HIP_IFEL((written2 = hip_insert_dh(dh_data2, dh_size2,
+        HIP_IFEL((written2 = hip_insert_dh(&dh_data2, &dh_size2,
                                            HIP_SECOND_DH_GROUP_ID)) < 0,
                  written2, "Could not extract the second DH public key\n");
 
@@ -754,6 +767,8 @@ int hip_create_r1(struct hip_common *const msg,
                                                                 HIP_MAX_DH_GROUP_ID, dh_data2, 0)),
                  err, "Building of DH failed.\n");
     }
+#endif
+
 
     /* Parameter HIP transform. */
     HIP_IFEL((err = hip_build_param_hip_transform(msg,

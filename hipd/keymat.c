@@ -153,9 +153,8 @@ void hip_make_keymat(char *kij,
 
     bigger_hit  = hit1_is_bigger ? hit1 : hit2;
     smaller_hit = hit1_is_bigger ? hit2 : hit1;
-
-    shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
-                                         smaller_hit, bigger_hit, I, J);
+    shabuffer   = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
+                                           smaller_hit, bigger_hit, I, J);
     if (!shabuffer) {
         HIP_ERROR("No memory for keymat\n");
         return;

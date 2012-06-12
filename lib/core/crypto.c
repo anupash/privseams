@@ -307,7 +307,7 @@ static unsigned char dhprime_modp_8192[] = {
 };
 
 /* load DH arrays for easy access */
-static const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
+UNUSED static const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
     0,
     dhprime_384,
     dhprime_oakley_1,
@@ -317,7 +317,7 @@ static const unsigned char *dhprime[HIP_MAX_DH_GROUP_ID] = {
     dhprime_modp_8192,
 };
 
-static int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
+UNUSED static int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     -1,
     sizeof(dhprime_384),
     sizeof(dhprime_oakley_1),
@@ -327,13 +327,29 @@ static int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     sizeof(dhprime_modp_8192),
 };
 
-static unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
-                                                    0x02,
-                                                    0x02,
-                                                    0x02,
-                                                    0x02,
-                                                    0x02,
-                                                    0x02 };
+UNUSED static unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
+                                                           0x02,
+                                                           0x02,
+                                                           0x02,
+                                                           0x02,
+                                                           0x02,
+                                                           0x02 };
+
+static const int KDF1_SHA1_len = HIP_AH_SHA_LEN;
+
+static void *KDF1_SHA1(const void *in, size_t inlen, void *out, size_t *outlen)
+{
+#ifndef OPENSSL_NO_SHA
+    if (*outlen < SHA_DIGEST_LENGTH) {
+        return NULL;
+    } else {
+        *outlen = SHA_DIGEST_LENGTH;
+    }
+    return SHA1(in, inlen, out);
+#else
+    return NULL;
+#endif
+}
 
 /**
  * Calculates a hmac.
@@ -641,6 +657,64 @@ out_err:
 }
 
 /**
+ * Generate a shared key using ECDH
+ *
+ * @param ec Elliptic curve key
+ * @param peer_key peer's public key
+ * @param peer_len length of the peer_key
+ * @param dh_shared_key shared key to generate
+ * @param outlen the length of the shared key
+ * @return 1 on success, 0 otherwise
+ */
+int hip_gen_ecdh_shared_key(EC_KEY *ec,
+                            const uint8_t *peer_key,
+                            UNUSED size_t peer_len,
+                            uint8_t *ecdh_shared_key,
+                            size_t outlen)
+{
+    //size_t  len;
+    int       err;
+    EC_KEY   *peer          = NULL;
+    EC_POINT *peer_pub_key  = NULL;
+    EC_GROUP *group         = NULL;
+    BIGNUM   *peer_priv_key = NULL;
+    int       curve_size    = 256;
+    int       priv_len      = (curve_size + 7) >> 3;
+    int       pub_len       = priv_len * 2 + 1;
+
+    BIGNUM *x_peer = NULL, *y_peer = NULL;
+
+    //unsigned char *buffer=NULL;
+
+    peer  = EC_KEY_new();
+    group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
+    peer_pub_key = EC_POINT_new(group);
+    EC_KEY_set_group(peer, group);
+    EC_POINT_oct2point(group, peer_pub_key, peer_key + HIP_CURVE_ID_LENGTH, pub_len, NULL);
+    EC_KEY_set_public_key(peer, peer_pub_key);
+
+
+    if (!EC_POINT_get_affine_coordinates_GFp(group,
+                                             EC_KEY_get0_public_key(peer), x_peer, y_peer, NULL)) {
+        HIP_DEBUG("Problem generating coordinates of the curve\n");
+        err = -1;
+        goto out_err;
+    }
+    outlen = KDF1_SHA1_len;
+    outlen = ECDH_compute_key(ecdh_shared_key, outlen, EC_KEY_get0_public_key(peer), ec, KDF1_SHA1);
+
+    HIP_HEXDUMP(" ECDH cpmpute key = ", ecdh_shared_key, outlen);
+    err = outlen;
+out_err:
+    EC_KEY_free(peer);
+    EC_POINT_free(peer_pub_key);
+    EC_GROUP_free(group);
+    BN_free(peer_priv_key);
+    return err;
+}
+
+/**
  * Encode Diffie-Hellman key into a character array.
  *
  * @param dh Diffie-Hellman key
@@ -662,39 +736,94 @@ out_err:
 }
 
 /**
+ * Encode ECDH public key into a character array.
+ *
+ * @param dh Diffie-Hellman key
+ * @param out output argument: a character array
+ * @param outlen the length of @c out in bytes
+ * @return the number of bytes written
+ */
+int hip_encode_ecdh_publickey(EC_KEY *eckey, uint8_t **out, int *outlen)
+{
+    EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+
+    EC_POINT *pub_key = EC_POINT_new(group);
+    EC_POINT_copy(pub_key, EC_KEY_get0_public_key(eckey));
+    const BIGNUM *priv_key = EC_KEY_get0_private_key(eckey);
+
+
+    int pub_key_len = EC_POINT_point2oct(group, pub_key, EC_KEY_get_conv_form(eckey),
+                                         NULL, 0, NULL);
+    int priv_key_len = (pub_key_len - 1) / 2;
+    *outlen = pub_key_len + priv_key_len + HIP_CURVE_ID_LENGTH;
+
+    *out                = malloc(*outlen);
+    **(uint16_t **) out = htons(NID_X9_62_prime256v1);
+
+    EC_POINT_point2oct(group, pub_key, EC_KEY_get_conv_form(eckey),
+                       (unsigned char *) (*out) + HIP_CURVE_ID_LENGTH, *outlen, NULL);
+
+    bn2bin_safe(priv_key, *out + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
+
+    printf("The public of the generated EC_KEY public key len = %d\n", pub_key_len);
+    HIP_HEXDUMP("EC_KEY public : ", *out + 2, pub_key_len);
+
+    return *outlen;
+}
+
+/**
  * Generate a new Diffie-Hellman key.
  *
  * @param group_id the group id of the D-H
  * @return a new Diffie-Hellman key (caller deallocates)
  */
-EVP_PKEY *hip_generate_dh_key(const int group_id)
+EVP_PKEY *hip_generate_dh_key(UNUSED const int group_id)
 {
-    int            err;
-    DH            *dh;
     EVP_PKEY      *evp_pkey;
     char           rnd_seed[20];
     struct timeval time1;
+    EC_KEY        *ec        = EC_KEY_new();
+    EC_GROUP      *group     = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    int            asn1_flag = OPENSSL_EC_NAMED_CURVE;
 
     gettimeofday(&time1, NULL);
     sprintf(rnd_seed, "%x%x", (unsigned int) time1.tv_usec,
             (unsigned int) time1.tv_sec);
     RAND_seed(rnd_seed, sizeof(rnd_seed));
-
-    dh    = DH_new();
-    dh->g = BN_new();
-    dh->p = BN_new();
-    /* Put prime corresponding to group_id into dh->p */
-    BN_bin2bn(dhprime[group_id],
-              dhprime_len[group_id], dh->p);
-    /* Put generator corresponding to group_id into dh->g */
-    BN_set_word(dh->g, dhgen[group_id]);
-    /* By not setting dh->priv_key, allow crypto lib to pick at random */
-    if ((err = DH_generate_key(dh)) != 1) {
-        HIP_ERROR("DH key generation failed (%d).\n", err);
-        exit(1);
-    }
     evp_pkey = EVP_PKEY_new();
-    EVP_PKEY_set1_DH(evp_pkey, dh);
+
+#ifdef CONFIG_HIP_ECDH
+    EC_GROUP_set_asn1_flag(group, asn1_flag);
+    EC_KEY_set_group(ec, group);
+    EC_KEY_generate_key(ec);
+    EVP_PKEY_set1_EC_KEY(evp_pkey, ec);
+#else
+    int err;
+    DH *dh;
+
+    if (group_id == HIP_ECDH_NIST_256P) {
+        EC_GROUP_set_asn1_flag(group, asn1_flag);
+        EC_KEY_set_group(ec, group);
+        EC_KEY_generate_key(ec);
+        EVP_PKEY_set1_EC_KEY(evp_pkey, ec);
+    } else {
+        dh    = DH_new();
+        dh->g = BN_new();
+        dh->p = BN_new();
+        /* Put prime corresponding to group_id into dh->p */
+        BN_bin2bn(dhprime[group_id],
+                  dhprime_len[group_id], dh->p);
+        /* Put generator corresponding to group_id into dh->g */
+        BN_set_word(dh->g, dhgen[group_id]);
+        /* By not setting dh->priv_key, allow crypto lib to pick at random */
+        if ((err = DH_generate_key(dh)) != 1) {
+            HIP_ERROR("DH key generation failed (%d).\n", err);
+            exit(1);
+        }
+        EVP_PKEY_set1_DH(evp_pkey, dh);
+    }
+#endif
+
     return evp_pkey;
 }
 

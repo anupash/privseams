@@ -45,7 +45,11 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
 
-#define DH_GROUP_ID 3
+#ifdef CONFIG_HIP_ECDH
+#define DH_GROUP_ID HIP_ECDH_NIST_256P
+#else
+#define DH_GROUP_ID HIP_DH_OAKLEY_5
+#endif
 
 int signaling_hipfw_init(const char *policy_file);
 int signaling_hipfw_uninit(void);
@@ -93,6 +97,10 @@ int signaling_hipfw_handle_incoming_certificate_update_ack(const struct hip_comm
 int signaling_hipfw_get_dh_shared_key(struct hip_common *msg, DH *dh_key,
                                       unsigned char **dh_shared_key,
                                       uint16_t *dh_shared_len);
-int signaling_hipfw_generate_mb_dh_key(const int group_id, DH **dh_key);
-DH *signaling_hipfw_get_mb_dh_key(void);
+int signaling_hipfw_get_ecdh_shared_key(struct hip_common *msg,
+                                        EC_KEY *ec_key,
+                                        unsigned char **dh_shared_key,
+                                        uint16_t *dh_shared_len);
+int signaling_hipfw_generate_mb_evp_key(const int group_id, EVP_PKEY **evp);
+EVP_PKEY *signaling_hipfw_get_mb_evp_key(void);
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_H*/

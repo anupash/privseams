@@ -54,7 +54,7 @@ static EVP_PKEY *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
  * If a DH-key does not exist, we will create one.
  * @return the number of bytes written
  */
-int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
+int hip_insert_dh(uint8_t **buffer, int *bufsize, int group_id)
 {
     int       res;
     EVP_PKEY *tmp;
@@ -84,7 +84,12 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 
     tmp = dh_table[group_id];
 
-    res = hip_encode_dh_publickey(EVP_PKEY_get1_DH(tmp), buffer, bufsize);
+#ifdef CONFIG_HIP_ECDH
+    res = hip_encode_ecdh_publickey(EVP_PKEY_get1_EC_KEY(tmp), buffer, bufsize);
+#else
+    res = hip_encode_dh_publickey(EVP_PKEY_get1_DH(tmp), *buffer, *bufsize);
+#endif
+
     if (res < 0) {
         HIP_ERROR("Encoding error\n");
         res = -1;
@@ -126,7 +131,6 @@ int hip_calculate_shared_secret(const uint8_t *public_value,
      * First check that we have the key available.
      * Then encode it into the buffer
      */
-
     if (dh_table[group_id] == NULL) {
         tmp                = hip_generate_dh_key(group_id);
         dh_table[group_id] = tmp;
@@ -137,13 +141,21 @@ int hip_calculate_shared_secret(const uint8_t *public_value,
         }
     }
 
+#ifdef CONFIG_HIP_ECDH
+    err = hip_gen_ecdh_shared_key(EVP_PKEY_get1_EC_KEY(dh_table[group_id]), public_value,
+                                  len, buffer, bufsize);
+    if (err < 0) {
+        HIP_ERROR("Could not create shared secret\n");
+        return -1;
+    }
+#else
     err = hip_gen_dh_shared_key(EVP_PKEY_get1_DH(dh_table[group_id]), public_value,
                                 len, buffer, bufsize);
     if (err < 0) {
         HIP_ERROR("Could not create shared secret\n");
         return -1;
     }
-
+#endif
     return err;
 }
 
