@@ -1955,8 +1955,9 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
 
     if (sig_state->flag_offer_type == OFFER_SIGNED) {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_SIGNED_SERVICE_ACK\n");
+        HIP_DEBUG("Start PERF_I2_SIGNED_SERVICE_ACK, PERF_R2_SIGNED_SERVICE_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+        hip_perf_start_benchmark(perf_set, PERF_R2_SIGNED_SERVICE_ACK);
 #endif
         if (packet_type == HIP_UPDATE) {
             HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
@@ -1983,8 +1984,9 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
                  -1, "Could not build ack for signed service offer\n");
 #endif
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_SIGNED_SERVICE_ACK\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+        HIP_DEBUG("Stop PERF_I2_SIGNED_SERVICE_ACK, PERF_R2_SIGNED_SERVICE_ACK\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I2_SIGNED_SERVICE_ACK);
+        hip_perf_stop_benchmark(perf_set, PERF_R2_SIGNED_SERVICE_ACK);
 #endif
     }
     HIP_DEBUG("Signation connection and service acknowledgement added \n");

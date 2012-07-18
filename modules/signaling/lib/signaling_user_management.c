@@ -203,7 +203,7 @@ struct userdb_certificate_context *userdb_get_certificate_context(struct userdb_
 struct userdb_user_entry *userdb_add_user(const struct signaling_user_context *user, int replace)
 {
     X509_NAME                *uname = NULL;
-    struct userdb_user_entry *new   = NULL;
+    struct userdb_user_entry *new = NULL;
 
     /* Check if we already have that user */
     if (signaling_DER_to_X509_NAME(user->subject_name, user->subject_name_len, &uname)) {
@@ -858,12 +858,10 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
     const int       orig_len = hip_get_msg_total_len(msg);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    HIP_DEBUG("Start PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, "
+              "PERF_CONN_U1_VERIFY_USER_SIG, PERF_CONN_U2_VERIFY_USER_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
     hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-    hip_perf_start_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
     hip_perf_start_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
     hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
     hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
@@ -902,12 +900,10 @@ int signaling_verify_user_signature_from_msg(struct hip_common *msg, struct sign
 
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_SIG\n");
+    HIP_DEBUG("Stop PERF_I2_VERIFY_USER_SIG, PERF_R2_VERIFY_USER_SIG, "
+              "PERF_CONN_U1_VERIFY_USER_SIG, PERF_CONN_U2_VERIFY_USER_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_SIG);
-    hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U1_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
     hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_USER_SIG);
