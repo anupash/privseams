@@ -54,7 +54,7 @@
 #define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
 #define HIP_ECDH_NIST_256P            7 /* NIST 256bit prime Elliptic Curve*/
-#define HIP_FIRST_DH_GROUP_ID         HIP_DH_OAKLEY_5
+#define HIP_FIRST_DH_GROUP_ID         HIP_ECDH_NIST_256P
 #define HIP_SECOND_DH_GROUP_ID        HIP_DH_384
 #define HIP_MAX_DH_GROUP_ID           8
 
