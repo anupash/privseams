@@ -1070,8 +1070,8 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
         HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
                            &sig_len, (RSA *) mb_key), -1, "Signing error\n");
     } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
-        HIP_IFEL(ECDSA_sign(0, sha1_digest, SHA_DIGEST_LENGTH, signature,
-                            &sig_len, (EC_KEY *) mb_key), -1, "Signing error\n");
+        HIP_IFEL(!ECDSA_sign(0, sha1_digest, SHA_DIGEST_LENGTH, signature,
+                             &sig_len, (EC_KEY *) mb_key), -1, "Signing error\n");
         //HIP_IFEL(impl_ecdsa_sign(sha1_digest, (EC_KEY *) mb_key, signature), -1,
         //         "Could not sign Service offer using ECDSA key\n");
     }
@@ -1613,8 +1613,10 @@ int signaling_verify_service_signature(X509 *cert, uint8_t *verify_it, uint8_t v
         HIP_IFEL(ECDSA_size(ecdsa) != sig_len,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n",
                  ECDSA_size(ecdsa), sig_len);
-        HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, signature),
+        HIP_IFEL(!ECDSA_verify(0, sha1_digest, 20, signature, sig_len, ecdsa),
                  -1, "ECDSA service signature did not verify correctly\n");
+        //HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, signature),
+        //         -1, "ECDSA service signature did not verify correctly\n");
         break;
     case EVP_PKEY_RSA:
         HIP_DEBUG("Verifying RSA signature\n");
