@@ -14,7 +14,7 @@
 #include "modules/signaling/hipd/signaling.h"
 
 #define HIP_DEFAULT_HIPFW_ALGO       HIP_HI_RSA
-#define SERVICE_RESPONSE_ALGO_DH     1
+#define SERVICE_RESPONSE_ALGO_DH     0
 
 enum service_offer_type {
     OFFER_SIGNED           = 0,

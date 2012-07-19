@@ -372,8 +372,10 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_DIFFIE_HELLMAN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U_R_LOAD_USER_KEY);
         if (sig_state->flag_offer_type == OFFER_SIGNED) {
-            HIP_DEBUG("Write PERF_CONN_U1_HANDLE_SIGNED_OFFER, PERF_CONN_U2_SIGNED_ACK, PERF_CONN_U2_HMAC,"
-                      "PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+            HIP_DEBUG("Write PERF_CONN_U1_HANDLE_SIGNED_OFFER, PERF_CONN_U2_SIGNED_ACK, PERF_CONN_U2_HMAC, "
+                      "PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, "
+                      "PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH, "
+                      "PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA\n");
             hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HANDLE_SIGNED_OFFER);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_SIGNED_ACK);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HMAC);
@@ -381,6 +383,8 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA);
         } else if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
             HIP_DEBUG("Write PERF_CONN_U1_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_CONN_U2_UNSIGNED_ACK, PERF_CONN_U2_HMAC,"
                       "PERF_CONN_U2_HOST_SIGN, PERF_CONN_U2_USER_SIGN\n");
@@ -433,7 +437,8 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Write PERF_CONN_U2, PERF_COMPLETE_UPDATE_EX, PERF_CONN_U2_VERIFY_HMAC, "
-                  "PERF_CONN_U2_GROUP_SERVICE_OFFERS, PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U2_LOCATE_MBOX_CERT, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+                  "PERF_CONN_U2_GROUP_SERVICE_OFFERS, PERF_CONN_U_I_LOAD_USER_KEY, PERF_CONN_U2_LOCATE_MBOX_CERT, "
+                  "PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
         hip_perf_write_benchmark(perf_set, PERF_COMPLETE_UPDATE_EX);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_HMAC);
@@ -443,7 +448,9 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
 
         if (sig_state->flag_offer_type == OFFER_SIGNED) {
             HIP_DEBUG("Write PERF_CONN_U2_HANDLE_SIGNED_OFFER, PERF_CONN_U3_SIGNED_ACK, PERF_CONN_U3_HMAC, "
-                      "PERF_CONN_U3_HOST_SIGN, PERF_CONN_U3_USER_SIGN\n");
+                      "PERF_CONN_U3_HOST_SIGN, PERF_CONN_U3_USER_SIGN, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH, "
+                      "PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS"
+                      "PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA\n");
             hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HANDLE_SIGNED_OFFER);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_SIGNED_ACK);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_HMAC);
@@ -451,6 +458,8 @@ static int hip_send_update_packet(UNUSED const uint8_t packet_type,
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_USER_SIGN);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER);
             hip_perf_write_benchmark(perf_set, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH);
+            hip_perf_write_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA);
         } else if (sig_state->flag_offer_type == OFFER_UNSIGNED) {
             HIP_DEBUG("Write PERF_CONN_U2_HANDLE_UNSIGNED_SERVICE_OFFER, PERF_CONN_U3_UNSIGNED_ACK, PERF_CONN_U3_HMAC, "
                       "PERF_CONN_U3_HOST_SIGN, PERF_CONN_U3_USER_SIGN\n");

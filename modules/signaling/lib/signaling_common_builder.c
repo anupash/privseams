@@ -1070,8 +1070,10 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
         HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
                            &sig_len, (RSA *) mb_key), -1, "Signing error\n");
     } else if (HIP_DEFAULT_HIPFW_ALGO == HIP_HI_ECDSA) {
-        HIP_IFEL(impl_ecdsa_sign(sha1_digest, (EC_KEY *) mb_key, signature), -1,
-                 "Could not sign Service offer using ECDSA key\n");
+        HIP_IFEL(ECDSA_sign(0, sha1_digest, SHA_DIGEST_LENGTH, signature,
+                            &sig_len, (EC_KEY *) mb_key), -1, "Signing error\n");
+        //HIP_IFEL(impl_ecdsa_sign(sha1_digest, (EC_KEY *) mb_key, signature), -1,
+        //         "Could not sign Service offer using ECDSA key\n");
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_MBOX_R1_SERVICE_SIGNATURE, PERF_MBOX_I2_SERVICE_SIGNATURE, "
@@ -2241,9 +2243,11 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
 
                 if (SERVICE_RESPONSE_ALGO_DH) {
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH\n");
+                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH\n");
                     hip_perf_start_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
                     hip_perf_start_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH);
 #endif
 #ifdef CONFIG_HIP_ECDH
                     HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)), -ENOMEM,
@@ -2274,15 +2278,19 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                     free(dh_shared_key);
                     dh_shared_len = 1024;
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH\n");
+                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH\n");
                     hip_perf_stop_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_DH);
                     hip_perf_stop_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_DH);
+                    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_DH);
 #endif
                 } else {
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA\n");
+                    HIP_DEBUG("Start PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA\n");
                     hip_perf_start_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA);
                     hip_perf_start_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_start_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_start_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA);
 #endif
                     /*---- Fetch the certificate and the public key corresponding to the mbox -----*/
                     HIP_IFEL(!(cert = signaling_get_mbox_cert_from_offer_id(sig_state, tmp_offer_id)),
@@ -2308,9 +2316,11 @@ int signaling_build_service_ack_s(struct signaling_hipd_state *sig_state,
                                    sizeof(ack.service_option) + sizeof(ack.service_offer_hash) +
                                    16 * sizeof(uint8_t);
 #ifdef CONFIG_HIP_PERFORMANCE
-                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA\n");
+                    HIP_DEBUG("Stop PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA\n");
                     hip_perf_stop_benchmark(perf_set, PERF_I2_ENC_SYMM_KEY_INFO_ACK_RSA);
                     hip_perf_stop_benchmark(perf_set, PERF_R2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_ENC_SYMM_KEY_INFO_ACK_RSA);
+                    hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_ENC_SYMM_KEY_INFO_ACK_RSA);
 #endif
                 }
 

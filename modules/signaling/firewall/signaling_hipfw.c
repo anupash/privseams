@@ -107,7 +107,7 @@ UNUSED static uint16_t      ec_key_len = 99;
 static EVP_PKEY *evp = NULL;
 //static DH       *dh              = NULL;
 
-int SERVICE_OFFER_TYPE = OFFER_SIGNED;
+int SERVICE_OFFER_TYPE = OFFER_SELECTIVE_SIGNED;
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
