@@ -1953,16 +1953,20 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
         HIP_DUMP_MSG(msg_buf);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+        HIP_DEBUG("Start PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER);
         hip_perf_start_benchmark(perf_set, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER);
 #endif
         /* ========== Generate 128 -bit key for encrypting the payload of HIP_ENCRYPTED param ===============*/
         HIP_IFEL(generate_key_for_hip_encrypt(key_data, &key_data_len, key_hint), -1, "Could not generate the random key for HIP Encrypted\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER\n");
+        HIP_DEBUG("Stop PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER, PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2_GEN_SYMM_KEY_SIGNED_OFFER);
         hip_perf_stop_benchmark(perf_set, PERF_R2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_GEN_SYMM_KEY_SIGNED_OFFER);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_GEN_SYMM_KEY_SIGNED_OFFER);
 #endif
         /* ========== Create the HIP_ENCRYPTED param. The payload will not be encrypted here ===============*/
         tmp_ptr = (uint8_t *) msg_buf + sizeof(struct hip_common);
@@ -1988,17 +1992,21 @@ int signaling_build_response_to_service_offer_s(struct hip_packet_context       
         /* ========== Encrypt the payload of HIP_ENCRYPTED param.  ===============*/
         HIP_HEXDUMP("enc key = ", key_data, key_data_len);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS\n");
+        HIP_DEBUG("Start PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS\n");
         hip_perf_start_benchmark(perf_set, PERF_I2_ENCRYPT_ENDPOINT_SECRETS);
         hip_perf_start_benchmark(perf_set, PERF_R2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_start_benchmark(perf_set, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS);
 #endif
         HIP_IFEL(hip_crypto_encrypted(info_secret_enc, iv, HIP_HIP_AES_SHA1,
                                       tmp_len, key_data, HIP_DIRECTION_ENCRYPT),
                  -1, "Building of param encrypted failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS\n");
+        HIP_DEBUG("Stop PERF_I2_ENCRYPT_ENDPOINT_SECRETS, PERF_R2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2_ENCRYPT_ENDPOINT_SECRETS);
         hip_perf_stop_benchmark(perf_set, PERF_R2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_ENCRYPT_ENDPOINT_SECRETS);
+        hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_ENCRYPT_ENDPOINT_SECRETS);
 #endif
         HIP_HEXDUMP("Encrypted data = ", info_secret_enc, tmp_len);
 
