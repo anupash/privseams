@@ -43,7 +43,7 @@
 #include "common_types.h"
 #include "esp_prot_defines.h"
 
-#define HIP_DEFAULT_HIPFW_ALGO       HIP_HI_RSA
+#define HIP_DEFAULT_HIPFW_ALGO       HIP_HI_ECDSA
 
 enum hipfw_pkt_type {
     OTHER_PACKET = 0,
