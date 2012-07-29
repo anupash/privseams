@@ -2191,7 +2191,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_MBOX_R2_BUILD_PARAM_REM_LIST, "/root/results/PERF_MBOX_R2_BUILD_PARAM_REM_LIST.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_DH, "/root/results/PERF_MBOX_R2_DEC_SYMM_KEY_DH.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_DEC_SYMM_KEY_RSA, "/root/results/PERF_MBOX_R2_DEC_SYMM_KEY_RSA.csv");
-    hip_perf_set_name(perf_set, PERF_MBOX_R2_DEC_ENDPOINT_SECRET, "/root/results/PERF_MBOX_I2_DEC_ENDPOINT_SECRET.csv");
+    hip_perf_set_name(perf_set, PERF_MBOX_R2_DEC_ENDPOINT_SECRET, "/root/results/PERF_MBOX_R2_DEC_ENDPOINT_SECRET.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ, "/root/results/PERF_MBOX_R2_VERIFY_INFO_REQ.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_VERIFY_WITH_POLICY, "/root/results/PERF_MBOX_R2_VERIFY_WITH_POLICY.csv");
     hip_perf_set_name(perf_set, PERF_MBOX_R2_REM_PARAMS, "/root/results/PERF_MBOX_R2_REM_PARAMS.csv");
