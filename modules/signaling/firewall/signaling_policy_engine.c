@@ -500,6 +500,7 @@ static int match_tuples(struct policy_tuple                 *tuple_conn,
     }
 
     if (ret && tuple_rule->application.connections >= 0) {
+        HIP_DEBUG("Application connections = %d \n", tuple_conn->application.connections);
         if (tuple_conn->application.connections < 0) {
             signaling_info_req_flag_set(&flags->flag_info_requests, APP_INFO_CONNECTIONS);
             ret = -1;
@@ -692,11 +693,10 @@ void signaling_copy_connection_ctx_to_policy_tuple(const struct signaling_connec
     }
 
 
-    if (ctx->app.connections > 0) {
+    if (ctx->app.connections >= 0) {
         tuple->application.connections = ctx->app.connections;
     } else {
         tuple->application.connections = -1;
-        ;
     }
 /*
  *  HIP_DEBUG("============Printing Sockets===============\n");

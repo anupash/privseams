@@ -602,10 +602,10 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                                             struct signaling_connection_context *ctx,
                                             const uint8_t app_info_flag)
 {
-    int                                         len_contents = 0;
-    int                                         i            = 0;
-    int                                         tmp_len;
-    char                                        param_buf[HIP_MAX_PACKET];
+    int len_contents = 0;
+    int i            = 0;
+    int tmp_len;
+    //char                                        param_buf[HIP_MAX_PACKET];
     struct signaling_param_app_info_name        app_info_name;
     struct signaling_param_app_info_connections app_info_conn;
     uint8_t                                    *tmp_ptr = NULL;
@@ -650,17 +650,24 @@ int signaling_build_param_app_info_response(struct hip_common *msg,
                 app_info_conn.sockets[2 * i + 1] = ctx->app.sockets[i].dst_port;
                 len_contents                    += sizeof(struct signaling_port_pair);
             } else if (i == 0) {
-                app_info_conn.port_pair_length = 0;
+                app_info_conn.port_pair_length = htons(0);
+                app_info_conn.connection_count = htons(0);
                 len_contents                   = sizeof(app_info_conn.port_pair_length) + sizeof(app_info_conn.connection_count);
                 hip_set_param_contents_len((struct hip_tlv_common *) &app_info_conn, len_contents);
                 hip_set_param_type((struct hip_tlv_common *) &app_info_conn, HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS);
 
                 //TODO do not have the version parameter set. Leaving it to null character.
                 /* Append the parameter to the message */
-                if (hip_build_generic_param(msg, &app_info_conn, sizeof(struct signaling_param_app_info_connections), param_buf)) {
+                if (hip_build_param(msg, &app_info_conn)) {
                     HIP_ERROR("Failed to append application info connection parameter to message.\n");
                     return -1;
                 }
+/*
+ *              if (hip_build_generic_param(msg, &app_info_conn, sizeof(struct signaling_param_app_info_connections), param_buf)) {
+ *                  HIP_ERROR("Failed to append application info connection parameter to message.\n");
+ *                  return -1;
+ *              }
+ */
                 return 0;
             } else {
                 break;
@@ -2962,8 +2969,8 @@ int signaling_build_offset_list_to_remove_params(struct hip_common *msg,
     uint8_t                tmp_info   = 0;
     uint16_t               param_type = 0;
 
-    HIP_DEBUG("Offest list length = %d\n", j);
-    for (i = 0; i < j; i++) {
+    HIP_DEBUG("Offset list length = %d\n", j);
+    for (i = 0; i < j - 1; i++) {
         tmp_info   = info_remove[i];
         param_type = signaling_get_param_type_from_info_req(tmp_info);
         if ((param = hip_get_param_readwrite(msg, param_type))) {
@@ -3011,66 +3018,68 @@ int signaling_remove_params_from_hip_msg(struct hip_common *msg,
     start_ptr = (uint8_t *) msg_buf;
     tmp_len   = offset_list[0];
 
-    for (i = 0; i <= *offset_list_len; i++) {
-        memcpy(tmp_ptr, start_ptr, tmp_len);
-        //HIP_DEBUG("i = %d, tmp_len = %u, copied portion of the new message\n", i, tmp_len);
-        tmp_ptr   += tmp_len;
-        start_ptr += tmp_len;
+    if (*offset_list_len > 0) {
+        for (i = 0; i <= *offset_list_len; i++) {
+            memcpy(tmp_ptr, start_ptr, tmp_len);
+            //HIP_DEBUG("i = %d, tmp_len = %u, copied portion of the new message\n", i, tmp_len);
+            tmp_ptr   += tmp_len;
+            start_ptr += tmp_len;
 
-        if (i < *offset_list_len) {
-            param = (struct hip_tlv_common *) ((uint8_t *) msg_buf + offset_list[i]);
-            //HIP_DEBUG("parameter correct at this positon\n");
-            tmp_len      = hip_get_param_total_len(param);
-            msg_new_len -= tmp_len;
-            start_ptr   += tmp_len;
-            //HIP_DEBUG("Length of the parameter at this position = %d, new hip msg length = %d\n", tmp_len, msg_new_len);
-            if (i < *offset_list_len - 1) {
-                HIP_DEBUG("next offset = %d\n", offset_list[i + 1]);
-                tmp_len = offset_list[i + 1] - (offset_list[i] + tmp_len);
-            } else {
-                tmp_len = hip_get_msg_total_len(msg_buf) - (offset_list[i] + tmp_len);
+            if (i < *offset_list_len) {
+                param = (struct hip_tlv_common *) ((uint8_t *) msg_buf + offset_list[i]);
+                //HIP_DEBUG("parameter correct at this positon\n");
+                tmp_len      = hip_get_param_total_len(param);
+                msg_new_len -= tmp_len;
+                start_ptr   += tmp_len;
+                //HIP_DEBUG("Length of the parameter at this position = %d, new hip msg length = %d\n", tmp_len, msg_new_len);
+                if (i < *offset_list_len - 1) {
+                    HIP_DEBUG("next offset = %d\n", offset_list[i + 1]);
+                    tmp_len = offset_list[i + 1] - (offset_list[i] + tmp_len);
+                } else {
+                    tmp_len = hip_get_msg_total_len(msg_buf) - (offset_list[i] + tmp_len);
+                }
+                //HIP_DEBUG("Sizeof of the next chunk to be copied = %u\n", tmp_len);
             }
-            //HIP_DEBUG("Sizeof of the next chunk to be copied = %u\n", tmp_len);
         }
-    }
-    hip_set_msg_total_len(msg, msg_new_len);
-/*
- *  HIP_DEBUG("HIP message after removal of secrets and ack msg_len = %d\n", msg_new_len);
- *  hip_dump_msg(msg);
- */
+        hip_set_msg_total_len(msg, msg_new_len);
+        /*
+         *  HIP_DEBUG("HIP message after removal of secrets and ack msg_len = %d\n", msg_new_len);
+         *  hip_dump_msg(msg);
+         */
 
-    param = NULL;
-    while ((param = hip_get_next_param_readwrite(msg_buf, param))) {
-        if (hip_get_param_type(param) == HIP_PARAM_SELECTIVE_HASH_LEAF) {
-            int idx = ntohs(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
-            params_removed[idx] = 1;
+        param = NULL;
+        while ((param = hip_get_next_param_readwrite(msg_buf, param))) {
+            if (hip_get_param_type(param) == HIP_PARAM_SELECTIVE_HASH_LEAF) {
+                int idx = ntohs(((struct siganling_param_selective_hash_leaf *) param)->leaf_pos);
+                params_removed[idx] = 1;
+            }
         }
-    }
 
-    tmp_ptr = (uint8_t *) msg_buf;
-    i       = 1;
-    int j = 0;
-    param = NULL;
-    while (i < 20) {
-        if (params_removed[i]) {
+        tmp_ptr = (uint8_t *) msg_buf;
+        i       = 1;
+        int j = 0;
+        param = NULL;
+        while (i < 20) {
+            if (params_removed[i]) {
+                i++;
+                continue;
+            } else if ((param = hip_get_next_param_readwrite(msg_buf, param)) &&
+                       j < *offset_list_len &&
+                       ((uint8_t *) param - (uint8_t *) msg_buf) == offset_list[j]) {
+                j++;
+                HIP_DEBUG("Position of the parameter to be removed i = %d\n", i);
+                struct siganling_param_selective_hash_leaf tmp_leaf = { 0 };
+                tmp_leaf.leaf_pos      = htons(i);
+                tmp_leaf.len_param_rem = htons(hip_get_param_total_len(param));
+                HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, param, hip_get_param_total_len(param), tmp_leaf.leaf_hash) < 0,
+                         -1, "Building of SHA1 digest failed\n");
+                hip_set_param_contents_len((struct hip_tlv_common *) &tmp_leaf, sizeof(struct siganling_param_selective_hash_leaf) - sizeof(struct hip_tlv_common));
+                hip_set_param_type((struct hip_tlv_common *) &tmp_leaf, HIP_PARAM_SELECTIVE_HASH_LEAF);
+                HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *) &tmp_leaf),
+                         -1, "Failed to append appinfo parameter to message.\n");
+            }
             i++;
-            continue;
-        } else if ((param = hip_get_next_param_readwrite(msg_buf, param)) &&
-                   j < *offset_list_len &&
-                   ((uint8_t *) param - (uint8_t *) msg_buf) == offset_list[j]) {
-            j++;
-            HIP_DEBUG("Position of the parameter to be removed i = %d\n", i);
-            struct siganling_param_selective_hash_leaf tmp_leaf = { 0 };
-            tmp_leaf.leaf_pos      = htons(i);
-            tmp_leaf.len_param_rem = htons(hip_get_param_total_len(param));
-            HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, param, hip_get_param_total_len(param), tmp_leaf.leaf_hash) < 0,
-                     -1, "Building of SHA1 digest failed\n");
-            hip_set_param_contents_len((struct hip_tlv_common *) &tmp_leaf, sizeof(struct siganling_param_selective_hash_leaf) - sizeof(struct hip_tlv_common));
-            hip_set_param_type((struct hip_tlv_common *) &tmp_leaf, HIP_PARAM_SELECTIVE_HASH_LEAF);
-            HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *) &tmp_leaf),
-                     -1, "Failed to append appinfo parameter to message.\n");
         }
-        i++;
     }
 /*
  *  HIP_DEBUG("HIP message after addition of hash leafs\n");

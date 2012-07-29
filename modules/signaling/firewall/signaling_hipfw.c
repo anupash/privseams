@@ -1137,10 +1137,10 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
 #endif
     if ((matched_tuple = signaling_policy_engine_check_and_flag(hit_i, ctx_out, &ctx_flags, &policy_check))) {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_WITH_POLICY, PERF_MBOX_R2_VERIFY_WITH_POLICY,"
+        HIP_DEBUG("Stop PERF_MBOX_R2_VERIFY_WITH_POLICY, PERF_MBOX_I2_VERIFY_WITH_POLICY, "
                   "PERF_MBOX_U1_VERIFY_WITH_POLICY, PERF_MBOX_U2_VERIFY_WITH_POLICY\n");
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1_VERIFY_WITH_POLICY);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_WITH_POLICY);
-        hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_WITH_POLICY);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_U1_VERIFY_WITH_POLICY);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_WITH_POLICY);
 #endif
@@ -1355,16 +1355,19 @@ int signaling_hipfw_check_policy_and_verify_info_response(struct hip_common *com
                      -1, "Could not send connection fail notification to the end-point\n");
             *ret = 0;
         } else {
-            HIP_DEBUG("Connection tracking table after receipt of I2/U2\n");
+            HIP_DEBUG("Connection tracking table after receipt of I2/R2/U2/U3\n");
             signaling_cdb_add_connection(*hit_i, *hit_r, new_conn->src_port, new_conn->dst_port, SIGNALING_CONN_PROCESSING);
             signaling_cdb_print();
             *ret = -1;
         }
     } else {
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ, PERF_MBOX_R2_VERIFY_INFO_REQ\n");
+        HIP_DEBUG("Stop PERF_MBOX_I2_VERIFY_INFO_REQ, PERF_MBOX_R2_VERIFY_INFO_REQ, "
+                  "PERF_MBOX_U3_VERIFY_INFO_REQ, PERF_MBOX_U3_VERIFY_INFO_REQ\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2_VERIFY_INFO_REQ);
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2_VERIFY_INFO_REQ);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_U2_VERIFY_INFO_REQ);
+        hip_perf_stop_benchmark(perf_set, PERF_MBOX_U3_VERIFY_INFO_REQ);
 #endif
         if (policy_check == -1) {
             // TODO add connection to scdb

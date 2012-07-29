@@ -329,7 +329,7 @@ int signaling_init_application_context(struct signaling_application_context *con
         app_ctx->sockets[i].src_port = 0;
         app_ctx->sockets[i].dst_port = 0;
     }
-    app_ctx->connections = 0;
+    app_ctx->connections = -1;
 out_err:
     return err;
 }
@@ -391,9 +391,14 @@ int signaling_init_app_context_from_msg(struct signaling_application_context *co
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APP_INFO_CONNECTIONS) {
         ctx->connections = ntohs(((const struct signaling_param_app_info_connections *) param)->connection_count);
         tmp_len          = ntohs(((const struct signaling_param_app_info_connections *) param)->port_pair_length);
-        for (i = 0; i < tmp_len; i++) {
-            ctx->sockets[i].src_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i]);
-            ctx->sockets[i].dst_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1]);
+        HIP_DEBUG("Connection = %d, port pairs = %d \n", ctx->connections, tmp_len);
+        if (tmp_len > 0 && ctx->connections > 0) {
+            for (i = 0; i < tmp_len; i++) {
+                ctx->sockets[i].src_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i]);
+                ctx->sockets[i].dst_port = ntohs(((const struct signaling_param_app_info_connections *) param)->sockets[2 * i + 1]);
+            }
+        } else {
+            HIP_DEBUG("Connection = %d, port pairs = %d \n", ctx->connections, tmp_len);
         }
     }
 
