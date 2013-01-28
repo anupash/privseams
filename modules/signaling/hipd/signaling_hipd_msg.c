@@ -1319,6 +1319,46 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
                                                          sig_state->pending_conn_context.app.sockets);
     }
 
+
+    /* Verify Service Signature for Selective Signed and Signed Offer*/
+    if ((param = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_SERVICE_OFFER))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (packet_type == HIP_UPDATE) {
+            HIP_DEBUG("Start PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
+        } else {
+            HIP_DEBUG("Start PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
+            hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
+            hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
+        }
+#endif
+        do {
+            if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
+                HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
+                         -1, "Could not copy connection context\n");
+                if (flag_service_offer_signed == OFFER_SELECTIVE_SIGNED || flag_service_offer_signed == OFFER_SIGNED) {
+                    HIP_IFEL((signaling_verify_mb_sig_selective_s(sig_state, &param_service_offer) != 1),
+                             -1, " Error verifying service signature on selective ack\n");
+                }
+            }
+        } while ((param = hip_get_next_param(ctx->input_msg, param)));
+#ifdef CONFIG_HIP_PERFORMANCE
+        if (packet_type == HIP_UPDATE) {
+            HIP_DEBUG("Stop PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
+        } else {
+            HIP_DEBUG("Stop PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
+            hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
+        }
+#endif
+    } else {
+        HIP_DEBUG("No Service Offer from middleboxes. Nothing to do.\n");
+    }
+
+
     if (flag_service_offer_signed == OFFER_SIGNED) {
         signaling_build_response_to_service_offer_s(ctx, *recv_conn, sig_state, flags_info_requested);
     } else if (flag_service_offer_signed == OFFER_UNSIGNED || flag_service_offer_signed == OFFER_SELECTIVE_SIGNED) {
@@ -1327,33 +1367,6 @@ int signaling_generic_handle_service_offers(const uint8_t packet_type, struct hi
                 if (hip_get_param_type(param) == HIP_PARAM_SIGNALING_SERVICE_OFFER) {
                     HIP_IFEL(signaling_copy_service_offer(&param_service_offer, (const struct signaling_param_service_offer *) (param)),
                              -1, "Could not copy connection context\n");
-                    /* Verify Service Signature for Selective Signing*/
-                    if (flag_service_offer_signed == OFFER_SELECTIVE_SIGNED) {
-#ifdef CONFIG_HIP_PERFORMANCE
-                        if (packet_type == HIP_UPDATE) {
-                            HIP_DEBUG("Start PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
-                            hip_perf_start_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
-                            hip_perf_start_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
-                        } else {
-                            HIP_DEBUG("Start PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
-                            hip_perf_start_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
-                            hip_perf_start_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
-                        }
-#endif
-                        HIP_IFEL((signaling_verify_mb_sig_selective_s(sig_state, &param_service_offer) != 1),
-                                 -1, " Error verifying service signature on selective ack\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-                        if (packet_type == HIP_UPDATE) {
-                            HIP_DEBUG("Stop PERF_CONN_U2_VERIFY_MBOX_SIGN, PERF_CONN_U3_VERIFY_MBOX_SIGN\n");
-                            hip_perf_stop_benchmark(perf_set, PERF_CONN_U2_VERIFY_MBOX_SIGN);
-                            hip_perf_stop_benchmark(perf_set, PERF_CONN_U3_VERIFY_MBOX_SIGN);
-                        } else {
-                            HIP_DEBUG("Stop PERF_I2_VERIFY_MBOX_SIGN, PERF_R2_VERIFY_MBOX_SIGN\n");
-                            hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_MBOX_SIGN);
-                            hip_perf_stop_benchmark(perf_set, PERF_R2_VERIFY_MBOX_SIGN);
-                        }
-#endif
-                    }
                     if (signaling_get_info_req_from_service_offer(&param_service_offer, flags_info_requested)) {
                         HIP_DEBUG("Building of application context parameter failed.\n");
                         err = 0;
@@ -1963,7 +1976,6 @@ int signaling_i2_add_signed_service_ack_and_sig_conn(UNUSED const uint8_t packet
             HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
                      -1, "This is no signaling update packet\n");
         }
-
 
         if (packet_type == HIP_R1 || update_type == SIGNALING_FIRST_BEX_UPDATE ||
             update_type == SIGNALING_SECOND_BEX_UPDATE) {

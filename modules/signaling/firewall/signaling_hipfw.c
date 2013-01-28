@@ -107,7 +107,7 @@ UNUSED static uint16_t      ec_key_len = 99;
 static EVP_PKEY *evp = NULL;
 //static DH       *dh              = NULL;
 
-int SERVICE_OFFER_TYPE = OFFER_SIGNED;
+int SERVICE_OFFER_TYPE = OFFER_UNSIGNED;
 
 /* Set from libconfig.
  * If set to zero, the firewall does only static filtering on basis of the predefined policy.
@@ -1167,7 +1167,7 @@ int signaling_hipfw_check_policy_and_create_service_offer(struct hip_common *com
             hip_perf_start_benchmark(perf_set, PERF_MBOX_U2_ADD_INFO_REQ_SELECTIVE_S);
 
 #endif
-            if (SERVICE_OFFER_TYPE != OFFER_SELECTIVE_SIGNED) {
+            if (SERVICE_OFFER_TYPE == OFFER_UNSIGNED) {
                 HIP_IFEL(signaling_add_service_offer_to_msg(common, ctx_flags, next_service_offer_id, other_dir->offer_hash,
                                                             signaling_hipfw_feedback_get_mb_key(), signaling_hipfw_feedback_get_mb_cert(),
                                                             SERVICE_OFFER_TYPE), -1,

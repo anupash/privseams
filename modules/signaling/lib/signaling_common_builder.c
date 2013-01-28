@@ -964,7 +964,7 @@ int signaling_add_service_offer_to_msg_s(struct hip_common *msg,
     uint8_t                             *tmp_ptr = (uint8_t *) &param_service_offer;
 
     HIP_DEBUG("Adding service offer parameter according to the policy\n");
-    HIP_ASSERT(flag_sign == OFFER_SELECTIVE_SIGNED);
+    HIP_ASSERT(flag_sign == OFFER_SELECTIVE_SIGNED || flag_sign == OFFER_SIGNED);
     /* build and append parameter */
     hip_set_param_type((struct hip_tlv_common *) &tmp_service_offer, HIP_PARAM_SIGNALING_SERVICE_OFFER);
     tmp_service_offer.service_offer_id = htons(service_offer_id);
@@ -1682,7 +1682,7 @@ int signaling_verify_mb_sig_selective_s(struct signaling_hipd_state          *si
     HIP_HEXDUMP("Signature received in the service offer = ", signature, sig_len);
 
     /*---- Verifying mbox signature  ----*/
-    HIP_DEBUG("Verifying mbox signature in the Selectively Signed Service Offer parameter.\n");
+    HIP_DEBUG("Verifying mbox signature in the Selectively Signed or Signed Service Offer parameter.\n");
     if (!signaling_verify_service_signature(cert, (uint8_t *) offer, header_len + info_len + cert_hint_len,
                                             (uint8_t *) signature, sig_len)) {
         HIP_DEBUG("Service Signature verified Successfully\n");
@@ -3013,39 +3013,41 @@ int signaling_remove_params_from_hip_msg(struct hip_common *msg,
     //HIP_DEBUG("Inside remove params from hip msg\n");
 
     memcpy(msg_buf, msg, hip_get_msg_total_len(msg));
-    //HIP_DEBUG("Original hip msg copied\n");
+    HIP_DEBUG("Original hip msg copied\n");
     tmp_ptr   = (uint8_t *) msg;
     start_ptr = (uint8_t *) msg_buf;
     tmp_len   = offset_list[0];
 
+    //HIP_DEBUG("Before Entering if .. tmp_len = %d\n", tmp_len);
+
     if (*offset_list_len > 0) {
         for (i = 0; i <= *offset_list_len; i++) {
             memcpy(tmp_ptr, start_ptr, tmp_len);
-            //HIP_DEBUG("i = %d, tmp_len = %u, copied portion of the new message\n", i, tmp_len);
+            HIP_DEBUG("i = %d, tmp_len = %u, copied portion of the new message\n", i, tmp_len);
             tmp_ptr   += tmp_len;
             start_ptr += tmp_len;
 
             if (i < *offset_list_len) {
                 param = (struct hip_tlv_common *) ((uint8_t *) msg_buf + offset_list[i]);
-                //HIP_DEBUG("parameter correct at this positon\n");
+                HIP_DEBUG("parameter correct at this positon\n");
                 tmp_len      = hip_get_param_total_len(param);
                 msg_new_len -= tmp_len;
                 start_ptr   += tmp_len;
-                //HIP_DEBUG("Length of the parameter at this position = %d, new hip msg length = %d\n", tmp_len, msg_new_len);
+                HIP_DEBUG("Length of the parameter at this position = %d, new hip msg length = %d\n", tmp_len, msg_new_len);
                 if (i < *offset_list_len - 1) {
                     HIP_DEBUG("next offset = %d\n", offset_list[i + 1]);
                     tmp_len = offset_list[i + 1] - (offset_list[i] + tmp_len);
                 } else {
                     tmp_len = hip_get_msg_total_len(msg_buf) - (offset_list[i] + tmp_len);
                 }
-                //HIP_DEBUG("Sizeof of the next chunk to be copied = %u\n", tmp_len);
+                HIP_DEBUG("Sizeof of the next chunk to be copied = %u\n", tmp_len);
             }
         }
         hip_set_msg_total_len(msg, msg_new_len);
-        /*
-         *  HIP_DEBUG("HIP message after removal of secrets and ack msg_len = %d\n", msg_new_len);
-         *  hip_dump_msg(msg);
-         */
+
+        HIP_DEBUG("HIP message after removal of secrets and ack msg_len = %d\n", msg_new_len);
+        //hip_dump_msg(msg);
+
 
         param = NULL;
         while ((param = hip_get_next_param_readwrite(msg_buf, param))) {
@@ -3081,11 +3083,10 @@ int signaling_remove_params_from_hip_msg(struct hip_common *msg,
             i++;
         }
     }
-/*
- *  HIP_DEBUG("HIP message after addition of hash leafs\n");
- *  hip_dump_msg(msg);
- *
- */
+    HIP_DEBUG("HIP message after addition of hash leafs\n");
+    //hip_dump_msg(msg);
+
+
 out_err:
     free(msg_buf);
     return err;

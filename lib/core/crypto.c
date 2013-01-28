@@ -765,7 +765,7 @@ int hip_encode_ecdh_publickey(EC_KEY *eckey, uint8_t **out, int *outlen)
 
     bn2bin_safe(priv_key, *out + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
 
-    printf("The public of the generated EC_KEY public key len = %d\n", pub_key_len);
+    HIP_DEBUG("The public of the generated EC_KEY public key len = %d\n", pub_key_len);
     HIP_HEXDUMP("EC_KEY public : ", *out + 2, pub_key_len);
 
     return *outlen;
