@@ -5,7 +5,7 @@ On-path network elements, such as NATs and firewalls, are an accepted commonalit
 
 
 HIPL dependencies
-=================
+-----------------
 
 HIPL places certain requirements on your kernel. Starting from Linux kernel
 version 2.6.27, no changes are necessary. If you run an older version, look
@@ -46,7 +46,7 @@ On Ubuntu, the following command should install net-tools
 
 
 How to build HIPL
-=================
+-----------------
 
 If you are working with a Bazaar checkout, you will have to bootstrap the
 autotools build system with
@@ -84,5 +84,5 @@ You can optionally enable ECDH (Elliptic-Curve Diffie-Hellman) instead of regula
 Diffie-Hellman (DH) for the HIP Base Exchange (HIP BEX). This is recommended for 
 hardware with low-end configurations.
 
-  ./configure --enable-ecdh         Enable ECDH (default is NO)
+  ./configure --enable-ecdh                           Enable ECDH (default is NO)
 
