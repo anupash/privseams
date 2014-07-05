@@ -84,3 +84,17 @@ hardware with low-end configurations.
 
   ./configure --enable-ecdh                           Enable ECDH (default is NO)
 
+###How to clean HIPL
+
+This does not clean the autotools files
+
+  make clean
+
+to rebuild autotools
+
+   autoreconf --install --force
+
+to clean autotools
+
+   make autotools-clean
+
