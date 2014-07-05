@@ -1,7 +1,7 @@
-privseams
+Priv-Seams: A Privacy-aware Signaling Layer for End-host-Assisted Middlebox Services
 =========
 
-Priv-Seams Signaling layer for HIP for Linux
+On-path network elements, such as NATs and firewalls, are an accepted commonality in today’s networks. They are essential when extending network functionality and providing additional security. However, these so called middleboxes are not explicitly considered in the original TCP/IP-based network architecture. As a result, the protocols of the TCP/IP suite provide middleboxes with the same information about data flows as packet-forwarding routers. Yet, middleboxes typically perform complex functions within the network that require additional knowledge. Inferring this knowledge from observing the sparse information available in network packets requires these devices to base their decisions on ambiguous or forgeable data. Priv-Seams is designed to counter problems arising from such insufficient information and identify the resulting informational requirements of middleboxes. It is a signaling layer that enables end hosts to provide middleboxes with descriptive and verifiable data flow contexts in order to allow for more secure and richer middlebox functions in home and enterprise network scenarios than provided by today’s middleboxes. Furthermore, it provides extensions to the SEAMS signaling protocol that take privacy concerns of transmitting such descriptive and verifiable contexts on the signaling path into consideration. The evaluation of SEAMS and its extensions, shows that they can be a feasible addition to TCP/IP-based networks and that they support multiple on-path middleboxes.
 
 
 HIPL dependencies
