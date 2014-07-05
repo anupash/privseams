@@ -39,6 +39,11 @@ On Fedora, the following command(s) should solve the dependencies:
   Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build \
                           redhat-lsb
 
+Priv-Seams dependencies
+-----------------
+On Ubuntu, the following command should install net-tools
+  apt-get install net-tools
+
 
 How to build HIPL
 =================
@@ -73,4 +78,11 @@ Please note that the HIP configuration files are located in
 change the location to /etc/hip, you have to pass --sysconfdir=/etc to
 configure (or create a symbolic link).
 
+Priv-Seams build options
+-----------------
+You can optionally enable ECDH (Elliptic-Curve Diffie-Hellman) instead of regular
+Diffie-Hellman (DH) for the HIP Base Exchange (HIP BEX). This is recommended for 
+hardware with low-end configurations.
+
+  ./configure --enable-ecdh         Enable ECDH (default is NO)
 
